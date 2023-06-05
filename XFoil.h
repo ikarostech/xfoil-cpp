@@ -76,7 +76,7 @@ class XFoil {
   void ExecMDES();
   bool ExecQDES();
   bool initialize();
-  bool initXFoilGeometry(int fn, double *fx, double *fy, double *fnx,
+  bool initXFoilGeometry(int fn, const double *fx, const double *fy, double *fnx,
                          double *fny);
   bool initXFoilAnalysis(double Re, double alpha, double Mach, double NCrit,
                          double XtrTop, double XtrBot, int reType, int maType,
@@ -148,7 +148,7 @@ class XFoil {
   void zccalc(int mtest);
   void zcnorm(int mtest);
   void zlefind(complex<double> *zle, complex<double> zc[], double wc[], int nc,
-               complex<double> piq[], double agte);
+               const complex<double> piq[], double agte);
   void piqsum();
   void ftp();
   void scinit(int n, double x[], double xp[], double y[], double yp[],
@@ -167,7 +167,7 @@ class XFoil {
   void sss(double ss, double *s1, double *s2, double del, double xbf,
            double ybf, double x[], double xp[], double y[], double yp[],
            double s[], int n, int iside);
-  bool inside(double xb[], double yb[], int nb, double xbf, double ybf);
+  bool inside(const double xb[], const double yb[], int nb, double xbf, double ybf);
   void flap();
   int arefine(double x[], double y[], double s[], double xs[], double ys[],
               int n, double atol, int ndim, double xnew[], double ynew[],
@@ -178,7 +178,7 @@ class XFoil {
   bool restoreblData(int icom);
   bool saveblData(int icom);
 
-  bool aecalc(int n, double x[], double y[], double t[], int itype,
+  bool aecalc(int n, const double x[], const double y[], const double t[], int itype,
               double &area, double &xcen, double &ycen, double &ei11,
               double &ei22, double &apx1, double &apx2);
   bool apcalc();
@@ -186,7 +186,7 @@ class XFoil {
              double thet2, double rt2, double a2, double acrit, double &ax,
              double &ax_hk1, double &ax_t1, double &ax_rt1, double &ax_a1,
              double &ax_hk2, double &ax_t2, double &ax_rt2, double &ax_a2);
-  bool baksub(int n, double a[IQX][IQX], int indx[], double b[]);
+  bool baksub(int n, double a[IQX][IQX], const int indx[], double b[]);
   bool bldif(int ityp);
   bool blkin();
   bool blmid(int ityp);
@@ -195,13 +195,13 @@ class XFoil {
   bool blsolve();
   bool blsys();
   bool blvar(int ityp);
-  bool cang(double x[], double y[], int n, int &imax, double &amax);
+  bool cang(const double x[], const double y[], int n, int &imax, double &amax);
   bool cdcalc();
   bool cfl(double hk, double rt, double &cf, double &cf_hk, double &cf_rt,
            double &cf_msq);
   bool cft(double hk, double rt, double msq, double &cf, double &cf_hk,
            double &cf_rt, double &cf_msq);
-  bool cpcalc(int n, double q[], double qinf, double minf, double cp[]);
+  bool cpcalc(int n, const double q[], double qinf, double minf, double cp[]);
   bool dampl(double hk, double th, double rt, double &ax, double &ax_hk,
              double &ax_th, double &ax_rt);
   bool dil(double hk, double rt, double &di, double &di_hk, double &di_rt);
@@ -254,7 +254,7 @@ class XFoil {
   bool qiset();
   bool qvfue();
   bool qwcalc();
-  bool scalc(double x[], double y[], double s[], int n);
+  bool scalc(const double x[], const double y[], double s[], int n);
   bool segspl(double x[], double xs[], double s[], int n);
   bool segspld(double x[], double xs[], double s[], int n, double xs1,
                double xs2);
@@ -263,7 +263,7 @@ class XFoil {
   bool sinvrt(double &si, double xi, double x[], double xs[], double s[],
               int n);
 
-  void splina(double x[], double xs[], double s[], int n);
+  void splina(const double x[], double xs[], const double s[], int n);
   bool splind(double x[600], double xs[600], double s[600], int n, double xs1,
               double xs2);
   bool stepbl();
@@ -282,11 +282,11 @@ class XFoil {
   bool xyWake();
   double aint(double number);
   double atanc(double y, double x, double thold);
-  double curv(double ss, double x[], double xs[], double y[], double ys[],
-              double s[], int n);
-  double d2val(double ss, double x[], double xs[], double s[], int n);
-  double deval(double ss, double x[], double xs[], double s[], int n);
-  double seval(double ss, double x[], double xs[], double s[], int n);
+  double curv(double ss, const double x[], const double xs[], const double y[], const double ys[],
+              const double s[], int n);
+  double d2val(double ss, const double x[], const double xs[], const double s[], int n);
+  double deval(double ss, const double x[], const double xs[], const double s[], int n);
+  double seval(double ss, const double x[], const double xs[], const double s[], int n);
   double sign(double a, double b);
 
  public:
