@@ -129,7 +129,6 @@ class XFoil {
   static double VAccel() { return vaccel; }
   static void setVAccel(double accel) { vaccel = accel; }
 
- private:
   void inter(double x0[], double xp0[], double y0[], double yp0[], double s0[],
              int n0, double sle0, double x1[], double xp1[], double y1[],
              double yp1[], double s1[], int n1, double sle1, double x[],
@@ -382,24 +381,9 @@ class XFoil {
 
   bool m_bTrace;
 
-  //	int nax, npx, nfx;
-
-  //	double com2[74], com1[74];
-  //	int ncom;
-  //	QString labref;
-  //	QString fname, pfname, pfnamx;
-  //	QString oname, prefix;
-  //	QString name, namepol, codepol, nameref;
-  //	QString ispars;
-
-  //	bool lpacc,lqvdes,,lqrefl,lcpref,lforef,lpfile,lpfilx;
-  //	bool lppsho,lplot,lclip,lvlab,lcurs,lcminp, lhmomp,lland;
-  //	bool lplcam,lgparm,lnorm,,lgsym,lgslop, lcslop,lclock,
   bool limage, lgamu, sharp, lqaij, ladij, lwdij;
   bool lqinu,
-      lgsame;  //???
-               //	bool lgtick, lplegn,,lplist, lpgrid,lblgrd,lblsym,
-  //	     lcpgrd,lggrid,lgeopl, lpcdw,lqsppl, liqset, lqgrid;
+      lgsame;
 
   double sccon, gacon, gbcon, gbc0, gbc1, gccon, dlcon, ctcon;
 
@@ -410,29 +394,19 @@ class XFoil {
   double isys[IVX][ISX];
   double xbp[IBX], ybp[IBX], sb[IBX], snew[4 * IBX];
   double xof, yof, sble, chordb;
-  //	double xbmin,xbmax,ybmin,ybmax;
   double areab, radble, angbte;
   double ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt;
-  //	double xcm[1200],ycm[1200],scm[1200],xcmp[1200],ycmp[1200];
-  //	double xtk[1200],ytk[1200],stk[1200];
-  //	double xtkp[1200],ytkp[1200];
+
 
   double sle, xle, yle, xte, yte;
   double chord, yimage, wgap[IWX], waklen;
-  //	double size,scrnfr,plotar, pfac,qfac,vfac,xwind,ywind;
-  //	double xpage,ypage,xmarg,ymarg, chg, chq,xofair,yofair,facair,
-  // xofa,yofa,faca,uprwt; 	double cpmin,cpmax,cpdel; 	double
-  // cpolplf[3][4]; double xcdwid,xalwid,xocwid;
   double ch;
   int nw, ist;
 
-  //	int kimage,nseqex;
   int aijpiv[IQX];
-  //	int idev,idevrp,ipslu,ncolor,icols[5],nover, ncm,ntk;
 
   double cl_alf, cl_msq;
   double psio, cosa, sina, gamma, gamm1;
-  //	double circ;
   double tkl_msq, cpstar, qstar;
   double cpmni, cpmnv, xcpmni, xcpmnv;
   double arad;  // added arcds
@@ -442,7 +416,6 @@ class XFoil {
   double xssitr[ISX], uinv_a[IVX][ISX];
   double gam[IQX], gam_a[IQX], gamu[IQX][ISX], sig[IZX];
   double apanel[IZX], sst, sst_go, sst_gp, gamte, sigte;
-  //	double sigte_a,gamte_a;
   double dste, aste;
   double qinv[IZX], qinvu[IZX][3], qinv_a[IZX];
   double q[IQX][IQX], dq[IQX], dzdg[IQX], dzdn[IQX], dzdm[IZX], dqdg[IQX];
@@ -478,25 +451,16 @@ class XFoil {
       di1_s1, di1_ms, di1_re, us1, us1_u1, us1_t1, us1_d1, us1_ms, us1_re, cq1,
       cq1_u1, cq1_t1, cq1_d1, cq1_ms, cq1_re, de1, de1_u1, de1_t1, de1_d1,
       de1_ms;
-  //	double
-  // xoff,yoff,xgmin,xgmax,ygmin,ygmax,dxyg,xcmin,xcmax,ycmin,ycmax,dxyc,dyoffc,xpmin,xpmax,ypmin,ypmax,dxyp,dyoffp,ysfp,gtick;
+
   int imxbl, ismxbl;
   double xsf, ysf;
-  //	QString vmxbl;
 
-  //	double cpol[800][iptot][9],cpolsd[800][3][jptot][9];//what's iptot???
-  //	double xpref[300],cpref[300], verspol[9],cpolxy[300][2][9]
-  //	double machp1[9],
-  // reynp1[9],acritp[9],xstripp[3][9],cpolref[128][2][4][9];
   double cfm, cfm_ms, cfm_re, cfm_u1, cfm_t1, cfm_d1, cfm_u2, cfm_t2, cfm_d2;
   double xt, xt_a1, xt_ms, xt_re, xt_xf, xt_x1, xt_t1, xt_d1, xt_u1, xt_x2,
       xt_t2, xt_d2, xt_u2;
   double va[4][3][IZX], vb[4][3][IZX], vdel[4][3][IZX], vm[4][IZX][IZX],
       vz[4][3];
 
-  //	int ncpref, napol[9], npol, ipact, nlref,
-  // icolp[9],icolr[9],imatyp[9],iretyp[9], nxypol[9],npolref, ndref[4][9];
-  //	double c1sav[74], c2sav[74];
 
   /*
   c

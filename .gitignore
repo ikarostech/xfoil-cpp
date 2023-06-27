@@ -1,4 +1,8 @@
 a.exe
 a.out
 
+gtest/*
+gmock/*
+lib/*
+out/*
 .vscode/*
