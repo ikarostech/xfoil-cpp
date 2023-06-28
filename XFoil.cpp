@@ -2100,13 +2100,10 @@ bool XFoil::blvar(int ityp) {
  * @param x foil x parameters
  * @param y foil y parameters
  * @param n foil plot size
- * @param imax !side effect! index of max 
- * @param amax !side effect! angle of max [degree]
+ * @return PairIndex index: index of max angle diff, value: angle of max angle diff[degree]
  */
-void XFoil::cang(const double x[], const double y[], int n, int &imax, double &amax) {
-  //-------------------------------------------------------------------
-  amax = 0.0;
-  imax = 1;
+PairIndex XFoil::cang(const double x[], const double y[], int n) {
+  PairIndex pair_index = PairIndex(1, 0.0);
 
   //---- go over each point, calculating corner angle
   for (int i = 2; i <= n - 1; i++) {
@@ -2123,11 +2120,12 @@ void XFoil::cang(const double x[], const double y[], int n, int &imax, double &a
     double sin = (delta_former.y() * delta_later.x() - delta_former.x() * delta_later.y()) / delta_former.norm() / delta_later.norm();
     double delta_angle = asin(sin) * 180.0 / PI;
     
-    if (fabs(delta_angle) > fabs(amax)) {
-      amax = delta_angle;
-      imax = i;
+    if (fabs(delta_angle) > fabs(pair_index.value)) {
+      pair_index.index = i;
+      pair_index.value = delta_angle;
     }
   }
+  return pair_index;
 }
 
 bool XFoil::cdcalc() {
@@ -9322,8 +9320,10 @@ int XFoil::cadd(int ispl, double atol, double xrf1, double xrf2) {
 
   geopar(xb, xbp, yb, ybp, sb, nb, w1, sble, chordb, areab, radble, angbte,
          ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
-
-  cang(x, y, n, imax, amax);
+  
+  PairIndex pair_cang = cang(x, y, n);
+  imax = pair_cang.index;
+  amax = pair_cang.value;
 
   return nbadd;
 }
@@ -9693,7 +9693,9 @@ void XFoil::flap() {
 }
 
 bool XFoil::CheckAngles() {
-  cang(x, y, n, imax, amax);
+  PairIndex pair_cang = cang(x, y, n);
+  imax = pair_cang.index;
+  amax = pair_cang.value;
   if (fabs(amax) > angtol) {
     return true;  // we have a coarse paneling
   }

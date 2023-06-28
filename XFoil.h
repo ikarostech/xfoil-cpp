@@ -59,7 +59,16 @@ struct blData {
       cqz_uz, cqz_tz, cqz_dz, cqz_ms, cqz_re, dez, dez_uz, dez_tz, dez_dz,
       dez_ms;
 };
-
+class PairIndex {
+  public:
+    int index;
+    double value;
+    PairIndex(int index, double value) {
+      this->index = index;
+      this->value = value;
+    }
+    PairIndex() {}
+};
 class XFoil {
  public:
   XFoil();
@@ -197,7 +206,7 @@ class XFoil {
   bool blsolve();
   bool blsys();
   bool blvar(int ityp);
-  void cang(const double x[], const double y[], int n, int &imax, double &amax);
+  PairIndex cang(const double x[], const double y[], int n);
   bool cdcalc();
   bool cfl(double hk, double rt, double &cf, double &cf_hk, double &cf_rt,
            double &cf_msq);

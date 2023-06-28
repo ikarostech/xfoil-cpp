@@ -50,11 +50,11 @@ TEST_F(DatGoogleTest, testCang) {
   double dmax;
   
   //when
-  foil->cang(x,y,n,imax,dmax);
+  PairIndex actual = foil->cang(x,y,n);
 
   //then
-  ASSERT_EQ(78, imax);
-  ASSERT_DOUBLE_EQ(9.9742071999702819, dmax);
+  ASSERT_EQ(78, actual.index);
+  ASSERT_DOUBLE_EQ(9.9742071999702819, actual.value);
 }
 
 int main() {
