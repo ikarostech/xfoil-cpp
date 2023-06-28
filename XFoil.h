@@ -222,8 +222,7 @@ class XFoil {
     double msq;
   };
   C_f cfl(double hk, double rt);
-  bool cft(double hk, double rt, double msq, double &cf, double &cf_hk,
-           double &cf_rt, double &cf_msq);
+  C_f cft(double hk, double rt, double msq);
   bool cpcalc(int n, const double q[], double qinf, double minf, double cp[]);
   bool dampl(double hk, double th, double rt, double &ax, double &ax_hk,
              double &ax_th, double &ax_rt);

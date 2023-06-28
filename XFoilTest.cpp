@@ -91,14 +91,13 @@ TEST(cft_test, cal_cft) {
   double cf_msq;
                 
   //when
-  //XFoil::C_f actual = foil->cfl(4.0, 1E+5);
-  foil->cft(6.0, 1E+5, 0.01, cf, cf_hk, cf_rt, cf_msq);
+  XFoil::C_f actual = foil->cft(6.0, 1E+5, 0.01);
 
   //then
-  ASSERT_DOUBLE_EQ(-0.00021874525090522493, cf);
-  ASSERT_DOUBLE_EQ(-2.2177015917117524e-06, cf_hk);
-  ASSERT_DOUBLE_EQ(-9.7729505058686228e-13, cf_rt);
-  ASSERT_DOUBLE_EQ(2.1840616807413529e-05, cf_msq);
+  ASSERT_DOUBLE_EQ(-0.00021874525090522493, actual.cf);
+  ASSERT_DOUBLE_EQ(-2.2177015917117524e-06, actual.hk);
+  ASSERT_DOUBLE_EQ(-9.7729505058686228e-13, actual.rt);
+  ASSERT_DOUBLE_EQ(2.1840616807413529e-05, actual.msq);
 }
 int main() {
     testing::InitGoogleTest();

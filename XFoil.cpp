@@ -1489,12 +1489,16 @@ bool XFoil::blmid(int ityp) {
       cfm_rta = c_f.rt;
       cfm_ma = c_f.msq;
     } else {
-      cft(hka, rta, ma, cfm, cfm_hka, cfm_rta, cfm_ma);
-      C_f c_f = cfl(hka, rta);
-      cfml = c_f.cf;
-      cfml_hka = c_f.hk;
-      cfml_rta = c_f.rt;
-      cfml_ma = c_f.msq;
+      C_f c_fl = cfl(hka, rta);
+      cfml = c_fl.cf;
+      cfml_hka = c_fl.hk;
+      cfml_rta = c_fl.rt;
+      cfml_ma = c_fl.msq;
+      C_f c_ft = cft(hka, rta, ma);
+      cfm = c_ft.cf;
+      cfml_hka = c_ft.hk;
+      cfml_rta = c_ft.rt;
+      cfml_ma = c_ft.msq;
       if (cfml > cfm) {
         cfm = cfml;
         cfm_hka = cfml_hka;
@@ -1927,12 +1931,16 @@ bool XFoil::blvar(int ityp) {
     }
     else {
       //----- turbulent
-      cft(hk2, rt2, m2, cf2, cf2_hk2, cf2_rt2, cf2_m2);
-      C_f c_f = cfl(hk2, rt2);
-      cf2l = c_f.cf;
-      cf2l_hk2 = c_f.hk;
-      cf2l_rt2 = c_f.rt;
-      cf2l_m2 = c_f.msq;
+      C_f c_fl = cfl(hk2, rt2);
+      cf2l = c_fl.cf;
+      cf2l_hk2 = c_fl.hk;
+      cf2l_rt2 = c_fl.rt;
+      cf2l_m2 = c_fl.msq;
+      C_f c_ft = cft(hk2, rt2, m2);
+      cf2 = c_ft.cf;
+      cf2_hk2 = c_ft.hk;
+      cf2_rt2 = c_ft.rt;
+      cf2_m2 = c_ft.msq;
       if (cf2l > cf2) {
         //------- laminar cf is greater than turbulent cf -- use laminar
         //-       (this will only occur for unreasonably small rtheta)
@@ -1965,7 +1973,12 @@ bool XFoil::blvar(int ityp) {
   } else {
     if (ityp == 2) {
       //----- turbulent wall contribution
-      cft(hk2, rt2, m2, cf2t, cf2t_hk2, cf2t_rt2, cf2t_m2);
+      C_f c_ft = cft(hk2, rt2, m2);
+      cf2t = c_ft.cf;
+      cf2t_hk2 = c_ft.hk;
+      cf2t_rt2 = c_ft.rt;
+      cf2t_m2 = c_ft.msq;
+
       cf2t_u2 = cf2t_hk2 * hk2_u2 + cf2t_rt2 * rt2_u2 + cf2t_m2 * m2_u2;
       cf2t_t2 = cf2t_hk2 * hk2_t2 + cf2t_rt2 * rt2_t2;
       cf2t_d2 = cf2t_hk2 * hk2_d2;
@@ -2185,10 +2198,6 @@ bool XFoil::cdcalc() {
  * 
  * @param hk kinematic shape parameter
  * @param rt momentum-thickness reynolds number
- * @param cf side effect 
- * @param cf_hk side effect
- * @param cf_rt side effect
- * @param cf_msq side effect
  */
 XFoil::C_f XFoil::cfl(double hk, double rt) {
   C_f c_f = C_f();
@@ -2206,34 +2215,31 @@ XFoil::C_f XFoil::cfl(double hk, double rt) {
   return c_f;
 }
 
-bool XFoil::cft(double hk, double rt, double msq, double &cf, double &cf_hk,
-                double &cf_rt, double &cf_msq) {
-  double gam, gm1, f_arg, fc, grt, gex, thk, cfo;
-  gam = 1.4;
+XFoil::C_f XFoil::cft(double hk, double rt, double msq) {
+  C_f c_f = C_f();
+  double gam = 1.4;
 
   //---- turbulent skin friction function  ( cf )    (coles)
-  gm1 = gam - 1.0;
-  fc = sqrt(1.0 + 0.5 * gm1 * msq);
-  grt = log(rt / fc);
-  grt = std::max(grt, 3.0);
+  double gm1 = 1.4 - 1.0;
+  double fc = sqrt(1.0 + 0.5 * gm1 * msq);
+  double grt = std::max(log(rt / fc), 3.0);
 
-  gex = -1.74 - 0.31 * hk;
+  double gex = -1.74 - 0.31 * hk;
 
-  f_arg = -1.33 * hk;
-  f_arg = std::max(-20.0, f_arg);
+  double f_arg = std::max(-1.33 * hk, -20.0);
+  
+  double tanh_hk = tanh(4.0 - hk / 0.875);
 
-  thk = tanh(4.0 - hk / 0.875);
-
-  cfo = 0.3 * exp(f_arg) * pow((grt / 2.3026), gex);
-  cf = (cfo + 0.00011 * (thk - 1.0)) / fc;
-  cf_hk = (-1.33 * cfo - 0.31 * log(grt / 2.3026) * cfo -
-           0.00011 * (1.0 - thk * thk) / 0.875) /
+  double cfo = 0.3 * exp(f_arg) * pow((grt / 2.3026), gex);
+  c_f.cf = (cfo + 0.00011 * (tanh_hk - 1.0)) / fc;
+  c_f.hk = (-1.33 * cfo - 0.31 * log(grt / 2.3026) * cfo -
+           0.00011 * (1.0 - pow(tanh_hk, 2)) / 0.875) /
           fc;
-  cf_rt = gex * cfo / (fc * grt) / rt;
-  cf_msq = gex * cfo / (fc * grt) * (-0.25 * gm1 / fc / fc) -
-           0.25 * gm1 * (cf) / fc / fc;
+  c_f.rt = gex * cfo / (fc * grt) / rt;
+  c_f.msq = gex * cfo / (fc * grt) * (-0.25 * gm1 / fc / fc) -
+           0.25 * gm1 * (c_f.cf) / pow(fc, 2);
 
-  return true;
+  return c_f;
 }
 
 bool XFoil::clcalc(double xref, double yref) {
