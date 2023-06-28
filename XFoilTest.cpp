@@ -58,35 +58,47 @@ TEST_F(DatGoogleTest, testCang) {
 TEST(cfl_test, hk_over_5_5) {
   //given
   XFoil *foil = new XFoil();
-  double cf;
-  double cf_hk;
-  double cf_rt;
-  double cf_msq;
+
   //when
-  foil->cfl(6.0, 1E+5, cf, cf_hk, cf_rt, cf_msq);
+  XFoil::C_f actual = foil->cfl(6.0, 1E+5);
 
   //then
-  ASSERT_DOUBLE_EQ(-6.8333333333333339e-07, cf);
-  ASSERT_DOUBLE_EQ(4.4444444444444448e-08, cf_hk);
-  ASSERT_DOUBLE_EQ(6.833333333333334e-12, cf_rt);
-  ASSERT_DOUBLE_EQ(0.0, cf_msq);
+  ASSERT_DOUBLE_EQ(-6.8333333333333339e-07, actual.cf);
+  ASSERT_DOUBLE_EQ(4.4444444444444448e-08, actual.hk);
+  ASSERT_DOUBLE_EQ(6.833333333333334e-12, actual.rt);
+  ASSERT_DOUBLE_EQ(0.0, actual.msq);
 }
 
 TEST(cfl_test, hk_under_5_5) {
+  //given
+  XFoil *foil = new XFoil();
+  //when
+  XFoil::C_f actual = foil->cfl(4.0, 1E+5);
+
+  //then
+  ASSERT_DOUBLE_EQ(-2.0927500000000003e-07, actual.cf);
+  ASSERT_DOUBLE_EQ(-1.0795950000000001e-06, actual.hk);
+  ASSERT_DOUBLE_EQ(2.0927500000000003e-12, actual.rt);
+  ASSERT_DOUBLE_EQ(0.0, actual.msq);
+}
+
+TEST(cft_test, cal_cft) {
   //given
   XFoil *foil = new XFoil();
   double cf;
   double cf_hk;
   double cf_rt;
   double cf_msq;
+                
   //when
-  foil->cfl(4.0, 1E+5, cf, cf_hk, cf_rt, cf_msq);
+  //XFoil::C_f actual = foil->cfl(4.0, 1E+5);
+  foil->cft(6.0, 1E+5, 0.01, cf, cf_hk, cf_rt, cf_msq);
 
   //then
-  ASSERT_DOUBLE_EQ(-2.0927500000000003e-07, cf);
-  ASSERT_DOUBLE_EQ(-1.0795950000000001e-06, cf_hk);
-  ASSERT_DOUBLE_EQ(2.0927500000000003e-12, cf_rt);
-  ASSERT_DOUBLE_EQ(0.0, cf_msq);
+  ASSERT_DOUBLE_EQ(-0.00021874525090522493, cf);
+  ASSERT_DOUBLE_EQ(-2.2177015917117524e-06, cf_hk);
+  ASSERT_DOUBLE_EQ(-9.7729505058686228e-13, cf_rt);
+  ASSERT_DOUBLE_EQ(2.1840616807413529e-05, cf_msq);
 }
 int main() {
     testing::InitGoogleTest();

@@ -208,8 +208,20 @@ class XFoil {
   bool blvar(int ityp);
   PairIndex cang(const double x[], const double y[], int n);
   bool cdcalc();
-  void cfl(double hk, double rt, double &cf, double &cf_hk, double &cf_rt,
-           double &cf_msq);
+
+  /**
+   * @brief 
+   * 
+   */
+  class C_f {
+    public:
+    double cf;
+    double hk;
+    double rt;
+    /** squared freestream mach number at current cl*/
+    double msq;
+  };
+  C_f cfl(double hk, double rt);
   bool cft(double hk, double rt, double msq, double &cf, double &cf_hk,
            double &cf_rt, double &cf_msq);
   bool cpcalc(int n, const double q[], double qinf, double minf, double cp[]);

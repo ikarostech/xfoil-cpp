@@ -1481,14 +1481,21 @@ bool XFoil::blmid(int ityp) {
     cfm_ma = 0.0;
     cfm_ms = 0.0;
   } else {
-    if (ityp == 1)
-      cfl(hka, rta, cfm, cfm_hka, cfm_rta, cfm_ma);
-    else {
+     
+    if (ityp == 1) {
+      C_f c_f = cfl(hka, rta);
+      cfm = c_f.cf;
+      cfm_hka = c_f.hk;
+      cfm_rta = c_f.rt;
+      cfm_ma = c_f.msq;
+    } else {
       cft(hka, rta, ma, cfm, cfm_hka, cfm_rta, cfm_ma);
-      cfl(hka, rta, cfml, cfml_hka, cfml_rta, cfml_ma);
+      C_f c_f = cfl(hka, rta);
+      cfml = c_f.cf;
+      cfml_hka = c_f.hk;
+      cfml_rta = c_f.rt;
+      cfml_ma = c_f.msq;
       if (cfml > cfm) {
-        // ccc      write(*,*) 'cft cfl rt hk:', cfm, cfml, rta, hka,
-        // 0.5*(x1+x2)
         cfm = cfml;
         cfm_hka = cfml_hka;
         cfm_rta = cfml_rta;
@@ -1910,13 +1917,22 @@ bool XFoil::blvar(int ityp) {
     cf2_rt2 = 0.0;
     cf2_m2 = 0.0;
   } else {
-    if (ityp == 1)
+    if (ityp == 1) {
       //----- laminar
-      cfl(hk2, rt2, cf2, cf2_hk2, cf2_rt2, cf2_m2);
+      C_f c_f = cfl(hk2, rt2);
+      cf2 = c_f.cf;
+      cf2_hk2 = c_f.hk;
+      cf2_rt2 = c_f.rt;
+      cf2_m2 = c_f.msq;
+    }
     else {
       //----- turbulent
       cft(hk2, rt2, m2, cf2, cf2_hk2, cf2_rt2, cf2_m2);
-      cfl(hk2, rt2, cf2l, cf2l_hk2, cf2l_rt2, cf2l_m2);
+      C_f c_f = cfl(hk2, rt2);
+      cf2l = c_f.cf;
+      cf2l_hk2 = c_f.hk;
+      cf2l_rt2 = c_f.rt;
+      cf2l_m2 = c_f.msq;
       if (cf2l > cf2) {
         //------- laminar cf is greater than turbulent cf -- use laminar
         //-       (this will only occur for unreasonably small rtheta)
@@ -2163,8 +2179,9 @@ bool XFoil::cdcalc() {
   return true;
 }
 
+
 /**
- * @brief calculate cf laminar skin friction
+ * @brief calculate skin friction coefficient(C_f) in lamier
  * 
  * @param hk kinematic shape parameter
  * @param rt momentum-thickness reynolds number
@@ -2173,20 +2190,20 @@ bool XFoil::cdcalc() {
  * @param cf_rt side effect
  * @param cf_msq side effect
  */
-void XFoil::cfl(double hk, double rt, double &cf, double &cf_hk, double &cf_rt,
-                double &cf_msq) {
-  double tmp;
+XFoil::C_f XFoil::cfl(double hk, double rt) {
+  C_f c_f = C_f();
   if (hk < 5.5) {
-    tmp = (5.5 - hk) * (5.5 - hk) * (5.5 - hk) / (hk + 1.0);
-    cf = (0.0727 * tmp - 0.07) / rt;
-    cf_hk = (-.0727 * tmp * 3.0 / (5.5 - hk) - 0.0727 * tmp / (hk + 1.0)) / rt;
+    double tmp = pow(5.5 - hk, 3) / (hk + 1.0);
+    c_f.cf = (0.0727 * tmp - 0.07) / rt;
+    c_f.hk = (-0.0727 * tmp * 3.0 / (5.5 - hk) - 0.0727 * tmp / (hk + 1.0)) / rt;
   } else {
-    tmp = 1.0 - 1.0 / (hk - 4.5);
-    cf = (0.015 * tmp * tmp - 0.07) / rt;
-    cf_hk = (0.015 * tmp * 2.0 / (hk - 4.5) / (hk - 4.5)) / rt;
+    double tmp = 1.0 - 1.0 / (hk - 4.5);
+    c_f.cf = (0.015 * tmp * tmp - 0.07) / rt;
+    c_f.hk = 0.015 * tmp * 2.0 / pow(hk - 4.5, 2.0) / rt;
   }
-  cf_rt = -cf / rt;
-  cf_msq = 0.0;
+  c_f.rt = -c_f.cf / rt;
+  c_f.msq = 0.0;
+  return c_f;
 }
 
 bool XFoil::cft(double hk, double rt, double msq, double &cf, double &cf_hk,
