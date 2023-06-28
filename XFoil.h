@@ -39,6 +39,9 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 #include <sstream>
 #include <string>
 #include <iomanip>
+#include <vector>
+#include <iterator>
+#include <numeric>
 
 #include "xfoil_params.h"
 
@@ -194,7 +197,7 @@ class XFoil {
   bool blsolve();
   bool blsys();
   bool blvar(int ityp);
-  bool cang(const double x[], const double y[], int n, int &imax, double &amax);
+  void cang(const double x[], const double y[], int n, int &imax, double &amax);
   bool cdcalc();
   bool cfl(double hk, double rt, double &cf, double &cf_hk, double &cf_rt,
            double &cf_msq);

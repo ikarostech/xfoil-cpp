@@ -22,7 +22,9 @@
 
 #include "XFoil.h"
 #include <cstring>
-
+#include "Eigen/Core"
+#include "Eigen/Dense"
+#include "Eigen/StdVector"
 #define PI 3.141592654
 
 bool XFoil::s_bCancel = false;
@@ -2092,37 +2094,40 @@ bool XFoil::blvar(int ityp) {
   return true;
 }
 
-bool XFoil::cang(const double x[], const double y[], int n, int &imax, double &amax) {
+/**
+ * @brief find index and angle of max foil curv diff
+ * 
+ * @param x foil x parameters
+ * @param y foil y parameters
+ * @param n foil plot size
+ * @param imax !side effect! index of max 
+ * @param amax !side effect! angle of max [degree]
+ */
+void XFoil::cang(const double x[], const double y[], int n, int &imax, double &amax) {
   //-------------------------------------------------------------------
   amax = 0.0;
   imax = 1;
 
   //---- go over each point, calculating corner angle
   for (int i = 2; i <= n - 1; i++) {
-    double dx1 = x[i] - x[i - 1];
-    double dy1 = y[i] - y[i - 1];
-    double dx2 = x[i] - x[i + 1];
-    double dy2 = y[i] - y[i + 1];
+    Eigen::Vector2d delta_former = {x[i] - x[i-1], y[i] - y[i-1]};
+    Eigen::Vector2d delta_later = {x[i] - x[i+1], y[i] - y[i+1]};
 
     //------ allow for doubled points
-    if (dx1 == 0.0 && dy1 == 0.0) {
-      dx1 = x[i] - x[i - 2];
-      dy1 = y[i] - y[i - 2];
+    if (delta_former.norm() == 0.0) {
+      delta_former = {x[i] - x[i-2], y[i] - y[i-2]};
     }
-    if (dx2 == 0.0 && dy2 == 0.0) {
-      dx2 = x[i] - x[i + 2];
-      dy2 = y[i] - y[i + 2];
+    if (delta_later.norm() == 0.0) {
+      delta_later = {x[i] - x[i+2], y[i] - y[i+2]};
     }
-
-    double crossp = (dx2 * dy1 - dy2 * dx1) /
-             sqrt((dx1 * dx1 + dy1 * dy1) * (dx2 * dx2 + dy2 * dy2));
-    double angl = asin(crossp) * (180.0 / PI);
-    if (fabs(angl) > fabs(amax)) {
-      amax = angl;
+    double sin = (delta_former.y() * delta_later.x() - delta_former.x() * delta_later.y()) / delta_former.norm() / delta_later.norm();
+    double delta_angle = asin(sin) * 180.0 / PI;
+    
+    if (fabs(delta_angle) > fabs(amax)) {
+      amax = delta_angle;
       imax = i;
     }
   }
-  return true;
 }
 
 bool XFoil::cdcalc() {
@@ -9288,7 +9293,6 @@ stop90:
 
 int XFoil::cadd(int ispl, double atol, double xrf1, double xrf2) {
   int nnew, nbadd;
-  //	cang(xb,yb,nb,&imax,&amax); // Already done???
 
   if (ispl == 1) {
     sb[1] = 0.0;

@@ -44,15 +44,17 @@ protected:
 };
 
 TEST_F(DatGoogleTest, testCang) {
+  //given
+  XFoil *foil = new XFoil();
   int imax;
   double dmax;
-  XFoil *foil = new XFoil();
-  bool actual = foil->cang(x,y,n,imax,dmax);
-  printf("%d\n%lf", imax,dmax);
-  ASSERT_TRUE(actual);
+  
+  //when
+  foil->cang(x,y,n,imax,dmax);
+
+  //then
   ASSERT_EQ(78, imax);
   ASSERT_DOUBLE_EQ(9.9742071999702819, dmax);
-
 }
 
 int main() {
