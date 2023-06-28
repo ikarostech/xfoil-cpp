@@ -46,8 +46,6 @@ protected:
 TEST_F(DatGoogleTest, testCang) {
   //given
   XFoil *foil = new XFoil();
-  int imax;
-  double dmax;
   
   //when
   PairIndex actual = foil->cang(x,y,n);
@@ -57,6 +55,39 @@ TEST_F(DatGoogleTest, testCang) {
   ASSERT_DOUBLE_EQ(9.9742071999702819, actual.value);
 }
 
+TEST(cfl_test, hk_over_5_5) {
+  //given
+  XFoil *foil = new XFoil();
+  double cf;
+  double cf_hk;
+  double cf_rt;
+  double cf_msq;
+  //when
+  foil->cfl(6.0, 1E+5, cf, cf_hk, cf_rt, cf_msq);
+
+  //then
+  ASSERT_DOUBLE_EQ(-6.8333333333333339e-07, cf);
+  ASSERT_DOUBLE_EQ(4.4444444444444448e-08, cf_hk);
+  ASSERT_DOUBLE_EQ(6.833333333333334e-12, cf_rt);
+  ASSERT_DOUBLE_EQ(0.0, cf_msq);
+}
+
+TEST(cfl_test, hk_under_5_5) {
+  //given
+  XFoil *foil = new XFoil();
+  double cf;
+  double cf_hk;
+  double cf_rt;
+  double cf_msq;
+  //when
+  foil->cfl(4.0, 1E+5, cf, cf_hk, cf_rt, cf_msq);
+
+  //then
+  ASSERT_DOUBLE_EQ(-2.0927500000000003e-07, cf);
+  ASSERT_DOUBLE_EQ(-1.0795950000000001e-06, cf_hk);
+  ASSERT_DOUBLE_EQ(2.0927500000000003e-12, cf_rt);
+  ASSERT_DOUBLE_EQ(0.0, cf_msq);
+}
 int main() {
     testing::InitGoogleTest();
     return RUN_ALL_TESTS();

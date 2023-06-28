@@ -208,7 +208,7 @@ class XFoil {
   bool blvar(int ityp);
   PairIndex cang(const double x[], const double y[], int n);
   bool cdcalc();
-  bool cfl(double hk, double rt, double &cf, double &cf_hk, double &cf_rt,
+  void cfl(double hk, double rt, double &cf, double &cf_hk, double &cf_rt,
            double &cf_msq);
   bool cft(double hk, double rt, double msq, double &cf, double &cf_hk,
            double &cf_rt, double &cf_msq);

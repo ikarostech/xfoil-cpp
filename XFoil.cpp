@@ -2163,9 +2163,18 @@ bool XFoil::cdcalc() {
   return true;
 }
 
-bool XFoil::cfl(double hk, double rt, double &cf, double &cf_hk, double &cf_rt,
+/**
+ * @brief calculate cf laminar skin friction
+ * 
+ * @param hk kinematic shape parameter
+ * @param rt momentum-thickness reynolds number
+ * @param cf side effect 
+ * @param cf_hk side effect
+ * @param cf_rt side effect
+ * @param cf_msq side effect
+ */
+void XFoil::cfl(double hk, double rt, double &cf, double &cf_hk, double &cf_rt,
                 double &cf_msq) {
-  //---- laminar skin friction function  ( cf )    ( from falkner-skan )
   double tmp;
   if (hk < 5.5) {
     tmp = (5.5 - hk) * (5.5 - hk) * (5.5 - hk) / (hk + 1.0);
@@ -2178,8 +2187,6 @@ bool XFoil::cfl(double hk, double rt, double &cf, double &cf_hk, double &cf_rt,
   }
   cf_rt = -cf / rt;
   cf_msq = 0.0;
-
-  return true;
 }
 
 bool XFoil::cft(double hk, double rt, double msq, double &cf, double &cf_hk,
