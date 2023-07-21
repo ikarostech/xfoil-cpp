@@ -9347,7 +9347,7 @@ int XFoil::cadd(int ispl, double atol, double xrf1, double xrf2) {
          ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
   //TODO plotsに置き換え
   vector<Vector2d> plots;
-  for(int i=0; i<=n; i++) {
+  for(int i=INDEX_START_WITH; i<=n; i++) {
     plots.push_back({x[i], y[i]});
   }
   PairIndex pair_cang = cang(plots);
@@ -9724,7 +9724,7 @@ void XFoil::flap() {
 bool XFoil::CheckAngles() {
   //TODO plotsに置き換え
   vector<Vector2d> plots;
-  for(int i=0; i<=n; i++) {
+  for(int i=INDEX_START_WITH; i<=n; i++) {
     plots.push_back({x[i], y[i]});
   }
   PairIndex pair_cang = cang(plots);
