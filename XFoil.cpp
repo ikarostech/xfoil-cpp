@@ -3745,19 +3745,15 @@ bool XFoil::initXFoilAnalysis(double Re, double alpha, double Mach,
  *     returns true if point xf,yf
  *     is inside contour x(i),y(i).
  *------------------------------------- */
-bool XFoil::inside(const double x[], const double y[], int n, double xf, double yf) {
+bool XFoil::isInside(vector<Vector2d> plots, Vector2d target) {
  
-  //---- integ, ybrate subtended angle around airfoil perimeter, yb
   double angle = 0.0;
-  for (int i = 1; i <= n; i++) {
-    int ip = i + 1;
-    if (i == n) ip = 1;
-    const double xb1 = x[i] - xf;
-    const double yb1 = y[i] - yf;
-    const double xb2 = x[ip] - xf;
-    const double yb2 = y[ip] - yf;
-    angle = angle + (xb1 * yb2 - yb1 * xb2) /
-                        sqrt((xb1 * xb1 + yb1 * yb1) * (xb2 * xb2 + yb2 * yb2));
+  for (int i = 0; i < plots.size(); i++) {
+    int ip = (i + 1) % plots.size();
+    const Vector2d delta_former = plots[i] - target;
+    const Vector2d delta_later = plots[ip] - target;
+
+    angle += cross2(delta_former.normalized(), delta_later.normalized());
   }
 
   //---- angle = 0 if xf,yf is outside, angle = +/- 2 pi  if xf,yf is inside
@@ -9407,7 +9403,12 @@ void XFoil::flap() {
   double yb2new = 0.0;
 
   getxyf(xb, xbp, yb, ybp, sb, nb, tops, bots, xbf, ybf);
-  insid = inside(xb, yb, nb, xbf, ybf);
+  //TODO plot置き換え
+  vector<Vector2d> plots;
+  for (int i=INDEX_START_WITH; i<n+INDEX_START_WITH; i++) {
+    plots.push_back({x[i], y[i]});
+  }
+  insid = isInside(plots, {xbf, ybf});
 
   double rdef = ddef * PI / 180.0;  // ddef : flap deflection in degrees
   if (fabs(rdef) <= 0.001) return;

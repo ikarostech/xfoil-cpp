@@ -183,7 +183,7 @@ class XFoil {
   void sss(double ss, double *s1, double *s2, double del, double xbf,
            double ybf, double x[], double xp[], double y[], double yp[],
            double s[], int n, int iside);
-  bool inside(const double xb[], const double yb[], int nb, double xbf, double ybf);
+  bool isInside(vector<Vector2d> plots, Vector2d target);
   void flap();
   int arefine(double x[], double y[], double s[], double xs[], double ys[],
               int n, double atol, int ndim, double xnew[], double ynew[],
