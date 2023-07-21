@@ -43,9 +43,14 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 #include <iterator>
 #include <numeric>
 
+#include "Eigen/Core"
+#include "Eigen/Dense"
+#include "Eigen/StdVector"
+
 #include "xfoil_params.h"
 
 using namespace std;
+using namespace Eigen;
 //------ derived dimensioning limit parameters
 
 struct blData {
@@ -206,7 +211,7 @@ class XFoil {
   bool blsolve();
   bool blsys();
   bool blvar(int ityp);
-  PairIndex cang(const double x[], const double y[], int n);
+  PairIndex cang(const vector<Vector2d> plots);
   bool cdcalc();
 
   /**
@@ -378,7 +383,7 @@ class XFoil {
 
   double m_ctrl; /** information storage for xflr5 gui */
 
- private:
+ public: //private:
   double wc[ICX + 1], sc[ICX + 1];
   double scold[ICX + 1], xcold[ICX + 1], ycold[ICX + 1];
   double qf0[IQX + 1], qf1[IQX + 1], qf2[IQX + 1], qf3[IQX + 1];

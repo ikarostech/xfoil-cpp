@@ -18,7 +18,6 @@ protected:
 
     std::string line;
     std::getline(fs, line);
-    std::cout << "Foil name : " << line << std::endl;
     int cnt = 0;
     while (!fs.eof()) {
       std::getline(fs, line);
@@ -36,19 +35,34 @@ protected:
     }
     return cnt;
   }
-  double x[604], y[604];
+  double x[604], y[604], nx[604], ny[604];
   int n;
+  vector<Vector2d> plots;
+
+  std::stringstream ss;
+  XFoil *foil;
   virtual void SetUp() {
     n = loadDatFile("sample/CLARK_Y.dat", x, y);
+    
+    foil = new XFoil();
+
+    if (!foil->initXFoilGeometry(n, x, y, nx, ny)) {
+      std::cout << "Initialization error!" << std::endl;
+    }
+    if (!foil->initXFoilAnalysis(100000, 0, 0.0, 9.0, 1.0, 1.0, 1, 1, true, ss)) {
+      std::cout << "Initialization error!" << std::endl;
+    }
+
+    for (int i=1; i<=foil->n; i++) {
+      Vector2d plot = {foil->x[i], foil->y[i]};
+      plots.push_back(plot);
+    }
   }  
 };
 
-TEST_F(DatGoogleTest, testCang) {
-  //given
-  XFoil *foil = new XFoil();
-  
+TEST_F(DatGoogleTest, test_cang) {
   //when
-  PairIndex actual = foil->cang(x,y,n);
+  PairIndex actual = foil->cang(plots);
 
   //then
   ASSERT_EQ(78, actual.index);
@@ -99,6 +113,93 @@ TEST(cft_test, cal_cft) {
   ASSERT_DOUBLE_EQ(-9.7729505058686228e-13, actual.rt);
   ASSERT_DOUBLE_EQ(2.1840616807413529e-05, actual.msq);
 }
+
+//TODO blmidのリファクタリング
+TEST_F(DatGoogleTest, test_blmid_turbulent) {
+  //given
+  foil->hk1 = foil->hk2 = 6.0;
+  foil->rt1 = foil->rt2 = 1E+5;
+  foil->m1 = foil->m2 = 0.01;
+  
+  //when
+  foil->blmid(1);
+
+  //then
+  ASSERT_DOUBLE_EQ(-6.8333333333333339e-07, foil->cfm);
+  ASSERT_DOUBLE_EQ(0, foil->cfm_u1);
+  ASSERT_DOUBLE_EQ(0, foil->cfm_t1);
+  ASSERT_DOUBLE_EQ(0, foil->cfm_d1);
+
+  ASSERT_DOUBLE_EQ(0, foil->cfm_u2);
+  ASSERT_DOUBLE_EQ(0, foil->cfm_t2);
+  ASSERT_DOUBLE_EQ(0, foil->cfm_d2);
+
+  ASSERT_DOUBLE_EQ(0, foil->cfm_ms);
+  ASSERT_DOUBLE_EQ(0, foil->cfm_re);
+}
+
+TEST_F(DatGoogleTest, test_blmid_laminar) {
+  //given
+  foil->hk1 = foil->hk2 = 6.0;
+  foil->rt1 = foil->rt2 = 1E+5;
+  foil->m1 = foil->m2 = 0.01;
+  
+  //when
+  foil->blmid(2);
+
+  //then
+  ASSERT_DOUBLE_EQ(-6.8333333333333339e-07, foil->cfm);
+  ASSERT_DOUBLE_EQ(0, foil->cfm_u1);
+  ASSERT_DOUBLE_EQ(0, foil->cfm_t1);
+  ASSERT_DOUBLE_EQ(0, foil->cfm_d1);
+
+  ASSERT_DOUBLE_EQ(0, foil->cfm_u2);
+  ASSERT_DOUBLE_EQ(0, foil->cfm_t2);
+  ASSERT_DOUBLE_EQ(0, foil->cfm_d2);
+
+  ASSERT_DOUBLE_EQ(0, foil->cfm_ms);
+  ASSERT_DOUBLE_EQ(0, foil->cfm_re);
+}
+
+TEST_F(DatGoogleTest, test_blmid_turbulent_wake) {
+  //given
+  foil->hk1 = foil->hk2 = 6.0;
+  foil->rt1 = foil->rt2 = 1E+5;
+  foil->m1 = foil->m2 = 0.01;
+  
+  //when
+  foil->blmid(3);
+
+  //then
+  ASSERT_DOUBLE_EQ(0, foil->cfm);
+  ASSERT_DOUBLE_EQ(0, foil->cfm_u1);
+  ASSERT_DOUBLE_EQ(0, foil->cfm_t1);
+  ASSERT_DOUBLE_EQ(0, foil->cfm_d1);
+
+  ASSERT_DOUBLE_EQ(0, foil->cfm_u2);
+  ASSERT_DOUBLE_EQ(0, foil->cfm_t2);
+  ASSERT_DOUBLE_EQ(0, foil->cfm_d2);
+
+  ASSERT_DOUBLE_EQ(0, foil->cfm_ms);
+  ASSERT_DOUBLE_EQ(0, foil->cfm_re);
+}
+
+TEST_F(DatGoogleTest, test_inside_true) {
+  //when
+  bool actual = foil->inside(x, y, n, 0.1, 0.05);
+
+  //then
+  ASSERT_TRUE(actual);
+}
+
+TEST_F(DatGoogleTest, test_inside_false) {
+  //when
+  bool actual = foil->inside(x, y, n, 0.1, 0.35);
+
+  //then
+  ASSERT_FALSE(actual);
+}
+
 int main() {
     testing::InitGoogleTest();
     return RUN_ALL_TESTS();

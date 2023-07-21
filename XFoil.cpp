@@ -25,12 +25,13 @@
 #include "Eigen/Core"
 #include "Eigen/Dense"
 #include "Eigen/StdVector"
+using namespace Eigen;
 #define PI 3.141592654
 
 bool XFoil::s_bCancel = false;
 bool XFoil::s_bFullReport = false;
 double XFoil::vaccel = 0.01;
-
+const int INDEX_START_WITH = 1;
 XFoil::XFoil() {
   m_pOutStream = NULL;
   //------ primary dimensioning limit parameters
@@ -1496,9 +1497,9 @@ bool XFoil::blmid(int ityp) {
       cfml_ma = c_fl.msq;
       C_f c_ft = cft(hka, rta, ma);
       cfm = c_ft.cf;
-      cfml_hka = c_ft.hk;
-      cfml_rta = c_ft.rt;
-      cfml_ma = c_ft.msq;
+      cfm_hka = c_ft.hk;
+      cfm_rta = c_ft.rt;
+      cfm_ma = c_ft.msq;
       if (cfml > cfm) {
         cfm = cfml;
         cfm_hka = cfml_hka;
@@ -2131,21 +2132,16 @@ bool XFoil::blvar(int ityp) {
  * @param n foil plot size
  * @return PairIndex index: index of max angle diff, value: angle of max angle diff[degree]
  */
-PairIndex XFoil::cang(const double x[], const double y[], int n) {
-  PairIndex pair_index = PairIndex(1, 0.0);
+PairIndex XFoil::cang(vector<Vector2d> plots) {
+  //TODO INDEX_START_WITH
+  PairIndex pair_index = PairIndex(0, 0.0);
 
   //---- go over each point, calculating corner angle
-  for (int i = 2; i <= n - 1; i++) {
-    Eigen::Vector2d delta_former = {x[i] - x[i-1], y[i] - y[i-1]};
-    Eigen::Vector2d delta_later = {x[i] - x[i+1], y[i] - y[i+1]};
+  //TODO INDEX_START_WITH
+  for (int i = 1; i < plots.size() - 1; i++) {
+    Vector2d delta_former = plots[i] - plots[i-1];
+    Vector2d delta_later =  plots[i] - plots[i+1];
 
-    //------ allow for doubled points
-    if (delta_former.norm() == 0.0) {
-      delta_former = {x[i] - x[i-2], y[i] - y[i-2]};
-    }
-    if (delta_later.norm() == 0.0) {
-      delta_later = {x[i] - x[i+2], y[i] - y[i+2]};
-    }
     double sin = (delta_former.y() * delta_later.x() - delta_former.x() * delta_later.y()) / delta_former.norm() / delta_later.norm();
     double delta_angle = asin(sin) * 180.0 / PI;
     
@@ -3741,11 +3737,10 @@ bool XFoil::initXFoilAnalysis(double Re, double alpha, double Mach,
  *     is inside contour x(i),y(i).
  *------------------------------------- */
 bool XFoil::inside(const double x[], const double y[], int n, double xf, double yf) {
-  int i;
-  
+ 
   //---- integ, ybrate subtended angle around airfoil perimeter, yb
   double angle = 0.0;
-  for (i = 1; i <= n; i++) {
+  for (int i = 1; i <= n; i++) {
     int ip = i + 1;
     if (i == n) ip = 1;
     const double xb1 = x[i] - xf;
@@ -9350,8 +9345,12 @@ int XFoil::cadd(int ispl, double atol, double xrf1, double xrf2) {
 
   geopar(xb, xbp, yb, ybp, sb, nb, w1, sble, chordb, areab, radble, angbte,
          ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
-  
-  PairIndex pair_cang = cang(x, y, n);
+  //TODO plotsに置き換え
+  vector<Vector2d> plots;
+  for(int i=0; i<=n; i++) {
+    plots.push_back({x[i], y[i]});
+  }
+  PairIndex pair_cang = cang(plots);
   imax = pair_cang.index;
   amax = pair_cang.value;
 
@@ -9723,7 +9722,12 @@ void XFoil::flap() {
 }
 
 bool XFoil::CheckAngles() {
-  PairIndex pair_cang = cang(x, y, n);
+  //TODO plotsに置き換え
+  vector<Vector2d> plots;
+  for(int i=0; i<=n; i++) {
+    plots.push_back({x[i], y[i]});
+  }
+  PairIndex pair_cang = cang(plots);
   imax = pair_cang.index;
   amax = pair_cang.value;
   if (fabs(amax) > angtol) {
