@@ -26,12 +26,21 @@
 #include "Eigen/Dense"
 #include "Eigen/StdVector"
 using namespace Eigen;
+// determinant
+double cross2(const Eigen::Vector2d& a, const Eigen::Vector2d& b)
+{
+  return a[0]*b[1] - a[1]*b[0];
+}
+
 #define PI 3.141592654
 
 bool XFoil::s_bCancel = false;
 bool XFoil::s_bFullReport = false;
 double XFoil::vaccel = 0.01;
 const int INDEX_START_WITH = 1;
+
+
+
 XFoil::XFoil() {
   m_pOutStream = NULL;
   //------ primary dimensioning limit parameters
@@ -2142,7 +2151,7 @@ PairIndex XFoil::cang(vector<Vector2d> plots) {
     Vector2d delta_former = plots[i] - plots[i-1];
     Vector2d delta_later =  plots[i] - plots[i+1];
 
-    double sin = (delta_former.y() * delta_later.x() - delta_former.x() * delta_later.y()) / delta_former.norm() / delta_later.norm();
+    double sin = cross2(delta_later, delta_former) / delta_former.norm() / delta_later.norm();
     double delta_angle = asin(sin) * 180.0 / PI;
     
     if (fabs(delta_angle) > fabs(pair_index.value)) {
