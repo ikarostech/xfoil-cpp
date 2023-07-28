@@ -117,9 +117,9 @@ TEST(cft_test, cal_cft) {
 //TODO blmidのリファクタリング
 TEST_F(DatGoogleTest, test_blmid_turbulent) {
   //given
-  foil->hk1 = foil->hk2 = 6.0;
-  foil->rt1 = foil->rt2 = 1E+5;
-  foil->m1 = foil->m2 = 0.01;
+  foil->blData1.hkz = foil->hk2 = 6.0;
+  foil->blData1.rtz = foil->rt2 = 1E+5;
+  foil->blData1.mz = foil->m2 = 0.01;
   
   //when
   foil->blmid(1);
@@ -140,9 +140,9 @@ TEST_F(DatGoogleTest, test_blmid_turbulent) {
 
 TEST_F(DatGoogleTest, test_blmid_laminar) {
   //given
-  foil->hk1 = foil->hk2 = 6.0;
-  foil->rt1 = foil->rt2 = 1E+5;
-  foil->m1 = foil->m2 = 0.01;
+  foil->blData1.hkz = foil->hk2 = 6.0;
+  foil->blData1.rtz = foil->rt2 = 1E+5;
+  foil->blData1.mz = foil->m2 = 0.01;
   
   //when
   foil->blmid(2);
@@ -163,9 +163,9 @@ TEST_F(DatGoogleTest, test_blmid_laminar) {
 
 TEST_F(DatGoogleTest, test_blmid_turbulent_wake) {
   //given
-  foil->hk1 = foil->hk2 = 6.0;
-  foil->rt1 = foil->rt2 = 1E+5;
-  foil->m1 = foil->m2 = 0.01;
+  foil->blData1.hkz = foil->hk2 = 6.0;
+  foil->blData1.rtz = foil->rt2 = 1E+5;
+  foil->blData1.mz = foil->m2 = 0.01;
   
   //when
   foil->blmid(3);

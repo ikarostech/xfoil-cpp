@@ -479,81 +479,79 @@ bool XFoil::initialize() {
   de2 = 0.0;
   de2_u2 = 0.0;
   de2_t2 = 0.0;
-  de2_d2 = 0.0;
   de2_ms = 0.0;
-  x1 = 0.0;
-  u1 = 0.0;
-  theta1 = 0.0;
-  d1 = 0.0;
-  s1 = 0.0;
-  ampl1 = 0.0;
-  u1_uei = 0.0;
-  u1_ms = 0.0;
-  dw1 = 0.0;
-  h1 = 0.0;
-  h1_t1 = 0.0;
-  h1_d1 = 0.0;
-  m1 = 0.0;
-  m1_u1 = 0.0;
-  m1_ms = 0.0;
-  r1 = 0.0;
-  r1_u1 = 0.0;
-  r1_ms = 0.0;
-  v1 = 0.0;
-  v1_u1 = 0.0;
-  v1_ms = 0.0;
-  v1_re = 0.0;
-  hk1 = 0.0;
-  hk1_u1 = 0.0;
-  hk1_t1 = 0.0;
-  hk1_d1 = 0.0;
-  hk1_ms = 0.0;
-  hs1 = 0.0;
-  hs1_u1 = 0.0;
-  hs1_t1 = 0.0;
-  hs1_d1 = 0.0;
-  hs1_ms = 0.0;
-  hs1_re = 0.0;
-  hc1 = 0.0;
-  hc1_u1 = 0.0;
-  hc1_t1 = 0.0;
-  hc1_d1 = 0.0;
-  hc1_ms = 0.0;
-  rt1 = 0.0;
-  rt1_u1 = 0.0;
-  rt1_t1 = 0.0;
-  rt1_ms = 0.0;
-  rt1_re = 0.0;
-  cf1 = 0.0;
-  cf1_u1 = 0.0;
-  cf1_t1 = 0.0;
-  cf1_d1 = 0.0;
-  cf1_ms = 0.0;
-  cf1_re = 0.0;
-  di1 = 0.0;
-  di1_u1 = 0.0;
-  di1_t1 = 0.0;
-  di1_d1 = 0.0;
-  di1_s1 = 0.0;
-  di1_ms = 0.0;
-  di1_re = 0.0;
-  us1 = 0.0;
-  us1_u1 = 0.0;
-  us1_t1 = 0.0;
-  us1_d1 = 0.0;
-  us1_ms = 0.0;
-  us1_re = 0.0;
-  cq1 = 0.0;
-  cq1_u1 = 0.0;
-  cq1_t1 = 0.0;
-  cq1_d1 = 0.0;
-  cq1_ms = 0.0;
-  cq1_re = 0.0;
-  de1 = 0.0;
-  de1_u1 = 0.0;
-  de1_t1 = 0.0;
-  de1_d1 = 0.0;
-  de1_ms = 0.0;
+  blData1.xz = 0.0;
+  blData1.uz = 0.0;
+  blData1.tz = 0.0;
+  blData1.dz = 0.0;
+  blData1.sz = 0.0;
+  blData1.amplz = 0.0;
+  blData1.uz_uei = 0.0;
+  blData1.uz_ms = 0.0;
+  blData1.dwz = 0.0;
+  blData1.hz = 0.0;
+  blData1.hz_tz = 0.0;
+  blData1.hz_dz = 0.0;
+  blData1.mz = 0.0;
+  blData1.mz_uz = 0.0;
+  blData1.mz_ms = 0.0;
+  blData1.rz = 0.0;
+  blData1.rz_uz = 0.0;
+  blData1.rz_ms = 0.0;
+  blData1.vz = 0.0;
+  blData1.vz_uz = 0.0;
+  blData1.vz_ms = 0.0;
+  blData1.vz_re = 0.0;
+  blData1.hkz = 0.0;
+  blData1.hkz_uz = 0.0;
+  blData1.hkz_tz = 0.0;
+  blData1.hkz_dz = 0.0;
+  blData1.hkz_ms = 0.0;
+  blData1.hsz = 0.0;
+  blData1.hsz_uz = 0.0;
+  blData1.hsz_tz = 0.0;
+  blData1.hsz_dz = 0.0;
+  blData1.hsz_ms = 0.0;
+  blData1.hsz_re = 0.0;
+  blData1.hcz = 0.0;
+  blData1.hcz_uz = 0.0;
+  blData1.hcz_tz = 0.0;
+  blData1.hcz_dz = 0.0;
+  blData1.hcz_ms = 0.0;
+  blData1.rtz = 0.0;
+  blData1.rtz_uz = 0.0;
+  blData1.rtz_tz = 0.0;
+  blData1.rtz_ms = 0.0;
+  blData1.rtz_re = 0.0;
+  blData1.cfz = 0.0;
+  blData1.cfz_uz = 0.0;
+  blData1.cfz_tz = 0.0;
+  blData1.cfz_dz = 0.0;
+  blData1.cfz_ms = 0.0;
+  blData1.cfz_re = 0.0;
+  blData1.diz = 0.0;
+  blData1.diz_uz = 0.0;
+  blData1.diz_tz = 0.0;
+  blData1.diz_dz = 0.0;
+  blData1.diz_sz = 0.0;
+  blData1.diz_ms = 0.0;
+  blData1.diz_re = 0.0;
+  blData1.usz = 0.0;
+  blData1.usz_uz = 0.0;
+  blData1.usz_tz = 0.0;
+  blData1.usz_dz = 0.0;
+  blData1.usz_ms = 0.0;
+  blData1.usz_re = 0.0;
+  blData1.cqz = 0.0;
+  blData1.cqz_uz = 0.0;
+  blData1.cqz_tz = 0.0;
+  blData1.cqz_dz = 0.0;
+  blData1.cqz_ms = 0.0;
+  blData1.cqz_re = 0.0;
+  blData1.dez = 0.0;
+  blData1.dez_uz = 0.0;
+  blData1.dez_tz = 0.0;
+  blData1.dez_ms = 0.0;
   xsf = 0.0;
   ysf = 0.0;
   cdp = 0.0;
@@ -846,13 +844,13 @@ bool XFoil::aecalc(int n, const double x[], const double y[], const double t[], 
     } else {
       //----- normal airfoil section
       c1 = eixy;
-      s1 = eixx - ei11;
+      blData1.sz = eixx - ei11;
 
       c2 = eixy;
       s2 = eixx - ei22;
 
-      if (fabs(s1) > fabs(s2)) {
-        apx1 = atan2(s1, c1);
+      if (fabs(blData1.sz) > fabs(s2)) {
+        apx1 = atan2(blData1.sz, c1);
         apx2 = apx1 + 0.5 * PI;
       } else {
         apx2 = atan2(s2, c2);
@@ -1058,10 +1056,10 @@ bool XFoil::bldif(int ityp) {
     ddlog = 0.0;
   } else {
     //----- usual logarithmic differences
-    xlog = log(x2 / x1);
-    ulog = log(u2 / u1);
-    tlog = log(theta2 / theta1);
-    hlog = log(hs2 / hs1);
+    xlog = log(x2 / blData1.xz);
+    ulog = log(u2 / blData1.uz);
+    tlog = log(theta2 / blData1.tz);
+    hlog = log(hs2 / blData1.hsz);
     ddlog = 1.0;
   }
 
@@ -1092,9 +1090,9 @@ bool XFoil::bldif(int ityp) {
   //
   //---- local upwinding is based on local change in  log(hk-1)
   //-    (mainly kicks in at transition)
-  f_arg = fabs((hk2 - 1.0) / (hk1 - 1.0));
+  f_arg = fabs((hk2 - 1.0) / (blData1.hkz - 1.0));
   hl = log(f_arg);
-  hl_hk1 = -1.0 / (hk1 - 1.0);
+  hl_hk1 = -1.0 / (blData1.hkz - 1.0);
   hl_hk2 = 1.0 / (hk2 - 1.0);
 
   hlsq = std::min(hl * hl, 15.0);
@@ -1106,13 +1104,13 @@ bool XFoil::bldif(int ityp) {
   upw_hk1 = upw_hl * hl_hk1 + upw_hd * hd_hk1;
   upw_hk2 = upw_hl * hl_hk2 + upw_hd * hd_hk2;
 
-  upw_u1 = upw_hk1 * hk1_u1;
-  upw_t1 = upw_hk1 * hk1_t1;
-  upw_d1 = upw_hk1 * hk1_d1;
+  upw_u1 = upw_hk1 * blData1.hkz_uz;
+  upw_t1 = upw_hk1 * blData1.hkz_tz;
+  upw_d1 = upw_hk1 * blData1.hkz_dz;
   upw_u2 = upw_hk2 * hk2_u2;
   upw_t2 = upw_hk2 * hk2_t2;
   upw_d2 = upw_hk2 * hk2_d2;
-  upw_ms = upw_hk1 * hk1_ms + upw_hk2 * hk2_ms;
+  upw_ms = upw_hk1 * blData1.hkz_ms + upw_hk2 * hk2_ms;
 
   if (ityp == 0) {
     //***** le point -->  set zero amplification factor
@@ -1124,39 +1122,39 @@ bool XFoil::bldif(int ityp) {
       //***** laminar part -->  set amplification equation
       //----- set average amplification ax over interval x1..x2
 
-      axset(hk1, theta1, rt1, ampl1, hk2, theta2, rt2, ampl2, amcrit, ax,
+      axset(blData1.hkz, blData1.tz, blData1.rtz, blData1.amplz, hk2, theta2, rt2, ampl2, amcrit, ax,
             ax_hk1, ax_t1, ax_rt1, ax_a1, ax_hk2, ax_t2, ax_rt2, ax_a2);
 
-      rezc = ampl2 - ampl1 - ax * (x2 - x1);
-      z_ax = -(x2 - x1);
+      rezc = ampl2 - blData1.amplz - ax * (x2 - blData1.xz);
+      z_ax = -(x2 - blData1.xz);
 
       vs1[1][1] = z_ax * ax_a1 - 1.0;
-      vs1[1][2] = z_ax * (ax_hk1 * hk1_t1 + ax_t1 + ax_rt1 * rt1_t1);
-      vs1[1][3] = z_ax * (ax_hk1 * hk1_d1);
-      vs1[1][4] = z_ax * (ax_hk1 * hk1_u1 + ax_rt1 * rt1_u1);
+      vs1[1][2] = z_ax * (ax_hk1 * blData1.hkz_tz + ax_t1 + ax_rt1 * blData1.rtz_tz);
+      vs1[1][3] = z_ax * (ax_hk1 * blData1.hkz_dz);
+      vs1[1][4] = z_ax * (ax_hk1 * blData1.hkz_uz + ax_rt1 * blData1.rtz_uz);
       vs1[1][5] = ax;
       vs2[1][1] = z_ax * ax_a2 + 1.0;
       vs2[1][2] = z_ax * (ax_hk2 * hk2_t2 + ax_t2 + ax_rt2 * rt2_t2);
       vs2[1][3] = z_ax * (ax_hk2 * hk2_d2);
       vs2[1][4] = z_ax * (ax_hk2 * hk2_u2 + ax_rt2 * rt2_u2);
       vs2[1][5] = -ax;
-      vsm[1] = z_ax * (ax_hk1 * hk1_ms + ax_rt1 * rt1_ms + ax_hk2 * hk2_ms +
+      vsm[1] = z_ax * (ax_hk1 * blData1.hkz_ms + ax_rt1 * blData1.rtz_ms + ax_hk2 * hk2_ms +
                        ax_rt2 * rt2_ms);
-      vsr[1] = z_ax * (ax_rt1 * rt1_re + ax_rt2 * rt2_re);
+      vsr[1] = z_ax * (ax_rt1 * blData1.rtz_re + ax_rt2 * rt2_re);
       vsx[1] = 0.0;
       vsrez[1] = -rezc;
     } else {
       //***** turbulent part -->  set shear lag equation
 
-      sa = (1.0 - upw) * s1 + upw * s2;
-      cqa = (1.0 - upw) * cq1 + upw * cq2;
-      cfa = (1.0 - upw) * cf1 + upw * cf2;
-      hka = (1.0 - upw) * hk1 + upw * hk2;
+      sa = (1.0 - upw) * blData1.sz + upw * s2;
+      cqa = (1.0 - upw) * blData1.cqz + upw * cq2;
+      cfa = (1.0 - upw) * blData1.cfz + upw * cf2;
+      hka = (1.0 - upw) * blData1.hkz + upw * hk2;
 
-      usa = 0.5 * (us1 + us2);
-      rta = 0.5 * (rt1 + rt2);
-      dea = 0.5 * (de1 + de2);
-      da = 0.5 * (d1 + d2);
+      usa = 0.5 * (blData1.usz + us2);
+      rta = 0.5 * (blData1.rtz + rt2);
+      dea = 0.5 * (blData1.dez + de2);
+      da = 0.5 * (blData1.dz + d2);
 
       if (ityp == 3)
         ald = dlcon;  //------ increased dissipation length in wake (decrease
@@ -1189,8 +1187,8 @@ bool XFoil::bldif(int ityp) {
       scc = sccon * 1.333 / (1.0 + usa);
       scc_usa = -scc / (1.0 + usa);
 
-      slog = log(s2 / s1);
-      dxi = x2 - x1;
+      slog = log(s2 / blData1.sz);
+      dxi = x2 - blData1.xz;
 
       rezc = scc * (cqa - sa * ald) * dxi - dea * 2.0 * slog +
              dea * 2.0 * (uq * dxi - ulog);
@@ -1206,19 +1204,19 @@ bool XFoil::bldif(int ityp) {
       z_sa = -scc * dxi * ald;
       z_dea = 2.0 * (uq * dxi - ulog - slog);
 
-      z_upw = z_cqa * (cq2 - cq1) + z_sa * (s2 - s1) + z_cfa * (cf2 - cf1) +
-              z_hka * (hk2 - hk1);
+      z_upw = z_cqa * (cq2 - blData1.cqz) + z_sa * (s2 - blData1.sz) + z_cfa * (cf2 - blData1.cfz) +
+              z_hka * (hk2 - blData1.hkz);
       z_de1 = 0.5 * z_dea;
       z_de2 = 0.5 * z_dea;
       z_us1 = 0.5 * z_usa;
       z_us2 = 0.5 * z_usa;
       z_d1 = 0.5 * z_da;
       z_d2 = 0.5 * z_da;
-      z_u1 = -z_ul / u1;
+      z_u1 = -z_ul / blData1.uz;
       z_u2 = z_ul / u2;
       z_x1 = -z_dxi;
       z_x2 = z_dxi;
-      z_s1 = (1.0 - upw) * z_sa - z_sl / s1;
+      z_s1 = (1.0 - upw) * z_sa - z_sl / blData1.sz;
       z_s2 = upw * z_sa + z_sl / s2;
       z_cq1 = (1.0 - upw) * z_cqa;
       z_cq2 = upw * z_cqa;
@@ -1228,52 +1226,52 @@ bool XFoil::bldif(int ityp) {
       z_hk2 = upw * z_hka;
 
       vs1[1][1] = z_s1;
-      vs1[1][2] = z_upw * upw_t1 + z_de1 * de1_t1 + z_us1 * us1_t1;
-      vs1[1][3] = z_d1 + z_upw * upw_d1 + z_de1 * de1_d1 + z_us1 * us1_d1;
-      vs1[1][4] = z_u1 + z_upw * upw_u1 + z_de1 * de1_u1 + z_us1 * us1_u1;
+      vs1[1][2] = z_upw * upw_t1 + z_de1 * blData1.dez_tz + z_us1 * blData1.usz_tz;
+      vs1[1][3] = z_d1 + z_upw * upw_d1 + z_de1 * blData1.dez_dz + z_us1 * blData1.usz_dz;
+      vs1[1][4] = z_u1 + z_upw * upw_u1 + z_de1 * blData1.dez_uz + z_us1 * blData1.usz_uz;
       vs1[1][5] = z_x1;
       vs2[1][1] = z_s2;
       vs2[1][2] = z_upw * upw_t2 + z_de2 * de2_t2 + z_us2 * us2_t2;
-      vs2[1][3] = z_d2 + z_upw * upw_d2 + z_de2 * de2_d2 + z_us2 * us2_d2;
+      vs2[1][3] = z_d2 + z_upw * upw_d2 + z_de2 * blData2.dez_dz + z_us2 * us2_d2;
       vs2[1][4] = z_u2 + z_upw * upw_u2 + z_de2 * de2_u2 + z_us2 * us2_u2;
       vs2[1][5] = z_x2;
-      vsm[1] = z_upw * upw_ms + z_de1 * de1_ms + z_us1 * us1_ms +
+      vsm[1] = z_upw * upw_ms + z_de1 * blData1.dez_ms + z_us1 * blData1.usz_ms +
                z_de2 * de2_ms + z_us2 * us2_ms;
 
-      vs1[1][2] = vs1[1][2] + z_cq1 * cq1_t1 + z_cf1 * cf1_t1 + z_hk1 * hk1_t1;
-      vs1[1][3] = vs1[1][3] + z_cq1 * cq1_d1 + z_cf1 * cf1_d1 + z_hk1 * hk1_d1;
-      vs1[1][4] = vs1[1][4] + z_cq1 * cq1_u1 + z_cf1 * cf1_u1 + z_hk1 * hk1_u1;
+      vs1[1][2] = vs1[1][2] + z_cq1 * blData1.cqz_tz + z_cf1 * blData1.cfz_tz + z_hk1 * blData1.hkz_tz;
+      vs1[1][3] = vs1[1][3] + z_cq1 * blData1.cqz_dz + z_cf1 * blData1.cfz_dz + z_hk1 * blData1.hkz_dz;
+      vs1[1][4] = vs1[1][4] + z_cq1 * blData1.cqz_uz + z_cf1 * blData1.cfz_uz + z_hk1 * blData1.hkz_uz;
 
       vs2[1][2] = vs2[1][2] + z_cq2 * cq2_t2 + z_cf2 * cf2_t2 + z_hk2 * hk2_t2;
       vs2[1][3] = vs2[1][3] + z_cq2 * cq2_d2 + z_cf2 * cf2_d2 + z_hk2 * hk2_d2;
       vs2[1][4] = vs2[1][4] + z_cq2 * cq2_u2 + z_cf2 * cf2_u2 + z_hk2 * hk2_u2;
 
-      vsm[1] = vsm[1] + z_cq1 * cq1_ms + z_cf1 * cf1_ms + z_hk1 * hk1_ms +
+      vsm[1] = vsm[1] + z_cq1 * blData1.cqz_ms + z_cf1 * blData1.cfz_ms + z_hk1 * blData1.hkz_ms +
                z_cq2 * cq2_ms + z_cf2 * cf2_ms + z_hk2 * hk2_ms;
       vsr[1] =
-          z_cq1 * cq1_re + z_cf1 * cf1_re + z_cq2 * cq2_re + z_cf2 * cf2_re;
+          z_cq1 * blData1.cqz_re + z_cf1 * blData1.cfz_re + z_cq2 * cq2_re + z_cf2 * cf2_re;
       vsx[1] = 0.0;
       vsrez[1] = -rezc;
     }
   }  // endif
 
   //**** set up momentum equation
-  ha = 0.5 * (h1 + h2);
-  ma = 0.5 * (m1 + m2);
-  xa = 0.5 * (x1 + x2);
-  ta = 0.5 * (theta1 + theta2);
-  hwa = 0.5 * (dw1 / theta1 + dw2 / theta2);
+  ha = 0.5 * (blData1.hz + h2);
+  ma = 0.5 * (blData1.mz + m2);
+  xa = 0.5 * (blData1.xz + x2);
+  ta = 0.5 * (blData1.tz + theta2);
+  hwa = 0.5 * (blData1.dwz / blData1.tz + dw2 / theta2);
 
   //---- set cf term, using central value cfm for better accuracy in drag
-  cfx = 0.50 * cfm * xa / ta + 0.25 * (cf1 * x1 / theta1 + cf2 * x2 / theta2);
+  cfx = 0.50 * cfm * xa / ta + 0.25 * (blData1.cfz * blData1.xz / blData1.tz + cf2 * x2 / theta2);
   cfx_xa = 0.50 * cfm / ta;
   cfx_ta = -.50 * cfm * xa / ta / ta;
 
-  cfx_x1 = 0.25 * cf1 / theta1 + cfx_xa * 0.5;
+  cfx_x1 = 0.25 * blData1.cfz / blData1.tz + cfx_xa * 0.5;
   cfx_x2 = 0.25 * cf2 / theta2 + cfx_xa * 0.5;
-  cfx_t1 = -.25 * cf1 * x1 / theta1 / theta1 + cfx_ta * 0.5;
+  cfx_t1 = -.25 * blData1.cfz * blData1.xz / blData1.tz / blData1.tz + cfx_ta * 0.5;
   cfx_t2 = -.25 * cf2 * x2 / theta2 / theta2 + cfx_ta * 0.5;
-  cfx_cf1 = 0.25 * x1 / theta1;
+  cfx_cf1 = 0.25 * blData1.xz / blData1.tz;
   cfx_cf2 = 0.25 * x2 / theta2;
   cfx_cfm = 0.50 * xa / ta;
 
@@ -1293,43 +1291,43 @@ bool XFoil::bldif(int ityp) {
   z_cf2 = z_cfx * cfx_cf2;
 
   z_t1 =
-      -z_tl / theta1 + z_cfx * cfx_t1 + z_hwa * 0.5 * (-dw1 / theta1 / theta1);
+      -z_tl / blData1.tz + z_cfx * cfx_t1 + z_hwa * 0.5 * (-blData1.dwz / blData1.tz / blData1.tz);
   z_t2 =
       z_tl / theta2 + z_cfx * cfx_t2 + z_hwa * 0.5 * (-dw2 / theta2 / theta2);
-  z_x1 = -z_xl / x1 + z_cfx * cfx_x1;
+  z_x1 = -z_xl / blData1.xz + z_cfx * cfx_x1;
   z_x2 = z_xl / x2 + z_cfx * cfx_x2;
-  z_u1 = -z_ul / u1;
+  z_u1 = -z_ul / blData1.uz;
   z_u2 = z_ul / u2;
 
-  vs1[2][2] = 0.5 * z_ha * h1_t1 + z_cfm * cfm_t1 + z_cf1 * cf1_t1 + z_t1;
-  vs1[2][3] = 0.5 * z_ha * h1_d1 + z_cfm * cfm_d1 + z_cf1 * cf1_d1;
-  vs1[2][4] = 0.5 * z_ma * m1_u1 + z_cfm * cfm_u1 + z_cf1 * cf1_u1 + z_u1;
+  vs1[2][2] = 0.5 * z_ha * blData1.hz_tz + z_cfm * cfm_t1 + z_cf1 * blData1.cfz_tz + z_t1;
+  vs1[2][3] = 0.5 * z_ha * blData1.hz_dz + z_cfm * cfm_d1 + z_cf1 * blData1.cfz_dz;
+  vs1[2][4] = 0.5 * z_ma * blData1.mz_uz + z_cfm * cfm_u1 + z_cf1 * blData1.cfz_uz + z_u1;
   vs1[2][5] = z_x1;
   vs2[2][2] = 0.5 * z_ha * h2_t2 + z_cfm * cfm_t2 + z_cf2 * cf2_t2 + z_t2;
   vs2[2][3] = 0.5 * z_ha * h2_d2 + z_cfm * cfm_d2 + z_cf2 * cf2_d2;
   vs2[2][4] = 0.5 * z_ma * m2_u2 + z_cfm * cfm_u2 + z_cf2 * cf2_u2 + z_u2;
   vs2[2][5] = z_x2;
 
-  vsm[2] = 0.5 * z_ma * m1_ms + z_cfm * cfm_ms + z_cf1 * cf1_ms +
+  vsm[2] = 0.5 * z_ma * blData1.mz_ms + z_cfm * cfm_ms + z_cf1 * blData1.cfz_ms +
            0.5 * z_ma * m2_ms + z_cf2 * cf2_ms;
-  vsr[2] = z_cfm * cfm_re + z_cf1 * cf1_re + z_cf2 * cf2_re;
+  vsr[2] = z_cfm * cfm_re + z_cf1 * blData1.cfz_re + z_cf2 * cf2_re;
   vsx[2] = 0.0;
   vsrez[2] = -rezt;
 
   //**** set up shape parameter equation
 
-  xot1 = x1 / theta1;
+  xot1 = blData1.xz / blData1.tz;
   xot2 = x2 / theta2;
 
-  ha = 0.5 * (h1 + h2);
-  hsa = 0.5 * (hs1 + hs2);
-  hca = 0.5 * (hc1 + hc2);
-  hwa = 0.5 * (dw1 / theta1 + dw2 / theta2);
+  ha = 0.5 * (blData1.hz + h2);
+  hsa = 0.5 * (blData1.hsz + hs2);
+  hca = 0.5 * (blData1.hcz + hc2);
+  hwa = 0.5 * (blData1.dwz / blData1.tz + dw2 / theta2);
 
-  dix = (1.0 - upw) * di1 * xot1 + upw * di2 * xot2;
-  cfx = (1.0 - upw) * cf1 * xot1 + upw * cf2 * xot2;
-  dix_upw = di2 * xot2 - di1 * xot1;
-  cfx_upw = cf2 * xot2 - cf1 * xot1;
+  dix = (1.0 - upw) * blData1.diz * xot1 + upw * di2 * xot2;
+  cfx = (1.0 - upw) * blData1.cfz * xot1 + upw * cf2 * xot2;
+  dix_upw = di2 * xot2 - blData1.diz * xot1;
+  cfx_upw = cf2 * xot2 - blData1.cfz * xot1;
 
   btmp = 2.0 * hca / hsa + 1.0 - ha - hwa;
 
@@ -1345,7 +1343,7 @@ bool XFoil::bldif(int ityp) {
 
   z_upw = z_cfx * cfx_upw + z_dix * dix_upw;
 
-  z_hs1 = -hca * ulog / hsa / hsa - z_hl / hs1;
+  z_hs1 = -hca * ulog / hsa / hsa - z_hl / blData1.hsz;
   z_hs2 = -hca * ulog / hsa / hsa + z_hl / hs2;
 
   z_cf1 = (1.0 - upw) * z_cfx * xot1;
@@ -1353,36 +1351,36 @@ bool XFoil::bldif(int ityp) {
   z_di1 = (1.0 - upw) * z_dix * xot1;
   z_di2 = upw * z_dix * xot2;
 
-  z_t1 = (1.0 - upw) * (z_cfx * cf1 + z_dix * di1) * (-xot1 / theta1);
+  z_t1 = (1.0 - upw) * (z_cfx * blData1.cfz + z_dix * blData1.diz) * (-xot1 / blData1.tz);
   z_t2 = upw * (z_cfx * cf2 + z_dix * di2) * (-xot2 / theta2);
-  z_x1 = (1.0 - upw) * (z_cfx * cf1 + z_dix * di1) / theta1 - z_xl / x1;
+  z_x1 = (1.0 - upw) * (z_cfx * blData1.cfz + z_dix * blData1.diz) / blData1.tz - z_xl / blData1.xz;
   z_x2 = upw * (z_cfx * cf2 + z_dix * di2) / theta2 + z_xl / x2;
-  z_u1 = -z_ul / u1;
+  z_u1 = -z_ul / blData1.uz;
   z_u2 = z_ul / u2;
 
-  z_t1 = z_t1 + z_hwa * 0.5 * (-dw1 / theta1 / theta1);
+  z_t1 = z_t1 + z_hwa * 0.5 * (-blData1.dwz / blData1.tz / blData1.tz);
   z_t2 = z_t2 + z_hwa * 0.5 * (-dw2 / theta2 / theta2);
 
-  vs1[3][1] = z_di1 * di1_s1;
-  vs1[3][2] = z_hs1 * hs1_t1 + z_cf1 * cf1_t1 + z_di1 * di1_t1 + z_t1;
-  vs1[3][3] = z_hs1 * hs1_d1 + z_cf1 * cf1_d1 + z_di1 * di1_d1;
-  vs1[3][4] = z_hs1 * hs1_u1 + z_cf1 * cf1_u1 + z_di1 * di1_u1 + z_u1;
+  vs1[3][1] = z_di1 * blData1.diz_sz;
+  vs1[3][2] = z_hs1 * blData1.hsz_tz + z_cf1 * blData1.cfz_tz + z_di1 * blData1.diz_tz + z_t1;
+  vs1[3][3] = z_hs1 * blData1.hsz_dz + z_cf1 * blData1.cfz_dz + z_di1 * blData1.diz_dz;
+  vs1[3][4] = z_hs1 * blData1.hsz_uz + z_cf1 * blData1.cfz_uz + z_di1 * blData1.diz_uz + z_u1;
   vs1[3][5] = z_x1;
   vs2[3][1] = z_di2 * di2_s2;
   vs2[3][2] = z_hs2 * hs2_t2 + z_cf2 * cf2_t2 + z_di2 * di2_t2 + z_t2;
   vs2[3][3] = z_hs2 * hs2_d2 + z_cf2 * cf2_d2 + z_di2 * di2_d2;
   vs2[3][4] = z_hs2 * hs2_u2 + z_cf2 * cf2_u2 + z_di2 * di2_u2 + z_u2;
   vs2[3][5] = z_x2;
-  vsm[3] = z_hs1 * hs1_ms + z_cf1 * cf1_ms + z_di1 * di1_ms + z_hs2 * hs2_ms +
+  vsm[3] = z_hs1 * blData1.hsz_ms + z_cf1 * blData1.cfz_ms + z_di1 * blData1.diz_ms + z_hs2 * hs2_ms +
            z_cf2 * cf2_ms + z_di2 * di2_ms;
-  vsr[3] = z_hs1 * hs1_re + z_cf1 * cf1_re + z_di1 * di1_re + z_hs2 * hs2_re +
+  vsr[3] = z_hs1 * blData1.hsz_re + z_cf1 * blData1.cfz_re + z_di1 * blData1.diz_re + z_hs2 * hs2_re +
            z_cf2 * cf2_re + z_di2 * di2_re;
 
   vs1[3][2] =
-      vs1[3][2] + 0.5 * (z_hca * hc1_t1 + z_ha * h1_t1) + z_upw * upw_t1;
+      vs1[3][2] + 0.5 * (z_hca * blData1.hcz_tz + z_ha * blData1.hz_tz) + z_upw * upw_t1;
   vs1[3][3] =
-      vs1[3][3] + 0.5 * (z_hca * hc1_d1 + z_ha * h1_d1) + z_upw * upw_d1;
-  vs1[3][4] = vs1[3][4] + 0.5 * (z_hca * hc1_u1) + z_upw * upw_u1;
+      vs1[3][3] + 0.5 * (z_hca * blData1.hcz_dz + z_ha * blData1.hz_dz) + z_upw * upw_d1;
+  vs1[3][4] = vs1[3][4] + 0.5 * (z_hca * blData1.hcz_uz) + z_upw * upw_u1;
   vs2[3][2] =
       vs2[3][2] + 0.5 * (z_hca * hc2_t2 + z_ha * h2_t2) + z_upw * upw_t2;
   vs2[3][3] =
@@ -1390,7 +1388,7 @@ bool XFoil::bldif(int ityp) {
   vs2[3][4] = vs2[3][4] + 0.5 * (z_hca * hc2_u2) + z_upw * upw_u2;
 
   vsm[3] =
-      vsm[3] + 0.5 * (z_hca * hc1_ms) + z_upw * upw_ms + 0.5 * (z_hca * hc2_ms);
+      vsm[3] + 0.5 * (z_hca * blData1.hcz_ms) + z_upw * upw_ms + 0.5 * (z_hca * hc2_ms);
 
   vsx[3] = 0.0;
   vsrez[3] = -rezh;
@@ -1463,25 +1461,25 @@ bool XFoil::blmid(int ityp) {
   double cfml, cfml_hka, cfml_rta, cfml_ma, cfm_hka;
   //---- set similarity variables if not defined
   if (simi) {
-    hk1 = hk2;
-    hk1_t1 = hk2_t2;
-    hk1_d1 = hk2_d2;
-    hk1_u1 = hk2_u2;
-    hk1_ms = hk2_ms;
-    rt1 = rt2;
-    rt1_t1 = rt2_t2;
-    rt1_u1 = rt2_u2;
-    rt1_ms = rt2_ms;
-    rt1_re = rt2_re;
-    m1 = m2;
-    m1_u1 = m2_u2;
-    m1_ms = m2_ms;
+    blData1.hkz = hk2;
+    blData1.hkz_tz = hk2_t2;
+    blData1.hkz_dz = hk2_d2;
+    blData1.hkz_uz = hk2_u2;
+    blData1.hkz_ms = hk2_ms;
+    blData1.rtz = rt2;
+    blData1.rtz_tz = rt2_t2;
+    blData1.rtz_uz = rt2_u2;
+    blData1.rtz_ms = rt2_ms;
+    blData1.rtz_re = rt2_re;
+    blData1.mz = m2;
+    blData1.mz_uz = m2_u2;
+    blData1.mz_ms = m2_ms;
   }
 
   //---- define stuff for midpoint cf
-  hka = 0.5 * (hk1 + hk2);
-  rta = 0.5 * (rt1 + rt2);
-  ma = 0.5 * (m1 + m2);
+  hka = 0.5 * (blData1.hkz + hk2);
+  rta = 0.5 * (blData1.rtz + rt2);
+  ma = 0.5 * (blData1.mz + m2);
 
   //---- midpoint skin friction coefficient  (zero in wake)
   if (ityp == 3) {
@@ -1517,17 +1515,17 @@ bool XFoil::blmid(int ityp) {
       }
     }
   }
-  cfm_u1 = 0.5 * (cfm_hka * hk1_u1 + cfm_ma * m1_u1 + cfm_rta * rt1_u1);
-  cfm_t1 = 0.5 * (cfm_hka * hk1_t1 + cfm_rta * rt1_t1);
-  cfm_d1 = 0.5 * (cfm_hka * hk1_d1);
+  cfm_u1 = 0.5 * (cfm_hka * blData1.hkz_uz + cfm_ma * blData1.mz_uz + cfm_rta * blData1.rtz_uz);
+  cfm_t1 = 0.5 * (cfm_hka * blData1.hkz_tz + cfm_rta * blData1.rtz_tz);
+  cfm_d1 = 0.5 * (cfm_hka * blData1.hkz_dz);
 
   cfm_u2 = 0.5 * (cfm_hka * hk2_u2 + cfm_ma * m2_u2 + cfm_rta * rt2_u2);
   cfm_t2 = 0.5 * (cfm_hka * hk2_t2 + cfm_rta * rt2_t2);
   cfm_d2 = 0.5 * (cfm_hka * hk2_d2);
 
-  cfm_ms = 0.5 * (cfm_hka * hk1_ms + cfm_ma * m1_ms + cfm_rta * rt1_ms +
+  cfm_ms = 0.5 * (cfm_hka * blData1.hkz_ms + cfm_ma * blData1.mz_ms + cfm_rta * blData1.rtz_ms +
                   cfm_hka * hk2_ms + cfm_ma * m2_ms + cfm_rta * rt2_ms);
-  cfm_re = 0.5 * (cfm_rta * rt1_re + cfm_rta * rt2_re);
+  cfm_re = 0.5 * (cfm_rta * blData1.rtz_re + cfm_rta * rt2_re);
 
   return true;
 }
@@ -1791,9 +1789,9 @@ bool XFoil::blsys() {
     double res_ms = vsm[k];
 
     //------ combine with derivatives of compressible  u1,u2 = uec(uei m)
-    vs1[k][4] = res_u1 * u1_uei;
+    vs1[k][4] = res_u1 * blData1.uz_uei;
     vs2[k][4] = res_u2 * u2_uei;
-    vsm[k] = res_u1 * u1_ms + res_u2 * u2_ms + res_ms;
+    vsm[k] = res_u1 * blData1.uz_ms + res_u2 * u2_ms + res_ms;
   }
   return true;
 }
@@ -2118,7 +2116,7 @@ bool XFoil::blvar(int ityp) {
 
   de2_u2 = de2_hk2 * hk2_u2;
   de2_t2 = de2_hk2 * hk2_t2 + (3.15 + 1.72 / (hk2 - 1.0));
-  de2_d2 = de2_hk2 * hk2_d2 + 1.0;
+  blData2.dez_dz = de2_hk2 * hk2_d2 + 1.0;
   de2_ms = de2_hk2 * hk2_ms;
 
   hdmax = 12.0;
@@ -2126,7 +2124,7 @@ bool XFoil::blvar(int ityp) {
     de2 = hdmax * theta2;
     de2_u2 = 0.0;
     de2_t2 = hdmax;
-    de2_d2 = 0.0;
+    blData2.dez_dz = 0.0;
     de2_ms = 0.0;
   }
 
@@ -4499,31 +4497,31 @@ bool XFoil::mrchue() {
             if (ibl < itran[is])
               //----------- laminar case: relatively slow increase in hk
               // downstream
-              htarg = hk1 + 0.03 * (x2 - x1) / theta1;
+              htarg = blData1.hkz + 0.03 * (x2 - blData1.xz) / blData1.tz;
             else if (ibl == itran[is]) {
               //----------- transition interval: weighted laminar and turbulent
               // case
-              htarg = hk1 + (0.03 * (xt - x1) - 0.15 * (x2 - xt)) / theta1;
+              htarg = blData1.hkz + (0.03 * (xt - blData1.xz) - 0.15 * (x2 - xt)) / blData1.tz;
             } else if (wake) {
               //----------- turbulent wake case:
               //--          asymptotic wake behavior with approximate backward
               // euler
-              cst = 0.03 * (x2 - x1) / theta1;
-              hk2 = hk1;
+              cst = 0.03 * (x2 - blData1.xz) / blData1.tz;
+              hk2 = blData1.hkz;
               hk2 = hk2 - (hk2 + cst * (hk2 - 1.0) * (hk2 - 1.0) * (hk2 - 1.0) -
-                           hk1) /
+                           blData1.hkz) /
                               (1.0 + 3.0 * cst * (hk2 - 1.0) * (hk2 - 1.0));
               hk2 = hk2 - (hk2 + cst * (hk2 - 1.0) * (hk2 - 1.0) * (hk2 - 1.0) -
-                           hk1) /
+                           blData1.hkz) /
                               (1.0 + 3.0 * cst * (hk2 - 1.0) * (hk2 - 1.0));
               hk2 = hk2 - (hk2 + cst * (hk2 - 1.0) * (hk2 - 1.0) * (hk2 - 1.0) -
-                           hk1) /
+                           blData1.hkz) /
                               (1.0 + 3.0 * cst * (hk2 - 1.0) * (hk2 - 1.0));
               htarg = hk2;
             } else
               htarg =
-                  hk1 - 0.15 * (x2 - x1) /
-                            theta1;  //----------- turbulent case: relatively
+                  blData1.hkz - 0.15 * (x2 - blData1.xz) /
+                            blData1.tz;  //----------- turbulent case: relatively
                                      // fast decrease in hk downstream
 
             //---------- limit specified hk to something reasonable
@@ -5467,7 +5465,7 @@ bool XFoil::psilin(int iNode, double xi, double yi, double nxi, double nyi,
     sx = (x[jp] - x[jo]) / dso;
     sy = (y[jp] - y[jo]) / dso;
 
-    x1 = sx * rx1 + sy * ry1;
+    blData1.xz = sx * rx1 + sy * ry1;
     x2 = sx * rx2 + sy * ry2;
     yy = sx * ry1 - sy * rx1;
 
@@ -5486,10 +5484,10 @@ bool XFoil::psilin(int iNode, double xi, double yi, double nxi, double nyi,
     //------ set log(r^2) and arctan(x/y), correcting for reflection if any
     if (io != jo && rs1 > 0.0) {
       logr12 = log(rs1);
-      theta1 = atan2(sgn * x1, sgn * yy) + (0.5 - 0.5 * sgn) * PI;
+      blData1.tz = atan2(sgn * blData1.xz, sgn * yy) + (0.5 - 0.5 * sgn) * PI;
     } else {
       logr12 = 0.0;
-      theta1 = 0.0;
+      blData1.tz = 0.0;
     }
 
     if (io != jp && rs2 > 0.0) {
@@ -5510,44 +5508,44 @@ bool XFoil::psilin(int iNode, double xi, double yi, double nxi, double nyi,
       nxp = nx[jp];
       nyp = ny[jp];
 
-      x1o = -((rx1 - x1 * sx) * nxo + (ry1 - x1 * sy) * nyo) / dso -
+      x1o = -((rx1 - blData1.xz * sx) * nxo + (ry1 - blData1.xz * sy) * nyo) / dso -
             (sx * nxo + sy * nyo);
-      x1p = ((rx1 - x1 * sx) * nxp + (ry1 - x1 * sy) * nyp) / dso;
+      x1p = ((rx1 - blData1.xz * sx) * nxp + (ry1 - blData1.xz * sy) * nyp) / dso;
       x2o = -((rx2 - x2 * sx) * nxo + (ry2 - x2 * sy) * nyo) / dso;
       x2p = ((rx2 - x2 * sx) * nxp + (ry2 - x2 * sy) * nyp) / dso -
             (sx * nxp + sy * nyp);
-      yyo = ((rx1 + x1 * sy) * nyo - (ry1 - x1 * sx) * nxo) / dso -
+      yyo = ((rx1 + blData1.xz * sy) * nyo - (ry1 - blData1.xz * sx) * nxo) / dso -
             (sx * nyo - sy * nxo);
-      yyp = -((rx1 - x1 * sy) * nyp - (ry1 + x1 * sx) * nxp) / dso;
+      yyp = -((rx1 - blData1.xz * sy) * nyp - (ry1 + blData1.xz * sx) * nxp) / dso;
     }
 
     if (jo == n) goto stop11;
 
     if (siglin) {
       //------- set up midpoint quantities
-      x0 = 0.5 * (x1 + x2);
+      x0 = 0.5 * (blData1.xz + x2);
       rs0 = x0 * x0 + yy * yy;
       logr0 = log(rs0);
       theta0 = atan2(sgn * x0, sgn * yy) + (0.5 - 0.5 * sgn) * PI;
 
       //------- calculate source contribution to psi	for  1-0  half-panel
-      dxinv = 1.0 / (x1 - x0);
-      psum = x0 * (theta0 - apan) - x1 * (theta1 - apan) +
+      dxinv = 1.0 / (blData1.xz - x0);
+      psum = x0 * (theta0 - apan) - blData1.xz * (blData1.tz - apan) +
              0.5 * yy * (logr12 - logr0);
-      pdif = ((x1 + x0) * psum + rs1 * (theta1 - apan) - rs0 * (theta0 - apan) +
-              (x0 - x1) * yy) *
+      pdif = ((blData1.xz + x0) * psum + rs1 * (blData1.tz - apan) - rs0 * (theta0 - apan) +
+              (x0 - blData1.xz) * yy) *
              dxinv;
 
-      psx1 = -(theta1 - apan);
+      psx1 = -(blData1.tz - apan);
       psx0 = theta0 - apan;
       psyy = 0.5 * (logr12 - logr0);
 
       pdx1 =
-          ((x1 + x0) * psx1 + psum + 2.0 * x1 * (theta1 - apan) - pdif) * dxinv;
+          ((blData1.xz + x0) * psx1 + psum + 2.0 * blData1.xz * (blData1.tz - apan) - pdif) * dxinv;
       pdx0 =
-          ((x1 + x0) * psx0 + psum - 2.0 * x0 * (theta0 - apan) + pdif) * dxinv;
+          ((blData1.xz + x0) * psx0 + psum - 2.0 * x0 * (theta0 - apan) + pdif) * dxinv;
       pdyy =
-          ((x1 + x0) * psyy + 2.0 * (x0 - x1 + yy * (theta1 - theta0))) * dxinv;
+          ((blData1.xz + x0) * psyy + 2.0 * (x0 - blData1.xz + yy * (blData1.tz - theta0))) * dxinv;
 
       dsm = sqrt((x[jp] - x[jm]) * (x[jp] - x[jm]) +
                  (y[jp] - y[jm]) * (y[jp] - y[jm]));
@@ -5620,20 +5618,20 @@ bool XFoil::psilin(int iNode, double xi, double yi, double nxi, double nyi,
     }
 
     //------ calculate vortex panel contribution to psi
-    dxinv = 1.0 / (x1 - x2);
-    psis = 0.5 * x1 * logr12 - 0.5 * x2 * logr22 + x2 - x1 +
-           yy * (theta1 - theta2);
-    psid = ((x1 + x2) * psis +
-            0.5 * (rs2 * logr22 - rs1 * logr12 + x1 * x1 - x2 * x2)) *
+    dxinv = 1.0 / (blData1.xz - x2);
+    psis = 0.5 * blData1.xz * logr12 - 0.5 * x2 * logr22 + x2 - blData1.xz +
+           yy * (blData1.tz - theta2);
+    psid = ((blData1.xz + x2) * psis +
+            0.5 * (rs2 * logr22 - rs1 * logr12 + blData1.xz * blData1.xz - x2 * x2)) *
            dxinv;
 
     psx1 = 0.5 * logr12;
     psx2 = -.5 * logr22;
-    psyy = theta1 - theta2;
+    psyy = blData1.tz - theta2;
 
-    pdx1 = ((x1 + x2) * psx1 + psis - x1 * logr12 - psid) * dxinv;
-    pdx2 = ((x1 + x2) * psx2 + psis + x2 * logr22 + psid) * dxinv;
-    pdyy = ((x1 + x2) * psyy - yy * (logr12 - logr22)) * dxinv;
+    pdx1 = ((blData1.xz + x2) * psx1 + psis - blData1.xz * logr12 - psid) * dxinv;
+    pdx2 = ((blData1.xz + x2) * psx2 + psis + x2 * logr22 + psid) * dxinv;
+    pdyy = ((blData1.xz + x2) * psyy - yy * (logr12 - logr22)) * dxinv;
 
     gsum1 = gamu[jp][1] + gamu[jo][1];
     gsum2 = gamu[jp][2] + gamu[jo][2];
@@ -5679,16 +5677,16 @@ bool XFoil::psilin(int iNode, double xi, double yi, double nxi, double nyi,
 
 stop11:
   psig = 0.5 * yy * (logr12 - logr22) + x2 * (theta2 - apan) -
-         x1 * (theta1 - apan);
+         blData1.xz * (blData1.tz - apan);
   pgam =
-      0.5 * x1 * logr12 - 0.5 * x2 * logr22 + x2 - x1 + yy * (theta1 - theta2);
+      0.5 * blData1.xz * logr12 - 0.5 * x2 * logr22 + x2 - blData1.xz + yy * (blData1.tz - theta2);
 
-  psigx1 = -(theta1 - apan);
+  psigx1 = -(blData1.tz - apan);
   psigx2 = theta2 - apan;
   psigyy = 0.5 * (logr12 - logr22);
   pgamx1 = 0.5 * logr12;
   pgamx2 = -0.5 * logr22;
-  pgamyy = theta1 - theta2;
+  pgamyy = blData1.tz - theta2;
 
   psigni = psigx1 * x1i + psigx2 * x2i + psigyy * yyi;
   pgamni = pgamx1 * x1i + pgamx2 * x2i + pgamyy * yyi;
@@ -5809,7 +5807,7 @@ bool XFoil::pswlin(int i, double xi, double yi, double nxi, double nyi,
     const double sx = (x[jp] - x[jo]) * dsio;
     const double sy = (y[jp] - y[jo]) * dsio;
 
-    x1 = sx * rx1 + sy * ry1;
+    blData1.xz = sx * rx1 + sy * ry1;
     x2 = sx * rx2 + sy * ry2;
     const double yy = sx * ry1 - sy * rx1;
     const double rs1 = rx1 * rx1 + ry1 * ry1;
@@ -5825,7 +5823,7 @@ bool XFoil::pswlin(int i, double xi, double yi, double nxi, double nyi,
 
     if (io != jo && rs1 > 0.0) {
       g1 = log(rs1);
-      t1 = atan2(sgn * x1, sgn * yy) - (0.5 - 0.5 * sgn) * PI;
+      t1 = atan2(sgn * blData1.xz, sgn * yy) - (0.5 - 0.5 * sgn) * PI;
     } else {
       g1 = 0.0;
       t1 = 0.0;
@@ -5842,25 +5840,25 @@ bool XFoil::pswlin(int i, double xi, double yi, double nxi, double nyi,
     const double x2i = sx * nxi + sy * nyi;
     const double yyi = sx * nyi - sy * nxi;
     //------- set up midpoint quantities
-    const double x0 = 0.5 * (x1 + x2);
+    const double x0 = 0.5 * (blData1.xz + x2);
     const double rs0 = x0 * x0 + yy * yy;
     const double g0 = log(rs0);
     const double t0 = atan2(sgn * x0, sgn * yy) - (0.5 - 0.5 * sgn) * PI;
 
     //------- calculate source contribution to psi	for  1-0  half-panel
-    double dxinv = 1.0 / (x1 - x0);
-    double psum = x0 * (t0 - apan) - x1 * (t1 - apan) + 0.5 * yy * (g1 - g0);
-    double pdif = ((x1 + x0) * psum + rs1 * (t1 - apan) - rs0 * (t0 - apan) +
-            (x0 - x1) * yy) *
+    double dxinv = 1.0 / (blData1.xz - x0);
+    double psum = x0 * (t0 - apan) - blData1.xz * (t1 - apan) + 0.5 * yy * (g1 - g0);
+    double pdif = ((blData1.xz + x0) * psum + rs1 * (t1 - apan) - rs0 * (t0 - apan) +
+            (x0 - blData1.xz) * yy) *
            dxinv;
 
     double psx1 = -(t1 - apan);
     double psx0 = t0 - apan;
     double psyy = 0.5 * (g1 - g0);
 
-    double pdx1 = ((x1 + x0) * psx1 + psum + 2.0 * x1 * (t1 - apan) - pdif) * dxinv;
-    double pdx0 = ((x1 + x0) * psx0 + psum - 2.0 * x0 * (t0 - apan) + pdif) * dxinv;
-    double pdyy = ((x1 + x0) * psyy + 2.0 * (x0 - x1 + yy * (t1 - t0))) * dxinv;
+    double pdx1 = ((blData1.xz + x0) * psx1 + psum + 2.0 * blData1.xz * (t1 - apan) - pdif) * dxinv;
+    double pdx0 = ((blData1.xz + x0) * psx0 + psum - 2.0 * x0 * (t0 - apan) + pdif) * dxinv;
+    double pdyy = ((blData1.xz + x0) * psyy + 2.0 * (x0 - blData1.xz + yy * (t1 - t0))) * dxinv;
 
     const double dsm = sqrt((x[jp] - x[jm]) * (x[jp] - x[jm]) +
                (y[jp] - y[jm]) * (y[jp] - y[jm]));
@@ -6096,79 +6094,79 @@ bool XFoil::qwcalc() {
 
 bool XFoil::restoreblData(int icom) {
   if (icom == 1) {
-    x1 = blsav[icom].xz;
-    u1 = blsav[icom].uz;
-    theta1 = blsav[icom].tz;
-    d1 = blsav[icom].dz;
-    s1 = blsav[icom].sz;
-    ampl1 = blsav[icom].amplz;
-    u1_uei = blsav[icom].uz_uei;
-    u1_ms = blsav[icom].uz_ms;
-    dw1 = blsav[icom].dwz;
-    h1 = blsav[icom].hz;
-    h1_t1 = blsav[icom].hz_tz;
-    h1_d1 = blsav[icom].hz_dz;
-    m1 = blsav[icom].mz;
-    m1_u1 = blsav[icom].mz_uz;
-    m1_ms = blsav[icom].mz_ms;
-    r1 = blsav[icom].rz;
-    r1_u1 = blsav[icom].rz_uz;
-    r1_ms = blsav[icom].rz_ms;
-    v1 = blsav[icom].vz;
-    v1_u1 = blsav[icom].vz_uz;
-    v1_ms = blsav[icom].vz_ms;
-    v1_re = blsav[icom].vz_re;
-    hk1 = blsav[icom].hkz;
-    hk1_u1 = blsav[icom].hkz_uz;
-    hk1_t1 = blsav[icom].hkz_tz;
-    hk1_d1 = blsav[icom].hkz_dz;
-    hk1_ms = blsav[icom].hkz_ms;
-    hs1 = blsav[icom].hsz;
-    hs1_u1 = blsav[icom].hsz_uz;
-    hs1_t1 = blsav[icom].hsz_tz;
-    hs1_d1 = blsav[icom].hsz_dz;
-    hs1_ms = blsav[icom].hsz_ms;
-    hs1_re = blsav[icom].hsz_re;
-    hc1 = blsav[icom].hcz;
-    hc1_u1 = blsav[icom].hcz_uz;
-    hc1_t1 = blsav[icom].hcz_tz;
-    hc1_d1 = blsav[icom].hcz_dz;
-    hc1_ms = blsav[icom].hcz_ms;
-    rt1 = blsav[icom].rtz;
-    rt1_u1 = blsav[icom].rtz_uz;
-    rt1_t1 = blsav[icom].rtz_tz;
-    rt1_ms = blsav[icom].rtz_ms;
-    rt1_re = blsav[icom].rtz_re;
-    cf1 = blsav[icom].cfz;
-    cf1_u1 = blsav[icom].cfz_uz;
-    cf1_t1 = blsav[icom].cfz_tz;
-    cf1_d1 = blsav[icom].cfz_dz;
-    cf1_ms = blsav[icom].cfz_ms;
-    cf1_re = blsav[icom].cfz_re;
-    di1 = blsav[icom].diz;
-    di1_u1 = blsav[icom].diz_uz;
-    di1_t1 = blsav[icom].diz_tz;
-    di1_d1 = blsav[icom].diz_dz;
-    di1_s1 = blsav[icom].diz_sz;
-    di1_ms = blsav[icom].diz_ms;
-    di1_re = blsav[icom].diz_re;
-    us1 = blsav[icom].usz;
-    us1_u1 = blsav[icom].usz_uz;
-    us1_t1 = blsav[icom].usz_tz;
-    us1_d1 = blsav[icom].usz_dz;
-    us1_ms = blsav[icom].usz_ms;
-    us1_re = blsav[icom].usz_re;
-    cq1 = blsav[icom].cqz;
-    cq1_u1 = blsav[icom].cqz_uz;
-    cq1_t1 = blsav[icom].cqz_tz;
-    cq1_d1 = blsav[icom].cqz_dz;
-    cq1_ms = blsav[icom].cqz_ms;
-    cq1_re = blsav[icom].cqz_re;
-    de1 = blsav[icom].dez;
-    de1_u1 = blsav[icom].dez_uz;
-    de1_t1 = blsav[icom].dez_tz;
-    de1_d1 = blsav[icom].dez_dz;
-    de1_ms = blsav[icom].dez_ms;
+    blData1.xz = blsav[icom].xz;
+    blData1.uz = blsav[icom].uz;
+    blData1.tz = blsav[icom].tz;
+    blData1.dz = blsav[icom].dz;
+    blData1.sz = blsav[icom].sz;
+    blData1.amplz = blsav[icom].amplz;
+    blData1.uz_uei = blsav[icom].uz_uei;
+    blData1.uz_ms = blsav[icom].uz_ms;
+    blData1.dwz = blsav[icom].dwz;
+    blData1.hz = blsav[icom].hz;
+    blData1.hz_tz = blsav[icom].hz_tz;
+    blData1.hz_dz = blsav[icom].hz_dz;
+    blData1.mz = blsav[icom].mz;
+    blData1.mz_uz = blsav[icom].mz_uz;
+    blData1.mz_ms = blsav[icom].mz_ms;
+    blData1.rz = blsav[icom].rz;
+    blData1.rz_uz = blsav[icom].rz_uz;
+    blData1.rz_ms = blsav[icom].rz_ms;
+    blData1.vz = blsav[icom].vz;
+    blData1.vz_uz = blsav[icom].vz_uz;
+    blData1.vz_ms = blsav[icom].vz_ms;
+    blData1.vz_re = blsav[icom].vz_re;
+    blData1.hkz = blsav[icom].hkz;
+    blData1.hkz_uz = blsav[icom].hkz_uz;
+    blData1.hkz_tz = blsav[icom].hkz_tz;
+    blData1.hkz_dz = blsav[icom].hkz_dz;
+    blData1.hkz_ms = blsav[icom].hkz_ms;
+    blData1.hsz = blsav[icom].hsz;
+    blData1.hsz_uz = blsav[icom].hsz_uz;
+    blData1.hsz_tz = blsav[icom].hsz_tz;
+    blData1.hsz_dz = blsav[icom].hsz_dz;
+    blData1.hsz_ms = blsav[icom].hsz_ms;
+    blData1.hsz_re = blsav[icom].hsz_re;
+    blData1.hcz = blsav[icom].hcz;
+    blData1.hcz_uz = blsav[icom].hcz_uz;
+    blData1.hcz_tz = blsav[icom].hcz_tz;
+    blData1.hcz_dz = blsav[icom].hcz_dz;
+    blData1.hcz_ms = blsav[icom].hcz_ms;
+    blData1.rtz = blsav[icom].rtz;
+    blData1.rtz_uz = blsav[icom].rtz_uz;
+    blData1.rtz_tz = blsav[icom].rtz_tz;
+    blData1.rtz_ms = blsav[icom].rtz_ms;
+    blData1.rtz_re = blsav[icom].rtz_re;
+    blData1.cfz = blsav[icom].cfz;
+    blData1.cfz_uz = blsav[icom].cfz_uz;
+    blData1.cfz_tz = blsav[icom].cfz_tz;
+    blData1.cfz_dz = blsav[icom].cfz_dz;
+    blData1.cfz_ms = blsav[icom].cfz_ms;
+    blData1.cfz_re = blsav[icom].cfz_re;
+    blData1.diz = blsav[icom].diz;
+    blData1.diz_uz = blsav[icom].diz_uz;
+    blData1.diz_tz = blsav[icom].diz_tz;
+    blData1.diz_dz = blsav[icom].diz_dz;
+    blData1.diz_sz = blsav[icom].diz_sz;
+    blData1.diz_ms = blsav[icom].diz_ms;
+    blData1.diz_re = blsav[icom].diz_re;
+    blData1.usz = blsav[icom].usz;
+    blData1.usz_uz = blsav[icom].usz_uz;
+    blData1.usz_tz = blsav[icom].usz_tz;
+    blData1.usz_dz = blsav[icom].usz_dz;
+    blData1.usz_ms = blsav[icom].usz_ms;
+    blData1.usz_re = blsav[icom].usz_re;
+    blData1.cqz = blsav[icom].cqz;
+    blData1.cqz_uz = blsav[icom].cqz_uz;
+    blData1.cqz_tz = blsav[icom].cqz_tz;
+    blData1.cqz_dz = blsav[icom].cqz_dz;
+    blData1.cqz_ms = blsav[icom].cqz_ms;
+    blData1.cqz_re = blsav[icom].cqz_re;
+    blData1.dez = blsav[icom].dez;
+    blData1.dez_uz = blsav[icom].dez_uz;
+    blData1.dez_tz = blsav[icom].dez_tz;
+    blData1.dez_dz = blsav[icom].dez_dz;
+    blData1.dez_ms = blsav[icom].dez_ms;
   }
   if (icom == 2) {
     x2 = blsav[icom].xz;
@@ -6242,7 +6240,7 @@ bool XFoil::restoreblData(int icom) {
     de2 = blsav[icom].dez;
     de2_u2 = blsav[icom].dez_uz;
     de2_t2 = blsav[icom].dez_tz;
-    de2_d2 = blsav[icom].dez_dz;
+    blData2.dez_dz = blsav[icom].dez_dz;
     de2_ms = blsav[icom].dez_ms;
   }
   return true;
@@ -6250,79 +6248,79 @@ bool XFoil::restoreblData(int icom) {
 
 bool XFoil::saveblData(int icom) {
   if (icom == 1) {
-    blsav[icom].xz = x1;
-    blsav[icom].uz = u1;
-    blsav[icom].tz = theta1;
-    blsav[icom].dz = d1;
-    blsav[icom].sz = s1;
-    blsav[icom].amplz = ampl1;
-    blsav[icom].uz_uei = u1_uei;
-    blsav[icom].uz_ms = u1_ms;
-    blsav[icom].dwz = dw1;
-    blsav[icom].hz = h1;
-    blsav[icom].hz_tz = h1_t1;
-    blsav[icom].hz_dz = h1_d1;
-    blsav[icom].mz = m1;
-    blsav[icom].mz_uz = m1_u1;
-    blsav[icom].mz_ms = m1_ms;
-    blsav[icom].rz = r1;
-    blsav[icom].rz_uz = r1_u1;
-    blsav[icom].rz_ms = r1_ms;
-    blsav[icom].vz = v1;
-    blsav[icom].vz_uz = v1_u1;
-    blsav[icom].vz_ms = v1_ms;
-    blsav[icom].vz_re = v1_re;
-    blsav[icom].hkz = hk1;
-    blsav[icom].hkz_uz = hk1_u1;
-    blsav[icom].hkz_tz = hk1_t1;
-    blsav[icom].hkz_dz = hk1_d1;
-    blsav[icom].hkz_ms = hk1_ms;
-    blsav[icom].hsz = hs1;
-    blsav[icom].hsz_uz = hs1_u1;
-    blsav[icom].hsz_tz = hs1_t1;
-    blsav[icom].hsz_dz = hs1_d1;
-    blsav[icom].hsz_ms = hs1_ms;
-    blsav[icom].hsz_re = hs1_re;
-    blsav[icom].hcz = hc1;
-    blsav[icom].hcz_uz = hc1_u1;
-    blsav[icom].hcz_tz = hc1_t1;
-    blsav[icom].hcz_dz = hc1_d1;
-    blsav[icom].hcz_ms = hc1_ms;
-    blsav[icom].rtz = rt1;
-    blsav[icom].rtz_uz = rt1_u1;
-    blsav[icom].rtz_tz = rt1_t1;
-    blsav[icom].rtz_ms = rt1_ms;
-    blsav[icom].rtz_re = rt1_re;
-    blsav[icom].cfz = cf1;
-    blsav[icom].cfz_uz = cf1_u1;
-    blsav[icom].cfz_tz = cf1_t1;
-    blsav[icom].cfz_dz = cf1_d1;
-    blsav[icom].cfz_ms = cf1_ms;
-    blsav[icom].cfz_re = cf1_re;
-    blsav[icom].diz = di1;
-    blsav[icom].diz_uz = di1_u1;
-    blsav[icom].diz_tz = di1_t1;
-    blsav[icom].diz_dz = di1_d1;
-    blsav[icom].diz_sz = di1_s1;
-    blsav[icom].diz_ms = di1_ms;
-    blsav[icom].diz_re = di1_re;
-    blsav[icom].usz = us1;
-    blsav[icom].usz_uz = us1_u1;
-    blsav[icom].usz_tz = us1_t1;
-    blsav[icom].usz_dz = us1_d1;
-    blsav[icom].usz_ms = us1_ms;
-    blsav[icom].usz_re = us1_re;
-    blsav[icom].cqz = cq1;
-    blsav[icom].cqz_uz = cq1_u1;
-    blsav[icom].cqz_tz = cq1_t1;
-    blsav[icom].cqz_dz = cq1_d1;
-    blsav[icom].cqz_ms = cq1_ms;
-    blsav[icom].cqz_re = cq1_re;
-    blsav[icom].dez = de1;
-    blsav[icom].dez_uz = de1_u1;
-    blsav[icom].dez_tz = de1_t1;
-    blsav[icom].dez_dz = de1_d1;
-    blsav[icom].dez_ms = de1_ms;
+    blsav[icom].xz = blData1.xz;
+    blsav[icom].uz = blData1.uz;
+    blsav[icom].tz = blData1.tz;
+    blsav[icom].dz = blData1.dz;
+    blsav[icom].sz = blData1.sz;
+    blsav[icom].amplz = blData1.amplz;
+    blsav[icom].uz_uei = blData1.uz_uei;
+    blsav[icom].uz_ms = blData1.uz_ms;
+    blsav[icom].dwz = blData1.dwz;
+    blsav[icom].hz = blData1.hz;
+    blsav[icom].hz_tz = blData1.hz_tz;
+    blsav[icom].hz_dz = blData1.hz_dz;
+    blsav[icom].mz = blData1.mz;
+    blsav[icom].mz_uz = blData1.mz_uz;
+    blsav[icom].mz_ms = blData1.mz_ms;
+    blsav[icom].rz = blData1.rz;
+    blsav[icom].rz_uz = blData1.rz_uz;
+    blsav[icom].rz_ms = blData1.rz_ms;
+    blsav[icom].vz = blData1.vz;
+    blsav[icom].vz_uz = blData1.vz_uz;
+    blsav[icom].vz_ms = blData1.vz_ms;
+    blsav[icom].vz_re = blData1.vz_re;
+    blsav[icom].hkz = blData1.hkz;
+    blsav[icom].hkz_uz = blData1.hkz_uz;
+    blsav[icom].hkz_tz = blData1.hkz_tz;
+    blsav[icom].hkz_dz = blData1.hkz_dz;
+    blsav[icom].hkz_ms = blData1.hkz_ms;
+    blsav[icom].hsz = blData1.hsz;
+    blsav[icom].hsz_uz = blData1.hsz_uz;
+    blsav[icom].hsz_tz = blData1.hsz_tz;
+    blsav[icom].hsz_dz = blData1.hsz_dz;
+    blsav[icom].hsz_ms = blData1.hsz_ms;
+    blsav[icom].hsz_re = blData1.hsz_re;
+    blsav[icom].hcz = blData1.hcz;
+    blsav[icom].hcz_uz = blData1.hcz_uz;
+    blsav[icom].hcz_tz = blData1.hcz_tz;
+    blsav[icom].hcz_dz = blData1.hcz_dz;
+    blsav[icom].hcz_ms = blData1.hcz_ms;
+    blsav[icom].rtz = blData1.rtz;
+    blsav[icom].rtz_uz = blData1.rtz_uz;
+    blsav[icom].rtz_tz = blData1.rtz_tz;
+    blsav[icom].rtz_ms = blData1.rtz_ms;
+    blsav[icom].rtz_re = blData1.rtz_re;
+    blsav[icom].cfz = blData1.cfz;
+    blsav[icom].cfz_uz = blData1.cfz_uz;
+    blsav[icom].cfz_tz = blData1.cfz_tz;
+    blsav[icom].cfz_dz = blData1.cfz_dz;
+    blsav[icom].cfz_ms = blData1.cfz_ms;
+    blsav[icom].cfz_re = blData1.cfz_re;
+    blsav[icom].diz = blData1.diz;
+    blsav[icom].diz_uz = blData1.diz_uz;
+    blsav[icom].diz_tz = blData1.diz_tz;
+    blsav[icom].diz_dz = blData1.diz_dz;
+    blsav[icom].diz_sz = blData1.diz_sz;
+    blsav[icom].diz_ms = blData1.diz_ms;
+    blsav[icom].diz_re = blData1.diz_re;
+    blsav[icom].usz = blData1.usz;
+    blsav[icom].usz_uz = blData1.usz_uz;
+    blsav[icom].usz_tz = blData1.usz_tz;
+    blsav[icom].usz_dz = blData1.usz_dz;
+    blsav[icom].usz_ms = blData1.usz_ms;
+    blsav[icom].usz_re = blData1.usz_re;
+    blsav[icom].cqz = blData1.cqz;
+    blsav[icom].cqz_uz = blData1.cqz_uz;
+    blsav[icom].cqz_tz = blData1.cqz_tz;
+    blsav[icom].cqz_dz = blData1.cqz_dz;
+    blsav[icom].cqz_ms = blData1.cqz_ms;
+    blsav[icom].cqz_re = blData1.cqz_re;
+    blsav[icom].dez = blData1.dez;
+    blsav[icom].dez_uz = blData1.dez_uz;
+    blsav[icom].dez_tz = blData1.dez_tz;
+    blsav[icom].dez_dz = blData1.dez_dz;
+    blsav[icom].dez_ms = blData1.dez_ms;
   } else {
     blsav[icom].xz = x2;
     blsav[icom].uz = u2;
@@ -6395,7 +6393,7 @@ bool XFoil::saveblData(int icom) {
     blsav[icom].dez = de2;
     blsav[icom].dez_uz = de2_u2;
     blsav[icom].dez_tz = de2_t2;
-    blsav[icom].dez_dz = de2_d2;
+    blsav[icom].dez_dz = blData2.dez_dz;
     blsav[icom].dez_ms = de2_ms;
   }
   return true;
@@ -6705,7 +6703,7 @@ bool XFoil::setbl() {
       if (ibl == itran[is] && !tran) {
         // TRACE("setbl: xtr???  n1=%d n2=%d: \n", ampl1, ampl2);
 
-        ss << "setbl: xtr???  n1=" << ampl1 << " n2=" << ampl2 << ":\n";
+        ss << "setbl: xtr???  n1=" << blData1.amplz << " n2=" << ampl2 << ":\n";
         writeString(ss.str());
         ss.str("");
       }
@@ -7613,79 +7611,79 @@ void XFoil::sss(double ss, double *s1, double *s2, double del, double xbf,
 bool XFoil::stepbl() {
   // techwinder : can't think of a more elegant way to do this, and too lazy to
   // search
-  x1 = x2;
-  u1 = u2;
-  theta1 = theta2;
-  d1 = d2;
-  s1 = s2;
-  ampl1 = ampl2;
-  u1_uei = u2_uei;
-  u1_ms = u2_ms;
-  dw1 = dw2;
-  h1 = h2;
-  h1_t1 = h2_t2;
-  h1_d1 = h2_d2;
-  m1 = m2;
-  m1_u1 = m2_u2;
-  m1_ms = m2_ms;
-  r1 = r2;
-  r1_u1 = r2_u2;
-  r1_ms = r2_ms;
-  v1 = v2;
-  v1_u1 = v2_u2;
-  v1_ms = v2_ms;
-  v1_re = v2_re;
-  hk1 = hk2;
-  hk1_u1 = hk2_u2;
-  hk1_t1 = hk2_t2;
-  hk1_d1 = hk2_d2;
-  hk1_ms = hk2_ms;
-  hs1 = hs2;
-  hs1_u1 = hs2_u2;
-  hs1_t1 = hs2_t2;
-  hs1_d1 = hs2_d2;
-  hs1_ms = hs2_ms;
-  hs1_re = hs2_re;
-  hc1 = hc2;
-  hc1_u1 = hc2_u2;
-  hc1_t1 = hc2_t2;
-  hc1_d1 = hc2_d2;
-  hc1_ms = hc2_ms;
-  rt1 = rt2;
-  rt1_u1 = rt2_u2;
-  rt1_t1 = rt2_t2;
-  rt1_ms = rt2_ms;
-  rt1_re = rt2_re;
-  cf1 = cf2;
-  cf1_u1 = cf2_u2;
-  cf1_t1 = cf2_t2;
-  cf1_d1 = cf2_d2;
-  cf1_ms = cf2_ms;
-  cf1_re = cf2_re;
-  di1 = di2;
-  di1_u1 = di2_u2;
-  di1_t1 = di2_t2;
-  di1_d1 = di2_d2;
-  di1_s1 = di2_s2;
-  di1_ms = di2_ms;
-  di1_re = di2_re;
-  us1 = us2;
-  us1_u1 = us2_u2;
-  us1_t1 = us2_t2;
-  us1_d1 = us2_d2;
-  us1_ms = us2_ms;
-  us1_re = us2_re;
-  cq1 = cq2;
-  cq1_u1 = cq2_u2;
-  cq1_t1 = cq2_t2;
-  cq1_d1 = cq2_d2;
-  cq1_ms = cq2_ms;
-  cq1_re = cq2_re;
-  de1 = de2;
-  de1_u1 = de2_u2;
-  de1_t1 = de2_t2;
-  de1_d1 = de2_d2;
-  de1_ms = de2_ms;
+  blData1.xz = x2;
+  blData1.uz = u2;
+  blData1.tz = theta2;
+  blData1.dz = d2;
+  blData1.sz = s2;
+  blData1.amplz = ampl2;
+  blData1.uz_uei = u2_uei;
+  blData1.uz_ms = u2_ms;
+  blData1.dwz = dw2;
+  blData1.hz = h2;
+  blData1.hz_tz = h2_t2;
+  blData1.hz_dz = h2_d2;
+  blData1.mz = m2;
+  blData1.mz_uz = m2_u2;
+  blData1.mz_ms = m2_ms;
+  blData1.rz = r2;
+  blData1.rz_uz = r2_u2;
+  blData1.rz_ms = r2_ms;
+  blData1.vz = v2;
+  blData1.vz_uz = v2_u2;
+  blData1.vz_ms = v2_ms;
+  blData1.vz_re = v2_re;
+  blData1.hkz = hk2;
+  blData1.hkz_uz = hk2_u2;
+  blData1.hkz_tz = hk2_t2;
+  blData1.hkz_dz = hk2_d2;
+  blData1.hkz_ms = hk2_ms;
+  blData1.hsz = hs2;
+  blData1.hsz_uz = hs2_u2;
+  blData1.hsz_tz = hs2_t2;
+  blData1.hsz_dz = hs2_d2;
+  blData1.hsz_ms = hs2_ms;
+  blData1.hsz_re = hs2_re;
+  blData1.hcz = hc2;
+  blData1.hcz_uz = hc2_u2;
+  blData1.hcz_tz = hc2_t2;
+  blData1.hcz_dz = hc2_d2;
+  blData1.hcz_ms = hc2_ms;
+  blData1.rtz = rt2;
+  blData1.rtz_uz = rt2_u2;
+  blData1.rtz_tz = rt2_t2;
+  blData1.rtz_ms = rt2_ms;
+  blData1.rtz_re = rt2_re;
+  blData1.cfz = cf2;
+  blData1.cfz_uz = cf2_u2;
+  blData1.cfz_tz = cf2_t2;
+  blData1.cfz_dz = cf2_d2;
+  blData1.cfz_ms = cf2_ms;
+  blData1.cfz_re = cf2_re;
+  blData1.diz = di2;
+  blData1.diz_uz = di2_u2;
+  blData1.diz_tz = di2_t2;
+  blData1.diz_dz = di2_d2;
+  blData1.diz_sz = di2_s2;
+  blData1.diz_ms = di2_ms;
+  blData1.diz_re = di2_re;
+  blData1.usz = us2;
+  blData1.usz_uz = us2_u2;
+  blData1.usz_tz = us2_t2;
+  blData1.usz_dz = us2_d2;
+  blData1.usz_ms = us2_ms;
+  blData1.usz_re = us2_re;
+  blData1.cqz = cq2;
+  blData1.cqz_uz = cq2_u2;
+  blData1.cqz_tz = cq2_t2;
+  blData1.cqz_dz = cq2_d2;
+  blData1.cqz_ms = cq2_ms;
+  blData1.cqz_re = cq2_re;
+  blData1.dez = de2;
+  blData1.dez_uz = de2_u2;
+  blData1.dez_tz = de2_t2;
+  blData1.dez_dz = blData2.dez_dz;
+  blData1.dez_ms = de2_ms;
   return true;
 }
 
@@ -7959,11 +7957,11 @@ bool XFoil::trchek() {
   saveblData(2);
 
   //---- calculate average amplification rate ax over x1..x2 interval
-  axset(hk1, theta1, rt1, ampl1, hk2, theta2, rt2, ampl2, amcrit, ax, ax_hk1,
+  axset(blData1.hkz, blData1.tz, blData1.rtz, blData1.amplz, hk2, theta2, rt2, ampl2, amcrit, ax, ax_hk1,
         ax_t1, ax_rt1, ax_a1, ax_hk2, ax_t2, ax_rt2, ax_a2);
 
   //---- set initial guess for iterate n2 (ampl2) at x2
-  ampl2 = ampl1 + ax * (x2 - x1);
+  ampl2 = blData1.amplz + ax * (x2 - blData1.xz);
 
   //---- solve implicit system for amplification ampl2
   for (itam = 1; itam <= 30; itam++) {
@@ -7979,16 +7977,16 @@ bool XFoil::trchek() {
       //------ there is transition in x1..x2, "t" is set from n1, n2
       amplt = amcrit;
       amplt_a2 = 0.0;
-      sfa = (amplt - ampl1) / (ampl2 - ampl1);
-      sfa_a1 = (sfa - 1.0) / (ampl2 - ampl1);
-      sfa_a2 = (-sfa) / (ampl2 - ampl1);
+      sfa = (amplt - blData1.amplz) / (ampl2 - blData1.amplz);
+      sfa_a1 = (sfa - 1.0) / (ampl2 - blData1.amplz);
+      sfa_a2 = (-sfa) / (ampl2 - blData1.amplz);
     }
 
     if (xiforc < x2) {
-      sfx = (xiforc - x1) / (x2 - x1);
-      sfx_x1 = (sfx - 1.0) / (x2 - x1);
-      sfx_x2 = (-sfx) / (x2 - x1);
-      sfx_xf = 1.0 / (x2 - x1);
+      sfx = (xiforc - blData1.xz) / (x2 - blData1.xz);
+      sfx_x1 = (sfx - 1.0) / (x2 - blData1.xz);
+      sfx_x2 = (-sfx) / (x2 - blData1.xz);
+      sfx_xf = 1.0 / (x2 - blData1.xz);
     } else {
       sfx = 1.0;
       sfx_x1 = 0.0;
@@ -8021,15 +8019,15 @@ bool XFoil::trchek() {
     wf1_xf = -wf2_xf;
 
     //---- interpolate bl variables to xt
-    xt = x1 * wf1 + x2 * wf2;
-    tt = theta1 * wf1 + theta2 * wf2;
-    dt = d1 * wf1 + d2 * wf2;
-    ut = u1 * wf1 + u2 * wf2;
+    xt = blData1.xz * wf1 + x2 * wf2;
+    tt = blData1.tz * wf1 + theta2 * wf2;
+    dt = blData1.dz * wf1 + d2 * wf2;
+    ut = blData1.uz * wf1 + u2 * wf2;
 
-    xt_a2 = x1 * wf1_a2 + x2 * wf2_a2;
-    tt_a2 = theta1 * wf1_a2 + theta2 * wf2_a2;
-    dt_a2 = d1 * wf1_a2 + d2 * wf2_a2;
-    ut_a2 = u1 * wf1_a2 + u2 * wf2_a2;
+    xt_a2 = blData1.xz * wf1_a2 + x2 * wf2_a2;
+    tt_a2 = blData1.tz * wf1_a2 + theta2 * wf2_a2;
+    dt_a2 = blData1.dz * wf1_a2 + d2 * wf2_a2;
+    ut_a2 = blData1.uz * wf1_a2 + u2 * wf2_a2;
 
     //---- temporarily set "2" variables from "t" for blkin
     x2 = xt;
@@ -8060,7 +8058,7 @@ bool XFoil::trchek() {
     ampl2 = amsave;
 
     //---- calculate amplification rate ax over current x1-xt interval
-    axset(hk1, theta1, rt1, ampl1, hkt, tt, rtt, amplt, amcrit, ax, ax_hk1,
+    axset(blData1.hkz, blData1.tz, blData1.rtz, blData1.amplz, hkt, tt, rtt, amplt, amcrit, ax, ax_hk1,
           ax_t1, ax_rt1, ax_a1, ax_hkt, ax_tt, ax_rtt, ax_at);
 
     //---- punch out early if there is no amplification here
@@ -8072,15 +8070,15 @@ bool XFoil::trchek() {
             (ax_hkt * hkt_ut + ax_rtt * rtt_ut) * ut_a2 + ax_at * amplt_a2;
 
     //---- residual for implicit ampl2 definition (amplification equation)
-    res = ampl2 - ampl1 - ax * (x2 - x1);
-    res_a2 = 1.0 - ax_a2 * (x2 - x1);
+    res = ampl2 - blData1.amplz - ax * (x2 - blData1.xz);
+    res_a2 = 1.0 - ax_a2 * (x2 - blData1.xz);
 
     da2 = -res / res_a2;
 
     rlx = 1.0;
     dxt = xt_a2 * da2;
 
-    if (rlx * fabs(dxt / (x2 - x1)) > 0.05) rlx = 0.05 * fabs((x2 - x1) / dxt);
+    if (rlx * fabs(dxt / (x2 - blData1.xz)) > 0.05) rlx = 0.05 * fabs((x2 - blData1.xz) / dxt);
 
     if (rlx * fabs(da2) > 1.0) rlx = 1.0 * fabs(1.0 / da2);
 
@@ -8104,7 +8102,7 @@ stop101:
 
   //---- test for free or forced transition
   trfree = (ampl2 >= amcrit);
-  trforc = (xiforc > x1) && (xiforc <= x2);
+  trforc = (xiforc > blData1.xz) && (xiforc <= x2);
 
   //---- set transition interval flag
   tran = (trforc || trfree);
@@ -8148,30 +8146,30 @@ stop101:
   dt_d2 = wf2;
   ut_u2 = wf2;
 
-  xt_a1 = x1 * wf1_a1 + x2 * wf2_a1;
-  tt_a1 = theta1 * wf1_a1 + theta2 * wf2_a1;
-  dt_a1 = d1 * wf1_a1 + d2 * wf2_a1;
-  ut_a1 = u1 * wf1_a1 + u2 * wf2_a1;
+  xt_a1 = blData1.xz * wf1_a1 + x2 * wf2_a1;
+  tt_a1 = blData1.tz * wf1_a1 + theta2 * wf2_a1;
+  dt_a1 = blData1.dz * wf1_a1 + d2 * wf2_a1;
+  ut_a1 = blData1.uz * wf1_a1 + u2 * wf2_a1;
 
-  xt_x1 = x1 * wf1_x1 + x2 * wf2_x1 + xt_x1;
-  tt_x1 = theta1 * wf1_x1 + theta2 * wf2_x1;
-  dt_x1 = d1 * wf1_x1 + d2 * wf2_x1;
-  ut_x1 = u1 * wf1_x1 + u2 * wf2_x1;
+  xt_x1 = blData1.xz * wf1_x1 + x2 * wf2_x1 + xt_x1;
+  tt_x1 = blData1.tz * wf1_x1 + theta2 * wf2_x1;
+  dt_x1 = blData1.dz * wf1_x1 + d2 * wf2_x1;
+  ut_x1 = blData1.uz * wf1_x1 + u2 * wf2_x1;
 
-  xt_x2 = x1 * wf1_x2 + x2 * wf2_x2 + xt_x2;
-  tt_x2 = theta1 * wf1_x2 + theta2 * wf2_x2;
-  dt_x2 = d1 * wf1_x2 + d2 * wf2_x2;
-  ut_x2 = u1 * wf1_x2 + u2 * wf2_x2;
+  xt_x2 = blData1.xz * wf1_x2 + x2 * wf2_x2 + xt_x2;
+  tt_x2 = blData1.tz * wf1_x2 + theta2 * wf2_x2;
+  dt_x2 = blData1.dz * wf1_x2 + d2 * wf2_x2;
+  ut_x2 = blData1.uz * wf1_x2 + u2 * wf2_x2;
 
-  xt_xf = x1 * wf1_xf + x2 * wf2_xf;
+  xt_xf = blData1.xz * wf1_xf + x2 * wf2_xf;
 
   //---- at this point, ax = ax( hk1, t1, rt1, a1, hkt, tt, rtt, at )
 
   //---- set sensitivities of ax( t1 d1 u1 a1 t2 d2 u2 a2 ms re )
-  ax_t1 = ax_hk1 * hk1_t1 + ax_t1 + ax_rt1 * rt1_t1 +
+  ax_t1 = ax_hk1 * blData1.hkz_tz + ax_t1 + ax_rt1 * blData1.rtz_tz +
           (ax_hkt * hkt_tt + ax_tt + ax_rtt * rtt_tt) * tt_t1;
-  ax_d1 = ax_hk1 * hk1_d1 + (ax_hkt * hkt_dt) * dt_d1;
-  ax_u1 = ax_hk1 * hk1_u1 + ax_rt1 * rt1_u1 +
+  ax_d1 = ax_hk1 * blData1.hkz_dz + (ax_hkt * hkt_dt) * dt_d1;
+  ax_u1 = ax_hk1 * blData1.hkz_uz + ax_rt1 * blData1.rtz_uz +
           (ax_hkt * hkt_ut + ax_rtt * rtt_ut) * ut_u1;
   ax_a1 = ax_a1 +
           (ax_hkt * hkt_tt + ax_tt + ax_rtt * rtt_tt) *
@@ -8194,11 +8192,11 @@ stop101:
           (ax_hkt * hkt_dt) * dt_x2 +
           (ax_hkt * hkt_ut + ax_rtt * rtt_ut) * ut_x2;
 
-  ax_ms = ax_hkt * hkt_ms + ax_rtt * rtt_ms + ax_hk1 * hk1_ms + ax_rt1 * rt1_ms;
-  ax_re = ax_rtt * rtt_re + ax_rt1 * rt1_re;
+  ax_ms = ax_hkt * hkt_ms + ax_rtt * rtt_ms + ax_hk1 * blData1.hkz_ms + ax_rt1 * blData1.rtz_ms;
+  ax_re = ax_rtt * rtt_re + ax_rt1 * blData1.rtz_re;
 
   //---- set sensitivities of residual res
-  z_ax = -(x2 - x1);
+  z_ax = -(x2 - blData1.xz);
 
   z_a1 = z_ax * ax_a1 - 1.0;
   z_t1 = z_ax * ax_t1;
@@ -8267,12 +8265,12 @@ bool XFoil::trdif() {
   saveblData(2);
 
   //---- weighting factors for linear interpolation to transition point
-  wf2 = (xt - x1) / (x2 - x1);
-  wf2_xt = 1.0 / (x2 - x1);
+  wf2 = (xt - blData1.xz) / (x2 - blData1.xz);
+  wf2_xt = 1.0 / (x2 - blData1.xz);
 
   wf2_a1 = wf2_xt * xt_a1;
-  wf2_x1 = wf2_xt * xt_x1 + (wf2 - 1.0) / (x2 - x1);
-  wf2_x2 = wf2_xt * xt_x2 - wf2 / (x2 - x1);
+  wf2_x1 = wf2_xt * xt_x1 + (wf2 - 1.0) / (x2 - blData1.xz);
+  wf2_x2 = wf2_xt * xt_x2 - wf2 / (x2 - blData1.xz);
   wf2_t1 = wf2_xt * xt_t1;
   wf2_t2 = wf2_xt * xt_t2;
   wf2_d1 = wf2_xt * xt_d1;
@@ -8300,47 +8298,47 @@ bool XFoil::trdif() {
   //**** first,  do laminar part between x1 and xt
 
   //-----interpolate primary variables to transition point
-  tt = theta1 * wf1 + theta2 * wf2;
-  tt_a1 = theta1 * wf1_a1 + theta2 * wf2_a1;
-  tt_x1 = theta1 * wf1_x1 + theta2 * wf2_x1;
-  tt_x2 = theta1 * wf1_x2 + theta2 * wf2_x2;
-  tt_t1 = theta1 * wf1_t1 + theta2 * wf2_t1 + wf1;
-  tt_t2 = theta1 * wf1_t2 + theta2 * wf2_t2 + wf2;
-  tt_d1 = theta1 * wf1_d1 + theta2 * wf2_d1;
-  tt_d2 = theta1 * wf1_d2 + theta2 * wf2_d2;
-  tt_u1 = theta1 * wf1_u1 + theta2 * wf2_u1;
-  tt_u2 = theta1 * wf1_u2 + theta2 * wf2_u2;
-  tt_ms = theta1 * wf1_ms + theta2 * wf2_ms;
-  tt_re = theta1 * wf1_re + theta2 * wf2_re;
-  tt_xf = theta1 * wf1_xf + theta2 * wf2_xf;
+  tt = blData1.tz * wf1 + theta2 * wf2;
+  tt_a1 = blData1.tz * wf1_a1 + theta2 * wf2_a1;
+  tt_x1 = blData1.tz * wf1_x1 + theta2 * wf2_x1;
+  tt_x2 = blData1.tz * wf1_x2 + theta2 * wf2_x2;
+  tt_t1 = blData1.tz * wf1_t1 + theta2 * wf2_t1 + wf1;
+  tt_t2 = blData1.tz * wf1_t2 + theta2 * wf2_t2 + wf2;
+  tt_d1 = blData1.tz * wf1_d1 + theta2 * wf2_d1;
+  tt_d2 = blData1.tz * wf1_d2 + theta2 * wf2_d2;
+  tt_u1 = blData1.tz * wf1_u1 + theta2 * wf2_u1;
+  tt_u2 = blData1.tz * wf1_u2 + theta2 * wf2_u2;
+  tt_ms = blData1.tz * wf1_ms + theta2 * wf2_ms;
+  tt_re = blData1.tz * wf1_re + theta2 * wf2_re;
+  tt_xf = blData1.tz * wf1_xf + theta2 * wf2_xf;
 
-  dt = d1 * wf1 + d2 * wf2;
-  dt_a1 = d1 * wf1_a1 + d2 * wf2_a1;
-  dt_x1 = d1 * wf1_x1 + d2 * wf2_x1;
-  dt_x2 = d1 * wf1_x2 + d2 * wf2_x2;
-  dt_t1 = d1 * wf1_t1 + d2 * wf2_t1;
-  dt_t2 = d1 * wf1_t2 + d2 * wf2_t2;
-  dt_d1 = d1 * wf1_d1 + d2 * wf2_d1 + wf1;
-  dt_d2 = d1 * wf1_d2 + d2 * wf2_d2 + wf2;
-  dt_u1 = d1 * wf1_u1 + d2 * wf2_u1;
-  dt_u2 = d1 * wf1_u2 + d2 * wf2_u2;
-  dt_ms = d1 * wf1_ms + d2 * wf2_ms;
-  dt_re = d1 * wf1_re + d2 * wf2_re;
-  dt_xf = d1 * wf1_xf + d2 * wf2_xf;
+  dt = blData1.dz * wf1 + d2 * wf2;
+  dt_a1 = blData1.dz * wf1_a1 + d2 * wf2_a1;
+  dt_x1 = blData1.dz * wf1_x1 + d2 * wf2_x1;
+  dt_x2 = blData1.dz * wf1_x2 + d2 * wf2_x2;
+  dt_t1 = blData1.dz * wf1_t1 + d2 * wf2_t1;
+  dt_t2 = blData1.dz * wf1_t2 + d2 * wf2_t2;
+  dt_d1 = blData1.dz * wf1_d1 + d2 * wf2_d1 + wf1;
+  dt_d2 = blData1.dz * wf1_d2 + d2 * wf2_d2 + wf2;
+  dt_u1 = blData1.dz * wf1_u1 + d2 * wf2_u1;
+  dt_u2 = blData1.dz * wf1_u2 + d2 * wf2_u2;
+  dt_ms = blData1.dz * wf1_ms + d2 * wf2_ms;
+  dt_re = blData1.dz * wf1_re + d2 * wf2_re;
+  dt_xf = blData1.dz * wf1_xf + d2 * wf2_xf;
 
-  ut = u1 * wf1 + u2 * wf2;
-  ut_a1 = u1 * wf1_a1 + u2 * wf2_a1;
-  ut_x1 = u1 * wf1_x1 + u2 * wf2_x1;
-  ut_x2 = u1 * wf1_x2 + u2 * wf2_x2;
-  ut_t1 = u1 * wf1_t1 + u2 * wf2_t1;
-  ut_t2 = u1 * wf1_t2 + u2 * wf2_t2;
-  ut_d1 = u1 * wf1_d1 + u2 * wf2_d1;
-  ut_d2 = u1 * wf1_d2 + u2 * wf2_d2;
-  ut_u1 = u1 * wf1_u1 + u2 * wf2_u1 + wf1;
-  ut_u2 = u1 * wf1_u2 + u2 * wf2_u2 + wf2;
-  ut_ms = u1 * wf1_ms + u2 * wf2_ms;
-  ut_re = u1 * wf1_re + u2 * wf2_re;
-  ut_xf = u1 * wf1_xf + u2 * wf2_xf;
+  ut = blData1.uz * wf1 + u2 * wf2;
+  ut_a1 = blData1.uz * wf1_a1 + u2 * wf2_a1;
+  ut_x1 = blData1.uz * wf1_x1 + u2 * wf2_x1;
+  ut_x2 = blData1.uz * wf1_x2 + u2 * wf2_x2;
+  ut_t1 = blData1.uz * wf1_t1 + u2 * wf2_t1;
+  ut_t2 = blData1.uz * wf1_t2 + u2 * wf2_t2;
+  ut_d1 = blData1.uz * wf1_d1 + u2 * wf2_d1;
+  ut_d2 = blData1.uz * wf1_d2 + u2 * wf2_d2;
+  ut_u1 = blData1.uz * wf1_u1 + u2 * wf2_u1 + wf1;
+  ut_u2 = blData1.uz * wf1_u2 + u2 * wf2_u2 + wf2;
+  ut_ms = blData1.uz * wf1_ms + u2 * wf2_ms;
+  ut_re = blData1.uz * wf1_re + u2 * wf2_re;
+  ut_xf = blData1.uz * wf1_xf + u2 * wf2_xf;
 
   //---- set primary "t" variables at xt  (really placed into "2" variables)
   x2 = xt;
