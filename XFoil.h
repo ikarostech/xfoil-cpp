@@ -462,15 +462,6 @@ class XFoil {
   double dwte, qinfbl, tkbl, tkbl_ms, rstbl, rstbl_ms, hstinv, hstinv_ms;
   double reybl, reybl_ms, reybl_re, gambl, gm1bl, hvrat, bule, xiforc, amcrit;
 
-  double x2, u2, theta2, d2, s2, ampl2, u2_uei, u2_ms, dw2, h2, h2_t2, h2_d2,
-      m2, m2_u2, m2_ms, r2, r2_u2, r2_ms, v2, v2_u2, v2_ms, v2_re, hk2, hk2_u2,
-      hk2_t2, hk2_d2, hk2_ms, hs2, hs2_u2, hs2_t2, hs2_d2, hs2_ms, hs2_re, hc2,
-      hc2_u2, hc2_t2, hc2_d2, hc2_ms, rt2, rt2_u2, rt2_t2, rt2_ms, rt2_re, cf2,
-      cf2_u2, cf2_t2, cf2_d2, cf2_ms, cf2_re, di2, di2_u2, di2_t2, di2_d2,
-      di2_s2, di2_ms, di2_re, us2, us2_u2, us2_t2, us2_d2, us2_ms, us2_re, cq2,
-      cq2_u2, cq2_t2, cq2_d2, cq2_ms, cq2_re, de2, de2_u2, de2_t2,
-      de2_ms;
-
   blData blData1, blData2;
 
   int imxbl, ismxbl;
