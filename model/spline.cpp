@@ -1,47 +1,29 @@
 #include "spline.hpp"
 
-#include <iostream>
-
 
 /**	  Calculates x(ss)
  *	   xs array must have been calculated by spline */
 double spline::seval(double ss, const double x[], const double xs[], const double s[], int n) {
-    int ilow, i;
-    double ds, t, cx1, cx2;
 
-    ilow = 1;
-    i = n;
+    //TODO: INDEX_START_WITH=1
+    int l = 1;
+    int r = n;
 
-    while (i - ilow > 1) {
-        int imid = (int)((i + ilow) / 2);
-        if (ss < s[imid])
-        i = imid;
-        else
-        ilow = imid;
+    while (r - l > 1) {
+        int imid = (r + l) / 2;
+        if (ss < s[imid]) {
+            r = imid;
+        }
+        else {
+            l = imid;
+        }
     }
+    int index = l;
 
-    ds = s[i] - s[i - 1];
-    t = (ss - s[i - 1]) / ds;
-    cx1 = ds * xs[i - 1] - x[i] + x[i - 1];
-    cx2 = ds * xs[i] - x[i] + x[i - 1];
-    std::cout<<"ss:"<<ss<<std::endl;
-    std::cout<<"x:";
-    for (int k=1; k<=n; k++) {
-        std::cout<<x[k]<<",";
-    }
-    std::cout<<std::endl;
-    std::cout<<"s:";
-    for (int k=1; k<=n; k++) {
-        std::cout<<s[k]<<",";
-    }
-    std::cout<<std::endl;
-    std::cout<<"xs:";
-    for (int k=1; k<=n; k++) {
-        std::cout<<xs[k]<<",";
-    }
-    std::cout<<std::endl;
-    double seval = t * x[i] + (1.0 - t) * x[i - 1] +
-            (t - t * t) * ((1.0 - t) * cx1 - t * cx2);
-    std::cout<<"seval:"<<seval<<std::endl;
-    return seval;
+    double ds = s[index] - s[index - 1];
+    double t = (ss - s[index - 1]) / ds;
+    double cx_former = ds * xs[index - 1] - x[index] + x[index - 1];
+    double cx_later = ds * xs[index] - x[index] + x[index - 1];
+    return t * x[index] + (1.0 - t) * x[index - 1] +
+            (t - t * t) * ((1.0 - t) * cx_former - t * cx_later);
 }
