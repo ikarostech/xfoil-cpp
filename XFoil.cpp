@@ -569,8 +569,8 @@ bool XFoil::abcopy() {
   segspl(y, yp, s, n);
   ncalc(x, y, s, n, nx, ny);
   lefind(sle, x, xp, y, yp, s, n);
-  xle = seval(sle, x, xp, s, n);
-  yle = seval(sle, y, yp, s, n);
+  xle = spline::seval(sle, x, xp, s, n);
+  yle = spline::seval(sle, y, yp, s, n);
   xte = 0.5 * (x[1] + x[n]);
   yte = 0.5 * (y[1] + y[n]);
   chord = sqrt((xte - xle) * (xte - xle) + (yte - yle) * (yte - yle));
@@ -2717,8 +2717,8 @@ bool XFoil::geopar(double x[], double xp[], double y[], double yp[], double s[],
 
   lefind(sle, x, xp, y, yp, s, n);
 
-  xle = seval(sle, x, xp, s, n);
-  yle = seval(sle, y, yp, s, n);
+  xle = spline::seval(sle, x, xp, s, n);
+  yle = spline::seval(sle, y, yp, s, n);
   xte = 0.5 * (x[1] + x[n]);
   yte = 0.5 * (y[1] + y[n]);
 
@@ -2761,16 +2761,16 @@ void XFoil::getcam(double xcm[], double ycm[], int &ncm, double xtk[],
   int i;
 
   xlfind(sl, x, xp, y, yp, s, n);
-  xl = seval(sl, x, xp, s, n);
-  yl = seval(sl, y, yp, s, n);
+  xl = spline::seval(sl, x, xp, s, n);
+  yl = spline::seval(sl, y, yp, s, n);
 
   //---- go over each point, finding opposite points, getting camber and
   // thickness
   for (i = 1; i <= n; i++) {
     //------ coordinates of point on the opposite side with the same x value
     sopps(sopp, s[i], x, xp, y, yp, s, n, sl);
-    const double xopp = seval(sopp, x, xp, s, n);
-    const double yopp = seval(sopp, y, yp, s, n);
+    const double xopp = spline::seval(sopp, x, xp, s, n);
+    const double yopp = spline::seval(sopp, y, yp, s, n);
 
     //------ get camber and thickness
     xcm[i] = 0.5 * (x[i] + xopp);
@@ -2835,7 +2835,7 @@ void XFoil::getmax(double x[], double y[], double yp[], int n, double &xmax,
   //---- do a newton loop to refine estimate
   bool bConv = false;
   for (iter = 1; iter <= 10; iter++) {
-    ymax = seval(xmax, y, yp, x, n);
+    ymax = spline::seval(xmax, y, yp, x, n);
     const double res = deval(xmax, y, yp, x, n);
     const double resp = d2val(xmax, y, yp, x, n);
     if (fabs(xlen * resp) < 1.0e-6) {
@@ -2980,8 +2980,8 @@ void XFoil::sopps(double &sopp, double si, double x[], double xp[], double y[],
   slen = s[n] - s[1];
 
   //---rational alternative 4/24/01 hhy
-  xle = seval(sle, x, xp, s, n);
-  yle = seval(sle, y, yp, s, n);
+  xle = spline::seval(sle, x, xp, s, n);
+  yle = spline::seval(sle, y, yp, s, n);
   xte = 0.5 * (x[1] + x[n]);
   yte = 0.5 * (y[1] + y[n]);
   chord = sqrt((xte - xle) * (xte - xle) + (yte - yle) * (yte - yle));
@@ -3005,17 +3005,17 @@ void XFoil::sopps(double &sopp, double si, double x[], double xp[], double y[],
   }
 
   //---- xbar = x coordinate in chord-line axes
-  xi = seval(si, x, xp, s, n);
-  yi = seval(si, y, yp, s, n);
-  xle = seval(sle, x, xp, s, n);
-  yle = seval(sle, y, yp, s, n);
+  xi = spline::seval(si, x, xp, s, n);
+  yi = spline::seval(si, y, yp, s, n);
+  xle = spline::seval(sle, x, xp, s, n);
+  yle = spline::seval(sle, y, yp, s, n);
   xbar = (xi - xle) * dxc + (yi - yle) * dyc;
 
   //---- converge on exact opposite point with same xbar value
   bool bFound = false;
   for (int iter = 1; iter <= 12; iter++) {
-    const double xopp = seval(sopp, x, xp, s, n);
-    const double yopp = seval(sopp, y, yp, s, n);
+    const double xopp = spline::seval(sopp, x, xp, s, n);
+    const double yopp = spline::seval(sopp, y, yp, s, n);
     const double xoppd = deval(sopp, x, xp, s, n);
     const double yoppd = deval(sopp, y, yp, s, n);
 
@@ -3051,8 +3051,8 @@ bool XFoil::getxyf(double x[], double xp[], double y[], double yp[], double s[],
   bots = s[n] - (x[n] - xf);
   sinvrt(tops, xf, x, xp, s, n);
   sinvrt(bots, xf, x, xp, s, n);
-  topy = seval(tops, y, yp, s, n);
-  boty = seval(bots, y, yp, s, n);
+  topy = spline::seval(tops, y, yp, s, n);
+  boty = spline::seval(bots, y, yp, s, n);
 
   yrel = yf;
 
@@ -3247,8 +3247,8 @@ void XFoil::hipnt(double chpnt, double thpnt) {
 
   //--- check chordline direction (should be unrotated for camber routines)
   //    to function correctly
-  xle = seval(sble, xb, xbp, sb, nb);
-  yle = seval(sble, yb, ybp, sb, nb);
+  xle = spline::seval(sble, xb, xbp, sb, nb);
+  yle = spline::seval(sble, yb, ybp, sb, nb);
   xte = 0.5 * (xb[1] + xb[nb]);
   yte = 0.5 * (yb[1] + yb[nb]);
   arot = atan2(yle - yte, xte - xle) / dtor;
@@ -3262,8 +3262,8 @@ void XFoil::hipnt(double chpnt, double thpnt) {
 
   //---- find leftmost point location
   xlfind(sbl, xb, xbp, yb, ybp, sb, nb);
-  //	xbl = seval(sbl,xb,xbp,sb,nb);
-  ybl = seval(sbl, yb, ybp, sb, nb);
+  //	xbl = spline::seval(sbl,xb,xbp,sb,nb);
+  ybl = spline::seval(sbl, yb, ybp, sb, nb);
 
   //---- find the current buffer airfoil camber and thickness
   getcam(xcm, ycm, ncm, xtk, ytk, ntk, xb, xbp, yb, ybp, sb, nb);
@@ -3289,7 +3289,7 @@ void XFoil::hipnt(double chpnt, double thpnt) {
     yfn[2] = thpnt;
     yfn[3] = xtk[ntk];
     splina(yfn, yfnp, xfn, 3);
-    for (int i = 1; i <= ntk; i++) xtk[i] = seval(xtk[i], yfn, yfnp, xfn, 3);
+    for (int i = 1; i <= ntk; i++) xtk[i] = spline::seval(xtk[i], yfn, yfnp, xfn, 3);
   }
 
   //--- shift camber highpoint
@@ -3301,7 +3301,7 @@ void XFoil::hipnt(double chpnt, double thpnt) {
     yfn[2] = chpnt;
     yfn[3] = xcm[ncm];
     splina(yfn, yfnp, xfn, 3);
-    for (int i = 1; i <= ncm; i++) xcm[i] = seval(xcm[i], yfn, yfnp, xfn, 3);
+    for (int i = 1; i <= ncm; i++) xcm[i] = spline::seval(xcm[i], yfn, yfnp, xfn, 3);
   }
 
   //---- make new airfoil from thickness and camber
@@ -3313,8 +3313,8 @@ void XFoil::hipnt(double chpnt, double thpnt) {
   //---- for each orig. airfoil point setup new yb from camber and thickness
   for (int i = 1; i <= nb; i++) {
     //------ spline camber and thickness at original xb points
-    const double ycc = seval(xb[i], ycm, ycmp, xcm, ncm);
-    const double ytt = seval(xb[i], ytk, ytkp, xtk, ntk);
+    const double ycc = spline::seval(xb[i], ycm, ycmp, xcm, ncm);
+    const double ytt = spline::seval(xb[i], ytk, ytkp, xtk, ntk);
 
     //------ set new y coordinate from new camber & thickness
     if (sb[i] <= sbl)
@@ -3653,8 +3653,8 @@ bool XFoil::lefind(double &sle, double x[], double xp[], double y[],
 
   //---- newton iteration to get exact sle value
   for (iter = 1; iter <= 50; iter++) {
-    xle = seval(sle, x, xp, s, n);
-    yle = seval(sle, y, yp, s, n);
+    xle = spline::seval(sle, x, xp, s, n);
+    yle = spline::seval(sle, y, yp, s, n);
     const double dxds = deval(sle, x, xp, s, n);
     const double dyds = deval(sle, y, yp, s, n);
     const double dxdd = d2val(sle, x, xp, s, n);
@@ -3770,10 +3770,10 @@ bool XFoil::mhinge() {
     sinvrt(bots, xof, x, xp, s, n);
   }
 
-  topx = seval(tops, x, xp, s, n);
-  topy = seval(tops, y, yp, s, n);
-  botx = seval(bots, x, xp, s, n);
-  boty = seval(bots, y, yp, s, n);
+  topx = spline::seval(tops, x, xp, s, n);
+  topy = spline::seval(tops, y, yp, s, n);
+  botx = spline::seval(bots, x, xp, s, n);
+  boty = spline::seval(bots, y, yp, s, n);
 
   hmom = 0.0;
   hfx = 0.0;
@@ -4716,8 +4716,8 @@ void XFoil::pangen() {
   // stop21:
 
   //---- set LE, TE points
-  xble = seval(sble, xb, xbp, sb, nb);
-  yble = seval(sble, yb, ybp, sb, nb);
+  xble = spline::seval(sble, xb, xbp, sb, nb);
+  yble = spline::seval(sble, yb, ybp, sb, nb);
   xbte = 0.5 * (xb[1] + xb[nb]);
   ybte = 0.5 * (yb[1] + yb[nb]);
   chbsq = (xbte - xble) * (xbte - xble) + (ybte - yble) * (ybte - yble);
@@ -4899,8 +4899,8 @@ stop51:
   for (int iter = 1; iter <= 20; iter++) {  // iter 10
 
     //------ set up tri-diagonal system for node position deltas
-    cv1 = seval(snew[1], w5, w6, sb, nb);
-    cv2 = seval(snew[2], w5, w6, sb, nb);
+    cv1 = spline::seval(snew[1], w5, w6, sb, nb);
+    cv2 = spline::seval(snew[2], w5, w6, sb, nb);
     cvs1 = deval(snew[1], w5, w6, sb, nb);
     cvs2 = deval(snew[2], w5, w6, sb, nb);
 
@@ -4916,7 +4916,7 @@ stop51:
     for (i = 2; i <= nn - 1; i++) {  // 110
       dsm = snew[i] - snew[i - 1];
       dsp = snew[i] - snew[i + 1];
-      cv3 = seval(snew[i + 1], w5, w6, sb, nb);
+      cv3 = spline::seval(snew[i + 1], w5, w6, sb, nb);
       cvs3 = deval(snew[i + 1], w5, w6, sb, nb);
 
       cavp = sqrt(cv3 * cv3 + cv2 * cv2);
@@ -5016,8 +5016,8 @@ stop11:
   for (i = 1; i <= n; i++) {
     ind = ipfac * (i - 1) + 1;
     s[i] = snew[ind];
-    x[i] = seval(snew[ind], xb, xbp, sb, nb);
-    y[i] = seval(snew[ind], yb, ybp, sb, nb);
+    x[i] = spline::seval(snew[ind], xb, xbp, sb, nb);
+    y[i] = spline::seval(snew[ind], yb, ybp, sb, nb);
   }
 
   //---- go over buffer airfoil again, checking for corners (double points)
@@ -5059,14 +5059,14 @@ stop11:
         // comparable
         if (i - 2 >= 1) {
           s[i - 1] = 0.5 * (s[i] + s[i - 2]);
-          x[i - 1] = seval(s[i - 1], xb, xbp, sb, nb);
-          y[i - 1] = seval(s[i - 1], yb, ybp, sb, nb);
+          x[i - 1] = spline::seval(s[i - 1], xb, xbp, sb, nb);
+          y[i - 1] = spline::seval(s[i - 1], yb, ybp, sb, nb);
         }
 
         if (i + 2 <= n) {
           s[i + 1] = 0.5 * (s[i] + s[i + 2]);
-          x[i + 1] = seval(s[i + 1], xb, xbp, sb, nb);
-          y[i + 1] = seval(s[i + 1], yb, ybp, sb, nb);
+          x[i + 1] = spline::seval(s[i + 1], xb, xbp, sb, nb);
+          y[i + 1] = spline::seval(s[i + 1], yb, ybp, sb, nb);
         }
 
         //---------- go on to next input geometry point to check for corner
@@ -5084,8 +5084,8 @@ stop11:
   segspl(y, yp, s, n);
   lefind(sle, x, xp, y, yp, s, n);
 
-  xle = seval(sle, x, xp, s, n);
-  yle = seval(sle, y, yp, s, n);
+  xle = spline::seval(sle, x, xp, s, n);
+  yle = spline::seval(sle, y, yp, s, n);
   xte = 0.5 * (x[1] + x[n]);
   yte = 0.5 * (y[1] + y[n]);
   chord = sqrt((xte - xle) * (xte - xle) + (yte - yle) * (yte - yle));
@@ -5173,8 +5173,8 @@ bool XFoil::Preprocess() {
   geopar(xb, xbp, yb, ybp, sb, nb, w1, sble, chordb, areab, radble, angbte,
          ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
 
-  //	xble = seval(sble,xb,xbp,sb,nb);
-  //	yble = seval(sble,yb,ybp,sb,nb);
+  //	xble = spline::seval(sble,xb,xbp,sb,nb);
+  //	yble = spline::seval(sble,yb,ybp,sb,nb);
   //	xbte = 0.5*(xb[1] + xb[nb]);
   //	ybte = 0.5*(yb[1] + yb[nb]);
   // TRACE(" le_x = %f, le_y = %f, chord=%f\n te_x = %f,  te_y = %f\n",
@@ -5182,8 +5182,8 @@ bool XFoil::Preprocess() {
 
   //---- set reasonable mses domain parameters for non-mses coordinate file
 
-  //	xble = seval(sble,xb,xbp,sb,nb);
-  //	yble = seval(sble,yb,ybp,sb,nb);
+  //	xble = spline::seval(sble,xb,xbp,sb,nb);
+  //	yble = spline::seval(sble,yb,ybp,sb,nb);
 
   //	What's the use?
   /*		xinl = xble - 2.0*chordb;
@@ -6453,8 +6453,8 @@ bool XFoil::setbl() {
         chx = xte - xle;
         chy = yte - yle;
         chsq = chx * chx + chy * chy;
-        xtr = seval(str, x, xp, s, n);
-        ytr = seval(str, y, yp, s, n);
+        xtr = spline::seval(str, x, xp, s, n);
+        ytr = spline::seval(str, y, yp, s, n);
         xoctr[is] = ((xtr - xle) * chx + (ytr - yle) * chy) / chsq;
         yoctr[is] = ((ytr - yle) * chx - (xtr - xle) * chy) / chsq;
       }
@@ -6652,31 +6652,6 @@ bool XFoil::setMach() {
   return true;
 }
 
-/**	  Calculates x(ss)
- *	   xs array must have been calculated by spline */
-double XFoil::seval(double ss, const double x[], const double xs[], const double s[], int n) {
-  int ilow, i;
-  double ds, t, cx1, cx2;
-
-  ilow = 1;
-  i = n;
-
-  while (i - ilow > 1) {
-    int imid = (int)((i + ilow) / 2);
-    if (ss < s[imid])
-      i = imid;
-    else
-      ilow = imid;
-  }
-
-  ds = s[i] - s[i - 1];
-  t = (ss - s[i - 1]) / ds;
-  cx1 = ds * xs[i - 1] - x[i] + x[i - 1];
-  cx2 = ds * xs[i] - x[i] + x[i - 1];
-  return t * x[i] + (1.0 - t) * x[i - 1] +
-         (t - t * t) * ((1.0 - t) * cx1 - t * cx2);
-}
-
 /** returns the absolute value of "a" x sign(b) */
 double XFoil::sign(double a, double b) {
   if (b >= 0.0)
@@ -6703,7 +6678,7 @@ bool XFoil::sinvrt(double &si, double xi, double x[], double xs[], double s[],
   sisav = si;
 
   for (iter = 1; iter <= 10; iter++) {
-    const double res = seval(si, x, xs, s, n) - xi;
+    const double res = spline::seval(si, x, xs, s, n) - xi;
     const double resp = deval(si, x, xs, s, n);
     const double ds = -res / resp;
     si = si + ds;
@@ -6910,7 +6885,7 @@ bool XFoil::speccl() {
  *      is used to achieve non-oscillatory curve.         |
  *      End conditions are set by end segment slope.      |
  *      To evaluate the spline at some value of s,        |
- *      use seval and/or deval.                           |
+ *      use spline::seval and/or deval.                           |
  *                                                        |
  *      s        independent variable array (input)       |
  *      x        dependent variable array   (input)       |
@@ -6949,7 +6924,7 @@ void XFoil::splina(const double x[], double xs[], const double s[], int n) {
  *      derivative end conditions are used.               |
  *                                                        |
  *      To evaluate the spline at some value of s,        |
- *      use seval and/or deval.                           |
+ *      use spline::seval and/or deval.                           |
  *                                                        |
  *      s        independent variable array (input)       |
  *      x        dependent variable array   (input)       |
@@ -7077,22 +7052,22 @@ void XFoil::sss(double ss, double *s1, double *s2, double del, double xbf,
 
   //---- initial guesses for s1, s2
 
-  r1 = (seval(ss, x, xp, s, n) - xbf);
-  r2 = (seval(ss, y, yp, s, n) - ybf);
+  r1 = (spline::seval(ss, x, xp, s, n) - xbf);
+  r2 = (spline::seval(ss, y, yp, s, n) - ybf);
   rsq = r1 * r1 + r2 * r2;
   *s1 = ss - (sind * sqrt(rsq) + eps * stot) * ssgn;
   *s2 = ss + (sind * sqrt(rsq) + eps * stot) * ssgn;
 
   //---- newton iteration loop
   for (int iter = 1; iter <= 10; iter++) {
-    const double x1 = seval(*s1, x, xp, s, n);
+    const double x1 = spline::seval(*s1, x, xp, s, n);
     const double x1p = deval(*s1, x, xp, s, n);
-    const double y1 = seval(*s1, y, yp, s, n);
+    const double y1 = spline::seval(*s1, y, yp, s, n);
     const double y1p = deval(*s1, y, yp, s, n);
 
-    const double x2 = seval(*s2, x, xp, s, n);
+    const double x2 = spline::seval(*s2, x, xp, s, n);
     const double x2p = deval(*s2, x, xp, s, n);
-    const double y2 = seval(*s2, y, yp, s, n);
+    const double y2 = spline::seval(*s2, y, yp, s, n);
     const double y2p = deval(*s2, y, yp, s, n);
 
     const double r1sq = (x1 - xbf) * (x1 - xbf) + (y1 - ybf) * (y1 - ybf);
@@ -8842,8 +8817,8 @@ int XFoil::arefine(double x[], double y[], double s[], double xs[], double ys[],
     if (lref) {
       //------- add extra point just before this node
       smid = s[i] - 0.3333 * (s[i] - s[i - 1]);
-      xk = seval(smid, x, xs, s, n);
-      yk = seval(smid, y, ys, s, n);
+      xk = spline::seval(smid, x, xs, s, n);
+      yk = spline::seval(smid, y, ys, s, n);
       if (xk >= x1 && xk <= x2) {
         k = k + 1;
         if (k > ndim) goto stop90;
@@ -8861,8 +8836,8 @@ int XFoil::arefine(double x[], double y[], double s[], double xs[], double ys[],
     if (lref) {
       //------- add extra point just after this node
       smid = s[i] + 0.3333 * (s[i + 1] - s[i]);
-      xk = seval(smid, x, xs, s, n);
-      yk = seval(smid, y, ys, s, n);
+      xk = spline::seval(smid, x, xs, s, n);
+      yk = spline::seval(smid, y, ys, s, n);
       if (xk >= x1 && xk <= x2) {
         k = k + 1;
         if (k > ndim) goto stop90;
@@ -8985,8 +8960,8 @@ void XFoil::flap() {
   } else {
     const double chx = deval(bots, xb, xbp, sb, nb) - deval(tops, xb, xbp, sb, nb);
     const double chy = deval(bots, yb, ybp, sb, nb) - deval(tops, yb, ybp, sb, nb);
-    const double fvx = seval(bots, xb, xbp, sb, nb) + seval(tops, xb, xbp, sb, nb);
-    const double fvy = seval(bots, yb, ybp, sb, nb) + seval(tops, yb, ybp, sb, nb);
+    const double fvx = spline::seval(bots, xb, xbp, sb, nb) + spline::seval(tops, xb, xbp, sb, nb);
+    const double fvy = spline::seval(bots, yb, ybp, sb, nb) + spline::seval(tops, yb, ybp, sb, nb);
     const double crsp = chx * (ybf - 0.5 * fvy) - chy * (xbf - 0.5 * fvx);
     if (crsp > 0.0) {
       //------ flap hinge is above airfoil
@@ -9005,11 +8980,11 @@ void XFoil::flap() {
   sss(bots, &sb1, &sb2, abot, xbf, ybf, xb, xbp, yb, ybp, sb, nb, 2);
 
   //-- ... and x,y coordinates
-  xt1 = seval(st1, xb, xbp, sb, nb);
-  yt1 = seval(st1, yb, ybp, sb, nb);
+  xt1 = spline::seval(st1, xb, xbp, sb, nb);
+  yt1 = spline::seval(st1, yb, ybp, sb, nb);
 
-  xb1 = seval(sb1, xb, xbp, sb, nb);
-  yb1 = seval(sb1, yb, ybp, sb, nb);
+  xb1 = spline::seval(sb1, xb, xbp, sb, nb);
+  yb1 = spline::seval(sb1, yb, ybp, sb, nb);
 
   //-- find points adjacent to breaks
   for (i = 1; i <= nb - 1; i++) {
@@ -9029,13 +9004,13 @@ void XFoil::flap() {
     const double st1q = st1 + sfrac * (sb[it1 + 1] - st1);
     if (sb[it1] < st1q) {
       //------ simply move adjacent point to ideal sfrac location
-      xt1new = seval(st1q, xb, xbp, sb, nb);
-      yt1new = seval(st1q, yb, ybp, sb, nb);
+      xt1new = spline::seval(st1q, xb, xbp, sb, nb);
+      yt1new = spline::seval(st1q, yb, ybp, sb, nb);
       lt1new = false;
     } else {
       //------ make new point at sfrac location
-      xt1new = seval(st1p, xb, xbp, sb, nb);
-      yt1new = seval(st1p, yb, ybp, sb, nb);
+      xt1new = spline::seval(st1p, xb, xbp, sb, nb);
+      yt1new = spline::seval(st1p, yb, ybp, sb, nb);
       lt1new = true;
     }
 
@@ -9044,13 +9019,13 @@ void XFoil::flap() {
     const double st2q = st2 + sfrac * (sb[it2q] - st2);
     if (sb[it2] > st2q) {
       //------ simply move adjacent point
-      xt2new = seval(st2q, xb, xbp, sb, nb);
-      yt2new = seval(st2q, yb, ybp, sb, nb);
+      xt2new = spline::seval(st2q, xb, xbp, sb, nb);
+      yt2new = spline::seval(st2q, yb, ybp, sb, nb);
       lt2new = false;
     } else {
       //------ make new point
-      xt2new = seval(st2p, xb, xbp, sb, nb);
-      yt2new = seval(st2p, yb, ybp, sb, nb);
+      xt2new = spline::seval(st2p, xb, xbp, sb, nb);
+      yt2new = spline::seval(st2p, yb, ybp, sb, nb);
       lt2new = true;
     }
   }
@@ -9060,13 +9035,13 @@ void XFoil::flap() {
     const double sb1q = sb1 + sfrac * (sb[ib1 - 1] - sb1);
     if (sb[ib1] > sb1q) {
       //------ simply move adjacent point
-      xb1new = seval(sb1q, xb, xbp, sb, nb);
-      yb1new = seval(sb1q, yb, ybp, sb, nb);
+      xb1new = spline::seval(sb1q, xb, xbp, sb, nb);
+      yb1new = spline::seval(sb1q, yb, ybp, sb, nb);
       lb1new = false;
     } else {
       //------ make new point
-      xb1new = seval(sb1p, xb, xbp, sb, nb);
-      yb1new = seval(sb1p, yb, ybp, sb, nb);
+      xb1new = spline::seval(sb1p, xb, xbp, sb, nb);
+      yb1new = spline::seval(sb1p, yb, ybp, sb, nb);
       lb1new = true;
     }
 
@@ -9075,13 +9050,13 @@ void XFoil::flap() {
     const double sb2q = sb2 + sfrac * (sb[ib2q] - sb2);
     if (sb[ib2] < sb2q) {
       //------ simply move adjacent point
-      xb2new = seval(sb2q, xb, xbp, sb, nb);
-      yb2new = seval(sb2q, yb, ybp, sb, nb);
+      xb2new = spline::seval(sb2q, xb, xbp, sb, nb);
+      yb2new = spline::seval(sb2q, yb, ybp, sb, nb);
       lb2new = false;
     } else {
       //------ make new point
-      xb2new = seval(sb2p, xb, xbp, sb, nb);
-      yb2new = seval(sb2p, yb, ybp, sb, nb);
+      xb2new = spline::seval(sb2p, xb, xbp, sb, nb);
+      yb2new = spline::seval(sb2p, yb, ybp, sb, nb);
       lb2new = true;
     }
   }
@@ -9382,8 +9357,8 @@ void XFoil::scinit(int n, double x[], double xp[], double y[], double yp[],
   //     --- avoids gibbs problems with q(w)'s fourier sine transform
   qim0 = ag0 + 0.5 * PI * (1.0 + agte);
 
-  xle = seval(sle, x, xp, s, n);
-  yle = seval(sle, y, yp, s, n);
+  xle = spline::seval(sle, x, xp, s, n);
+  yle = spline::seval(sle, y, yp, s, n);
 
   //---- save te gap and airfoil chord
   double dxte = x[1] - x[n];
@@ -9698,8 +9673,8 @@ void XFoil::zlefind(complex<double> *zle, complex<double> zc[], double wc[],
   bool found = false;
 
   for (int itcle = 1; itcle <= 10; itcle++) {
-    xcle = seval(wcle, xc, xcw, wc + ic1 - 1, nic);
-    ycle = seval(wcle, yc, ycw, wc + ic1 - 1, nic);
+    xcle = spline::seval(wcle, xc, xcw, wc + ic1 - 1, nic);
+    ycle = spline::seval(wcle, yc, ycw, wc + ic1 - 1, nic);
     const double dxdw = deval(wcle, xc, xcw, wc + ic1 - 1, nic);
     const double dydw = deval(wcle, yc, ycw, wc + ic1 - 1, nic);
     const double dxdd = d2val(wcle, xc, xcw, wc + ic1 - 1, nic);
@@ -9727,8 +9702,8 @@ void XFoil::zlefind(complex<double> *zle, complex<double> zc[], double wc[],
   //   51 continue
 
   //---- set final leading edge point complex coordinate
-  xcle = seval(wcle, xc, xcw, wc + ic1 - 1, nic);
-  ycle = seval(wcle, yc, ycw, wc + ic1 - 1, nic);
+  xcle = spline::seval(wcle, xc, xcw, wc + ic1 - 1, nic);
+  ycle = spline::seval(wcle, yc, ycw, wc + ic1 - 1, nic);
   *zle = complex<double>(xcle, ycle);
 
   return;
@@ -9753,8 +9728,8 @@ void XFoil::mapgam(int iac, double &alg, double &clg, double &cmg) {
   for (int i = 1; i <= nsp; i++) {
     qgamm[i] = w6[i];
     sspec[i] = w5[i];
-    double xic = seval(s[n] * sspec[i], x, xp, s, n);
-    double yic = seval(s[n] * sspec[i], y, yp, s, n);
+    double xic = spline::seval(s[n] * sspec[i], x, xp, s, n);
+    double yic = spline::seval(s[n] * sspec[i], y, yp, s, n);
     xspoc[i] = ((xic - xle) * chx + (yic - yle) * chy) / chsq;
     yspoc[i] = ((yic - yle) * chx - (xic - xle) * chy) / chsq;
   }
@@ -10875,8 +10850,8 @@ bool XFoil::ExecQDES() {
   splind(y, yp, s, n, -999.0, -999.0);
   ncalc(x, y, s, n, nx, ny);
   lefind(sle, x, xp, y, yp, s, n);
-  xle = seval(sle, x, xp, s, n);
-  yle = seval(sle, y, yp, s, n);
+  xle = spline::seval(sle, x, xp, s, n);
+  yle = spline::seval(sle, y, yp, s, n);
   chord = sqrt((0.5 * (x[1] + x[n]) - xle) * (0.5 * (x[1] + x[n]) - xle) +
                (0.5 * (y[1] + y[n]) - yle) * (0.5 * (y[1] + y[n]) - yle));
   tecalc();
@@ -10921,8 +10896,8 @@ void XFoil::RestoreQDES() {
   splind(y, yp, s, n, -999.0, -999.0);
   ncalc(x, y, s, n, nx, ny);
   lefind(sle, x, xp, y, yp, s, n);
-  xle = seval(sle, x, xp, s, n);
-  yle = seval(sle, y, yp, s, n);
+  xle = spline::seval(sle, x, xp, s, n);
+  yle = spline::seval(sle, y, yp, s, n);
   chord = sqrt((0.5 * (x[1] + x[n]) - xle) * (0.5 * (x[1] + x[n]) - xle) +
                (0.5 * (y[1] + y[n]) - yle) * (0.5 * (y[1] + y[n]) - yle));
   tecalc();
@@ -10970,8 +10945,8 @@ void XFoil::thkcam(double tfac, double cfac) {
   lefind(sble, xb, xbp, yb, ybp, sb, nb);
 
   //---rational alternative 4/24/01 hhy
-  xle = seval(sble, xb, xbp, sb, nb);
-  yle = seval(sble, yb, ybp, sb, nb);
+  xle = spline::seval(sble, xb, xbp, sb, nb);
+  yle = spline::seval(sble, yb, ybp, sb, nb);
   xte = 0.5 * (xb[1] + xb[nb]);
   yte = 0.5 * (yb[1] + yb[nb]);
   chord = sqrt((xte - xle) * (xte - xle) + (yte - yle) * (yte - yle));
@@ -10983,8 +10958,8 @@ void XFoil::thkcam(double tfac, double cfac) {
   for (i = 1; i <= nb; i++) {
     //------ coordinates of point on the opposite side with the same x value
     sopps(sbopp, sb[i], xb, xbp, yb, ybp, sb, nb, sble);
-    const double xbopp = seval(sbopp, xb, xbp, sb, nb);
-    const double ybopp = seval(sbopp, yb, ybp, sb, nb);
+    const double xbopp = spline::seval(sbopp, xb, xbp, sb, nb);
+    const double ybopp = spline::seval(sbopp, yb, ybp, sb, nb);
 
     //------ set new y coordinate by changing camber & thickness appropriately
     const double xcavg = (0.5 * (xb[i] + xbopp) * dxc + 0.5 * (yb[i] + ybopp) * dyc);
@@ -11059,8 +11034,8 @@ void XFoil::inter(double x0[], double xp0[], double y0[], double yp0[],
       st1 = sle1 + bots1 * sn;
 
     //------ set interpolated x,y coordinates
-    x[i] = f0 * seval(st0, x0, xp0, s0, n0) + f1 * seval(st1, x1, xp1, s1, n1);
-    y[i] = f0 * seval(st0, y0, yp0, s0, n0) + f1 * seval(st1, y1, yp1, s1, n1);
+    x[i] = f0 * spline::seval(st0, x0, xp0, s0, n0) + f1 * spline::seval(st1, x1, xp1, s1, n1);
+    y[i] = f0 * spline::seval(st0, y0, yp0, s0, n0) + f1 * spline::seval(st1, y1, yp1, s1, n1);
   }
 }
 
@@ -11104,8 +11079,8 @@ void XFoil::interpolate(double xf1[], double yf1[], int n1, double xf2[],
 
 double XFoil::DeRotate() {
   lefind(sble, xb, xbp, yb, ybp, sb, nb);
-  xle = seval(sble, xb, xbp, sb, nb);
-  yle = seval(sble, yb, ybp, sb, nb);
+  xle = spline::seval(sble, xb, xbp, sb, nb);
+  yle = spline::seval(sble, yb, ybp, sb, nb);
   xte = 0.5 * (xb[1] + xb[nb]);
   yte = 0.5 * (yb[1] + yb[nb]);
 
@@ -11143,8 +11118,8 @@ void XFoil::tgap(double gapnew, double blend) {
   double gap, dgap, doc;
   double arg;
   lefind(sble, xb, xbp, yb, ybp, sb, nb);
-  xble = seval(sble, xb, xbp, sb, nb);
-  yble = seval(sble, yb, ybp, sb, nb);
+  xble = spline::seval(sble, xb, xbp, sb, nb);
+  yble = spline::seval(sble, yb, ybp, sb, nb);
   xbte = 0.5 * (xb[1] + xb[nb]);
   ybte = 0.5 * (yb[1] + yb[nb]);
   chbsq = (xbte - xble) * (xbte - xble) + (ybte - yble) * (ybte - yble);
@@ -11244,8 +11219,8 @@ void XFoil::lerscl(double *x, double *xp, double *y, double *yp, double *s,
   double dxc, dyc, srfac, sopp;
 
   lefind(sle, x, xp, y, yp, s, n);
-  xle = seval(sle, x, xp, s, n);
-  yle = seval(sle, y, yp, s, n);
+  xle = spline::seval(sle, x, xp, s, n);
+  yle = spline::seval(sle, y, yp, s, n);
   xte = 0.5 * (x[1] + x[n]);
   yte = 0.5 * (y[1] + y[n]);
   chord = sqrt((xte - xle) * (xte - xle) + (yte - yle) * (yte - yle));
@@ -11263,8 +11238,8 @@ void XFoil::lerscl(double *x, double *xp, double *y, double *yp, double *s,
 
     //------ set point on the opposite side with the same chord x value
     sopps(sopp, s[i], x, xp, y, yp, s, n, sle);
-    const double xopp = seval(sopp, x, xp, s, n);
-    const double yopp = seval(sopp, y, yp, s, n);
+    const double xopp = spline::seval(sopp, x, xp, s, n);
+    const double yopp = spline::seval(sopp, y, yp, s, n);
 
     const double ybarop = (yopp - yle) * dxc - (xopp - xle) * dyc;
 

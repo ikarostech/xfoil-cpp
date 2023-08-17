@@ -47,6 +47,7 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 #include "Eigen/Dense"
 #include "Eigen/StdVector"
 
+#include "model/spline.hpp"
 #include "xfoil_params.h"
 
 using namespace std;
@@ -55,14 +56,20 @@ using namespace Eigen;
 
 struct blData {
  public:
-  double xz, uz, tz, dz, sz, amplz, uz_uei, uz_ms, dwz, hz, hz_tz, hz_dz, mz,
-      mz_uz, mz_ms, rz, rz_uz, rz_ms, vz, vz_uz, vz_ms, vz_re, hkz, hkz_uz,
-      hkz_tz, hkz_dz, hkz_ms, hsz, hsz_uz, hsz_tz, hsz_dz, hsz_ms, hsz_re, hcz,
-      hcz_uz, hcz_tz, hcz_dz, hcz_ms, rtz, rtz_uz, rtz_tz, rtz_ms, rtz_re, cfz,
-      cfz_uz, cfz_tz, cfz_dz, cfz_ms, cfz_re, diz, diz_uz, diz_tz, diz_dz,
-      diz_sz, diz_ms, diz_re, usz, usz_uz, usz_tz, usz_dz, usz_ms, usz_re, cqz,
-      cqz_uz, cqz_tz, cqz_dz, cqz_ms, cqz_re, dez, dez_uz, dez_tz, dez_dz,
-      dez_ms;
+  double xz, uz, tz, dz, sz, amplz, uz_uei, uz_ms, dwz, 
+      hz, hz_tz, hz_dz, 
+      mz, mz_uz, mz_ms, 
+      rz, rz_uz, rz_ms, 
+      vz, vz_uz, vz_ms, vz_re, 
+      hkz, hkz_uz, hkz_tz, hkz_dz, hkz_ms, 
+      hsz, hsz_uz, hsz_tz, hsz_dz, hsz_ms, hsz_re, 
+      hcz, hcz_uz, hcz_tz, hcz_dz, hcz_ms, 
+      rtz, rtz_uz, rtz_tz, rtz_ms, rtz_re, 
+      cfz, cfz_uz, cfz_tz, cfz_dz, cfz_ms, cfz_re,
+      diz, diz_uz, diz_tz, diz_dz, diz_sz, diz_ms, diz_re,
+      usz, usz_uz, usz_tz, usz_dz, usz_ms, usz_re, 
+      cqz, cqz_uz, cqz_tz, cqz_dz, cqz_ms, cqz_re, 
+      dez, dez_uz, dez_tz, dez_dz, dez_ms;
 };
 class PairIndex {
   public:
@@ -313,7 +320,6 @@ class XFoil {
               const double s[], int n);
   double d2val(double ss, const double x[], const double xs[], const double s[], int n);
   double deval(double ss, const double x[], const double xs[], const double s[], int n);
-  double seval(double ss, const double x[], const double xs[], const double s[], int n);
   double sign(double a, double b);
 
  public:

@@ -117,9 +117,9 @@ TEST(cft_test, cal_cft) {
 //TODO blmidのリファクタリング
 TEST_F(DatGoogleTest, test_blmid_turbulent) {
   //given
-  foil->blData1.hkz = foil->hk2 = 6.0;
-  foil->blData1.rtz = foil->rt2 = 1E+5;
-  foil->blData1.mz = foil->m2 = 0.01;
+  foil->blData1.hkz = foil->blData2.hkz = 6.0;
+  foil->blData1.rtz = foil->blData2.rtz = 1E+5;
+  foil->blData1.mz = foil->blData2.mz = 0.01;
   
   //when
   foil->blmid(1);
@@ -140,9 +140,9 @@ TEST_F(DatGoogleTest, test_blmid_turbulent) {
 
 TEST_F(DatGoogleTest, test_blmid_laminar) {
   //given
-  foil->blData1.hkz = foil->hk2 = 6.0;
-  foil->blData1.rtz = foil->rt2 = 1E+5;
-  foil->blData1.mz = foil->m2 = 0.01;
+  foil->blData1.hkz = foil->blData2.hkz = 6.0;
+  foil->blData1.rtz = foil->blData2.rtz = 1E+5;
+  foil->blData1.mz = foil->blData2.mz = 0.01;
   
   //when
   foil->blmid(2);
@@ -163,9 +163,9 @@ TEST_F(DatGoogleTest, test_blmid_laminar) {
 
 TEST_F(DatGoogleTest, test_blmid_turbulent_wake) {
   //given
-  foil->blData1.hkz = foil->hk2 = 6.0;
-  foil->blData1.rtz = foil->rt2 = 1E+5;
-  foil->blData1.mz = foil->m2 = 0.01;
+  foil->blData1.hkz = foil->blData2.hkz = 6.0;
+  foil->blData1.rtz = foil->blData2.rtz = 1E+5;
+  foil->blData1.mz = foil->blData2.mz = 0.01;
   
   //when
   foil->blmid(3);
@@ -198,6 +198,25 @@ TEST_F(DatGoogleTest, test_isInside_false) {
 
   //then
   ASSERT_FALSE(actual);
+}
+
+TEST_F(DatGoogleTest, test_blvar_cfz_wake) {
+  //given
+  foil->blData1.hkz = foil->blData2.hkz = 6.0;
+  foil->blData1.rtz = foil->blData2.rtz = 1E+5;
+  foil->blData1.mz = foil->blData2.mz = 0.01;
+  foil->setBLInitialized(false);
+  foil->ViscousIter();
+
+  //when
+  bool actual = foil->blvar(1);
+
+  //then
+  ASSERT_EQ(0, foil->blData2.cfz_uz);
+  ASSERT_EQ(0, foil->blData2.cfz_tz);
+  ASSERT_EQ(0, foil->blData2.cfz_dz);
+  ASSERT_EQ(0, foil->blData2.cfz_ms);
+  ASSERT_EQ(0, foil->blData2.cfz_re);
 }
 
 int main() {
