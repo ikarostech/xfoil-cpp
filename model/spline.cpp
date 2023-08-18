@@ -10,7 +10,7 @@ double spline::seval(double ss, const double x[], const double xs[], const doubl
     int r = n;
 
     while (r - l > 1) {
-        int imid = (r + l) / 2;
+        int imid = (int)((l + r) / 2);
         if (ss < s[imid]) {
             r = imid;
         }
@@ -18,7 +18,7 @@ double spline::seval(double ss, const double x[], const double xs[], const doubl
             l = imid;
         }
     }
-    int index = l;
+    int index = r;
 
     double ds = s[index] - s[index - 1];
     double t = (ss - s[index - 1]) / ds;
