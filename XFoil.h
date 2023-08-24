@@ -347,7 +347,7 @@ class XFoil {
   int imax;  // needed for preprocessing
 
   double thickb, cambrb;
-  double xb[IBX], yb[IBX], nx[IZX], ny[IZX];
+  vector<double> xb, yb, nx, ny;
   double xpref1, xpref2;
   double cvpar, cterat, ctrrat, xsref1, xsref2;
 
@@ -371,12 +371,13 @@ class XFoil {
   bool lbflap, lflap;
   int n, nb, iblte[ISX], ipan[IVX][ISX], nbl[ISX];
   int npan;
-  double x[IZX], y[IZX], xstrip[ISX], xoctr[ISX], yoctr[ISX];
+  vector<double> x, y;
+  double xstrip[ISX], xoctr[ISX], yoctr[ISX];
   double qvis[IZX];
   bool liqset;
   double adeg, xcmref, ycmref;
   double tklam;
-  double xp[IZX], yp[IZX], s[IZX];
+  vector<double> xp, yp, s;
   double dtor;
 
   double thet[IVX][ISX], tau[IVX][ISX], ctau[IVX][ISX], ctq[IVX][ISX];
@@ -426,7 +427,7 @@ class XFoil {
   double w5[6 * IQX], w6[6 * IQX], w7[6 * IQX], w8[6 * IQX];
   int nsys;
   double isys[IVX][ISX];
-  double xbp[IBX], ybp[IBX], sb[IBX], snew[4 * IBX];
+  vector<double> xbp, ybp, sb, snew;
   double xof, yof, sble, chordb;
   double areab, radble, angbte;
   double ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt;

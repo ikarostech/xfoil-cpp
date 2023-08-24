@@ -141,8 +141,8 @@ bool XFoil::initialize() {
   memset(itran, 0, sizeof(itran));
   memset(mass, 0, sizeof(mass));
   memset(nbl, 0, sizeof(nbl));
-  memset(nx, 0, sizeof(nx));
-  memset(ny, 0, sizeof(ny));
+  nx.resize(IZX, 0);
+  ny.resize(IZX, 0);
   memset(gamu, 0, sizeof(gamu));
   memset(gam, 0, sizeof(gam));
   memset(gam_a, 0, sizeof(gam_a));
@@ -155,10 +155,10 @@ bool XFoil::initialize() {
   memset(qinvu, 0, sizeof(qinvu));
   memset(qinv_a, 0, sizeof(qinv_a));
   memset(qvis, 0, sizeof(qvis));
-  memset(s, 0, sizeof(x));
-  memset(sb, 0, sizeof(xb));
+  s.resize(IZX, 0);
+  sb.resize(IBX, 0);
   memset(sig, 0, sizeof(sig));
-  memset(snew, 0, sizeof(snew));
+  snew.resize(4 * IBX, 0);
   memset(sig, 0, sizeof(sig));
   memset(tau, 0, sizeof(tau));
   memset(thet, 0, sizeof(thet));
@@ -166,15 +166,15 @@ bool XFoil::initialize() {
   memset(uinv, 0, sizeof(uinv));
   memset(uslp, 0, sizeof(uslp));
   memset(vti, 0, sizeof(vti));
-  memset(x, 0, sizeof(x));
-  memset(xb, 0, sizeof(xb));
-  memset(xbp, 0, sizeof(xbp));
-  memset(xp, 0, sizeof(xp));
+  x.resize(IZX, 0);
+  xb.resize(IBX, 0);
+  xbp.resize(IBX, 0);
+  xp.resize(IZX, 0);
   memset(xssi, 0, sizeof(xssi));
-  memset(y, 0, sizeof(y));
-  memset(yb, 0, sizeof(yb));
-  memset(ybp, 0, sizeof(ybp));
-  memset(yp, 0, sizeof(yp));
+  y.resize(IZX, 0);
+  yb.resize(IBX, 0);
+  ybp.resize(IBX, 0);
+  yp.resize(IZX, 0);
   memset(wgap, 0, sizeof(wgap));
   memset(va, 0, sizeof(va));
   memset(vb, 0, sizeof(vb));
@@ -564,13 +564,13 @@ bool XFoil::abcopy() {
     }
   }
 
-  scalc(x, y, s, n);
-  segspl(x, xp, s, n);
-  segspl(y, yp, s, n);
-  ncalc(x, y, s, n, nx, ny);
-  lefind(sle, x, xp, y, yp, s, n);
-  xle = spline::seval(sle, x, xp, s, n);
-  yle = spline::seval(sle, y, yp, s, n);
+  scalc(x.data(), y.data(), s.data(), n);
+  segspl(x.data(), xp.data(), s.data(), n);
+  segspl(y.data(), yp.data(), s.data(), n);
+  ncalc(x.data(), y.data(), s.data(), n, nx.data(), ny.data());
+  lefind(sle, x.data(), xp.data(), y.data(), yp.data(), s.data(), n);
+  xle = spline::seval(sle, x.data(), xp.data(), s.data(), n);
+  yle = spline::seval(sle, y.data(), yp.data(), s.data(), n);
   xte = 0.5 * (x[1] + x[n]);
   yte = 0.5 * (y[1] + y[n]);
   chord = sqrt((xte - xle) * (xte - xle) + (yte - yle) * (yte - yle));
@@ -3247,8 +3247,8 @@ void XFoil::hipnt(double chpnt, double thpnt) {
 
   //--- check chordline direction (should be unrotated for camber routines)
   //    to function correctly
-  xle = spline::seval(sble, xb, xbp, sb, nb);
-  yle = spline::seval(sble, yb, ybp, sb, nb);
+  xle = spline::seval(sble, xb.data(), xbp.data(), sb.data(), nb);
+  yle = spline::seval(sble, yb.data(), ybp.data(), sb.data(), nb);
   xte = 0.5 * (xb[1] + xb[nb]);
   yte = 0.5 * (yb[1] + yb[nb]);
   arot = atan2(yle - yte, xte - xle) / dtor;
@@ -3261,12 +3261,12 @@ void XFoil::hipnt(double chpnt, double thpnt) {
   }
 
   //---- find leftmost point location
-  xlfind(sbl, xb, xbp, yb, ybp, sb, nb);
+  xlfind(sbl, xb.data(), xbp.data(), yb.data(), ybp.data(), sb.data(), nb);
   //	xbl = spline::seval(sbl,xb,xbp,sb,nb);
-  ybl = spline::seval(sbl, yb, ybp, sb, nb);
+  ybl = spline::seval(sbl, yb.data(), ybp.data(), sb.data(), nb);
 
   //---- find the current buffer airfoil camber and thickness
-  getcam(xcm, ycm, ncm, xtk, ytk, ntk, xb, xbp, yb, ybp, sb, nb);
+  getcam(xcm, ycm, ncm, xtk, ytk, ntk, xb.data(), xbp.data(), yb.data(), ybp.data(), sb.data(), nb);
 
   //---- find the max thickness and camber
   getmax(xcm, ycm, ycmp, ncm, cxmax, cymax);
@@ -3326,11 +3326,11 @@ void XFoil::hipnt(double chpnt, double thpnt) {
     yb[i] = yb[i] + ybl;
   }
 
-  scalc(xb, yb, sb, nb);
-  segspl(xb, xbp, sb, nb);
-  segspl(yb, ybp, sb, nb);
+  scalc(xb.data(), yb.data(), sb.data(), nb);
+  segspl(xb.data(), xbp.data(), sb.data(), nb);
+  segspl(yb.data(), ybp.data(), sb.data(), nb);
 
-  geopar(xb, xbp, yb, ybp, sb, nb, w1, sble, chordb, areab, radble, angbte,
+  geopar(xb.data(), xbp.data(), yb.data(), ybp.data(), sb.data(), nb, w1, sble, chordb, areab, radble, angbte,
          ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
 }
 
@@ -3760,20 +3760,20 @@ bool XFoil::mhinge() {
   double dx, dy;
 
   if (!lflap) {
-    getxyf(x, xp, y, yp, s, n, tops, bots, xof, yof);
+    getxyf(x.data(), xp.data(), y.data(), yp.data(), s.data(), n, tops, bots, xof, yof);
     lflap = true;
   } else {
     //------ find top and bottom y at hinge x location
     tops = xof;
     bots = s[n] - xof;
-    sinvrt(tops, xof, x, xp, s, n);
-    sinvrt(bots, xof, x, xp, s, n);
+    sinvrt(tops, xof, x.data(), xp.data(), s.data(), n);
+    sinvrt(bots, xof, x.data(), xp.data(), s.data(), n);
   }
 
-  topx = spline::seval(tops, x, xp, s, n);
-  topy = spline::seval(tops, y, yp, s, n);
-  botx = spline::seval(bots, x, xp, s, n);
-  boty = spline::seval(bots, y, yp, s, n);
+  topx = spline::seval(tops, x.data(), xp.data(), s.data(), n);
+  topy = spline::seval(tops, y.data(), yp.data(), s.data(), n);
+  botx = spline::seval(bots, x.data(), xp.data(), s.data(), n);
+  boty = spline::seval(bots, y.data(), yp.data(), s.data(), n);
 
   hmom = 0.0;
   hfx = 0.0;
@@ -4683,22 +4683,22 @@ void XFoil::pangen() {
   //      endif
   //
   //---- set arc length spline parameter
-  scalc(xb, yb, sb, nb);
+  scalc(xb.data(), yb.data(), sb.data(), nb);
 
   //---- spline raw airfoil coordinates
-  segspl(xb, xbp, sb, nb);
-  segspl(yb, ybp, sb, nb);
+  segspl(xb.data(), xbp.data(), sb.data(), nb);
+  segspl(yb.data(), ybp.data(), sb.data(), nb);
 
   //---- normalizing length (~ chord)
   sbref = 0.5 * (sb[nb] - sb[1]);
 
   //---- set up curvature array
   for (i = 1; i <= nb; i++)
-    w5[i] = fabs(curv(sb[i], xb, xbp, yb, ybp, sb, nb)) * sbref;
+    w5[i] = fabs(curv(sb[i], xb.data(), xbp.data(), yb.data(), ybp.data(), sb.data(), nb)) * sbref;
 
   //---- locate LE point arc length value and the normalized curvature there
-  lefind(sble, xb, xbp, yb, ybp, sb, nb);
-  cvle = fabs(curv(sble, xb, xbp, yb, ybp, sb, nb)) * sbref;
+  lefind(sble, xb.data(), xbp.data(), yb.data(), ybp.data(), sb.data(), nb);
+  cvle = fabs(curv(sble, xb.data(), xbp.data(), yb.data(), ybp.data(), sb.data(), nb)) * sbref;
 
   //---- check for doubled point (sharp corner) at LE
   ible = 0;
@@ -4716,8 +4716,8 @@ void XFoil::pangen() {
   // stop21:
 
   //---- set LE, TE points
-  xble = spline::seval(sble, xb, xbp, sb, nb);
-  yble = spline::seval(sble, yb, ybp, sb, nb);
+  xble = spline::seval(sble, xb.data(), xbp.data(), sb.data(), nb);
+  yble = spline::seval(sble, yb.data(), ybp.data(), sb.data(), nb);
   xbte = 0.5 * (xb[1] + xb[nb]);
   ybte = 0.5 * (yb[1] + yb[nb]);
   chbsq = (xbte - xble) * (xbte - xble) + (ybte - yble) * (ybte - yble);
@@ -4728,7 +4728,7 @@ void XFoil::pangen() {
   for (k = -nk; k <= nk; k++) {
     frac = double(k) / double(nk);
     sbk = sble + frac * sbref / std::max(cvle, 20.0);
-    cvk = fabs(curv(sbk, xb, xbp, yb, ybp, sb, nb)) * sbref;
+    cvk = fabs(curv(sbk, xb.data(), xbp.data(), yb.data(), ybp.data(), sb.data(), nb)) * sbref;
     cvsum = cvsum + cvk;
   }
   cvavg = cvsum / double(2 * nk + 1);
@@ -4859,7 +4859,7 @@ stop51:
   }
 
   //---- spline curvature array
-  segspl(w5, w6, sb, nb);
+  segspl(w5, w6, sb.data(), nb);
 
   //---- set initial guess for node positions uniform in s.
   //     more nodes than specified (by factor of ipfac) are
@@ -4899,10 +4899,10 @@ stop51:
   for (int iter = 1; iter <= 20; iter++) {  // iter 10
 
     //------ set up tri-diagonal system for node position deltas
-    cv1 = spline::seval(snew[1], w5, w6, sb, nb);
-    cv2 = spline::seval(snew[2], w5, w6, sb, nb);
-    cvs1 = deval(snew[1], w5, w6, sb, nb);
-    cvs2 = deval(snew[2], w5, w6, sb, nb);
+    cv1 = spline::seval(snew[1], w5, w6, sb.data(), nb);
+    cv2 = spline::seval(snew[2], w5, w6, sb.data(), nb);
+    cvs1 = deval(snew[1], w5, w6, sb.data(), nb);
+    cvs2 = deval(snew[2], w5, w6, sb.data(), nb);
 
     cavm = sqrt(cv1 * cv1 + cv2 * cv2);
     if (cavm == 0.0) {
@@ -4916,8 +4916,8 @@ stop51:
     for (i = 2; i <= nn - 1; i++) {  // 110
       dsm = snew[i] - snew[i - 1];
       dsp = snew[i] - snew[i + 1];
-      cv3 = spline::seval(snew[i + 1], w5, w6, sb, nb);
-      cvs3 = deval(snew[i + 1], w5, w6, sb, nb);
+      cv3 = spline::seval(snew[i + 1], w5, w6, sb.data(), nb);
+      cvs3 = deval(snew[i + 1], w5, w6, sb.data(), nb);
 
       cavp = sqrt(cv3 * cv3 + cv2 * cv2);
       if (cavp == 0.0) {
@@ -5016,8 +5016,8 @@ stop11:
   for (i = 1; i <= n; i++) {
     ind = ipfac * (i - 1) + 1;
     s[i] = snew[ind];
-    x[i] = spline::seval(snew[ind], xb, xbp, sb, nb);
-    y[i] = spline::seval(snew[ind], yb, ybp, sb, nb);
+    x[i] = spline::seval(snew[ind], xb.data(), xbp.data(), sb.data(), nb);
+    y[i] = spline::seval(snew[ind], yb.data(), ybp.data(), sb.data(), nb);
   }
 
   //---- go over buffer airfoil again, checking for corners (double points)
@@ -5059,14 +5059,14 @@ stop11:
         // comparable
         if (i - 2 >= 1) {
           s[i - 1] = 0.5 * (s[i] + s[i - 2]);
-          x[i - 1] = spline::seval(s[i - 1], xb, xbp, sb, nb);
-          y[i - 1] = spline::seval(s[i - 1], yb, ybp, sb, nb);
+          x[i - 1] = spline::seval(s[i - 1], xb.data(), xbp.data(), sb.data(), nb);
+          y[i - 1] = spline::seval(s[i - 1], yb.data(), ybp.data(), sb.data(), nb);
         }
 
         if (i + 2 <= n) {
           s[i + 1] = 0.5 * (s[i] + s[i + 2]);
-          x[i + 1] = spline::seval(s[i + 1], xb, xbp, sb, nb);
-          y[i + 1] = spline::seval(s[i + 1], yb, ybp, sb, nb);
+          x[i + 1] = spline::seval(s[i + 1], xb.data(), xbp.data(), sb.data(), nb);
+          y[i + 1] = spline::seval(s[i + 1], yb.data(), ybp.data(), sb.data(), nb);
         }
 
         //---------- go on to next input geometry point to check for corner
@@ -5079,13 +5079,13 @@ stop11:
     nothing = 0;  // C++ doesn't like gotos
   }
 
-  scalc(x, y, s, n);
-  segspl(x, xp, s, n);
-  segspl(y, yp, s, n);
-  lefind(sle, x, xp, y, yp, s, n);
+  scalc(x.data(), y.data(), s.data(), n);
+  segspl(x.data(), xp.data(), s.data(), n);
+  segspl(y.data(), yp.data(), s.data(), n);
+  lefind(sle, x.data(), xp.data(), y.data(), yp.data(), s.data(), n);
 
-  xle = spline::seval(sle, x, xp, s, n);
-  yle = spline::seval(sle, y, yp, s, n);
+  xle = spline::seval(sle, x.data(), xp.data(), s.data(), n);
+  yle = spline::seval(sle, y.data(), yp.data(), s.data(), n);
   xte = 0.5 * (x[1] + x[n]);
   yte = 0.5 * (y[1] + y[n]);
   chord = sqrt((xte - xle) * (xte - xle) + (yte - yle) * (yte - yle));
@@ -5124,7 +5124,7 @@ stop11:
   tecalc();
 
   //---- calculate normal vectors
-  ncalc(x, y, s, n, nx, ny);
+  ncalc(x.data(), y.data(), s.data(), n, nx.data(), ny.data());
 
   //---- calculate panel angles for panel routines
   apcalc();
@@ -5167,10 +5167,10 @@ bool XFoil::Preprocess() {
     area = area + 0.5 * (yb[i] + yb[ip]) * (xb[i] - xb[ip]);
   }
 
-  scalc(xb, yb, sb, nb);
-  segspl(xb, xbp, sb, nb);
+  scalc(xb.data(), yb.data(), sb.data(), nb);
+  segspl(xb.data(), xbp.data(), sb.data(), nb);
   //	segspl(yb,ybp,sb,nb);
-  geopar(xb, xbp, yb, ybp, sb, nb, w1, sble, chordb, areab, radble, angbte,
+  geopar(xb.data(), xbp.data(), yb.data(), ybp.data(), sb.data(), nb, w1, sble, chordb, areab, radble, angbte,
          ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
 
   //	xble = spline::seval(sble,xb,xbp,sb,nb);
@@ -6453,8 +6453,8 @@ bool XFoil::setbl() {
         chx = xte - xle;
         chy = yte - yle;
         chsq = chx * chx + chy * chy;
-        xtr = spline::seval(str, x, xp, s, n);
-        ytr = spline::seval(str, y, yp, s, n);
+        xtr = spline::seval(str, x.data(), xp.data(), s.data(), n);
+        ytr = spline::seval(str, y.data(), yp.data(), s.data(), n);
         xoctr[is] = ((xtr - xle) * chx + (ytr - yle) * chy) / chsq;
         yoctr[is] = ((ytr - yle) * chx - (xtr - xle) * chy) / chsq;
       }
@@ -8656,15 +8656,15 @@ bool XFoil::xifset(int is) {
     w2[i] = ((y[i] - yle) * chx - (x[i] - xle) * chy) / chsq;
   }
 
-  splind(w1, w3, s, n, -999.0, -999.0);
-  splind(w2, w4, s, n, -999.0, -999.0);
+  splind(w1, w3, s.data(), n, -999.0, -999.0);
+  splind(w2, w4, s.data(), n, -999.0, -999.0);
 
   if (is == 1) {
     //----- set approximate arc length of forced transition point for sinvrt
     str = sle + (s[1] - sle) * xstrip[is];
 
     //----- calculate actual arc length
-    sinvrt(str, xstrip[is], w1, w3, s, n);
+    sinvrt(str, xstrip[is], w1, w3, s.data(), n);
 
     //----- set bl coordinate value
     xiforc = std::min((sst - str), xssi[iblte[is]][is]);
@@ -8672,7 +8672,7 @@ bool XFoil::xifset(int is) {
     //----- same for bottom side
 
     str = sle + (s[n] - sle) * xstrip[is];
-    sinvrt(str, xstrip[is], w1, w3, s, n);
+    sinvrt(str, xstrip[is], w1, w3, s.data(), n);
     xiforc = std::min((str - sst), xssi[iblte[is]][is]);
   }
 
@@ -8707,7 +8707,7 @@ bool XFoil::xyWake() {
   }
 
   ds1 = 0.5 * (s[2] - s[1] + s[n] - s[n - 1]);
-  setexp(snew + n, ds1, waklen * chord, nw);
+  setexp(snew.data() + n, ds1, waklen * chord, nw);
 
   xte = 0.5 * (x[1] + x[n]);
   yte = 0.5 * (y[1] + y[n]);
@@ -8871,11 +8871,11 @@ int XFoil::cadd(int ispl, double atol, double xrf1, double xrf2) {
       else
         sb[i] = sb[i - 1] + 1.0;
     }
-    segspl(xb, xbp, sb, nb);
-    segspl(yb, ybp, sb, nb);
+    segspl(xb.data(), xbp.data(), sb.data(), nb);
+    segspl(yb.data(), ybp.data(), sb.data(), nb);
   }
 
-  nnew = arefine(xb, yb, sb, xbp, ybp, nb, atol, IBX, w1, w2, xrf1, xrf2);
+  nnew = arefine(xb.data(), yb.data(), sb.data(), xbp.data(), ybp.data(), nb, atol, IBX, w1, w2, xrf1, xrf2);
 
   nbadd = nnew - nb;
 
@@ -8885,11 +8885,11 @@ int XFoil::cadd(int ispl, double atol, double xrf1, double xrf2) {
     yb[i] = w2[i];
   }
 
-  scalc(xb, yb, sb, nb);
-  segspl(xb, xbp, sb, nb);
-  segspl(yb, ybp, sb, nb);
+  scalc(xb.data(), yb.data(), sb.data(), nb);
+  segspl(xb.data(), xbp.data(), sb.data(), nb);
+  segspl(yb.data(), ybp.data(), sb.data(), nb);
 
-  geopar(xb, xbp, yb, ybp, sb, nb, w1, sble, chordb, areab, radble, angbte,
+  geopar(xb.data(), xbp.data(), yb.data(), ybp.data(), sb.data(), nb, w1, sble, chordb, areab, radble, angbte,
          ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
   //TODO plotsに置き換え
   vector<Vector2d> plots;
@@ -8943,7 +8943,7 @@ void XFoil::flap() {
   double xb2new = 0.0;
   double yb2new = 0.0;
 
-  getxyf(xb, xbp, yb, ybp, sb, nb, tops, bots, xbf, ybf);
+  getxyf(xb.data(), xbp.data(), yb.data(), ybp.data(), sb.data(), nb, tops, bots, xbf, ybf);
   //TODO plot置き換え
   vector<Vector2d> plots;
   for (int i=INDEX_START_WITH; i<n+INDEX_START_WITH; i++) {
@@ -8958,10 +8958,10 @@ void XFoil::flap() {
     atop = std::max(0.0, -rdef);
     abot = std::max(0.0, rdef);
   } else {
-    const double chx = deval(bots, xb, xbp, sb, nb) - deval(tops, xb, xbp, sb, nb);
-    const double chy = deval(bots, yb, ybp, sb, nb) - deval(tops, yb, ybp, sb, nb);
-    const double fvx = spline::seval(bots, xb, xbp, sb, nb) + spline::seval(tops, xb, xbp, sb, nb);
-    const double fvy = spline::seval(bots, yb, ybp, sb, nb) + spline::seval(tops, yb, ybp, sb, nb);
+    const double chx = deval(bots, xb.data(), xbp.data(), sb.data(), nb) - deval(tops, xb.data(), xbp.data(), sb.data(), nb);
+    const double chy = deval(bots, yb.data(), ybp.data(), sb.data(), nb) - deval(tops, yb.data(), ybp.data(), sb.data(), nb);
+    const double fvx = spline::seval(bots, xb.data(), xbp.data(), sb.data(), nb) + spline::seval(tops, xb.data(), xbp.data(), sb.data(), nb);
+    const double fvy = spline::seval(bots, yb.data(), ybp.data(), sb.data(), nb) + spline::seval(tops, yb.data(), ybp.data(), sb.data(), nb);
     const double crsp = chx * (ybf - 0.5 * fvy) - chy * (xbf - 0.5 * fvx);
     if (crsp > 0.0) {
       //------ flap hinge is above airfoil
@@ -8976,15 +8976,15 @@ void XFoil::flap() {
 
   //-- find upper and lower surface break arc length values...
 
-  sss(tops, &st1, &st2, atop, xbf, ybf, xb, xbp, yb, ybp, sb, nb, 1);
-  sss(bots, &sb1, &sb2, abot, xbf, ybf, xb, xbp, yb, ybp, sb, nb, 2);
+  sss(tops, &st1, &st2, atop, xbf, ybf, xb.data(), xbp.data(), yb.data(), ybp.data(), sb.data(), nb, 1);
+  sss(bots, &sb1, &sb2, abot, xbf, ybf, xb.data(), xbp.data(), yb.data(), ybp.data(), sb.data(), nb, 2);
 
   //-- ... and x,y coordinates
-  xt1 = spline::seval(st1, xb, xbp, sb, nb);
-  yt1 = spline::seval(st1, yb, ybp, sb, nb);
+  xt1 = spline::seval(st1, xb.data(), xbp.data(), sb.data(), nb);
+  yt1 = spline::seval(st1, yb.data(), ybp.data(), sb.data(), nb);
 
-  xb1 = spline::seval(sb1, xb, xbp, sb, nb);
-  yb1 = spline::seval(sb1, yb, ybp, sb, nb);
+  xb1 = spline::seval(sb1, xb.data(), xbp.data(), sb.data(), nb);
+  yb1 = spline::seval(sb1, yb.data(), ybp.data(), sb.data(), nb);
 
   //-- find points adjacent to breaks
   for (i = 1; i <= nb - 1; i++) {
@@ -9004,13 +9004,13 @@ void XFoil::flap() {
     const double st1q = st1 + sfrac * (sb[it1 + 1] - st1);
     if (sb[it1] < st1q) {
       //------ simply move adjacent point to ideal sfrac location
-      xt1new = spline::seval(st1q, xb, xbp, sb, nb);
-      yt1new = spline::seval(st1q, yb, ybp, sb, nb);
+      xt1new = spline::seval(st1q, xb.data(), xbp.data(), sb.data(), nb);
+      yt1new = spline::seval(st1q, yb.data(), ybp.data(), sb.data(), nb);
       lt1new = false;
     } else {
       //------ make new point at sfrac location
-      xt1new = spline::seval(st1p, xb, xbp, sb, nb);
-      yt1new = spline::seval(st1p, yb, ybp, sb, nb);
+      xt1new = spline::seval(st1p, xb.data(), xbp.data(), sb.data(), nb);
+      yt1new = spline::seval(st1p, yb.data(), ybp.data(), sb.data(), nb);
       lt1new = true;
     }
 
@@ -9019,13 +9019,13 @@ void XFoil::flap() {
     const double st2q = st2 + sfrac * (sb[it2q] - st2);
     if (sb[it2] > st2q) {
       //------ simply move adjacent point
-      xt2new = spline::seval(st2q, xb, xbp, sb, nb);
-      yt2new = spline::seval(st2q, yb, ybp, sb, nb);
+      xt2new = spline::seval(st2q, xb.data(), xbp.data(), sb.data(), nb);
+      yt2new = spline::seval(st2q, yb.data(), ybp.data(), sb.data(), nb);
       lt2new = false;
     } else {
       //------ make new point
-      xt2new = spline::seval(st2p, xb, xbp, sb, nb);
-      yt2new = spline::seval(st2p, yb, ybp, sb, nb);
+      xt2new = spline::seval(st2p, xb.data(), xbp.data(), sb.data(), nb);
+      yt2new = spline::seval(st2p, yb.data(), ybp.data(), sb.data(), nb);
       lt2new = true;
     }
   }
@@ -9035,13 +9035,13 @@ void XFoil::flap() {
     const double sb1q = sb1 + sfrac * (sb[ib1 - 1] - sb1);
     if (sb[ib1] > sb1q) {
       //------ simply move adjacent point
-      xb1new = spline::seval(sb1q, xb, xbp, sb, nb);
-      yb1new = spline::seval(sb1q, yb, ybp, sb, nb);
+      xb1new = spline::seval(sb1q, xb.data(), xbp.data(), sb.data(), nb);
+      yb1new = spline::seval(sb1q, yb.data(), ybp.data(), sb.data(), nb);
       lb1new = false;
     } else {
       //------ make new point
-      xb1new = spline::seval(sb1p, xb, xbp, sb, nb);
-      yb1new = spline::seval(sb1p, yb, ybp, sb, nb);
+      xb1new = spline::seval(sb1p, xb.data(), xbp.data(), sb.data(), nb);
+      yb1new = spline::seval(sb1p, yb.data(), ybp.data(), sb.data(), nb);
       lb1new = true;
     }
 
@@ -9050,13 +9050,13 @@ void XFoil::flap() {
     const double sb2q = sb2 + sfrac * (sb[ib2q] - sb2);
     if (sb[ib2] < sb2q) {
       //------ simply move adjacent point
-      xb2new = spline::seval(sb2q, xb, xbp, sb, nb);
-      yb2new = spline::seval(sb2q, yb, ybp, sb, nb);
+      xb2new = spline::seval(sb2q, xb.data(), xbp.data(), sb.data(), nb);
+      yb2new = spline::seval(sb2q, yb.data(), ybp.data(), sb.data(), nb);
       lb2new = false;
     } else {
       //------ make new point
-      xb2new = spline::seval(sb2p, xb, xbp, sb, nb);
-      yb2new = spline::seval(sb2p, yb, ybp, sb, nb);
+      xb2new = spline::seval(sb2p, xb.data(), xbp.data(), sb.data(), nb);
+      yb2new = spline::seval(sb2p, yb.data(), ybp.data(), sb.data(), nb);
       lb2new = true;
     }
   }
@@ -9246,18 +9246,18 @@ void XFoil::flap() {
 
   //-- check new geometry for splinter segments
   stol = 0.2;
-  scheck(xb, yb, &nb, stol, &lchange);
+  scheck(xb.data(), yb.data(), &nb, stol, &lchange);
 
   //-- spline new geometry
-  scalc(xb, yb, sb, nb);
-  segspl(xb, xbp, sb, nb);
-  segspl(yb, ybp, sb, nb);
+  scalc(xb.data(), yb.data(), sb.data(), nb);
+  segspl(xb.data(), xbp.data(), sb.data(), nb);
+  segspl(yb.data(), ybp.data(), sb.data(), nb);
 
   //	geopar(xb,xbp,yb,ybp,sb,nb,w1,sble,chordb,areab,
   //		radble,angbte,ei11ba,ei22ba,apx1ba,apx2ba,
   //		ei11bt,ei22bt,apx1bt,apx2bt,thickb,cambrb);
 
-  geopar(xb, xbp, yb, ybp, sb, nb, w1, sble, chordb, areab, radble, angbte,
+  geopar(xb.data(), xbp.data(), yb.data(), ybp.data(), sb.data(), nb, w1, sble, chordb, areab, radble, angbte,
          ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
 
   lbflap = true;
@@ -9728,8 +9728,8 @@ void XFoil::mapgam(int iac, double &alg, double &clg, double &cmg) {
   for (int i = 1; i <= nsp; i++) {
     qgamm[i] = w6[i];
     sspec[i] = w5[i];
-    double xic = spline::seval(s[n] * sspec[i], x, xp, s, n);
-    double yic = spline::seval(s[n] * sspec[i], y, yp, s, n);
+    double xic = spline::seval(s[n] * sspec[i], x.data(), xp.data(), s.data(), n);
+    double yic = spline::seval(s[n] * sspec[i], y.data(), yp.data(), s.data(), n);
     xspoc[i] = ((xic - xle) * chx + (yic - yle) * chy) / chsq;
     yspoc[i] = ((yic - yle) * chx - (xic - xle) * chy) / chsq;
   }
@@ -10164,14 +10164,14 @@ void XFoil::ExecMDES() {
 
   lcnpl = false;
 
-  mapgen(nb, xb, yb);
+  mapgen(nb, xb.data(), yb.data());
 
   //----- spline new buffer airfoil
-  scalc(xb, yb, sb, nb);
-  splind(xb, xbp, sb, nb, -999.0, -999.0);
-  splind(yb, ybp, sb, nb, -999.0, -999.0);
+  scalc(xb.data(), yb.data(), sb.data(), nb);
+  splind(xb.data(), xbp.data(), sb.data(), nb, -999.0, -999.0);
+  splind(yb.data(), ybp.data(), sb.data(), nb, -999.0, -999.0);
 
-  geopar(xb, xbp, yb, ybp, sb, nb, w1, sble, chordb, areab, radble, angbte,
+  geopar(xb.data(), xbp.data(), yb.data(), ybp.data(), sb.data(), nb, w1, sble, chordb, areab, radble, angbte,
          ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
 }
 
@@ -10467,7 +10467,7 @@ void XFoil::InitMDES() {
 
   if (!lscini) {
     //------ initialize s(w) for current airfoil, generating its cn coefficients
-    scinit(n, x, xp, y, yp, s, sle);
+    scinit(n, x.data(), xp.data(), y.data(), yp.data(), s.data(), sle);
     lscini = true;
 
     //------ set up to initialize qspec to current conditions
@@ -10580,7 +10580,7 @@ bool XFoil::mixed(int kqsp) {
   //    (fraction of smaller panel length adjacent to te)
   bwt = 0.1;
 
-  scalc(x, y, s, n);
+  scalc(x.data(), y.data(), s.data(), n);
 
   //---- zero-out and set dof shape functions
   for (i = 1; i <= n; i++) {
@@ -10616,7 +10616,7 @@ bool XFoil::mixed(int kqsp) {
     }
 
     //---- calculate normal direction vectors along which the nodes move
-    ncalc(x, y, s, n, nx, ny);
+    ncalc(x.data(), y.data(), s.data(), n, nx.data(), ny.data());
 
     //---- go over all nodes, setting up  psi = psi0  equations
     for (i = 1; i <= n; i++) {
@@ -10767,7 +10767,7 @@ bool XFoil::mixed(int kqsp) {
     qdof2 = qdof2 + dq[n + 4];
     qdof3 = qdof3 + dq[n + 5];
 
-    scalc(x, y, s, n);
+    scalc(x.data(), y.data(), s.data(), n);
 
     //---- set correct surface speed over target segment including dof
     // contributions
@@ -10845,13 +10845,13 @@ bool XFoil::ExecQDES() {
   adeg = alfa / dtor;
 
   //----- spline new airfoil shape
-  scalc(x, y, s, n);
-  splind(x, xp, s, n, -999.0, -999.0);
-  splind(y, yp, s, n, -999.0, -999.0);
-  ncalc(x, y, s, n, nx, ny);
-  lefind(sle, x, xp, y, yp, s, n);
-  xle = spline::seval(sle, x, xp, s, n);
-  yle = spline::seval(sle, y, yp, s, n);
+  scalc(x.data(), y.data(), s.data(), n);
+  splind(x.data(), xp.data(), s.data(), n, -999.0, -999.0);
+  splind(y.data(), yp.data(), s.data(), n, -999.0, -999.0);
+  ncalc(x.data(), y.data(), s.data(), n, nx.data(), ny.data());
+  lefind(sle, x.data(), xp.data(), y.data(), yp.data(), s.data(), n);
+  xle = spline::seval(sle, x.data(), xp.data(), s.data(), n);
+  yle = spline::seval(sle, y.data(), yp.data(), s.data(), n);
   chord = sqrt((0.5 * (x[1] + x[n]) - xle) * (0.5 * (x[1] + x[n]) - xle) +
                (0.5 * (y[1] + y[n]) - yle) * (0.5 * (y[1] + y[n]) - yle));
   tecalc();
@@ -10891,13 +10891,13 @@ bool XFoil::ExecQDES() {
 void XFoil::RestoreQDES() {
   //	Foil is restored from CXInverse rather than from XFoil
 
-  scalc(x, y, s, n);
-  splind(x, xp, s, n, -999.0, -999.0);
-  splind(y, yp, s, n, -999.0, -999.0);
-  ncalc(x, y, s, n, nx, ny);
-  lefind(sle, x, xp, y, yp, s, n);
-  xle = spline::seval(sle, x, xp, s, n);
-  yle = spline::seval(sle, y, yp, s, n);
+  scalc(x.data(), y.data(), s.data(), n);
+  splind(x.data(), xp.data(), s.data(), n, -999.0, -999.0);
+  splind(y.data(), yp.data(), s.data(), n, -999.0, -999.0);
+  ncalc(x.data(), y.data(), s.data(), n, nx.data(), ny.data());
+  lefind(sle, x.data(), xp.data(), y.data(), yp.data(), s.data(), n);
+  xle = spline::seval(sle, x.data(), xp.data(), s.data(), n);
+  yle = spline::seval(sle, y.data(), yp.data(), s.data(), n);
   chord = sqrt((0.5 * (x[1] + x[n]) - xle) * (0.5 * (x[1] + x[n]) - xle) +
                (0.5 * (y[1] + y[n]) - yle) * (0.5 * (y[1] + y[n]) - yle));
   tecalc();
@@ -10920,7 +10920,7 @@ void XFoil::tcset(double cnew, double tnew) {
   double xcm[IQX], ycm[IQX], xtk[IQX], ytk[IQX], ycmp[IQX], ytkp[IQX];
   double txmax, tymax, cxmax, cymax;
   int ncm, ntk;
-  getcam(xcm, ycm, ncm, xtk, ytk, ntk, xb, xbp, yb, ybp, sb, nb);
+  getcam(xcm, ycm, ncm, xtk, ytk, ntk, xb.data(), xbp.data(), yb.data(), ybp.data(), sb.data(), nb);
   getmax(xcm, ycm, ycmp, ncm, cxmax, cymax);
   getmax(xtk, ytk, ytkp, ntk, txmax, tymax);
 
@@ -10933,7 +10933,7 @@ void XFoil::tcset(double cnew, double tnew) {
 
   // ccc      if (tfac.lt.0.0) tfac = 0.0
   thkcam(tfac, cfac);
-  getcam(xcm, ycm, ncm, xtk, ytk, ntk, xb, xbp, yb, ybp, sb, nb);
+  getcam(xcm, ycm, ncm, xtk, ytk, ntk, xb.data(), xbp.data(), yb.data(), ybp.data(), sb.data(), nb);
 }
 
 void XFoil::thkcam(double tfac, double cfac) {
@@ -10942,11 +10942,11 @@ void XFoil::thkcam(double tfac, double cfac) {
   //---------------------------------------------------
   int i;
   double dxc, dyc, sbopp;
-  lefind(sble, xb, xbp, yb, ybp, sb, nb);
+  lefind(sble, xb.data(), xbp.data(), yb.data(), ybp.data(), sb.data(), nb);
 
   //---rational alternative 4/24/01 hhy
-  xle = spline::seval(sble, xb, xbp, sb, nb);
-  yle = spline::seval(sble, yb, ybp, sb, nb);
+  xle = spline::seval(sble, xb.data(), xbp.data(), sb.data(), nb);
+  yle = spline::seval(sble, yb.data(), ybp.data(), sb.data(), nb);
   xte = 0.5 * (xb[1] + xb[nb]);
   yte = 0.5 * (yb[1] + yb[nb]);
   chord = sqrt((xte - xle) * (xte - xle) + (yte - yle) * (yte - yle));
@@ -10957,9 +10957,9 @@ void XFoil::thkcam(double tfac, double cfac) {
   //---- go over each point, changing the y-thickness appropriately
   for (i = 1; i <= nb; i++) {
     //------ coordinates of point on the opposite side with the same x value
-    sopps(sbopp, sb[i], xb, xbp, yb, ybp, sb, nb, sble);
-    const double xbopp = spline::seval(sbopp, xb, xbp, sb, nb);
-    const double ybopp = spline::seval(sbopp, yb, ybp, sb, nb);
+    sopps(sbopp, sb[i], xb.data(), xbp.data(), yb.data(), ybp.data(), sb.data(), nb, sble);
+    const double xbopp = spline::seval(sbopp, xb.data(), xbp.data(), sb.data(), nb);
+    const double ybopp = spline::seval(sbopp, yb.data(), ybp.data(), sb.data(), nb);
 
     //------ set new y coordinate by changing camber & thickness appropriately
     const double xcavg = (0.5 * (xb[i] + xbopp) * dxc + 0.5 * (yb[i] + ybopp) * dyc);
@@ -10977,11 +10977,11 @@ void XFoil::thkcam(double tfac, double cfac) {
     yb[i] = w2[i];
   }
 
-  scalc(xb, yb, sb, nb);
-  segspl(xb, xbp, sb, nb);
-  segspl(yb, ybp, sb, nb);
+  scalc(xb.data(), yb.data(), sb.data(), nb);
+  segspl(xb.data(), xbp.data(), sb.data(), nb);
+  segspl(yb.data(), ybp.data(), sb.data(), nb);
 
-  geopar(xb, xbp, yb, ybp, sb, nb, w1, sble, chordb, areab, radble, angbte,
+  geopar(xb.data(), xbp.data(), yb.data(), ybp.data(), sb.data(), nb, w1, sble, chordb, areab, radble, angbte,
          ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
 }
 
@@ -11067,20 +11067,20 @@ void XFoil::interpolate(double xf1[], double yf1[], int n1, double xf2[],
   lefind(sleint2, x2, xp2, y2, yp2, s2, n2);
 
   inter(x1, xp1, y1, yp1, s1, n1, sleint1, x2, xp2, y2, yp2, s2, n2, sleint2,
-        xb, yb, nb, mixt);
+        xb.data(), yb.data(), nb, mixt);
 
-  scalc(xb, yb, sb, nb);
-  segspl(xb, xbp, sb, nb);
-  segspl(yb, ybp, sb, nb);
+  scalc(xb.data(), yb.data(), sb.data(), nb);
+  segspl(xb.data(), xbp.data(), sb.data(), nb);
+  segspl(yb.data(), ybp.data(), sb.data(), nb);
 
-  geopar(xb, xbp, yb, ybp, sb, nb, w1, sble, chordb, areab, radble, angbte,
+  geopar(xb.data(), xbp.data(), yb.data(), ybp.data(), sb.data(), nb, w1, sble, chordb, areab, radble, angbte,
          ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
 }
 
 double XFoil::DeRotate() {
-  lefind(sble, xb, xbp, yb, ybp, sb, nb);
-  xle = spline::seval(sble, xb, xbp, sb, nb);
-  yle = spline::seval(sble, yb, ybp, sb, nb);
+  lefind(sble, xb.data(), xbp.data(), yb.data(), ybp.data(), sb.data(), nb);
+  xle = spline::seval(sble, xb.data(), xbp.data(), sb.data(), nb);
+  yle = spline::seval(sble, yb.data(), ybp.data(), sb.data(), nb);
   xte = 0.5 * (xb[1] + xb[nb]);
   yte = 0.5 * (yb[1] + yb[nb]);
 
@@ -11099,11 +11099,11 @@ double XFoil::DeRotate() {
     yb[i] = ca * yt - sa * xt + yoff;
   }
 
-  scalc(xb, yb, sb, nb);
-  segspl(xb, xbp, sb, nb);
-  segspl(yb, ybp, sb, nb);
+  scalc(xb.data(), yb.data(), sb.data(), nb);
+  segspl(xb.data(), xbp.data(), sb.data(), nb);
+  segspl(yb.data(), ybp.data(), sb.data(), nb);
 
-  geopar(xb, xbp, yb, ybp, sb, nb, w1, sble, chordb, areab, radble, angbte,
+  geopar(xb.data(), xbp.data(), yb.data(), ybp.data(), sb.data(), nb, w1, sble, chordb, areab, radble, angbte,
          ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
 
   return arad * 180.0 / PI;
@@ -11117,9 +11117,9 @@ void XFoil::tgap(double gapnew, double blend) {
   double dxn, dyn, dxu, dyu;
   double gap, dgap, doc;
   double arg;
-  lefind(sble, xb, xbp, yb, ybp, sb, nb);
-  xble = spline::seval(sble, xb, xbp, sb, nb);
-  yble = spline::seval(sble, yb, ybp, sb, nb);
+  lefind(sble, xb.data(), xbp.data(), yb.data(), ybp.data(), sb.data(), nb);
+  xble = spline::seval(sble, xb.data(), xbp.data(), sb.data(), nb);
+  yble = spline::seval(sble, yb.data(), ybp.data(), sb.data(), nb);
   xbte = 0.5 * (xb[1] + xb[nb]);
   ybte = 0.5 * (yb[1] + yb[nb]);
   chbsq = (xbte - xble) * (xbte - xble) + (ybte - yble) * (ybte - yble);
@@ -11165,11 +11165,11 @@ void XFoil::tgap(double gapnew, double blend) {
     }
   }
 
-  scalc(xb, yb, sb, nb);
-  segspl(xb, xbp, sb, nb);
-  segspl(yb, ybp, sb, nb);
+  scalc(xb.data(), yb.data(), sb.data(), nb);
+  segspl(xb.data(), xbp.data(), sb.data(), nb);
+  segspl(yb.data(), ybp.data(), sb.data(), nb);
 
-  geopar(xb, xbp, yb, ybp, sb, nb, w1, sble, chordb, areab, radble, angbte,
+  geopar(xb.data(), xbp.data(), yb.data(), ybp.data(), sb.data(), nb, w1, sble, chordb, areab, radble, angbte,
          ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
 
   //	lgeopl = false;
@@ -11185,7 +11185,7 @@ void XFoil::lerad(double rfac, double blend) {
 
   doc = std::max(blend, 0.001);
 
-  lerscl(xb, xbp, yb, ybp, sb, nb, doc, rfac, w1, w2);
+  lerscl(xb.data(), xbp.data(), yb.data(), ybp.data(), sb.data(), nb, doc, rfac, w1, w2);
 
   for (i = 1; i <= nb; i++) {
     xb[i] = w1[i];
@@ -11193,17 +11193,17 @@ void XFoil::lerad(double rfac, double blend) {
   }
 
   //---- spline new coordinates
-  scalc(xb, yb, sb, nb);
-  segspl(xb, xbp, sb, nb);
-  segspl(yb, ybp, sb, nb);
+  scalc(xb.data(), yb.data(), sb.data(), nb);
+  segspl(xb.data(), xbp.data(), sb.data(), nb);
+  segspl(yb.data(), ybp.data(), sb.data(), nb);
 
-  geopar(xb, xbp, yb, ybp, sb, nb, w1, sble, chordb, areab, radble, angbte,
+  geopar(xb.data(), xbp.data(), yb.data(), ybp.data(), sb.data(), nb, w1, sble, chordb, areab, radble, angbte,
          ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
 
   //---- find max curvature
   cvmax = 0.0;
   for (i = (int)(nb / 4); i <= (3 * nb) / 4; i++) {
-    const double cv = curv(sb[i], xb, xbp, yb, ybp, sb, nb);
+    const double cv = curv(sb[i], xb.data(), xbp.data(), yb.data(), ybp.data(), sb.data(), nb);
     cvmax = std::max(fabs(cv), cvmax);
   }
 
@@ -11320,11 +11320,11 @@ void XFoil::naca4(int ides, int nside) {
   }
   nb = ib;
 
-  scalc(xb, yb, sb, nb);
-  segspl(xb, xbp, sb, nb);
-  segspl(yb, ybp, sb, nb);
+  scalc(xb.data(), yb.data(), sb.data(), nb);
+  segspl(xb.data(), xbp.data(), sb.data(), nb);
+  segspl(yb.data(), ybp.data(), sb.data(), nb);
 
-  geopar(xb, xbp, yb, ybp, sb, nb, w1, sble, chordb, areab, radble, angbte,
+  geopar(xb.data(), xbp.data(), yb.data(), ybp.data(), sb.data(), nb, w1, sble, chordb, areab, radble, angbte,
          ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
 }
 
