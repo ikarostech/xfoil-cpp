@@ -3,6 +3,22 @@
 
 #include "spline.hpp"
 
+TEST(scalc, test_value) {
+    //given
+    std::vector<double> x{0.0, 0.0, 1.0, 2.0, 3.0};
+    std::vector<double> y{0.0, 0.0, 0.0, 2.0, 3.0};
+
+    //when
+    std::vector<double> actual = spline::scalc(x.data(), y.data(), 4);
+
+    //then
+    ASSERT_EQ(0, actual[0]);
+    ASSERT_EQ(0, actual[1]);
+    ASSERT_EQ(1.0, actual[2]);
+    ASSERT_EQ(3.2360679774997898, actual[3]);
+    ASSERT_EQ(4.6502815398728847, actual[4]);
+}
+
 TEST(seval, test_value) {
     //given
     double ss = 1.03347;

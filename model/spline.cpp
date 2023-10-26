@@ -1,6 +1,25 @@
 #include "spline.hpp"
+#include "../Eigen/Core"
+#include "../Eigen/Dense"
+#include "../Eigen/StdVector"
 
+const double INDEX_START_WITH = 1;
+std::vector<double> spline::scalc(const double x[], const double y[], int n) {
+    //TODO 引数のVector2d化
+    std::vector<Eigen::Vector2d> pos(n + INDEX_START_WITH);
 
+    for (int i=0; i<n+INDEX_START_WITH; i++) {
+        pos[i][0] = x[i];
+        pos[i][1] = y[i];
+    }
+    std::vector<double> s(n + INDEX_START_WITH);
+    s[0] = 0;
+    for (int i = 1; i < n + INDEX_START_WITH; i++) {
+        s[i] = s[i - 1] + (pos[i] - pos[i-1]).norm();
+    }
+
+    return s;
+}
 /**	  Calculates x(ss)
  *	   xs array must have been calculated by spline */
 double spline::seval(double ss, const double x[], const double xs[], const double s[], int n) {
