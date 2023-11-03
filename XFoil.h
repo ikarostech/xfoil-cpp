@@ -288,7 +288,6 @@ class XFoil {
   bool qiset();
   bool qvfue();
   bool qwcalc();
-  bool scalc(const double x[], const double y[], double s[], int n);
   bool segspl(double x[], double xs[], double s[], int n);
   bool segspld(double x[], double xs[], double s[], int n, double xs1,
                double xs2);

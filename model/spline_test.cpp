@@ -9,7 +9,7 @@ TEST(scalc, test_value) {
     std::vector<double> y{0.0, 0.0, 0.0, 2.0, 3.0};
 
     //when
-    std::vector<double> actual = spline::scalc(x.data(), y.data(), 4);
+    std::vector<double> actual = spline::scalc(x.data(), y.data(), 4, 5);
 
     //then
     ASSERT_EQ(0, actual[0]);

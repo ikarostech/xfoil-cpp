@@ -2,20 +2,23 @@
 #include "../Eigen/Core"
 #include "../Eigen/Dense"
 #include "../Eigen/StdVector"
+#include <iostream>
 
-const double INDEX_START_WITH = 1;
-std::vector<double> spline::scalc(const double x[], const double y[], int n) {
+const int INDEX_START_WITH = 1;
+
+std::vector<double> spline::scalc(const double x[], const double y[], int n, const int s_size) {
     //TODO 引数のVector2d化
     std::vector<Eigen::Vector2d> pos(n + INDEX_START_WITH);
-
+    std::cout<<n<<std::endl;
     for (int i=0; i<n+INDEX_START_WITH; i++) {
         pos[i][0] = x[i];
         pos[i][1] = y[i];
+        
     }
-    std::vector<double> s(n + INDEX_START_WITH);
-    s[0] = 0;
-    for (int i = 1; i < n + INDEX_START_WITH; i++) {
-        s[i] = s[i - 1] + (pos[i] - pos[i-1]).norm();
+    std::vector<double> s(s_size, 0);
+    
+    for (int i = 1 + INDEX_START_WITH; i < n + INDEX_START_WITH; i++) {
+        s[i] = s[i - 1] + (pos[i] - pos[i - 1]).norm();
     }
 
     return s;

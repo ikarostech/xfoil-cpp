@@ -564,7 +564,8 @@ bool XFoil::abcopy() {
     }
   }
 
-  scalc(x.data(), y.data(), s.data(), n);
+  s = spline::scalc(x.data(), y.data(), n, s.size());
+  cout<<s.data()<<endl;
   segspl(x.data(), xp.data(), s.data(), n);
   segspl(y.data(), yp.data(), s.data(), n);
   ncalc(x.data(), y.data(), s.data(), n, nx.data(), ny.data());
@@ -3326,7 +3327,7 @@ void XFoil::hipnt(double chpnt, double thpnt) {
     yb[i] = yb[i] + ybl;
   }
 
-  scalc(xb.data(), yb.data(), sb.data(), nb);
+  sb = spline::scalc(xb.data(), yb.data(), nb, sb.size());
   segspl(xb.data(), xbp.data(), sb.data(), nb);
   segspl(yb.data(), ybp.data(), sb.data(), nb);
 
@@ -4683,7 +4684,7 @@ void XFoil::pangen() {
   //      endif
   //
   //---- set arc length spline parameter
-  scalc(xb.data(), yb.data(), sb.data(), nb);
+  sb = spline::scalc(xb.data(), yb.data(), nb, sb.size());
 
   //---- spline raw airfoil coordinates
   segspl(xb.data(), xbp.data(), sb.data(), nb);
@@ -5079,7 +5080,7 @@ stop11:
     nothing = 0;  // C++ doesn't like gotos
   }
 
-  scalc(x.data(), y.data(), s.data(), n);
+  s = spline::scalc(x.data(), y.data(), n, s.size());
   segspl(x.data(), xp.data(), s.data(), n);
   segspl(y.data(), yp.data(), s.data(), n);
   lefind(sle, x.data(), xp.data(), y.data(), yp.data(), s.data(), n);
@@ -5167,7 +5168,7 @@ bool XFoil::Preprocess() {
     area = area + 0.5 * (yb[i] + yb[ip]) * (xb[i] - xb[ip]);
   }
 
-  scalc(xb.data(), yb.data(), sb.data(), nb);
+  sb = spline::scalc(xb.data(), yb.data(), nb, sb.size());
   segspl(xb.data(), xbp.data(), sb.data(), nb);
   //	segspl(yb,ybp,sb,nb);
   geopar(xb.data(), xbp.data(), yb.data(), ybp.data(), sb.data(), nb, w1, sble, chordb, areab, radble, angbte,
@@ -5202,7 +5203,11 @@ bool XFoil::Preprocess() {
   lbflap = false;
 
   // end "load"
-  return abcopy();
+  abcopy();
+  for(int i=0; i<s.size(); i++) {
+    cout<<s.data()[i]<<endl;
+  }
+  return true;
 }
 
 /** -----------------------------------------------------------------------
@@ -5963,19 +5968,6 @@ bool XFoil::saveblData(int icom) {
     blsav[icom] = blData1;
   } else {
     blsav[icom] = blData2;
-  }
-  return true;
-}
-
-/** ----------------------------------------
- *      calculates the arc length array s  |
- *      for a 2-d array of points (x,y).   |
- * ----------------------------------------- */
-bool XFoil::scalc(const double x[], const double y[], double s[], int n) {
-  s[1] = 0.0;
-  for (int i = 2; i <= n; i++) {
-    s[i] = s[i - 1] + sqrt((x[i] - x[i - 1]) * (x[i] - x[i - 1]) +
-                           (y[i] - y[i - 1]) * (y[i] - y[i - 1]));
   }
   return true;
 }
@@ -8885,7 +8877,7 @@ int XFoil::cadd(int ispl, double atol, double xrf1, double xrf2) {
     yb[i] = w2[i];
   }
 
-  scalc(xb.data(), yb.data(), sb.data(), nb);
+  sb = spline::scalc(xb.data(), yb.data(), nb, sb.size());
   segspl(xb.data(), xbp.data(), sb.data(), nb);
   segspl(yb.data(), ybp.data(), sb.data(), nb);
 
@@ -9249,7 +9241,7 @@ void XFoil::flap() {
   scheck(xb.data(), yb.data(), &nb, stol, &lchange);
 
   //-- spline new geometry
-  scalc(xb.data(), yb.data(), sb.data(), nb);
+  sb = spline::scalc(xb.data(), yb.data(), nb, sb.size());
   segspl(xb.data(), xbp.data(), sb.data(), nb);
   segspl(yb.data(), ybp.data(), sb.data(), nb);
 
@@ -10167,7 +10159,7 @@ void XFoil::ExecMDES() {
   mapgen(nb, xb.data(), yb.data());
 
   //----- spline new buffer airfoil
-  scalc(xb.data(), yb.data(), sb.data(), nb);
+  sb = spline::scalc(xb.data(), yb.data(), nb, sb.size());
   splind(xb.data(), xbp.data(), sb.data(), nb, -999.0, -999.0);
   splind(yb.data(), ybp.data(), sb.data(), nb, -999.0, -999.0);
 
@@ -10580,7 +10572,7 @@ bool XFoil::mixed(int kqsp) {
   //    (fraction of smaller panel length adjacent to te)
   bwt = 0.1;
 
-  scalc(x.data(), y.data(), s.data(), n);
+  s = spline::scalc(x.data(), y.data(), n, s.size());
 
   //---- zero-out and set dof shape functions
   for (i = 1; i <= n; i++) {
@@ -10767,7 +10759,7 @@ bool XFoil::mixed(int kqsp) {
     qdof2 = qdof2 + dq[n + 4];
     qdof3 = qdof3 + dq[n + 5];
 
-    scalc(x.data(), y.data(), s.data(), n);
+    s = spline::scalc(x.data(), y.data(), n, s.size());
 
     //---- set correct surface speed over target segment including dof
     // contributions
@@ -10845,7 +10837,7 @@ bool XFoil::ExecQDES() {
   adeg = alfa / dtor;
 
   //----- spline new airfoil shape
-  scalc(x.data(), y.data(), s.data(), n);
+  s = spline::scalc(x.data(), y.data(), n, s.size());
   splind(x.data(), xp.data(), s.data(), n, -999.0, -999.0);
   splind(y.data(), yp.data(), s.data(), n, -999.0, -999.0);
   ncalc(x.data(), y.data(), s.data(), n, nx.data(), ny.data());
@@ -10891,7 +10883,7 @@ bool XFoil::ExecQDES() {
 void XFoil::RestoreQDES() {
   //	Foil is restored from CXInverse rather than from XFoil
 
-  scalc(x.data(), y.data(), s.data(), n);
+  s = spline::scalc(x.data(), y.data(), n, s.size());
   splind(x.data(), xp.data(), s.data(), n, -999.0, -999.0);
   splind(y.data(), yp.data(), s.data(), n, -999.0, -999.0);
   ncalc(x.data(), y.data(), s.data(), n, nx.data(), ny.data());
@@ -10977,7 +10969,7 @@ void XFoil::thkcam(double tfac, double cfac) {
     yb[i] = w2[i];
   }
 
-  scalc(xb.data(), yb.data(), sb.data(), nb);
+  sb = spline::scalc(xb.data(), yb.data(), nb, sb.size());
   segspl(xb.data(), xbp.data(), sb.data(), nb);
   segspl(yb.data(), ybp.data(), sb.data(), nb);
 
@@ -11044,7 +11036,7 @@ void XFoil::interpolate(double xf1[], double yf1[], int n1, double xf2[],
   int i;
   double x1[IBX], y1[IBX], x2[IBX], y2[IBX];
   double xp1[IBX], yp1[IBX], xp2[IBX], yp2[IBX];
-  double s1[IBX], s2[IBX];
+  vector<double> s1(IBX, 0), s2(IBX, 0);
   double sleint1, sleint2;
 
   for (i = 0; i < n1; i++) {
@@ -11056,20 +11048,20 @@ void XFoil::interpolate(double xf1[], double yf1[], int n1, double xf2[],
     y2[i + 1] = yf2[i];
   }
 
-  scalc(x1, y1, s1, n1);
-  segspld(x1, xp1, s1, n1, -999.0, -999.0);
-  segspld(y1, yp1, s1, n1, -999.0, -999.0);
-  lefind(sleint1, x1, xp1, y1, yp1, s1, n1);
+  s1 = spline::scalc(x1, y1, n1, s1.size());
+  segspld(x1, xp1, s1.data(), n1, -999.0, -999.0);
+  segspld(y1, yp1, s1.data(), n1, -999.0, -999.0);
+  lefind(sleint1, x1, xp1, y1, yp1, s1.data(), n1);
 
-  scalc(x2, y2, s2, n2);
-  segspld(x2, xp2, s2, n2, -999.0, -999.0);
-  segspld(y2, yp2, s2, n2, -999.0, -999.0);
-  lefind(sleint2, x2, xp2, y2, yp2, s2, n2);
+  s2 = spline::scalc(x2, y2, n2, s2.size());
+  segspld(x2, xp2, s2.data(), n2, -999.0, -999.0);
+  segspld(y2, yp2, s2.data(), n2, -999.0, -999.0);
+  lefind(sleint2, x2, xp2, y2, yp2, s2.data(), n2);
 
-  inter(x1, xp1, y1, yp1, s1, n1, sleint1, x2, xp2, y2, yp2, s2, n2, sleint2,
+  inter(x1, xp1, y1, yp1, s1.data(), n1, sleint1, x2, xp2, y2, yp2, s2.data(), n2, sleint2,
         xb.data(), yb.data(), nb, mixt);
 
-  scalc(xb.data(), yb.data(), sb.data(), nb);
+  sb = spline::scalc(xb.data(), yb.data(), nb, sb.size());
   segspl(xb.data(), xbp.data(), sb.data(), nb);
   segspl(yb.data(), ybp.data(), sb.data(), nb);
 
@@ -11099,7 +11091,7 @@ double XFoil::DeRotate() {
     yb[i] = ca * yt - sa * xt + yoff;
   }
 
-  scalc(xb.data(), yb.data(), sb.data(), nb);
+  sb = spline::scalc(xb.data(), yb.data(), nb, sb.size());
   segspl(xb.data(), xbp.data(), sb.data(), nb);
   segspl(yb.data(), ybp.data(), sb.data(), nb);
 
@@ -11165,7 +11157,7 @@ void XFoil::tgap(double gapnew, double blend) {
     }
   }
 
-  scalc(xb.data(), yb.data(), sb.data(), nb);
+  sb = spline::scalc(xb.data(), yb.data(), nb, sb.size());
   segspl(xb.data(), xbp.data(), sb.data(), nb);
   segspl(yb.data(), ybp.data(), sb.data(), nb);
 
@@ -11193,7 +11185,7 @@ void XFoil::lerad(double rfac, double blend) {
   }
 
   //---- spline new coordinates
-  scalc(xb.data(), yb.data(), sb.data(), nb);
+  sb = spline::scalc(xb.data(), yb.data(), nb, sb.size());
   segspl(xb.data(), xbp.data(), sb.data(), nb);
   segspl(yb.data(), ybp.data(), sb.data(), nb);
 
@@ -11320,7 +11312,7 @@ void XFoil::naca4(int ides, int nside) {
   }
   nb = ib;
 
-  scalc(xb.data(), yb.data(), sb.data(), nb);
+  sb = spline::scalc(xb.data(), yb.data(), nb, sb.size());
   segspl(xb.data(), xbp.data(), sb.data(), nb);
   segspl(yb.data(), ybp.data(), sb.data(), nb);
 
