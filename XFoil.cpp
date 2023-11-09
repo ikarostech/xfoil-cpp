@@ -565,7 +565,6 @@ bool XFoil::abcopy() {
   }
 
   s = spline::scalc(x.data(), y.data(), n, s.size());
-  cout<<s.data()<<endl;
   segspl(x.data(), xp.data(), s.data(), n);
   segspl(y.data(), yp.data(), s.data(), n);
   ncalc(x.data(), y.data(), s.data(), n, nx.data(), ny.data());
@@ -3239,7 +3238,7 @@ bool XFoil::hct(double hk, double msq, double &hc, double &hc_hk,
 void XFoil::hipnt(double chpnt, double thpnt) {
   //      include 'xfoil.inc'
   std::stringstream ss;
-  double xfn[5], yfn[5], yfnp[5];  // sfn[5]
+  vector<double> xfn(5), yfn(5), yfnp(5);  // sfn[5]
   double ybl, cxmax, cymax, txmax, tymax;
   double arot, sbl;
   double xcm[IQX], ycm[IQX], xtk[IQX], ytk[IQX], ycmp[IQX], ytkp[IQX];
@@ -3289,8 +3288,8 @@ void XFoil::hipnt(double chpnt, double thpnt) {
     yfn[1] = xtk[1];
     yfn[2] = thpnt;
     yfn[3] = xtk[ntk];
-    splina(yfn, yfnp, xfn, 3);
-    for (int i = 1; i <= ntk; i++) xtk[i] = spline::seval(xtk[i], yfn, yfnp, xfn, 3);
+    yfnp = spline::splina(yfn.data(), xfn.data(), 3, 5);
+    for (int i = 1; i <= ntk; i++) xtk[i] = spline::seval(xtk[i], yfn.data(), yfnp.data(), xfn.data(), 3);
   }
 
   //--- shift camber highpoint
@@ -3301,8 +3300,8 @@ void XFoil::hipnt(double chpnt, double thpnt) {
     yfn[1] = xcm[1];
     yfn[2] = chpnt;
     yfn[3] = xcm[ncm];
-    splina(yfn, yfnp, xfn, 3);
-    for (int i = 1; i <= ncm; i++) xcm[i] = spline::seval(xcm[i], yfn, yfnp, xfn, 3);
+    yfnp = spline::splina(yfn.data(), xfn.data(), 3, 5);
+    for (int i = 1; i <= ncm; i++) xcm[i] = spline::seval(xcm[i], yfn.data(), yfnp.data(), xfn.data(), 3);
   }
 
   //---- make new airfoil from thickness and camber
@@ -5204,9 +5203,6 @@ bool XFoil::Preprocess() {
 
   // end "load"
   abcopy();
-  for(int i=0; i<s.size(); i++) {
-    cout<<s.data()[i]<<endl;
-  }
   return true;
 }
 
@@ -6871,44 +6867,7 @@ bool XFoil::speccl() {
   return true;
 }
 
-/** -------------------------------------------------------
- *      Calculates spline coefficients for x(s).          |
- *       A simple averaging of adjacent segment slopes    |
- *      is used to achieve non-oscillatory curve.         |
- *      End conditions are set by end segment slope.      |
- *      To evaluate the spline at some value of s,        |
- *      use spline::seval and/or deval.                           |
- *                                                        |
- *      s        independent variable array (input)       |
- *      x        dependent variable array   (input)       |
- *      xs       dx/ds array                (calculated)  |
- *      n        number of points           (input)       |
- *                                                        |
- * -------------------------------------------------------*/
-void XFoil::splina(const double x[], double xs[], const double s[], int n) {
-  bool lend;
-  double dx, xs1, xs2;
-  xs1 = xs2 = 0.0;
 
-  lend = true;
-  for (int i = 1; i <= n - 1; i++) {
-    const double ds = s[i + 1] - s[i];
-    if (fabs(ds) < 1.e-10) {  //=0.0
-      xs[i] = xs1;
-      lend = true;
-    } else {
-      dx = x[i + 1] - x[i];
-      xs2 = dx / ds;
-      if (lend) {
-        xs[i] = xs2;
-        lend = false;
-      } else
-        xs[i] = 0.5 * (xs1 + xs2);
-    }
-    xs1 = xs2;
-  }
-  xs[n] = xs1;
-}
 
 /** -------------------------------------------------------
  *      Calculates spline coefficients for x(s).          |

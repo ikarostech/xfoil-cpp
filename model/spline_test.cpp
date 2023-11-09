@@ -32,6 +32,24 @@ TEST(seval, test_value) {
     ASSERT_EQ(-5.9902044244614357e-05, actual);
 }
 
+TEST(splina, test_value) {
+    //given
+    std::vector<double> x{0.0, 1.0, 0.6, 0.0, 0.0, 0.4, 1.0};
+    std::vector<double> s{0.0, 0.0, 0.8, 1.2, 1.2, 1.8, 2.5};
+    
+    //when
+    std::vector<double> xs = spline::splina(x.data(), s.data(), x.size() - spline::INDEX_START_WITH, x.size());
+
+    //then
+    ASSERT_EQ(0, xs[0]);
+    ASSERT_EQ(-0.5, xs[1]);
+    ASSERT_EQ(-1, xs[2]);
+    ASSERT_EQ(-1.5000000000000002, xs[3]);
+    ASSERT_EQ(0.66666666666666663, xs[4]);
+    ASSERT_EQ(0.76190476190476186, xs[5]);
+    ASSERT_EQ(0.85714285714285721, xs[6]);
+}
+
 int main() {
     testing::InitGoogleTest();
     return RUN_ALL_TESTS();
