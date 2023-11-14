@@ -2451,36 +2451,6 @@ bool XFoil::dampl(double hk, double th, double rt, double &ax, double &ax_hk,
   return true;
 }
 
-/** --------------------------------------------------
- *	   calculates dx/ds(ss)                         |
- *	   xs array must have been calculated by spline |
- * -------------------------------------------------- */
-double XFoil::deval(double ss, const double x[], const double xs[], const double s[], int n) {
-  int ilow, i;
-  double ds, t, cx1, cx2, deval;
-
-  ilow = 1;
-  //	i = nc;
-  i = n;  /// techwinder modified
-
-  while (i - ilow > 1) {
-    int imid = (i + ilow) / 2;
-    if (ss < s[imid])
-      i = imid;
-    else
-      ilow = imid;
-  }
-
-  ds = s[i] - s[i - 1];
-  t = (ss - s[i - 1]) / ds;
-  cx1 = ds * xs[i - 1] - x[i] + x[i - 1];
-  cx2 = ds * xs[i] - x[i] + x[i - 1];
-  deval = x[i] - x[i - 1] + (1.0 - 4.0 * t + 3.0 * t * t) * cx1 +
-          t * (3.0 * t - 2.0) * cx2;
-  deval = deval / ds;
-  return deval;
-}
-
 /** Laminar dissipation function  ( 2 cd/h* )     (from Falkner-Skan)*/
 bool XFoil::dil(double hk, double rt, double &di, double &di_hk,
                 double &di_rt) {
@@ -2836,7 +2806,7 @@ void XFoil::getmax(double x[], double y[], double yp[], int n, double &xmax,
   bool bConv = false;
   for (iter = 1; iter <= 10; iter++) {
     ymax = spline::seval(xmax, y, yp, x, n);
-    const double res = deval(xmax, y, yp, x, n);
+    const double res = spline::deval(xmax, y, yp, x, n);
     const double resp = d2val(xmax, y, yp, x, n);
     if (fabs(xlen * resp) < 1.0e-6) {
       bConv = true;
@@ -2892,7 +2862,7 @@ void XFoil::xlfind(double &sle, double x[], double xp[], double y[],
 
   //---- newton iteration to get exact sle value
   for (iter = 1; iter <= 50; iter++) {
-    double dxds = deval(sle, x, xp, s, n);
+    double dxds = spline::deval(sle, x, xp, s, n);
     double dxdd = d2val(sle, x, xp, s, n);
 
     //------ drive dxds to zero
@@ -3016,8 +2986,8 @@ void XFoil::sopps(double &sopp, double si, double x[], double xp[], double y[],
   for (int iter = 1; iter <= 12; iter++) {
     const double xopp = spline::seval(sopp, x, xp, s, n);
     const double yopp = spline::seval(sopp, y, yp, s, n);
-    const double xoppd = deval(sopp, x, xp, s, n);
-    const double yoppd = deval(sopp, y, yp, s, n);
+    const double xoppd = spline::deval(sopp, x, xp, s, n);
+    const double yoppd = spline::deval(sopp, y, yp, s, n);
 
     const double res = (xopp - xle) * dxc + (yopp - yle) * dyc - xbar;
     const double resd = xoppd * dxc + yoppd * dyc;
@@ -3655,8 +3625,8 @@ bool XFoil::lefind(double &sle, double x[], double xp[], double y[],
   for (iter = 1; iter <= 50; iter++) {
     xle = spline::seval(sle, x, xp, s, n);
     yle = spline::seval(sle, y, yp, s, n);
-    const double dxds = deval(sle, x, xp, s, n);
-    const double dyds = deval(sle, y, yp, s, n);
+    const double dxds = spline::deval(sle, x, xp, s, n);
+    const double dyds = spline::deval(sle, y, yp, s, n);
     const double dxdd = d2val(sle, x, xp, s, n);
     const double dydd = d2val(sle, y, yp, s, n);
 
@@ -4901,8 +4871,8 @@ stop51:
     //------ set up tri-diagonal system for node position deltas
     cv1 = spline::seval(snew[1], w5, w6, sb.data(), nb);
     cv2 = spline::seval(snew[2], w5, w6, sb.data(), nb);
-    cvs1 = deval(snew[1], w5, w6, sb.data(), nb);
-    cvs2 = deval(snew[2], w5, w6, sb.data(), nb);
+    cvs1 = spline::deval(snew[1], w5, w6, sb.data(), nb);
+    cvs2 = spline::deval(snew[2], w5, w6, sb.data(), nb);
 
     cavm = sqrt(cv1 * cv1 + cv2 * cv2);
     if (cavm == 0.0) {
@@ -4917,7 +4887,7 @@ stop51:
       dsm = snew[i] - snew[i - 1];
       dsp = snew[i] - snew[i + 1];
       cv3 = spline::seval(snew[i + 1], w5, w6, sb.data(), nb);
-      cvs3 = deval(snew[i + 1], w5, w6, sb.data(), nb);
+      cvs3 = spline::deval(snew[i + 1], w5, w6, sb.data(), nb);
 
       cavp = sqrt(cv3 * cv3 + cv2 * cv2);
       if (cavp == 0.0) {
@@ -6667,7 +6637,7 @@ bool XFoil::sinvrt(double &si, double xi, double x[], double xs[], double s[],
 
   for (iter = 1; iter <= 10; iter++) {
     const double res = spline::seval(si, x, xs, s, n) - xi;
-    const double resp = deval(si, x, xs, s, n);
+    const double resp = spline::deval(si, x, xs, s, n);
     const double ds = -res / resp;
     si = si + ds;
     if (fabs(ds / (s[n] - s[1])) < 1.0e-5) return true;
@@ -7012,14 +6982,14 @@ void XFoil::sss(double ss, double *s1, double *s2, double del, double xbf,
   //---- newton iteration loop
   for (int iter = 1; iter <= 10; iter++) {
     const double x1 = spline::seval(*s1, x, xp, s, n);
-    const double x1p = deval(*s1, x, xp, s, n);
+    const double x1p = spline::deval(*s1, x, xp, s, n);
     const double y1 = spline::seval(*s1, y, yp, s, n);
-    const double y1p = deval(*s1, y, yp, s, n);
+    const double y1p = spline::deval(*s1, y, yp, s, n);
 
     const double x2 = spline::seval(*s2, x, xp, s, n);
-    const double x2p = deval(*s2, x, xp, s, n);
+    const double x2p = spline::deval(*s2, x, xp, s, n);
     const double y2 = spline::seval(*s2, y, yp, s, n);
-    const double y2p = deval(*s2, y, yp, s, n);
+    const double y2p = spline::deval(*s2, y, yp, s, n);
 
     const double r1sq = (x1 - xbf) * (x1 - xbf) + (y1 - ybf) * (y1 - ybf);
     const double r2sq = (x2 - xbf) * (x2 - xbf) + (y2 - ybf) * (y2 - ybf);
@@ -7103,82 +7073,8 @@ void XFoil::sss(double ss, double *s1, double *s2, double del, double xbf,
 }
 
 bool XFoil::stepbl() {
-  // techwinder : can't think of a more elegant way to do this, and too lazy to
-  // search
-  blData1.xz = blData2.xz;
-  blData1.uz = blData2.uz;
-  blData1.tz = blData2.tz;
-  blData1.dz = blData2.dz;
-  blData1.sz = blData2.sz;
-  blData1.amplz = blData2.amplz;
-  blData1.uz_uei = blData2.uz_uei;
-  blData1.uz_ms = blData2.uz_ms;
-  blData1.dwz = blData2.dwz;
-  blData1.hz = blData2.hz;
-  blData1.hz_tz = blData2.hz_tz;
-  blData1.hz_dz = blData2.hz_dz;
-  blData1.mz = blData2.mz;
-  blData1.mz_uz = blData2.mz_uz;
-  blData1.mz_ms = blData2.mz_ms;
-  blData1.rz = blData2.rz;
-  blData1.rz_uz = blData2.rz_uz;
-  blData1.rz_ms = blData2.rz_ms;
-  blData1.vz = blData2.vz;
-  blData1.vz_uz = blData2.vz_uz;
-  blData1.vz_ms = blData2.vz_ms;
-  blData1.vz_re = blData2.vz_re;
-  blData1.hkz = blData2.hkz;
-  blData1.hkz_uz = blData2.hkz_uz;
-  blData1.hkz_tz = blData2.hkz_tz;
-  blData1.hkz_dz = blData2.hkz_dz;
-  blData1.hkz_ms = blData2.hkz_ms;
-  blData1.hsz = blData2.hsz;
-  blData1.hsz_uz = blData2.hsz_uz;
-  blData1.hsz_tz = blData2.hsz_tz;
-  blData1.hsz_dz = blData2.hsz_dz;
-  blData1.hsz_ms = blData2.hsz_ms;
-  blData1.hsz_re = blData2.hsz_re;
-  blData1.hcz = blData2.hcz;
-  blData1.hcz_uz = blData2.hcz_uz;
-  blData1.hcz_tz = blData2.hcz_tz;
-  blData1.hcz_dz = blData2.hcz_dz;
-  blData1.hcz_ms = blData2.hcz_ms;
-  blData1.rtz = blData2.rtz;
-  blData1.rtz_uz = blData2.rtz_uz;
-  blData1.rtz_tz = blData2.rtz_tz;
-  blData1.rtz_ms = blData2.rtz_ms;
-  blData1.rtz_re = blData2.rtz_re;
-  blData1.cfz = blData2.cfz;
-  blData1.cfz_uz = blData2.cfz_uz;
-  blData1.cfz_tz = blData2.cfz_tz;
-  blData1.cfz_dz = blData2.cfz_dz;
-  blData1.cfz_ms = blData2.cfz_ms;
-  blData1.cfz_re = blData2.cfz_re;
-  blData1.diz = blData2.diz;
-  blData1.diz_uz = blData2.diz_uz;
-  blData1.diz_tz = blData2.diz_tz;
-  blData1.diz_dz = blData2.diz_dz;
-  blData1.diz_sz = blData2.diz_sz;
-  blData1.diz_ms = blData2.diz_ms;
-  blData1.diz_re = blData2.diz_re;
-  blData1.usz = blData2.usz;
-  blData1.usz_uz = blData2.usz_uz;
-  blData1.usz_tz = blData2.usz_tz;
-  blData1.usz_dz = blData2.usz_dz;
-  blData1.usz_ms = blData2.usz_ms;
-  blData1.usz_re = blData2.usz_re;
-  blData1.cqz = blData2.cqz;
-  blData1.cqz_uz = blData2.cqz_uz;
-  blData1.cqz_tz = blData2.cqz_tz;
-  blData1.cqz_dz = blData2.cqz_dz;
-  blData1.cqz_ms = blData2.cqz_ms;
-  blData1.cqz_re = blData2.cqz_re;
-  blData1.dez = blData2.dez;
-  blData1.dez_uz = blData2.dez_uz;
-  blData1.dez_tz = blData2.dez_tz;
-  blData1.dez_dz = blData2.dez_dz;
-  blData1.dez_ms = blData2.dez_ms;
-  return true;
+    blData1 = blData2;
+    return true;
 }
 
 bool XFoil::stfind() {
@@ -8909,8 +8805,8 @@ void XFoil::flap() {
     atop = std::max(0.0, -rdef);
     abot = std::max(0.0, rdef);
   } else {
-    const double chx = deval(bots, xb.data(), xbp.data(), sb.data(), nb) - deval(tops, xb.data(), xbp.data(), sb.data(), nb);
-    const double chy = deval(bots, yb.data(), ybp.data(), sb.data(), nb) - deval(tops, yb.data(), ybp.data(), sb.data(), nb);
+    const double chx = spline::deval(bots, xb.data(), xbp.data(), sb.data(), nb) - spline::deval(tops, xb.data(), xbp.data(), sb.data(), nb);
+    const double chy = spline::deval(bots, yb.data(), ybp.data(), sb.data(), nb) - spline::deval(tops, yb.data(), ybp.data(), sb.data(), nb);
     const double fvx = spline::seval(bots, xb.data(), xbp.data(), sb.data(), nb) + spline::seval(tops, xb.data(), xbp.data(), sb.data(), nb);
     const double fvy = spline::seval(bots, yb.data(), ybp.data(), sb.data(), nb) + spline::seval(tops, yb.data(), ybp.data(), sb.data(), nb);
     const double crsp = chx * (ybf - 0.5 * fvy) - chy * (xbf - 0.5 * fvx);
@@ -9350,8 +9246,8 @@ void XFoil::scinit(int n, double x[], double xp[], double y[], double yp[],
     //---- calculate imaginary part of harmonic function  p(w) + iq(w)
     for (ic = 1; ic <= nc; ic++) {
       sic = s[1] + (s[n] - s[1]) * sc[ic];
-      dxds = deval(sic, x, xp, s, n);
-      dyds = deval(sic, y, yp, s, n);
+      dxds = spline::deval(sic, x, xp, s, n);
+      dyds = spline::deval(sic, y, yp, s, n);
 
       //------ set q(w) - qo   (qo defined so that q(w)-qo = 0  at  w = 0 , 2
       // PI)
@@ -9626,8 +9522,8 @@ void XFoil::zlefind(complex<double> *zle, complex<double> zc[], double wc[],
   for (int itcle = 1; itcle <= 10; itcle++) {
     xcle = spline::seval(wcle, xc, xcw, wc + ic1 - 1, nic);
     ycle = spline::seval(wcle, yc, ycw, wc + ic1 - 1, nic);
-    const double dxdw = deval(wcle, xc, xcw, wc + ic1 - 1, nic);
-    const double dydw = deval(wcle, yc, ycw, wc + ic1 - 1, nic);
+    const double dxdw = spline::deval(wcle, xc, xcw, wc + ic1 - 1, nic);
+    const double dydw = spline::deval(wcle, yc, ycw, wc + ic1 - 1, nic);
     const double dxdd = d2val(wcle, xc, xcw, wc + ic1 - 1, nic);
     const double dydd = d2val(wcle, yc, ycw, wc + ic1 - 1, nic);
 

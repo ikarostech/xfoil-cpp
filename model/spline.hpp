@@ -15,6 +15,12 @@ class spline {
     static std::vector<double> scalc(const double x[], const double y[], int n, const int s_size);
     static double seval(double ss, const double x[], const double xs[], const double s[], int n);
 
+    /** --------------------------------------------------
+    *	   calculates dx/ds(ss)                         |
+    *	   xs array must have been calculated by spline |
+    * -------------------------------------------------- */
+    static double deval(double ss, const double x[], const double xs[], const double s[], int n);
+
     /** -------------------------------------------------------
      *      Calculates spline coefficients for x(s).          |
      *       A simple averaging of adjacent segment slopes    |

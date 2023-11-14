@@ -46,6 +46,35 @@ double spline::seval(double ss, const double x[], const double xs[], const doubl
             (t - t * t) * ((1.0 - t) * cx_former - t * cx_later);
 }
 
+/** --------------------------------------------------
+*	   calculates dx/ds(ss)                         |
+*	   xs array must have been calculated by spline |
+* -------------------------------------------------- */
+double spline::deval(double ss, const double x[], const double xs[], const double s[], int n) {
+    int ilow, i;
+    double ds, t, cx1, cx2, deval;
+
+    ilow = 1;
+    //	i = nc;
+    i = n;  /// techwinder modified
+
+    while (i - ilow > 1) {
+        int imid = (i + ilow) / 2;
+        if (ss < s[imid])
+        i = imid;
+        else
+        ilow = imid;
+    }
+
+    ds = s[i] - s[i - 1];
+    t = (ss - s[i - 1]) / ds;
+    cx1 = ds * xs[i - 1] - x[i] + x[i - 1];
+    cx2 = ds * xs[i] - x[i] + x[i - 1];
+    deval = x[i] - x[i - 1] + (1.0 - 4.0 * t + 3.0 * t * t) * cx1 +
+            t * (3.0 * t - 2.0) * cx2;
+    deval = deval / ds;
+    return deval;
+}
 /** -------------------------------------------------------
  *      Calculates spline coefficients for x(s).          |
  *       A simple averaging of adjacent segment slopes    |
