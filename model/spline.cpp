@@ -2,7 +2,7 @@
 #include "../Eigen/Core"
 #include "../Eigen/Dense"
 #include "../Eigen/StdVector"
-
+#include <iostream>
 std::vector<double> spline::scalc(const double x[], const double y[], int n, const int s_size) {
     //TODO 引数のVector2d化
     std::vector<Eigen::Vector2d> pos(n + INDEX_START_WITH);
@@ -51,29 +51,18 @@ double spline::seval(double ss, const double x[], const double xs[], const doubl
 *	   xs array must have been calculated by spline |
 * -------------------------------------------------- */
 double spline::deval(double ss, const double x[], const double xs[], const double s[], int n) {
-    int ilow, i;
-    double ds, t, cx1, cx2, deval;
 
-    ilow = 1;
-    //	i = nc;
-    i = n;  /// techwinder modified
+    //FIXME 引数のVector化
+    std::vector<double> s_vector(s, s + n - 1 + INDEX_START_WITH);
+    int i = std::distance(s_vector.begin(), std::lower_bound(s_vector.begin(), s_vector.end(), ss));
 
-    while (i - ilow > 1) {
-        int imid = (i + ilow) / 2;
-        if (ss < s[imid])
-        i = imid;
-        else
-        ilow = imid;
-    }
-
-    ds = s[i] - s[i - 1];
-    t = (ss - s[i - 1]) / ds;
-    cx1 = ds * xs[i - 1] - x[i] + x[i - 1];
-    cx2 = ds * xs[i] - x[i] + x[i - 1];
-    deval = x[i] - x[i - 1] + (1.0 - 4.0 * t + 3.0 * t * t) * cx1 +
-            t * (3.0 * t - 2.0) * cx2;
-    deval = deval / ds;
-    return deval;
+    const double ds = s[i] - s[i - 1];
+    const double dx = x[i] - x[i - 1];
+    const double t = (ss - s[i - 1]) / ds;
+    const double cx1 = ds * xs[i - 1] - dx;
+    const double cx2 = ds * xs[i] - dx;
+    return (dx + (1.0 - 4.0 * t + 3.0 * t * t) * cx1 +
+            t * (3.0 * t - 2.0) * cx2) / ds;
 }
 /** -------------------------------------------------------
  *      Calculates spline coefficients for x(s).          |
