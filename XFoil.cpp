@@ -2312,35 +2312,6 @@ stop11:
   return crv;
 }
 
-/** --------------------------------------------------
- *      calculates d2x/ds2(ss)                       |
- *      xs array must have been calculated by spline |
- * --------------------------------------------------- */
-double XFoil::d2val(double ss, const double x[], const double xs[], const double s[], int n) {
-  int i, imid, ilow;
-  double ds, t, cx1, cx2, dtwoval;
-
-  ilow = 1;
-  i = n;
-stop10:
-  if (i - ilow <= 1) goto stop11;
-  imid = (i + ilow) / 2;
-  if (ss < s[imid])
-    i = imid;
-  else
-    ilow = imid;
-  goto stop10;
-
-stop11:
-  ds = s[i] - s[i - 1];
-  t = (ss - s[i - 1]) / ds;
-  cx1 = ds * xs[i - 1] - x[i] + x[i - 1];
-  cx2 = ds * xs[i] - x[i] + x[i - 1];
-  dtwoval = (6.0 * t - 4.0) * cx1 + (6.0 * t - 2.0) * cx2;
-  dtwoval = dtwoval / ds / ds;
-  return dtwoval;
-}
-
 /** ==============================================================
  *      amplification rate routine for envelope e^n method.
  *      reference:
@@ -2807,7 +2778,7 @@ void XFoil::getmax(double x[], double y[], double yp[], int n, double &xmax,
   for (iter = 1; iter <= 10; iter++) {
     ymax = spline::seval(xmax, y, yp, x, n);
     const double res = spline::deval(xmax, y, yp, x, n);
-    const double resp = d2val(xmax, y, yp, x, n);
+    const double resp = spline::d2val(xmax, y, yp, x, n);
     if (fabs(xlen * resp) < 1.0e-6) {
       bConv = true;
       break;  // go to 20
@@ -2863,7 +2834,7 @@ void XFoil::xlfind(double &sle, double x[], double xp[], double y[],
   //---- newton iteration to get exact sle value
   for (iter = 1; iter <= 50; iter++) {
     double dxds = spline::deval(sle, x, xp, s, n);
-    double dxdd = d2val(sle, x, xp, s, n);
+    double dxdd = spline::d2val(sle, x, xp, s, n);
 
     //------ drive dxds to zero
     double res = dxds;
@@ -3627,8 +3598,8 @@ bool XFoil::lefind(double &sle, double x[], double xp[], double y[],
     yle = spline::seval(sle, y, yp, s, n);
     const double dxds = spline::deval(sle, x, xp, s, n);
     const double dyds = spline::deval(sle, y, yp, s, n);
-    const double dxdd = d2val(sle, x, xp, s, n);
-    const double dydd = d2val(sle, y, yp, s, n);
+    const double dxdd = spline::d2val(sle, x, xp, s, n);
+    const double dydd = spline::d2val(sle, y, yp, s, n);
 
     const double xchord = xle - xte;
     const double ychord = yle - yte;
@@ -7035,10 +7006,10 @@ void XFoil::sss(double ss, double *s1, double *s2, double del, double xbf,
 
       //------- residual 2: set vector sum of line segments beteen the
       //-       endpoints and flap hinge to be perpendicular to airfoil surface.
-      x1pp = d2val(*s1, x, xp, s, n);
-      y1pp = d2val(*s1, y, yp, s, n);
-      x2pp = d2val(*s2, x, xp, s, n);
-      y2pp = d2val(*s2, y, yp, s, n);
+      x1pp = spline::d2val(*s1, x, xp, s, n);
+      y1pp = spline::d2val(*s1, y, yp, s, n);
+      x2pp = spline::d2val(*s2, x, xp, s, n);
+      y2pp = spline::d2val(*s2, y, yp, s, n);
 
       xtot = x1 + x2 - 2.0 * xbf;
       ytot = y1 + y2 - 2.0 * ybf;
@@ -9524,8 +9495,8 @@ void XFoil::zlefind(complex<double> *zle, complex<double> zc[], double wc[],
     ycle = spline::seval(wcle, yc, ycw, wc + ic1 - 1, nic);
     const double dxdw = spline::deval(wcle, xc, xcw, wc + ic1 - 1, nic);
     const double dydw = spline::deval(wcle, yc, ycw, wc + ic1 - 1, nic);
-    const double dxdd = d2val(wcle, xc, xcw, wc + ic1 - 1, nic);
-    const double dydd = d2val(wcle, yc, ycw, wc + ic1 - 1, nic);
+    const double dxdd = spline::d2val(wcle, xc, xcw, wc + ic1 - 1, nic);
+    const double dydd = spline::d2val(wcle, yc, ycw, wc + ic1 - 1, nic);
 
     const double xchord = xcle - xcte;
     const double ychord = ycle - ycte;

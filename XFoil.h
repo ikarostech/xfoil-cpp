@@ -317,7 +317,6 @@ class XFoil {
   double atanc(double y, double x, double thold);
   double curv(double ss, const double x[], const double xs[], const double y[], const double ys[],
               const double s[], int n);
-  double d2val(double ss, const double x[], const double xs[], const double s[], int n);
   double sign(double a, double b);
 
  public:

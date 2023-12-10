@@ -21,6 +21,12 @@ class spline {
     * -------------------------------------------------- */
     static double deval(double ss, const double x[], const double xs[], const double s[], int n);
 
+    /** --------------------------------------------------
+     *      calculates d2x/ds2(ss)                          /
+     *      xs array must have been calculated by spline    /
+     * --------------------------------------------------- */
+    static double d2val(double ss, const double x[], const double xs[], const double s[], int n);
+
     /** -------------------------------------------------------
      *      Calculates spline coefficients for x(s).          |
      *       A simple averaging of adjacent segment slopes    |
