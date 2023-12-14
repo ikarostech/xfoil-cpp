@@ -102,8 +102,21 @@ class XFoil {
   bool initialize();
   bool initXFoilGeometry(int fn, const double *fx, const double *fy, double *fnx,
                          double *fny);
+
+  enum class ReynoldsType {
+    CONSTANT,
+    FIXED_LIFT,
+    FIXED_LIFT_AND_DYNAMIC_PRESSURE
+  };
+  enum class MachType {
+    CONSTANT,
+    FIXED_LIFT,
+    FIXED_LIFT_AND_DYNAMIC_PRESSURE
+  };
+  ReynoldsType reynolds_type;
+  MachType mach_type;
   bool initXFoilAnalysis(double Re, double alpha, double Mach, double NCrit,
-                         double XtrTop, double XtrBot, int reType, int maType,
+                         double XtrTop, double XtrBot, ReynoldsType reType, MachType maType,
                          bool bViscous, std::stringstream &outStream);
 
   void splqsp(int kqsp);
@@ -397,7 +410,7 @@ class XFoil {
   complex<double> zc[ICX + 1], zc_cn[ICX + 1][IMX4 + 1];
   complex<double> cnsav[IMX + 1];
 
-  int retyp, matyp;
+
   double rlx;
 
   double hfx, hfy;

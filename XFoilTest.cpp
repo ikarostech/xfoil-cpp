@@ -49,7 +49,7 @@ protected:
     if (!foil->initXFoilGeometry(n, x, y, nx, ny)) {
       std::cout << "Initialization error!" << std::endl;
     }
-    if (!foil->initXFoilAnalysis(100000, 0, 0.0, 9.0, 1.0, 1.0, 1, 1, true, ss)) {
+    if (!foil->initXFoilAnalysis(100000, 0, 0.0, 9.0, 1.0, 1.0, XFoil::ReynoldsType::CONSTANT, XFoil::MachType::CONSTANT, true, ss)) {
       std::cout << "Initialization error!" << std::endl;
     }
 

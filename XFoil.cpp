@@ -87,13 +87,13 @@ XFoil::XFoil() {
   xpref2 = 1.0;
 
   //---- initialize freestream mach number to zero
-  matyp = 1;
+  mach_type = MachType::CONSTANT;
   minf1 = 0.0;
 
   //---- drop tolerance for bl system solver
   vaccel = 0.01;
   //---- default viscous parameters
-  retyp = 1;
+  reynolds_type = ReynoldsType::CONSTANT;
   reinf1 = 0.0;
 
   initialize();
@@ -3500,7 +3500,7 @@ bool XFoil::initXFoilGeometry(int fn, const double *fx, const double *fy, double
 
 bool XFoil::initXFoilAnalysis(double Re, double alpha, double Mach,
                               double NCrit, double XtrTop, double XtrBot,
-                              int reType, int maType, bool bViscous,
+                              ReynoldsType reType, MachType maType, bool bViscous,
                               std::stringstream &outStream) {
   // Sets Analysis parameters in XFoil
   m_pOutStream = &outStream;
@@ -3512,8 +3512,8 @@ bool XFoil::initXFoilAnalysis(double Re, double alpha, double Mach,
   alfa = alpha * PI / 180.0;
 
   minf1 = Mach;
-  retyp = reType;
-  matyp = maType;
+  reynolds_type = reType;
+  mach_type = maType;
   lalfa = true;
   qinf = 1.0;
 
@@ -4475,49 +4475,37 @@ bool XFoil::mrcl(double cls, double &m_cls, double &r_cls) {
   std::stringstream ss;
   double rrat, cla;
   cla = std::max(cls, 0.000001);
-  if (retyp < 1 || retyp > 3) {
-    writeString(
-        "    mrcl:  illegal Re(cls) dependence trigger, Setting fixed Re ",
-        true);
-    retyp = 1;
-  }
-  if (matyp < 1 || matyp > 3) {
-    writeString(
-        "    mrcl:  illegal Mach(cls) dependence trigger\n Setting fixed Mach",
-        true);
-    matyp = 1;
-  }
 
-  switch (matyp) {
-    case 1: {
+  switch (mach_type) {
+    case MachType::CONSTANT: {
       minf = minf1;
       m_cls = 0.0;
       break;
     }
-    case 2: {
+    case MachType::FIXED_LIFT: {
       minf = minf1 / sqrt(cla);
       m_cls = -0.5 * minf / cla;
       break;
     }
-    case 3: {
+    case MachType::FIXED_LIFT_AND_DYNAMIC_PRESSURE: {
       minf = minf1;
       m_cls = 0.0;
       break;
     }
   }
 
-  switch (retyp) {
-    case 1: {
+  switch (reynolds_type) {
+    case ReynoldsType::CONSTANT: {
       reinf = reinf1;
       r_cls = 0.0;
       break;
     }
-    case 2: {
+    case ReynoldsType::FIXED_LIFT: {
       reinf = reinf1 / sqrt(cla);
       r_cls = -0.5 * reinf / cla;
       break;
     }
-    case 3: {
+    case ReynoldsType::FIXED_LIFT_AND_DYNAMIC_PRESSURE: {
       reinf = reinf1 / cla;
       r_cls = -reinf / cla;
       break;
@@ -6670,7 +6658,7 @@ bool XFoil::specal() {
       mrcl(clm, minf_clm, reinf_clm);
 
       //-------- if mach is ok, go do next newton iteration
-      if (matyp == 1 || minf == 0.0 || minf_clm != 0.0) break;  // goto 91
+      if (mach_type == MachType::CONSTANT || minf == 0.0 || minf_clm != 0.0) break;  // goto 91
 
       rlx = 0.5 * rlx;
     }
@@ -7985,7 +7973,7 @@ bool XFoil::update() {
   //---- max allowable cl change per iteration
   dclmax = 0.5;
   dclmin = -0.5;
-  if (matyp != 1) dclmin = std::max(-0.5, -0.9 * cl);
+  if (mach_type != MachType::CONSTANT) dclmin = std::max(-0.5, -0.9 * cl);
   hstinv =
       gamm1 * (minf / qinf) * (minf / qinf) / (1.0 + 0.5 * gamm1 * minf * minf);
 
