@@ -47,6 +47,7 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 #include "Eigen/Dense"
 #include "Eigen/StdVector"
 
+#include "model/matrix.hpp"
 #include "model/spline.hpp"
 #include "xfoil_params.h"
 
@@ -319,7 +320,6 @@ class XFoil {
   bool tesys(double cte, double tte, double dte);
   bool trchek();
   bool trdif();
-  bool trisol(double a[], double b[], double c[], double d[], int kk);
   bool ueset();
   bool uicalc();
   bool update();

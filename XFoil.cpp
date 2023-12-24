@@ -4764,16 +4764,12 @@ stop51:
 
   //---- solve for smoothed curvature array w5
   if (ible == 0)
-    trisol(w2, w1, w3, w5, nb);
+    matrix::trisol(w2, w1, w3, w5, nb);
   else {
-    //		i = 1;
-    //		trisol(w2[i],w1[i],w3[i],w5[i],ible);
-    //		i = ible+1;
-    //		trisol(w2[i],w1[i],w3[i],w5[i],nb-ible);
     i = 1;
-    trisol(w2, w1, w3, w5, ible);
+    matrix::trisol(w2, w1, w3, w5, ible);
     i = ible + 1;
-    trisol(w2 + i - 1, w1 + i - 1, w3 + i - 1, w5 + i - 1, nb - ible);
+    matrix::trisol(w2 + i - 1, w1 + i - 1, w3 + i - 1, w5 + i - 1, nb - ible);
   }
 
   //---- find max curvature
@@ -4914,7 +4910,7 @@ stop51:
     }
 
     //------ solve for changes w4 in node position arc length values
-    trisol(w2, w1, w3, w4, nn);
+    matrix::trisol(w2, w1, w3, w4, nn);
 
     //------ find under-relaxation factor to keep nodes from changing order
     rlx = 1.0;
@@ -6878,7 +6874,7 @@ bool XFoil::splind(double x[], double xs[], double s[], int n, double xs1,
   }
 
   //---- solve for derivative array xs
-  trisol(a, b, c, xs, n);
+  matrix::trisol(a, b, c, xs, n);
   return true;
 }
 
@@ -7863,36 +7859,6 @@ bool XFoil::trdif() {
   //	}
   restoreblData(1);
 
-  return true;
-}
-
-bool XFoil::trisol(double a[], double b[], double c[], double d[], int kk) {
-  //-----------------------------------------
-  //     solves kk long, tri-diagonal system |
-  //                                         |
-  //             a c          d              |
-  //             b a c        d              |
-  //               b a .      .              |
-  //                 . . c    .              |
-  //                   b a    d              |
-  //                                         |
-  //     the righthand side d is replaced by |
-  //     the solution.  a, c are destroyed.  |
-  //-----------------------------------------
-  int k;
-  for (k = 2; k <= kk; k++) {
-    int km = k - 1;
-    c[km] = c[km] / a[km];
-    d[km] = d[km] / a[km];
-    a[k] = a[k] - b[k] * c[km];
-    d[k] = d[k] - b[k] * d[km];
-  }
-
-  d[kk] = d[kk] / a[kk];
-
-  for (k = kk - 1; k >= 1; k--) {
-    d[k] = d[k] - c[k] * d[k + 1];
-  }
   return true;
 }
 
@@ -10094,8 +10060,7 @@ void XFoil::smooq(int kq1, int kq2, int kqsp) {
   }
 
   //---- solve for smoothed qspec array
-  //      trisol(w2[kq1],w1[kq1],w3[kq1],qspec[kqsp][kq1],(kq2-kq1+1));
-  trisol(w2 + kq1 - 1, w1 + kq1 - 1, w3 + kq1 - 1, qspec[kqsp] + kq1 - 1,
+  matrix::trisol(w2 + kq1 - 1, w1 + kq1 - 1, w3 + kq1 - 1, qspec[kqsp] + kq1 - 1,
          (kq2 - kq1 + 1));
 }
 
