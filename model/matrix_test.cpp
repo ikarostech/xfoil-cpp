@@ -27,6 +27,10 @@ TEST(trisol, test_value) {
     ASSERT_EQ(0, b[0]);
     ASSERT_EQ(-1, b[1]);
     ASSERT_EQ(2, b[2]);
+
+    ASSERT_EQ(0, c[0]);
+    ASSERT_EQ(0.5, c[1]);
+    ASSERT_EQ(2, c[2]);
 }
 
 int main() {
