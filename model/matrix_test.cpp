@@ -30,9 +30,28 @@ TEST(trisol, test_value) {
 
     ASSERT_EQ(0, c[0]);
     ASSERT_EQ(0.5, c[1]);
-    ASSERT_EQ(2, c[2]);
+    ASSERT_EQ(0.66666666666666663, c[2]);
 }
+TEST(tridiagonalSolve, test_value) {
+    //given
+    Eigen::MatrixXd A(3, 3);
+    A <<  3, 1, 0,
+          1, 4, 2,
+          0, 2, 5;
+    Eigen::VectorXd d(3);
+    d << 5, 15, 19;
 
+    Eigen::VectorXd expectedX(3);
+    expectedX << 1, 2, 3;
+
+    //when
+    ThomasAlgorithmResult actual = matrix::tridiagonalSolve(A, d);
+
+    //then
+    ASSERT_FLOAT_EQ(actual.x(0), expectedX(0));
+    ASSERT_FLOAT_EQ(actual.x(1), expectedX(1));
+    ASSERT_FLOAT_EQ(actual.x(2), expectedX(2));
+}
 int main() {
     testing::InitGoogleTest();
     return RUN_ALL_TESTS();
