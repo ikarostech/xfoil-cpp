@@ -3,7 +3,6 @@
 class ThomasAlgorithmResult {
     public:
     Eigen::MatrixXd A;
-    Eigen::VectorXd d;
     Eigen::VectorXd x;
 };
 class matrix {

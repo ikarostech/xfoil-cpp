@@ -8,11 +8,11 @@ bool matrix::trisol(double a[], double b[], double c[], double d[], int kk) {
     //-----------------------------------------
     //     solves kk long, tri-diagonal system |
     //                                         |
-    //             a c          d              |
-    //             b a c        d              |
-    //               b a .      .              |
-    //                 . . c    .              |
-    //                   b a    d              |
+    //             a1 c1          d1           |
+    //             b2 a2 c2       d2           |
+    //               b3 a3 .       .           |
+    //                 . . cn-1    .           |
+    //                   bn an    dn           |
     //                                         |
     //     the righthand side d is replaced by |
     //     the solution.  a, c are destroyed.  |
@@ -43,18 +43,20 @@ ThomasAlgorithmResult matrix::tridiagonalSolve(Eigen::MatrixXd A, Eigen::VectorX
     Eigen::VectorXd c = A.diagonal(1);
     
     // Forward elimination
-    for (int i = 1; i < n; i++) {
-        std::cout<<i<<std::endl;
-        double factor = a(i - 1) / b(i - 1);
-        b(i) -= factor * c(i - 1);
-        d(i) -= factor * d(i - 1);
+    for (int i = 0; i < n - 1; i++) {
+        c(i) /= b(i); 
+        d(i) /= b(i);
+
+        b(i + 1) -= a(i) * c(i);
+        d(i + 1) -= a(i) * d(i);
+
     }
-    std::cout<<"forward"<<std::endl;
+
     // Backward substitution
-    x(n - 1) = d(n - 1) / b(n - 1);
+    d(n - 1) = d(n - 1) / b(n - 1);
 
     for (int i = n - 2; i >= 0; i--) {
-        x(i) = (d(i) - c(i) * x(i + 1)) / b(i);
+        d(i) -= c(i) * d(i + 1);
     }
     
     ThomasAlgorithmResult result = ThomasAlgorithmResult();
@@ -62,7 +64,6 @@ ThomasAlgorithmResult matrix::tridiagonalSolve(Eigen::MatrixXd A, Eigen::VectorX
     A.diagonal() = b;
     A.diagonal(1) = c;
     result.A = A;
-    result.d = d;
-    result.x = x;
+    result.x = d;
     return result;
 }
