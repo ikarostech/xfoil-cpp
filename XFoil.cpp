@@ -5911,16 +5911,15 @@ bool XFoil::segspl(double x[], double xs[], double s[], int n) {
   for (iseg = 2; iseg <= n - 2; iseg++) {
     if (s[iseg] == s[iseg + 1]) {
       nseg = iseg - iseg0 + 1;
-      //			splind(x[iseg0],xs[iseg0],s[iseg0],nseg,-999.0,-999.0);
-      splind(x + iseg0 - 1, xs + iseg0 - 1, s + iseg0 - 1, nseg, -999.0,
+      
+      spline::splind(x + iseg0 - 1, xs + iseg0 - 1, s + iseg0 - 1, nseg, -999.0,
              -999.0);
       iseg0 = iseg + 1;
     }
   }
   nseg = n - iseg0 + 1;
 
-  //	splind(x[iseg0],xs[iseg0],s[iseg0],nseg,-999.0,-999.0);
-  splind(x + iseg0 - 1, xs + iseg0 - 1, s + iseg0 - 1, nseg, -999.0, -999.0);
+  spline::splind(x + iseg0 - 1, xs + iseg0 - 1, s + iseg0 - 1, nseg, -999.0, -999.0);
 
   return true;
 }
@@ -5944,12 +5943,12 @@ bool XFoil::segspld(double x[], double xs[], double s[], int n, double xs1,
   for (iseg = 2; iseg <= n - 2; iseg++) {
     if (s[iseg] == s[iseg + 1]) {
       nseg = iseg - iseg0 + 1;
-      splind(x + iseg0 - 1, xs + iseg0 - 1, s + iseg0 - 1, nseg, xs1, xs2);
+      spline::splind(x + iseg0 - 1, xs + iseg0 - 1, s + iseg0 - 1, nseg, xs1, xs2);
       iseg0 = iseg + 1;
     }
   }
   nseg = n - iseg0 + 1;
-  splind(x + iseg0 - 1, xs + iseg0 - 1, s + iseg0 - 1, nseg, xs1, xs2);
+  spline::splind(x + iseg0 - 1, xs + iseg0 - 1, s + iseg0 - 1, nseg, xs1, xs2);
   return true;
 }
 
@@ -6789,92 +6788,6 @@ bool XFoil::speccl() {
 
   if (lflap) mhinge();
 
-  return true;
-}
-
-
-
-/** -------------------------------------------------------
- *      Calculates spline coefficients for x(s).          |
- *      Specified 1st derivative and/or usual zero 2nd    |
- *      derivative end conditions are used.               |
- *                                                        |
- *      To evaluate the spline at some value of s,        |
- *      use spline::seval and/or deval.                           |
- *                                                        |
- *      s        independent variable array (input)       |
- *      x        dependent variable array   (input)       |
- *      xs       dx/ds array                (calculated)  |
- *      n        number of points           (input)       |
- *      xs1,xs2  endpoint derivatives       (input)       |
- *               if = 999.0, then usual zero second       |
- *               derivative end condition(s) are used     |
- *               if = -999.0, then zero third             |
- *               derivative end condition(s) are used     |
- *                                                        |
- * ------------------------------------------------------- */
-bool XFoil::splind(double x[], double xs[], double s[], int n, double xs1,
-                   double xs2) {
-  int nmax = 600;
-  double a[601], b[601], c[601];
-
-  if (n > nmax) {
-    writeString("splind: array overflow, increase nmax", true);
-    return false;
-  }
-  for (int i = 2; i <= n - 1; i++) {
-    const double dsm = s[i] - s[i - 1];
-    const double dsp = s[i + 1] - s[i];
-    b[i] = dsp;
-    a[i] = 2.0 * (dsm + dsp);
-    c[i] = dsm;
-    xs[i] =
-        3.0 * ((x[i + 1] - x[i]) * dsm / dsp + (x[i] - x[i - 1]) * dsp / dsm);
-  }
-
-  if (xs1 >= 998.0) {
-    //----- set zero second derivative end condition
-    a[1] = 2.0;
-    c[1] = 1.0;
-    xs[1] = 3.0 * (x[2] - x[1]) / (s[2] - s[1]);
-  } else {
-    if (xs1 <= -998.0) {
-      //----- set zero third derivative end condition
-      a[1] = 1.0;
-      c[1] = 1.0;
-      xs[1] = 2.0 * (x[2] - x[1]) / (s[2] - s[1]);
-    } else {
-      //----- set specified first derivative end condition
-      a[1] = 1.0;
-      c[1] = 0.0;
-      xs[1] = xs1;
-    }
-  }
-
-  if (xs2 >= 998.0) {
-    b[n] = 1.0;
-    a[n] = 2.0;
-    xs[n] = 3.0 * (x[n] - x[n - 1]) / (s[n] - s[n - 1]);
-  } else {
-    if (xs2 <= -998.0) {
-      b[n] = 1.0;
-      a[n] = 1.0;
-      xs[n] = 2.0 * (x[n] - x[n - 1]) / (s[n] - s[n - 1]);
-    } else {
-      a[n] = 1.0;
-      b[n] = 0.0;
-      xs[n] = xs2;
-    }
-  }
-
-  if (n == 2 && xs1 <= -998.0 && xs2 <= -998.0) {
-    b[n] = 1.0;
-    a[n] = 2.0;
-    xs[n] = 3.0 * (x[n] - x[n - 1]) / (s[n] - s[n - 1]);
-  }
-
-  //---- solve for derivative array xs
-  matrix::trisol(a, b, c, xs, n);
   return true;
 }
 
@@ -8428,8 +8341,8 @@ bool XFoil::xifset(int is) {
     w2[i] = ((y[i] - yle) * chx - (x[i] - xle) * chy) / chsq;
   }
 
-  splind(w1, w3, s.data(), n, -999.0, -999.0);
-  splind(w2, w4, s.data(), n, -999.0, -999.0);
+  spline::splind(w1, w3, s.data(), n, -999.0, -999.0);
+  spline::splind(w2, w4, s.data(), n, -999.0, -999.0);
 
   if (is == 1) {
     //----- set approximate arc length of forced transition point for sinvrt
@@ -9431,8 +9344,8 @@ void XFoil::zlefind(complex<double> *zle, complex<double> zc[], double wc[],
   //---- calculate spline near leading edge with derivative end conditions
   nic = ic2 - ic1 + 1;
 
-  splind(xc, xcw, wc + ic1 - 1, nic, real(dzdw1), real(dzdw2));
-  splind(yc, ycw, wc + ic1 - 1, nic, imag(dzdw1), imag(dzdw2));
+  spline::splind(xc, xcw, wc + ic1 - 1, nic, real(dzdw1), real(dzdw2));
+  spline::splind(yc, ycw, wc + ic1 - 1, nic, imag(dzdw1), imag(dzdw2));
 
   double xcte = 0.5 * real(zc[1] + zc[nc]);
   double ycte = 0.5 * imag(zc[1] + zc[nc]);
@@ -9822,7 +9735,7 @@ void XFoil::cncalc(double qc[], bool lsymm) {
   }
 
   //---- spline q(w)
-  splind(qc, qcw, wc, nc, -999.0, -999.0);
+  spline::splind(qc, qcw, wc, nc, -999.0, -999.0);
 
   //---- get approximate w value at stagnation point
   for (ic = 2; ic <= nc; ic++) {
@@ -9899,18 +9812,18 @@ void XFoil::splqsp(int kqsp) {
 
   //---- usual spline with natural end bcs
   //	splind(qspec[kqsp][2],qspecp[kqsp][2],sspec[2], nsp-2, -999.0,-999.0);
-  splind(qspec[kqsp] + 2 - 1, qspecp[kqsp] + 2 - 1, sspec + 2 - 1, nsp - 2,
+  spline::splind(qspec[kqsp] + 2 - 1, qspecp[kqsp] + 2 - 1, sspec + 2 - 1, nsp - 2,
          -999.0, -999.0);
 
   //---- end intervals are splined separately with natural bcs at
   //     the trailing edge and matching slopes at the interior points
 
   i = 1;
-  splind(qspec[kqsp] + i - 1, qspecp[kqsp] + i - 1, sspec + i - 1, 2, -999.0,
+  spline::splind(qspec[kqsp] + i - 1, qspecp[kqsp] + i - 1, sspec + i - 1, 2, -999.0,
          qspecp[kqsp][i + 1]);
 
   i = nsp - 1;
-  splind(qspec[kqsp] + i - 1, qspecp[kqsp] + i - 1, sspec + i - 1, 2,
+  spline::splind(qspec[kqsp] + i - 1, qspecp[kqsp] + i - 1, sspec + i - 1, 2,
          qspecp[kqsp][i], -999.0);
 }
 
@@ -9940,8 +9853,8 @@ void XFoil::ExecMDES() {
 
   //----- spline new buffer airfoil
   sb = spline::scalc(xb.data(), yb.data(), nb, sb.size());
-  splind(xb.data(), xbp.data(), sb.data(), nb, -999.0, -999.0);
-  splind(yb.data(), ybp.data(), sb.data(), nb, -999.0, -999.0);
+  spline::splind(xb.data(), xbp.data(), sb.data(), nb, -999.0, -999.0);
+  spline::splind(yb.data(), ybp.data(), sb.data(), nb, -999.0, -999.0);
 
   geopar(xb.data(), xbp.data(), yb.data(), ybp.data(), sb.data(), nb, w1, sble, chordb, areab, radble, angbte,
          ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
@@ -10617,8 +10530,8 @@ bool XFoil::ExecQDES() {
 
   //----- spline new airfoil shape
   s = spline::scalc(x.data(), y.data(), n, s.size());
-  splind(x.data(), xp.data(), s.data(), n, -999.0, -999.0);
-  splind(y.data(), yp.data(), s.data(), n, -999.0, -999.0);
+  spline::splind(x.data(), xp.data(), s.data(), n, -999.0, -999.0);
+  spline::splind(y.data(), yp.data(), s.data(), n, -999.0, -999.0);
   ncalc(x.data(), y.data(), s.data(), n, nx.data(), ny.data());
   lefind(sle, x.data(), xp.data(), y.data(), yp.data(), s.data(), n);
   xle = spline::seval(sle, x.data(), xp.data(), s.data(), n);
@@ -10663,8 +10576,8 @@ void XFoil::RestoreQDES() {
   //	Foil is restored from CXInverse rather than from XFoil
 
   s = spline::scalc(x.data(), y.data(), n, s.size());
-  splind(x.data(), xp.data(), s.data(), n, -999.0, -999.0);
-  splind(y.data(), yp.data(), s.data(), n, -999.0, -999.0);
+  spline::splind(x.data(), xp.data(), s.data(), n, -999.0, -999.0);
+  spline::splind(y.data(), yp.data(), s.data(), n, -999.0, -999.0);
   ncalc(x.data(), y.data(), s.data(), n, nx.data(), ny.data());
   lefind(sle, x.data(), xp.data(), y.data(), yp.data(), s.data(), n);
   xle = spline::seval(sle, x.data(), xp.data(), s.data(), n);
