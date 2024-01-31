@@ -145,73 +145,65 @@ std::vector<double> spline::splina(const double x[], const double s[], int n, in
  *                                                        |
  * ------------------------------------------------------- */
 bool spline::splind(double x[], double xs[], double s[], int n, double xs1, double xs2) {
-  int nmax = 600;
-  double a[n + 1], b[n + 1], c[n + 1];
+  Eigen::MatrixXd matrixA = Eigen::MatrixXd(n, n);
+  Eigen::VectorXd vectorD = Eigen::VectorXd(n);
 
-  for (int i = 2; i <= n - 1; i++) {
-    const double dsm = s[i] - s[i - 1];
-    const double dsp = s[i + 1] - s[i];
-    b[i] = dsp;
-    a[i] = 2.0 * (dsm + dsp);
-    c[i] = dsm;
-    xs[i] =
-        3.0 * ((x[i + 1] - x[i]) * dsm / dsp + (x[i] - x[i - 1]) * dsp / dsm);
+  for (int i = 1; i < n - 1; i++) {
+    const double dsm = s[i + INDEX_START_WITH] - s[i - 1 + INDEX_START_WITH];
+    const double dsp = s[i + 1 + INDEX_START_WITH] - s[i + INDEX_START_WITH];
+    matrixA(i, i - 1) = dsp;
+    matrixA(i, i) = 2.0 * (dsm + dsp);
+    matrixA(i, i + 1) = dsm;
+    vectorD(i) =
+        3.0 * ((x[i + 1 + INDEX_START_WITH] - x[i + INDEX_START_WITH]) * dsm / dsp + (x[i + INDEX_START_WITH] - x[i - 1 + INDEX_START_WITH]) * dsp / dsm);
   }
 
   if (xs1 >= 998.0) {
     //----- set zero second derivative end condition
-    a[1] = 2.0;
-    c[1] = 1.0;
-    xs[1] = 3.0 * (x[2] - x[1]) / (s[2] - s[1]);
+    matrixA(0, 0) = 2.0;
+    matrixA(0, 1) = 1.0;
+    vectorD(0) = 3.0 * (x[1 + INDEX_START_WITH] - x[0 + INDEX_START_WITH]) / (s[1 + INDEX_START_WITH] - s[0 + INDEX_START_WITH]);
   } else {
     if (xs1 <= -998.0) {
       //----- set zero third derivative end condition
-      a[1] = 1.0;
-      c[1] = 1.0;
-      xs[1] = 2.0 * (x[2] - x[1]) / (s[2] - s[1]);
+      matrixA(0, 0) = 1.0;
+      matrixA(0, 1) = 1.0;
+      vectorD(0) = 2.0 * (x[1 + INDEX_START_WITH] - x[0 + INDEX_START_WITH]) / (s[1 + INDEX_START_WITH] - s[0 + INDEX_START_WITH]);
     } else {
       //----- set specified first derivative end condition
-      a[1] = 1.0;
-      c[1] = 0.0;
-      xs[1] = xs1;
+      matrixA(0, 0) = 1.0;
+      matrixA(0, 1) = 0.0;
+      vectorD(0) = xs1;
     }
   }
 
   if (xs2 >= 998.0) {
-    b[n] = 1.0;
-    a[n] = 2.0;
-    xs[n] = 3.0 * (x[n] - x[n - 1]) / (s[n] - s[n - 1]);
+    matrixA(n - 1, n - 2) = 1.0;
+    matrixA(n - 1, n - 1) = 2.0;
+    vectorD(n - 1) = 3.0 * (x[n - 1 + INDEX_START_WITH] - x[n - 2 + INDEX_START_WITH]) / (s[n - 1 + INDEX_START_WITH] - s[n - 2 + INDEX_START_WITH]);
   } else {
     if (xs2 <= -998.0) {
-      b[n] = 1.0;
-      a[n] = 1.0;
-      xs[n] = 2.0 * (x[n] - x[n - 1]) / (s[n] - s[n - 1]);
+      matrixA(n - 1, n - 2) = 1.0;
+      matrixA(n - 1, n - 1) = 1.0;
+      vectorD(n - 1) = 2.0 * (x[n - 1 + INDEX_START_WITH] - x[n - 2 + INDEX_START_WITH]) / (s[n - 1  + INDEX_START_WITH] - s[n - 2 + INDEX_START_WITH]);
     } else {
-      a[n] = 1.0;
-      b[n] = 0.0;
-      xs[n] = xs2;
+      matrixA(n - 1, n - 2) = 1.0;
+      matrixA(n - 1, n - 1) = 0.0;
+      vectorD(n - 1) = xs2;
     }
   }
 
   if (n == 2 && xs1 <= -998.0 && xs2 <= -998.0) {
-    b[n] = 1.0;
-    a[n] = 2.0;
-    xs[n] = 3.0 * (x[n] - x[n - 1]) / (s[n] - s[n - 1]);
+    matrixA(n - 1, n - 2) = 1.0;
+    matrixA(n - 1, n - 1) = 2.0;
+    vectorD(n - 1) = 3.0 * (x[n - 1 + INDEX_START_WITH] - x[n - 2 + INDEX_START_WITH]) / (s[n - 1  + INDEX_START_WITH] - s[n - 2 + INDEX_START_WITH]);
   }
 
   //---- solve for derivative array xs
-  Eigen::MatrixXd matrixA = Eigen::MatrixXd(n, n);
-  Eigen::VectorXd vectorD = Eigen::VectorXd(n);
-  for (int i=0; i<n; i++) {
-    matrixA(i,i) = a[i + 1];
-    vectorD(i) = xs[i + 1];
-  }
-  for (int i=0; i<n-1; i++) {
-    matrixA(i, i + 1) = c[i + 1];
-    matrixA(i + 1, i) = b[i + 2];
-  }
   Eigen::VectorXd vectorXs = matrix::tridiagonalSolve(matrixA, vectorD).x;
   //FIXME xsの0とn移行が0でないと結果がおかしくなるバグが存在
+  xs[0] = 0;
+  xs[n] = 0;
   for (int i=0; i<n; i++) {
     xs[i + 1] = vectorXs(i);
   }
