@@ -163,35 +163,36 @@ bool spline::splind(double x[], double xs[], double s[], int n, double xs1, doub
     matrixA(0, 0) = 2.0;
     matrixA(0, 1) = 1.0;
     vectorD(0) = 3.0 * (x[1 + INDEX_START_WITH] - x[0 + INDEX_START_WITH]) / (s[1 + INDEX_START_WITH] - s[0 + INDEX_START_WITH]);
-  } else {
-    if (xs1 <= -998.0) {
+  }
+  else if (xs1 <= -998.0) {
       //----- set zero third derivative end condition
       matrixA(0, 0) = 1.0;
       matrixA(0, 1) = 1.0;
       vectorD(0) = 2.0 * (x[1 + INDEX_START_WITH] - x[0 + INDEX_START_WITH]) / (s[1 + INDEX_START_WITH] - s[0 + INDEX_START_WITH]);
-    } else {
+  }
+  else {
       //----- set specified first derivative end condition
       matrixA(0, 0) = 1.0;
       matrixA(0, 1) = 0.0;
       vectorD(0) = xs1;
-    }
   }
 
   if (xs2 >= 998.0) {
     matrixA(n - 1, n - 2) = 1.0;
     matrixA(n - 1, n - 1) = 2.0;
     vectorD(n - 1) = 3.0 * (x[n - 1 + INDEX_START_WITH] - x[n - 2 + INDEX_START_WITH]) / (s[n - 1 + INDEX_START_WITH] - s[n - 2 + INDEX_START_WITH]);
-  } else {
-    if (xs2 <= -998.0) {
-      matrixA(n - 1, n - 2) = 1.0;
-      matrixA(n - 1, n - 1) = 1.0;
-      vectorD(n - 1) = 2.0 * (x[n - 1 + INDEX_START_WITH] - x[n - 2 + INDEX_START_WITH]) / (s[n - 1  + INDEX_START_WITH] - s[n - 2 + INDEX_START_WITH]);
-    } else {
-      matrixA(n - 1, n - 2) = 1.0;
-      matrixA(n - 1, n - 1) = 0.0;
-      vectorD(n - 1) = xs2;
-    }
   }
+  else if (xs2 <= -998.0) {
+    matrixA(n - 1, n - 2) = 1.0;
+    matrixA(n - 1, n - 1) = 1.0;
+    vectorD(n - 1) = 2.0 * (x[n - 1 + INDEX_START_WITH] - x[n - 2 + INDEX_START_WITH]) / (s[n - 1  + INDEX_START_WITH] - s[n - 2 + INDEX_START_WITH]);
+  } 
+  else {
+    matrixA(n - 1, n - 2) = 1.0;
+    matrixA(n - 1, n - 1) = 0.0;
+    vectorD(n - 1) = xs2;
+  }
+  
 
   if (n == 2 && xs1 <= -998.0 && xs2 <= -998.0) {
     matrixA(n - 1, n - 2) = 1.0;
