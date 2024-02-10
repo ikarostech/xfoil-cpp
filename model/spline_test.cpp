@@ -5,11 +5,15 @@
 
 TEST(scalc, test_value) {
     //given
-    std::vector<double> x{0.0, 0.0, 1.0, 2.0, 3.0};
-    std::vector<double> y{0.0, 0.0, 0.0, 2.0, 3.0};
+    Eigen::MatrixX2d points(5, 2);
+    points <<   0.0, 0.0,
+                0.0, 0.0,
+                1.0, 0.0,
+                2.0, 2.0,
+                3.0, 3.0;
 
     //when
-    std::vector<double> actual = spline::scalc(x.data(), y.data(), 4, 5);
+    std::vector<double> actual = spline::scalc(points, 4, 5);
 
     //then
     ASSERT_EQ(0, actual[0]);
