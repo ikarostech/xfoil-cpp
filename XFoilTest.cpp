@@ -54,7 +54,7 @@ protected:
     }
 
     for (int i=1; i<=foil->n; i++) {
-      Vector2d plot = {foil->x[i], foil->y[i]};
+      Vector2d plot = foil->points.row(i);
       plots.push_back(plot);
     }
   }  

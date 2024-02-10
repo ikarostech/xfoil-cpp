@@ -378,7 +378,7 @@ class XFoil {
   bool lbflap, lflap;
   int n, nb, iblte[ISX], ipan[IVX][ISX], nbl[ISX];
   int npan;
-  vector<double> x, y;
+  MatrixX2d points; //formerly x,y
   double xstrip[ISX], xoctr[ISX], yoctr[ISX];
   double qvis[IZX];
   bool liqset;

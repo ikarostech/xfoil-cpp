@@ -166,12 +166,13 @@ bool XFoil::initialize() {
   memset(uinv, 0, sizeof(uinv));
   memset(uslp, 0, sizeof(uslp));
   memset(vti, 0, sizeof(vti));
-  x.resize(IZX, 0);
+  points.resize(IZX, 2);
+
   xb.resize(IBX, 0);
   xbp.resize(IBX, 0);
   xp.resize(IZX, 0);
   memset(xssi, 0, sizeof(xssi));
-  y.resize(IZX, 0);
+  
   yb.resize(IBX, 0);
   ybp.resize(IBX, 0);
   yp.resize(IZX, 0);
@@ -539,8 +540,8 @@ bool XFoil::abcopy() {
 
   n = nb;
   for (i = 1; i <= n; i++) {
-    x[i] = xb[i];
-    y[i] = yb[i];
+    points.row(i).x() = xb[i];
+    points.row(i).y() = yb[i];
   }
   lgsame = true;
 
@@ -555,24 +556,24 @@ bool XFoil::abcopy() {
 
   while (i < n) {
     i++;
-    if (x[i - 1] == x[i] && y[i - 1] == y[i]) {
+    if (points.row(i - 1).x() == points.row(i).x() && points.row(i - 1).y() == points.row(i).y()) {
       for (int j = i; j <= n - 1; j++) {
-        x[j] = x[j + 1];
-        y[j] = y[j + 1];
+        points.row(j).x() = points.row(j + 1).x();
+        points.row(j).y() = points.row(j + 1).y();
       }
       n = n - 1;
     }
   }
-
-  s = spline::scalc(x.data(), y.data(), n, s.size());
-  segspl(x.data(), xp.data(), s.data(), n);
-  segspl(y.data(), yp.data(), s.data(), n);
-  ncalc(x.data(), y.data(), s.data(), n, nx.data(), ny.data());
-  lefind(sle, x.data(), xp.data(), y.data(), yp.data(), s.data(), n);
-  xle = spline::seval(sle, x.data(), xp.data(), s.data(), n);
-  yle = spline::seval(sle, y.data(), yp.data(), s.data(), n);
-  xte = 0.5 * (x[1] + x[n]);
-  yte = 0.5 * (y[1] + y[n]);
+  cout<<"strip out"<<endl;
+  s = spline::scalc(points.col(0).data(), points.col(1).data(), n, s.size());
+  segspl(points.col(0).data(), xp.data(), s.data(), n);
+  segspl(points.col(1).data(), yp.data(), s.data(), n);
+  ncalc(points.col(0).data(), points.col(1).data(), s.data(), n, nx.data(), ny.data());
+  lefind(sle, points.col(0).data(), xp.data(), points.col(1).data(), yp.data(), s.data(), n);
+  xle = spline::seval(sle, points.col(0).data(), xp.data(), s.data(), n);
+  yle = spline::seval(sle, points.col(1).data(), yp.data(), s.data(), n);
+  xte = 0.5 * (points.row(1).x() + points.row(n).x());
+  yte = 0.5 * (points.row(1).y() + points.row(n).y());
   chord = sqrt((xte - xle) * (xte - xle) + (yte - yle) * (yte - yle));
   tecalc();
   apcalc();
@@ -737,8 +738,8 @@ bool XFoil::apcalc() {
 
   //---- set angles of airfoil panels
   for (i = 1; i <= n - 1; i++) {
-    sx = x[i + 1] - x[i];
-    sy = y[i + 1] - y[i];
+    sx = points.row(i + 1).x() - points.row(i).x();
+    sy = points.row(i + 1).y() - points.row(i).y();
     if (sx == 0.0 && sy == 0.0)
       apanel[i] = atan2(-ny[i], -nx[i]);
     else
@@ -751,8 +752,8 @@ bool XFoil::apcalc() {
   if (sharp)
     apanel[i] = PI;
   else {
-    sx = x[ip] - x[i];
-    sy = y[ip] - y[i];
+    sx = points.row(ip).x() - points.row(i).x();
+    sy = points.row(ip).y() - points.row(i).y();
     apanel[i] = atan2(-sx, sy) + PI;
   }
 
@@ -2043,7 +2044,7 @@ bool XFoil::cdcalc() {
     for (ibl = 3; ibl <= iblte[is]; ibl++) {
       i = ipan[ibl][is];
       im = ipan[ibl - 1][is];
-      dx = (x[i] - x[im]) * ca + (y[i] - y[im]) * sa;
+      dx = (points.row(i).x() - points.row(im).x()) * ca + (points.row(i).y() - points.row(im).y()) * sa;
       cdf = cdf +
             0.5 * (tau[ibl][is] + tau[ibl - 1][is]) * dx * 2.0 / qinf / qinf;
     }
@@ -2161,17 +2162,17 @@ bool XFoil::clcalc(double xref, double yref) {
     cpc_cpi = (1.0 - bfac * cpg2) / (beta + bfac * cginc);
     double cpg2_alf = cpc_cpi * cpi_gam * gam_a[ip];
 
-    const double dx = (x[ip] - x[i]) * ca + (y[ip] - y[i]) * sa;
-    const double dy = (y[ip] - y[i]) * ca - (x[ip] - x[i]) * sa;
+    const double dx = (points.row(ip).x() - points.row(i).x()) * ca + (points.row(ip).y() - points.row(i).y()) * sa;
+    const double dy = (points.row(ip).y() - points.row(i).y()) * ca - (points.row(ip).x() - points.row(i).x()) * sa;
     const double dg = cpg2 - cpg1;
 
     const double ax =
-        (0.5 * (x[ip] + x[i]) - xref) * ca + (0.5 * (y[ip] + y[i]) - yref) * sa;
+        (0.5 * (points.row(ip).x() + points.row(i).x()) - xref) * ca + (0.5 * (points.row(ip).y() + points.row(i).y()) - yref) * sa;
     const double ay =
-        (0.5 * (y[ip] + y[i]) - yref) * ca - (0.5 * (x[ip] + x[i]) - xref) * sa;
+        (0.5 * (points.row(ip).y() + points.row(i).y()) - yref) * ca - (0.5 * (points.row(ip).x() + points.row(i).x()) - xref) * sa;
     const double ag = 0.5 * (cpg2 + cpg1);
 
-    const double dx_alf = -(x[ip] - x[i]) * sa + (y[ip] - y[i]) * ca;
+    const double dx_alf = -(points.row(ip).x() - points.row(i).x()) * sa + (points.row(ip).y() - points.row(i).y()) * ca;
     const double ag_alf = 0.5 * (cpg2_alf + cpg1_alf);
     const double ag_msq = 0.5 * (cpg2_msq + cpg1_msq);
 
@@ -2179,7 +2180,7 @@ bool XFoil::clcalc(double xref, double yref) {
     cdp = cdp - dy * ag;
     cm = cm - dx * (ag * ax + dg * dx / 12.0) - dy * (ag * ay + dg * dy / 12.0);
 
-    xcp += dx * ag * (x[ip] + x[i]) / 2.0;
+    xcp += dx * ag * (points.row(ip).x() + points.row(i).x()) / 2.0;
 
     cl_alf = cl_alf + dx * ag_alf + ag * dx_alf;
     cl_msq = cl_msq + dx * ag_msq;
@@ -2474,18 +2475,18 @@ bool XFoil::dslim(double &dstr, double thet, double msq, double hklim) {
  * ------------------------------------------------ */
 bool XFoil::fcpmin() {
   int i;
-  xcpmni = x[1];
-  xcpmnv = x[1];
+  xcpmni = points.row(1).x();
+  xcpmnv = points.row(1).x();
   cpmni = cpi[1];
   cpmnv = cpv[1];
 
   for (i = 2; i <= n + nw; i++) {
     if (cpi[i] < cpmni) {
-      xcpmni = x[i];
+      xcpmni = points.row(i).x();
       cpmni = cpi[i];
     }
     if (cpv[i] < cpmnv) {
-      xcpmnv = x[i];
+      xcpmnv = points.row(i).x();
       cpmnv = cpv[i];
     }
   }
@@ -3028,10 +3029,10 @@ bool XFoil::ggcalc() {
   //-    the unknowns are (dgamma)i and dpsio.
   for (i = 1; i <= n; i++) {
     //------ calculate psi and dpsi/dgamma array for current node
-    psilin(i, x[i], y[i], nx[i], ny[i], psi, psi_n, false, true);
+    psilin(i, points.row(i).x(), points.row(i).y(), nx[i], ny[i], psi, psi_n, false, true);
 
-    const double res1 = qinf * y[i];
-    const double res2 = -qinf * x[i];
+    const double res1 = qinf * points.row(i).y();
+    const double res2 = -qinf * points.row(i).x();
 
     //------ dres/dgamma
     for (j = 1; j <= n; j++) {
@@ -3076,9 +3077,9 @@ bool XFoil::ggcalc() {
     const double sbis = sin(abis);
 
     //----- minimum panel length adjacent to TE
-    const double ds1 = sqrt((x[1] - x[2]) * (x[1] - x[2]) + (y[1] - y[2]) * (y[1] - y[2]));
-    const double ds2 = sqrt((x[n] - x[n - 1]) * (x[n] - x[n - 1]) +
-               (y[n] - y[n - 1]) * (y[n] - y[n - 1]));
+    const double ds1 = sqrt((points.row(1).x() - points.row(2).x()) * (points.row(1).x() - points.row(2).x()) + (points.row(1).y() - points.row(2).y()) * (points.row(1).y() - points.row(2).y()));
+    const double ds2 = sqrt((points.row(n).x() - points.row(n - 1).x()) * (points.row(n).x() - points.row(n - 1).x()) +
+               (points.row(n).y() - points.row(n - 1).y()) * (points.row(n).y() - points.row(n - 1).y()));
     const double dsmin = std::min(ds1, ds2);
 
     //---- distance of internal control point ahead of sharp TE
@@ -3701,20 +3702,20 @@ bool XFoil::mhinge() {
   double dx, dy;
 
   if (!lflap) {
-    getxyf(x.data(), xp.data(), y.data(), yp.data(), s.data(), n, tops, bots, xof, yof);
+    getxyf(points.col(0).data(), xp.data(), points.col(1).data(), yp.data(), s.data(), n, tops, bots, xof, yof);
     lflap = true;
   } else {
     //------ find top and bottom y at hinge x location
     tops = xof;
     bots = s[n] - xof;
-    sinvrt(tops, xof, x.data(), xp.data(), s.data(), n);
-    sinvrt(bots, xof, x.data(), xp.data(), s.data(), n);
+    sinvrt(tops, xof, points.col(0).data(), xp.data(), s.data(), n);
+    sinvrt(bots, xof, points.col(0).data(), xp.data(), s.data(), n);
   }
 
-  topx = spline::seval(tops, x.data(), xp.data(), s.data(), n);
-  topy = spline::seval(tops, y.data(), yp.data(), s.data(), n);
-  botx = spline::seval(bots, x.data(), xp.data(), s.data(), n);
-  boty = spline::seval(bots, y.data(), yp.data(), s.data(), n);
+  topx = spline::seval(tops, points.col(0).data(), xp.data(), s.data(), n);
+  topy = spline::seval(tops, points.col(1).data(), yp.data(), s.data(), n);
+  botx = spline::seval(bots, points.col(0).data(), xp.data(), s.data(), n);
+  boty = spline::seval(bots, points.col(1).data(), yp.data(), s.data(), n);
 
   hmom = 0.0;
   hfx = 0.0;
@@ -3723,10 +3724,10 @@ bool XFoil::mhinge() {
   //---- integrate pressures on top and bottom sides of flap
   for (i = 2; i <= n; i++) {
     if (s[i - 1] < tops || s[i] > bots) {
-      dx = x[i] - x[i - 1];
-      dy = y[i] - y[i - 1];
-      xmid = 0.5 * (x[i] + x[i - 1]) - xof;
-      ymid = 0.5 * (y[i] + y[i - 1]) - yof;
+      dx = points.row(i).x() - points.row(i - 1).x();
+      dy = points.row(i).y() - points.row(i - 1).y();
+      xmid = 0.5 * (points.row(i).x() + points.row(i - 1).x()) - xof;
+      ymid = 0.5 * (points.row(i).y() + points.row(i - 1).y()) - yof;
 
       if (lvisc)
         pmid = 0.5 * (cpv[i] + cpv[i - 1]);
@@ -3757,10 +3758,10 @@ bool XFoil::mhinge() {
 
   // stop31
   //---- add on top surface chunk tops..s[i-1],  missed in the do 20 loop.
-  dx = topx - x[i - 1];
-  dy = topy - y[i - 1];
-  xmid = 0.5 * (topx + x[i - 1]) - xof;
-  ymid = 0.5 * (topy + y[i - 1]) - yof;
+  dx = topx - points.row(i - 1).x();
+  dy = topy - points.row(i - 1).y();
+  xmid = 0.5 * (topx + points.row(i - 1).x()) - xof;
+  ymid = 0.5 * (topy + points.row(i - 1).y()) - yof;
   if (s[i] != s[i - 1])
     frac = (tops - s[i - 1]) / (s[i] - s[i - 1]);
   else
@@ -3794,10 +3795,10 @@ bool XFoil::mhinge() {
 stop41:
   //---- add on bottom surface chunk bots..s[i],	missed in the do 20
   // loop.
-  dx = x[i] - botx;
-  dy = y[i] - boty;
-  xmid = 0.5 * (botx + x[i]) - xof;
-  ymid = 0.5 * (boty + y[i]) - yof;
+  dx = points.row(i).x() - botx;
+  dy = points.row(i).y() - boty;
+  xmid = 0.5 * (botx + points.row(i).x()) - xof;
+  ymid = 0.5 * (boty + points.row(i).y()) - yof;
   if (s[i] != s[i - 1])
     frac = (bots - s[i - 1]) / (s[i] - s[i - 1]);
   else
@@ -3824,10 +3825,10 @@ stop41:
   hfy = hfy + pmid * dx;
 
   //---- add on T.E. base thickness contribution
-  dx = x[1] - x[n];
-  dy = y[1] - y[n];
-  xmid = 0.5 * (x[1] + x[n]) - xof;
-  ymid = 0.5 * (y[1] + y[n]) - yof;
+  dx = points.row(1).x() - points.row(n).x();
+  dy = points.row(1).y() - points.row(n).y();
+  xmid = 0.5 * (points.row(1).x() + points.row(n).x()) - xof;
+  ymid = 0.5 * (points.row(1).y() + points.row(n).y()) - yof;
   if (lvisc)
     pmid = 0.5 * (cpv[1] + cpv[n]);
   else
@@ -4941,8 +4942,8 @@ stop11:
   for (i = 1; i <= n; i++) {
     ind = ipfac * (i - 1) + 1;
     s[i] = snew[ind];
-    x[i] = spline::seval(snew[ind], xb.data(), xbp.data(), sb.data(), nb);
-    y[i] = spline::seval(snew[ind], yb.data(), ybp.data(), sb.data(), nb);
+    points.row(i).x() = spline::seval(snew[ind], xb.data(), xbp.data(), sb.data(), nb);
+    points.row(i).y() = spline::seval(snew[ind], yb.data(), ybp.data(), sb.data(), nb);
   }
 
   //---- go over buffer airfoil again, checking for corners (double points)
@@ -4965,8 +4966,8 @@ stop11:
         //---------- move remainder of panel nodes to make room for additional
         // node
         for (j = n; j >= i; j--) {
-          x[j + 1] = x[j];
-          y[j + 1] = y[j];
+          points.row(j + 1).x() = points.row(j).x();
+          points.row(j + 1).y() = points.row(j).y();
           s[j + 1] = s[j];
         }
         n = n + 1;
@@ -4976,22 +4977,22 @@ stop11:
           writeString("Panel: Too many panels. Increase IQX", true);
           return;
         }
-        x[i] = xbcorn;
-        y[i] = ybcorn;
+        points.row(i).x() = xbcorn;
+        points.row(i).y() = ybcorn;
         s[i] = sbcorn;
 
         //---------- shift nodes adjacent to corner to keep panel sizes
         // comparable
         if (i - 2 >= 1) {
           s[i - 1] = 0.5 * (s[i] + s[i - 2]);
-          x[i - 1] = spline::seval(s[i - 1], xb.data(), xbp.data(), sb.data(), nb);
-          y[i - 1] = spline::seval(s[i - 1], yb.data(), ybp.data(), sb.data(), nb);
+          points.row(i - 1).x() = spline::seval(s[i - 1], xb.data(), xbp.data(), sb.data(), nb);
+          points.row(i - 1).y() = spline::seval(s[i - 1], yb.data(), ybp.data(), sb.data(), nb);
         }
 
         if (i + 2 <= n) {
           s[i + 1] = 0.5 * (s[i] + s[i + 2]);
-          x[i + 1] = spline::seval(s[i + 1], xb.data(), xbp.data(), sb.data(), nb);
-          y[i + 1] = spline::seval(s[i + 1], yb.data(), ybp.data(), sb.data(), nb);
+          points.row(i + 1).x() = spline::seval(s[i + 1], xb.data(), xbp.data(), sb.data(), nb);
+          points.row(i + 1).y() = spline::seval(s[i + 1], yb.data(), ybp.data(), sb.data(), nb);
         }
 
         //---------- go on to next input geometry point to check for corner
@@ -5004,15 +5005,15 @@ stop11:
     nothing = 0;  // C++ doesn't like gotos
   }
 
-  s = spline::scalc(x.data(), y.data(), n, s.size());
-  segspl(x.data(), xp.data(), s.data(), n);
-  segspl(y.data(), yp.data(), s.data(), n);
-  lefind(sle, x.data(), xp.data(), y.data(), yp.data(), s.data(), n);
+  s = spline::scalc(points.col(0).data(), points.col(1).data(), n, s.size());
+  segspl(points.col(0).data(), xp.data(), s.data(), n);
+  segspl(points.col(1).data(), yp.data(), s.data(), n);
+  lefind(sle, points.col(0).data(), xp.data(), points.col(1).data(), yp.data(), s.data(), n);
 
-  xle = spline::seval(sle, x.data(), xp.data(), s.data(), n);
-  yle = spline::seval(sle, y.data(), yp.data(), s.data(), n);
-  xte = 0.5 * (x[1] + x[n]);
-  yte = 0.5 * (y[1] + y[n]);
+  xle = spline::seval(sle, points.col(0).data(), xp.data(), s.data(), n);
+  yle = spline::seval(sle, points.col(1).data(), yp.data(), s.data(), n);
+  xte = 0.5 * (points.row(1).x() + points.row(n).x());
+  yte = 0.5 * (points.row(1).y() + points.row(n).y());
   chord = sqrt((xte - xle) * (xte - xle) + (yte - yle) * (yte - yle));
 
   //---- calculate panel size ratios (user info)
@@ -5049,38 +5050,15 @@ stop11:
   tecalc();
 
   //---- calculate normal vectors
-  ncalc(x.data(), y.data(), s.data(), n, nx.data(), ny.data());
+  ncalc(points.col(0).data(), points.col(1).data(), s.data(), n, nx.data(), ny.data());
 
   //---- calculate panel angles for panel routines
   apcalc();
-
-  if (sharp) {
-    //		QString str;
-    //		str.Format("Sharp trailing edge\n");
-    //		pXFile->WriteString(str);
-    // TRACE("sharp trailing edge\n");
-  } else {
-    //		gap = sqrt((x[1]-x[n])*(x[1]-x[n]) + (y[1]-y[n])*(y[1]-y[n]));
-    // TRACE("Blunt trailing edge.  Gap =%f", gap);
-    //		QString str;
-    //		str.Format("Blunt trailing edge.  Gap =%f", gap);
-    //		pXFile->WriteString(str);
-  }
-
-  // TRACE("paneling parameters used...\n");
-  // TRACE("   Number of panel nodes %d\n", npan);
-  // TRACE("   Panel bunching parameter  %.3\n", cvpar);
-  // TRACE("   TE/LE panel density ratio %.3\n", cterat);
-  // TRACE("   refined-area/le panel density ratio %3\n",ctrrat);
-  // TRACE("   top side refined area x/c limits %.3 %3\n",xsref1, xsref2);
-  // TRACE("   bottom side refined area x/c limits %.3 %3\n",xpref1, xpref2);
 
   return;
 }
 
 bool XFoil::Preprocess() {
-  //	double xble, yble, xbte, ybte;
-  //	double xinl, xout, ybot, ytop;
 
   //---- calculate airfoil area assuming counterclockwise ordering
   if (nb <= 2) return false;  // added techwinder
@@ -5097,29 +5075,6 @@ bool XFoil::Preprocess() {
   //	segspl(yb,ybp,sb,nb);
   geopar(xb.data(), xbp.data(), yb.data(), ybp.data(), sb.data(), nb, w1, sble, chordb, areab, radble, angbte,
          ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
-
-  //	xble = spline::seval(sble,xb,xbp,sb,nb);
-  //	yble = spline::seval(sble,yb,ybp,sb,nb);
-  //	xbte = 0.5*(xb[1] + xb[nb]);
-  //	ybte = 0.5*(yb[1] + yb[nb]);
-  // TRACE(" le_x = %f, le_y = %f, chord=%f\n te_x = %f,  te_y = %f\n",
-  // xble,yble, chordb,xbte, ybte);
-
-  //---- set reasonable mses domain parameters for non-mses coordinate file
-
-  //	xble = spline::seval(sble,xb,xbp,sb,nb);
-  //	yble = spline::seval(sble,yb,ybp,sb,nb);
-
-  //	What's the use?
-  /*		xinl = xble - 2.0*chordb;
-                  xout = xble + 3.0*chordb;
-                  ybot = yble - 2.5*chordb;
-                  ytop = yble + 3.5*chordb;
-                  xinl = aint(20.0*fabs(xinl/chordb)+0.5)/20.0 *
-     sign(chordb,xinl); xout = aint(20.0*fabs(xout/chordb)+0.5)/20.0 *
-     sign(chordb,xout); ybot = aint(20.0*fabs(ybot/chordb)+0.5)/20.0 *
-     sign(chordb,ybot); ytop = aint(20.0*fabs(ytop/chordb)+0.5)/20.0 *
-     sign(chordb,ytop);*/
 
   //---- wipe out old flap hinge location
   xbf = 0.0;
@@ -5222,16 +5177,16 @@ bool XFoil::psilin(int iNode, double xi, double yi, double nxi, double nyi,
       else {
         if (jo == n) {
           jp = 1;
-          if ((x[jo] - x[jp]) * (x[jo] - x[jp]) +
-                  (y[jo] - y[jp]) * (y[jo] - y[jp]) <
+          if ((points.row(jo).x() - points.row(jp).x()) * (points.row(jo).x() - points.row(jp).x()) +
+                  (points.row(jo).y() - points.row(jp).y()) * (points.row(jo).y() - points.row(jp).y()) <
               seps * seps)
             goto stop12;
         }
       }
     }
 
-    dso = sqrt((x[jo] - x[jp]) * (x[jo] - x[jp]) +
-               (y[jo] - y[jp]) * (y[jo] - y[jp]));
+    dso = sqrt((points.row(jo).x() - points.row(jp).x()) * (points.row(jo).x() - points.row(jp).x()) +
+               (points.row(jo).y() - points.row(jp).y()) * (points.row(jo).y() - points.row(jp).y()));
 
     //------ skip null panel
     if (fabs(dso) < 1.0e-7) goto stop10;
@@ -5240,13 +5195,13 @@ bool XFoil::psilin(int iNode, double xi, double yi, double nxi, double nyi,
 
     apan = apanel[jo];
 
-    rx1 = xi - x[jo];
-    ry1 = yi - y[jo];
-    rx2 = xi - x[jp];
-    ry2 = yi - y[jp];
+    rx1 = xi - points.row(jo).x();
+    ry1 = yi - points.row(jo).y();
+    rx2 = xi - points.row(jp).x();
+    ry2 = yi - points.row(jp).y();
 
-    sx = (x[jp] - x[jo]) / dso;
-    sy = (y[jp] - y[jo]) / dso;
+    sx = (points.row(jp).x() - points.row(jo).x()) / dso;
+    sy = (points.row(jp).y() - points.row(jo).y()) / dso;
 
     blData1.xz = sx * rx1 + sy * ry1;
     blData2.xz = sx * rx2 + sy * ry2;
@@ -5330,8 +5285,8 @@ bool XFoil::psilin(int iNode, double xi, double yi, double nxi, double nyi,
       pdyy =
           ((blData1.xz + x0) * psyy + 2.0 * (x0 - blData1.xz + yy * (blData1.tz - theta0))) * dxinv;
 
-      dsm = sqrt((x[jp] - x[jm]) * (x[jp] - x[jm]) +
-                 (y[jp] - y[jm]) * (y[jp] - y[jm]));
+      dsm = sqrt((points.row(jp).x() - points.row(jm).x()) * (points.row(jp).x() - points.row(jm).x()) +
+                 (points.row(jp).y() - points.row(jm).y()) * (points.row(jp).y() - points.row(jm).y()));
       dsim = 1.0 / dsm;
 
       ssum = (sig[jp] - sig[jo]) / dso + (sig[jp] - sig[jm]) * dsim;
@@ -5374,8 +5329,8 @@ bool XFoil::psilin(int iNode, double xi, double yi, double nxi, double nyi,
       pdyy =
           ((x0 + blData2.xz) * psyy + 2.0 * (blData2.xz - x0 + yy * (theta0 - blData2.tz))) * dxinv;
 
-      dsp = sqrt((x[jq] - x[jo]) * (x[jq] - x[jo]) +
-                 (y[jq] - y[jo]) * (y[jq] - y[jo]));
+      dsp = sqrt((points.row(jq).x() - points.row(jo).x()) * (points.row(jq).x() - points.row(jo).x()) +
+                 (points.row(jq).y() - points.row(jo).y()) * (points.row(jq).y() - points.row(jo).y()));
       dsip = 1.0 / dsp;
 
       ssum = (sig[jq] - sig[jo]) * dsip + (sig[jp] - sig[jo]) / dso;
@@ -5576,19 +5531,19 @@ bool XFoil::pswlin(int i, double xi, double yi, double nxi, double nyi,
     } else {
       if (jo == n + nw - 1) jq = jp;
     }
-    const double dso = sqrt((x[jo] - x[jp]) * (x[jo] - x[jp]) +
-               (y[jo] - y[jp]) * (y[jo] - y[jp]));
+    const double dso = sqrt((points.row(jo).x() - points.row(jp).x()) * (points.row(jo).x() - points.row(jp).x()) +
+               (points.row(jo).y() - points.row(jp).y()) * (points.row(jo).y() - points.row(jp).y()));
     const double dsio = 1.0 / dso;
 
     const double apan = apanel[jo];
 
-    const double rx1 = xi - x[jo];
-    const double ry1 = yi - y[jo];
-    const double rx2 = xi - x[jp];
-    const double ry2 = yi - y[jp];
+    const double rx1 = xi - points.row(jo).x();
+    const double ry1 = yi - points.row(jo).y();
+    const double rx2 = xi - points.row(jp).x();
+    const double ry2 = yi - points.row(jp).y();
 
-    const double sx = (x[jp] - x[jo]) * dsio;
-    const double sy = (y[jp] - y[jo]) * dsio;
+    const double sx = (points.row(jp).x() - points.row(jo).x()) * dsio;
+    const double sy = (points.row(jp).y() - points.row(jo).y()) * dsio;
 
     blData1.xz = sx * rx1 + sy * ry1;
     blData2.xz = sx * rx2 + sy * ry2;
@@ -5643,8 +5598,8 @@ bool XFoil::pswlin(int i, double xi, double yi, double nxi, double nyi,
     double pdx0 = ((blData1.xz + x0) * psx0 + psum - 2.0 * x0 * (t0 - apan) + pdif) * dxinv;
     double pdyy = ((blData1.xz + x0) * psyy + 2.0 * (x0 - blData1.xz + yy * (t1 - t0))) * dxinv;
 
-    const double dsm = sqrt((x[jp] - x[jm]) * (x[jp] - x[jm]) +
-               (y[jp] - y[jm]) * (y[jp] - y[jm]));
+    const double dsm = sqrt((points.row(jp).x() - points.row(jm).x()) * (points.row(jp).x() - points.row(jm).x()) +
+               (points.row(jp).y() - points.row(jm).y()) * (points.row(jp).y() - points.row(jm).y()));
     const double dsim = 1.0 / dsm;
 
     double ssum = (sig[jp] - sig[jo]) / dso + (sig[jp] - sig[jm]) * dsim;
@@ -5681,8 +5636,8 @@ bool XFoil::pswlin(int i, double xi, double yi, double nxi, double nyi,
     const double pdx2 = ((x0 + blData2.xz) * psx2 + psum - 2.0 * blData2.xz * (t2 - apan) + pdif) * dxinv;
     pdyy = ((x0 + blData2.xz) * psyy + 2.0 * (blData2.xz - x0 + yy * (t0 - t2))) * dxinv;
 
-    const double dsp = sqrt((x[jq] - x[jo]) * (x[jq] - x[jo]) +
-               (y[jq] - y[jo]) * (y[jq] - y[jo]));
+    const double dsp = sqrt((points.row(jq).x() - points.row(jo).x()) * (points.row(jq).x() - points.row(jo).x()) +
+               (points.row(jq).y() - points.row(jo).y()) * (points.row(jq).y() - points.row(jo).y()));
     const double dsip = 1.0 / dsp;
 
     ssum = (sig[jq] - sig[jo]) * dsip + (sig[jp] - sig[jo]) / dso;
@@ -5741,7 +5696,7 @@ bool XFoil::qdcalc() {
 
   //---- set up coefficient matrix of dpsi/dm on airfoil surface
   for (i = 1; i <= n; i++) {
-    pswlin(i, x[i], y[i], nx[i], ny[i], psi, psi_n);
+    pswlin(i, points.row(i).x(), points.row(i).y(), nx[i], ny[i], psi, psi_n);
     for (j = n + 1; j <= n + nw; j++) {
       bij[i][j] = -dzdm[j];
     }
@@ -5779,7 +5734,7 @@ bool XFoil::qdcalc() {
   for (i = n + 1; i <= n + nw; i++) {
     int iw = i - n;
     //------ airfoil contribution at wake panel node
-    psilin(i, x[i], y[i], nx[i], ny[i], psi, psi_n, false, true);
+    psilin(i, points.row(i).x(), points.row(i).y(), nx[i], ny[i], psi, psi_n, false, true);
     for (j = 1; j <= n; j++) {
       cij[iw][j] = dqdg[j];
     }
@@ -5787,7 +5742,7 @@ bool XFoil::qdcalc() {
       dij[i][j] = dqdm[j];
     }
     //------ wake contribution
-    pswlin(i, x[i], y[i], nx[i], ny[i], psi, psi_n);
+    pswlin(i, points.row(i).x(), points.row(i).y(), nx[i], ny[i], psi, psi_n);
     for (j = n + 1; j <= n + nw; j++) {
       dij[i][j] = dqdm[j];
     }
@@ -5867,7 +5822,7 @@ bool XFoil::qwcalc() {
 
   //---- rest of wake
   for (i = n + 2; i <= n + nw; i++) {
-    psilin(i, x[i], y[i], nx[i], ny[i], psi, psi_ni, false, false);
+    psilin(i, points.row(i).x(), points.row(i).y(), nx[i], ny[i], psi, psi_ni, false, false);
     qinvu[i][1] = qtan1;
     qinvu[i][2] = qtan2;
   }
@@ -6365,8 +6320,8 @@ bool XFoil::setbl() {
         chx = xte - xle;
         chy = yte - yle;
         chsq = chx * chx + chy * chy;
-        xtr = spline::seval(str, x.data(), xp.data(), s.data(), n);
-        ytr = spline::seval(str, y.data(), yp.data(), s.data(), n);
+        xtr = spline::seval(str, points.col(0).data(), xp.data(), s.data(), n);
+        ytr = spline::seval(str, points.col(1).data(), yp.data(), s.data(), n);
         xoctr[is] = ((xtr - xle) * chx + (ytr - yle) * chy) / chsq;
         yoctr[is] = ((ytr - yle) * chx - (xtr - xle) * chy) / chsq;
       }
@@ -7096,8 +7051,8 @@ bool XFoil::tecalc() {
 
   double scs, sds;
   //---- set te base vector and te bisector components
-  double dxte = x[1] - x[n];
-  double dyte = y[1] - y[n];
+  double dxte = points.row(1).x() - points.row(n).x();
+  double dyte = points.row(1).y() - points.row(n).y();
   double dxs = 0.5 * (-xp[1] + xp[n]);
   double dys = 0.5 * (-yp[1] + yp[n]);
 
@@ -7930,8 +7885,8 @@ bool XFoil::update() {
     cpc_cpi = (1.0 - bfac * cpg2) / (beta + bfac * cginc);
     const double cpg2_ac = cpc_cpi * cpi_q * q_ac[ip];
 
-    const double dx = (x[ip] - x[i]) * ca + (y[ip] - y[i]) * sa;
-    const double dx_a = -(x[ip] - x[i]) * sa + (y[ip] - y[i]) * ca;
+    const double dx = (points.row(ip).x() - points.row(i).x()) * ca + (points.row(ip).y() - points.row(i).y()) * sa;
+    const double dx_a = -(points.row(ip).x() - points.row(i).x()) * sa + (points.row(ip).y() - points.row(i).y()) * ca;
 
     const double ag = 0.5 * (cpg2 + cpg1);
     const double ag_ms = 0.5 * (cpg2_ms + cpg1_ms);
@@ -8281,8 +8236,8 @@ bool XFoil::xicalc() {
   for (ibl = iblte[is] + 2; ibl <= nbl[is]; ibl++) {
     int i = ipan[ibl][is];
     xssi[ibl][is] =
-        xssi[ibl - 1][is] + sqrt((x[i] - x[i - 1]) * (x[i] - x[i - 1]) +
-                                 (y[i] - y[i - 1]) * (y[i] - y[i - 1]));
+        xssi[ibl - 1][is] + sqrt((points.row(i).x() - points.row(i - 1).x()) * (points.row(i).x() - points.row(i - 1).x()) +
+                                 (points.row(i).y() - points.row(i - 1).y()) * (points.row(i).y() - points.row(i - 1).y()));
   }
 
   //---- trailing edge flap length to te gap ratio
@@ -8337,8 +8292,8 @@ bool XFoil::xifset(int is) {
 
   //---- calculate chord-based x/c, y/c
   for (int i = 1; i <= n; i++) {
-    w1[i] = ((x[i] - xle) * chx + (y[i] - yle) * chy) / chsq;
-    w2[i] = ((y[i] - yle) * chx - (x[i] - xle) * chy) / chsq;
+    w1[i] = ((points.row(i).x() - xle) * chx + (points.row(i).y() - yle) * chy) / chsq;
+    w2[i] = ((points.row(i).y() - yle) * chx - (points.row(i).x() - xle) * chy) / chsq;
   }
 
   spline::splind(w1, w3, s.data(), n, -999.0, -999.0);
@@ -8394,8 +8349,8 @@ bool XFoil::xyWake() {
   ds1 = 0.5 * (s[2] - s[1] + s[n] - s[n - 1]);
   setexp(snew.data() + n, ds1, waklen * chord, nw);
 
-  xte = 0.5 * (x[1] + x[n]);
-  yte = 0.5 * (y[1] + y[n]);
+  xte = 0.5 * (points.row(1).x() + points.row(n).x());
+  yte = 0.5 * (points.row(1).y() + points.row(n).y());
 
   //-- set first wake point a tiny distance behind te
   int i = n + 1;
@@ -8404,13 +8359,13 @@ bool XFoil::xyWake() {
   smod = sqrt(sx * sx + sy * sy);
   nx[i] = sx / smod;
   ny[i] = sy / smod;
-  x[i] = xte - 0.0001 * ny[i];
-  y[i] = yte + 0.0001 * nx[i];
+  points.row(i).x() = xte - 0.0001 * ny[i];
+  points.row(i).y() = yte + 0.0001 * nx[i];
   s[i] = s[n];
 
   //---- calculate streamfunction gradient components at first point
-  psilin(i, x[i], y[i], 1.0, 0.0, psi, psi_x, false, false);
-  psilin(i, x[i], y[i], 0.0, 1.0, psi, psi_y, false, false);
+  psilin(i, points.row(i).x(), points.row(i).y(), 1.0, 0.0, psi, psi_x, false, false);
+  psilin(i, points.row(i).x(), points.row(i).y(), 0.0, 1.0, psi, psi_y, false, false);
 
   //---- set unit vector normal to wake at first point
   nx[i + 1] = -psi_x / sqrt(psi_x * psi_x + psi_y * psi_y);
@@ -8424,14 +8379,14 @@ bool XFoil::xyWake() {
     const double ds = snew[i] - snew[i - 1];
 
     //------ set new point ds downstream of last point
-    x[i] = x[i - 1] - ds * ny[i];
-    y[i] = y[i - 1] + ds * nx[i];
+    points.row(i).x() = points.row(i - 1).x() - ds * ny[i];
+    points.row(i).y() = points.row(i - 1).y() + ds * nx[i];
     s[i] = s[i - 1] + ds;
 
     if (i != n + nw) {
       //------- calculate normal vector for next point
-      psilin(i, x[i], y[i], 1.0, 0.0, psi, psi_x, false, false);
-      psilin(i, x[i], y[i], 0.0, 1.0, psi, psi_y, false, false);
+      psilin(i, points.row(i).x(), points.row(i).y(), 1.0, 0.0, psi, psi_x, false, false);
+      psilin(i, points.row(i).x(), points.row(i).y(), 0.0, 1.0, psi, psi_y, false, false);
 
       nx[i + 1] = -psi_x / sqrt(psi_x * psi_x + psi_y * psi_y);
       ny[i + 1] = -psi_y / sqrt(psi_x * psi_x + psi_y * psi_y);
@@ -8579,7 +8534,7 @@ int XFoil::cadd(int ispl, double atol, double xrf1, double xrf2) {
   //TODO plotsに置き換え
   vector<Vector2d> plots;
   for(int i=INDEX_START_WITH; i<=n; i++) {
-    plots.push_back({x[i], y[i]});
+    plots.push_back(points.row(i));
   }
   PairIndex pair_cang = cang(plots);
   imax = pair_cang.index;
@@ -8632,7 +8587,7 @@ void XFoil::flap() {
   //TODO plot置き換え
   vector<Vector2d> plots;
   for (int i=INDEX_START_WITH; i<n+INDEX_START_WITH; i++) {
-    plots.push_back({x[i], y[i]});
+    plots.push_back(points.row(i));
   }
   insid = isInside(plots, {xbf, ybf});
 
@@ -8961,7 +8916,7 @@ bool XFoil::CheckAngles() {
   //TODO plotsに置き換え
   vector<Vector2d> plots;
   for(int i=INDEX_START_WITH; i<=n; i++) {
-    plots.push_back({x[i], y[i]});
+    plots.push_back(points.row(i));
   }
   PairIndex pair_cang = cang(plots);
   imax = pair_cang.index;
@@ -9413,8 +9368,8 @@ void XFoil::mapgam(int iac, double &alg, double &clg, double &cmg) {
   for (int i = 1; i <= nsp; i++) {
     qgamm[i] = w6[i];
     sspec[i] = w5[i];
-    double xic = spline::seval(s[n] * sspec[i], x.data(), xp.data(), s.data(), n);
-    double yic = spline::seval(s[n] * sspec[i], y.data(), yp.data(), s.data(), n);
+    double xic = spline::seval(s[n] * sspec[i], points.col(0).data(), xp.data(), s.data(), n);
+    double yic = spline::seval(s[n] * sspec[i], points.col(1).data(), yp.data(), s.data(), n);
     xspoc[i] = ((xic - xle) * chx + (yic - yle) * chy) / chsq;
     yspoc[i] = ((yic - yle) * chx - (xic - xle) * chy) / chsq;
   }
@@ -10151,7 +10106,7 @@ void XFoil::InitMDES() {
 
   if (!lscini) {
     //------ initialize s(w) for current airfoil, generating its cn coefficients
-    scinit(n, x.data(), xp.data(), y.data(), yp.data(), s.data(), sle);
+    scinit(n, points.col(0).data(), xp.data(), points.col(1).data(), yp.data(), s.data(), sle);
     lscini = true;
 
     //------ set up to initialize qspec to current conditions
@@ -10205,8 +10160,8 @@ bool XFoil::InitQDES() {
   for (int i = 1; i <= nsp; i++) {
     qgamm[i] = gam[i];
     sspec[i] = s[i] / s[n];
-    xspoc[i] = ((x[i] - xle) * chx + (y[i] - yle) * chy) / chsq;
-    yspoc[i] = ((y[i] - yle) * chx - (x[i] - xle) * chy) / chsq;
+    xspoc[i] = ((points.row(i).x() - xle) * chx + (points.row(i).y() - yle) * chy) / chsq;
+    yspoc[i] = ((points.row(i).y() - yle) * chx - (points.row(i).x() - xle) * chy) / chsq;
   }
   ssple = sle / s[n];
 
@@ -10264,7 +10219,7 @@ bool XFoil::mixed(int kqsp) {
   //    (fraction of smaller panel length adjacent to te)
   bwt = 0.1;
 
-  s = spline::scalc(x.data(), y.data(), n, s.size());
+  s = spline::scalc(points.col(0).data(), points.col(1).data(), n, s.size());
 
   //---- zero-out and set dof shape functions
   for (i = 1; i <= n; i++) {
@@ -10300,11 +10255,11 @@ bool XFoil::mixed(int kqsp) {
     }
 
     //---- calculate normal direction vectors along which the nodes move
-    ncalc(x.data(), y.data(), s.data(), n, nx.data(), ny.data());
+    ncalc(points.col(0).data(), points.col(1).data(), s.data(), n, nx.data(), ny.data());
 
     //---- go over all nodes, setting up  psi = psi0  equations
     for (i = 1; i <= n; i++) {
-      psilin(i, x[i], y[i], nx[i], ny[i], psi, psi_n, true, false);
+      psilin(i, points.row(i).x(), points.row(i).y(), nx[i], ny[i], psi, psi_n, true, false);
 
       dzdn[i] = dzdn[i] + psi_n;
 
@@ -10344,9 +10299,9 @@ bool XFoil::mixed(int kqsp) {
       sbis = sin(abis);
 
       //----- minimum panel length adjacent to te
-      ds1 = sqrt((x[1] - x[2]) * (x[1] - x[2]) + (y[1] - y[2]) * (y[1] - y[2]));
-      ds2 = sqrt((x[n] - x[n - 1]) * (x[n] - x[n - 1]) +
-                 (y[n] - y[n - 1]) * (y[n] - y[n - 1]));
+      ds1 = sqrt((points.row(1).x() - points.row(2).x()) * (points.row(1).x() - points.row(2).x()) + (points.row(1).y() - points.row(2).y()) * (points.row(1).y() - points.row(2).y()));
+      ds2 = sqrt((points.row(n).x() - points.row(n - 1).x()) * (points.row(n).x() - points.row(n - 1).x()) +
+                 (points.row(n).y() - points.row(n - 1).y()) * (points.row(n).y() - points.row(n - 1).y()));
       dsmin = min(ds1, ds2);
 
       //----- control point on bisector just ahead of te point
@@ -10429,8 +10384,8 @@ bool XFoil::mixed(int kqsp) {
 
     //---- update panel nodes inside target segment
     for (i = iq1; i <= iq2; i++) {
-      x[i] += nx[i] * dq[i];
-      y[i] += ny[i] * dq[i];
+      points.row(i).x() += nx[i] * dq[i];
+      points.row(i).y() += ny[i] * dq[i];
       if (fabs(dq[i]) > fabs(dnmax)) {
         dnmax = dq[i];
       }
@@ -10451,7 +10406,7 @@ bool XFoil::mixed(int kqsp) {
     qdof2 = qdof2 + dq[n + 4];
     qdof3 = qdof3 + dq[n + 5];
 
-    s = spline::scalc(x.data(), y.data(), n, s.size());
+    s = spline::scalc(points.col(0).data(), points.col(1).data(), n, s.size());
 
     //---- set correct surface speed over target segment including dof
     // contributions
@@ -10516,8 +10471,8 @@ bool XFoil::ExecQDES() {
 
   //----- save current coordinates for restoration if requested
   for (i = 1; i <= n; i++) {
-    xb[i] = x[i];
-    yb[i] = y[i];
+    xb[i] = points.row(i).x();
+    yb[i] = points.row(i).y();
     sb[i] = s[i];
     xbp[i] = xp[i];
     ybp[i] = yp[i];
@@ -10529,15 +10484,15 @@ bool XFoil::ExecQDES() {
   adeg = alfa / dtor;
 
   //----- spline new airfoil shape
-  s = spline::scalc(x.data(), y.data(), n, s.size());
-  spline::splind(x.data(), xp.data(), s.data(), n, -999.0, -999.0);
-  spline::splind(y.data(), yp.data(), s.data(), n, -999.0, -999.0);
-  ncalc(x.data(), y.data(), s.data(), n, nx.data(), ny.data());
-  lefind(sle, x.data(), xp.data(), y.data(), yp.data(), s.data(), n);
-  xle = spline::seval(sle, x.data(), xp.data(), s.data(), n);
-  yle = spline::seval(sle, y.data(), yp.data(), s.data(), n);
-  chord = sqrt((0.5 * (x[1] + x[n]) - xle) * (0.5 * (x[1] + x[n]) - xle) +
-               (0.5 * (y[1] + y[n]) - yle) * (0.5 * (y[1] + y[n]) - yle));
+  s = spline::scalc(points.col(0).data(), points.col(1).data(), n, s.size());
+  spline::splind(points.col(0).data(), xp.data(), s.data(), n, -999.0, -999.0);
+  spline::splind(points.col(1).data(), yp.data(), s.data(), n, -999.0, -999.0);
+  ncalc(points.col(0).data(), points.col(1).data(), s.data(), n, nx.data(), ny.data());
+  lefind(sle, points.col(0).data(), xp.data(), points.col(1).data(), yp.data(), s.data(), n);
+  xle = spline::seval(sle, points.col(0).data(), xp.data(), s.data(), n);
+  yle = spline::seval(sle, points.col(1).data(), yp.data(), s.data(), n);
+  chord = sqrt((0.5 * (points.row(1).x() + points.row(n).x()) - xle) * (0.5 * (points.row(1).x() + points.row(n).x()) - xle) +
+               (0.5 * (points.row(1).y() + points.row(n).y()) - yle) * (0.5 * (points.row(1).y() + points.row(n).y()) - yle));
   tecalc();
   apcalc();
 
@@ -10575,15 +10530,15 @@ bool XFoil::ExecQDES() {
 void XFoil::RestoreQDES() {
   //	Foil is restored from CXInverse rather than from XFoil
 
-  s = spline::scalc(x.data(), y.data(), n, s.size());
-  spline::splind(x.data(), xp.data(), s.data(), n, -999.0, -999.0);
-  spline::splind(y.data(), yp.data(), s.data(), n, -999.0, -999.0);
-  ncalc(x.data(), y.data(), s.data(), n, nx.data(), ny.data());
-  lefind(sle, x.data(), xp.data(), y.data(), yp.data(), s.data(), n);
-  xle = spline::seval(sle, x.data(), xp.data(), s.data(), n);
-  yle = spline::seval(sle, y.data(), yp.data(), s.data(), n);
-  chord = sqrt((0.5 * (x[1] + x[n]) - xle) * (0.5 * (x[1] + x[n]) - xle) +
-               (0.5 * (y[1] + y[n]) - yle) * (0.5 * (y[1] + y[n]) - yle));
+  s = spline::scalc(points.col(0).data(), points.col(1).data(), n, s.size());
+  spline::splind(points.col(0).data(), xp.data(), s.data(), n, -999.0, -999.0);
+  spline::splind(points.col(1).data(), yp.data(), s.data(), n, -999.0, -999.0);
+  ncalc(points.col(0).data(), points.col(1).data(), s.data(), n, nx.data(), ny.data());
+  lefind(sle, points.col(0).data(), xp.data(), points.col(1).data(), yp.data(), s.data(), n);
+  xle = spline::seval(sle, points.col(0).data(), xp.data(), s.data(), n);
+  yle = spline::seval(sle, points.col(1).data(), yp.data(), s.data(), n);
+  chord = sqrt((0.5 * (points.row(1).x() + points.row(n).x()) - xle) * (0.5 * (points.row(1).x() + points.row(n).x()) - xle) +
+               (0.5 * (points.row(1).y() + points.row(n).y()) - yle) * (0.5 * (points.row(1).y() + points.row(n).y()) - yle));
   tecalc();
   apcalc();
   lgamu = false;
@@ -11160,7 +11115,7 @@ void XFoil::createXBL(double xs[IVX][3]) {
   for (int is = 1; is <= 2; is++) {
     for (int ibl = 2; ibl <= nbl[is]; ibl++) {
       i = ipan[ibl][is];
-      xs[ibl][is] = x[i];
+      xs[ibl][is] = points.row(i).x();
       //			xxtr[is] = xle + (xte-xle)*xoctr[is] -
       //(yte-yle)*yoctr[is];
     }
