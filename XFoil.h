@@ -354,7 +354,8 @@ class XFoil {
   int imax;  // needed for preprocessing
 
   double thickb, cambrb;
-  vector<double> xb, yb, nx, ny;
+  MatrixX2d buffer_points; //formerly xb, yb
+  vector<double> nx, ny;
   double xpref1, xpref2;
   double cvpar, cterat, ctrrat, xsref1, xsref2;
 
@@ -384,7 +385,8 @@ class XFoil {
   bool liqset;
   double adeg, xcmref, ycmref;
   double tklam;
-  vector<double> xp, yp, s;
+  MatrixX2d dpoints_ds; //formerly xp, yp
+  vector<double> s;
   double dtor;
 
   double thet[IVX][ISX], tau[IVX][ISX], ctau[IVX][ISX], ctq[IVX][ISX];
