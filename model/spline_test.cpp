@@ -13,7 +13,7 @@ TEST(scalc, test_value) {
                 3.0, 3.0;
 
     //when
-    std::vector<double> actual = spline::scalc(points, 4, 5);
+    Eigen::VectorXd actual = spline::scalc(points, 4, 5);
 
     //then
     ASSERT_EQ(0, actual[0]);

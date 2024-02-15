@@ -386,7 +386,7 @@ class XFoil {
   double adeg, xcmref, ycmref;
   double tklam;
   MatrixX2d dpoints_ds; //formerly xp, yp
-  vector<double> s;
+  VectorXd spline_length;
   double dtor;
 
   double thet[IVX][ISX], tau[IVX][ISX], ctau[IVX][ISX], ctq[IVX][ISX];
@@ -436,7 +436,8 @@ class XFoil {
   double w5[6 * IQX], w6[6 * IQX], w7[6 * IQX], w8[6 * IQX];
   int nsys;
   double isys[IVX][ISX];
-  vector<double> xbp, ybp, sb, snew;
+  vector<double> xbp, ybp, snew;
+  VectorXd buffer_spline_length;
   double xof, yof, sble, chordb;
   double areab, radble, angbte;
   double ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt;

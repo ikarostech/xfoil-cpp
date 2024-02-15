@@ -155,8 +155,8 @@ bool XFoil::initialize() {
   memset(qinvu, 0, sizeof(qinvu));
   memset(qinv_a, 0, sizeof(qinv_a));
   memset(qvis, 0, sizeof(qvis));
-  s.resize(IZX, 0);
-  sb.resize(IBX, 0);
+  spline_length.resize(IZX);
+  buffer_spline_length.resize(IBX);
   memset(sig, 0, sizeof(sig));
   snew.resize(4 * IBX, 0);
   memset(sig, 0, sizeof(sig));
@@ -564,13 +564,13 @@ bool XFoil::abcopy() {
     }
   }
   cout<<"strip out"<<endl;
-  s = spline::scalc(points, n, s.size());
-  segspl(points.col(0).data(), dpoints_ds.col(0).data(), s.data(), n);
-  segspl(points.col(1).data(), dpoints_ds.col(1).data(), s.data(), n);
-  ncalc(points.col(0).data(), points.col(1).data(), s.data(), n, nx.data(), ny.data());
-  lefind(sle, points.col(0).data(), dpoints_ds.col(0).data(), points.col(1).data(), dpoints_ds.col(1).data(), s.data(), n);
-  xle = spline::seval(sle, points.col(0).data(), dpoints_ds.col(0).data(), s.data(), n);
-  yle = spline::seval(sle, points.col(1).data(), dpoints_ds.col(1).data(), s.data(), n);
+  spline_length = spline::scalc(points, n, spline_length.size());
+  segspl(points.col(0).data(), dpoints_ds.col(0).data(), spline_length.data(), n);
+  segspl(points.col(1).data(), dpoints_ds.col(1).data(), spline_length.data(), n);
+  ncalc(points.col(0).data(), points.col(1).data(), spline_length.data(), n, nx.data(), ny.data());
+  lefind(sle, points.col(0).data(), dpoints_ds.col(0).data(), points.col(1).data(), dpoints_ds.col(1).data(), spline_length.data(), n);
+  xle = spline::seval(sle, points.col(0).data(), dpoints_ds.col(0).data(), spline_length.data(), n);
+  yle = spline::seval(sle, points.col(1).data(), dpoints_ds.col(1).data(), spline_length.data(), n);
   xte = 0.5 * (points.row(1).x() + points.row(n).x());
   yte = 0.5 * (points.row(1).y() + points.row(n).y());
   chord = sqrt((xte - xle) * (xte - xle) + (yte - yle) * (yte - yle));
@@ -3188,8 +3188,8 @@ void XFoil::hipnt(double chpnt, double thpnt) {
 
   //--- check chordline direction (should be unrotated for camber routines)
   //    to function correctly
-  xle = spline::seval(sble, buffer_points.col(0).data(), xbp.data(), sb.data(), nb);
-  yle = spline::seval(sble, buffer_points.col(1).data(), ybp.data(), sb.data(), nb);
+  xle = spline::seval(sble, buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+  yle = spline::seval(sble, buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
   xte = 0.5 * (buffer_points.row(1).x() + buffer_points.row(nb).x());
   yte = 0.5 * (buffer_points.row(1).y() + buffer_points.row(nb).y());
   arot = atan2(yle - yte, xte - xle) / dtor;
@@ -3202,12 +3202,12 @@ void XFoil::hipnt(double chpnt, double thpnt) {
   }
 
   //---- find leftmost point location
-  xlfind(sbl, buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), sb.data(), nb);
+  xlfind(sbl, buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
   //	xbl = spline::seval(sbl,xb,xbp,sb,nb);
-  ybl = spline::seval(sbl, buffer_points.col(1).data(), ybp.data(), sb.data(), nb);
+  ybl = spline::seval(sbl, buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
 
   //---- find the current buffer airfoil camber and thickness
-  getcam(xcm, ycm, ncm, xtk, ytk, ntk, buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), sb.data(), nb);
+  getcam(xcm, ycm, ncm, xtk, ytk, ntk, buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
 
   //---- find the max thickness and camber
   getmax(xcm, ycm, ycmp, ncm, cxmax, cymax);
@@ -3258,7 +3258,7 @@ void XFoil::hipnt(double chpnt, double thpnt) {
     const double ytt = spline::seval(buffer_points.row(i).x(), ytk, ytkp, xtk, ntk);
 
     //------ set new y coordinate from new camber & thickness
-    if (sb[i] <= sbl)
+    if (buffer_spline_length[i] <= sbl)
       buffer_points.row(i).y() = ycc + ytt;
     else
       buffer_points.row(i).y() = ycc - ytt;
@@ -3267,11 +3267,11 @@ void XFoil::hipnt(double chpnt, double thpnt) {
     buffer_points.row(i).y() = buffer_points.row(i).y() + ybl;
   }
 
-  sb = spline::scalc(buffer_points, nb, sb.size());
-  segspl(buffer_points.col(0).data(), xbp.data(), sb.data(), nb);
-  segspl(buffer_points.col(1).data(), ybp.data(), sb.data(), nb);
+  buffer_spline_length = spline::scalc(buffer_points, nb, buffer_spline_length.size());
+  segspl(buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+  segspl(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
 
-  geopar(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), sb.data(), nb, w1, sble, chordb, areab, radble, angbte,
+  geopar(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb, w1, sble, chordb, areab, radble, angbte,
          ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
 }
 
@@ -3701,20 +3701,20 @@ bool XFoil::mhinge() {
   double dx, dy;
 
   if (!lflap) {
-    getxyf(points.col(0).data(), dpoints_ds.col(0).data(), points.col(1).data(), dpoints_ds.col(1).data(), s.data(), n, tops, bots, xof, yof);
+    getxyf(points.col(0).data(), dpoints_ds.col(0).data(), points.col(1).data(), dpoints_ds.col(1).data(), spline_length.data(), n, tops, bots, xof, yof);
     lflap = true;
   } else {
     //------ find top and bottom y at hinge x location
     tops = xof;
-    bots = s[n] - xof;
-    sinvrt(tops, xof, points.col(0).data(), dpoints_ds.col(0).data(), s.data(), n);
-    sinvrt(bots, xof, points.col(0).data(), dpoints_ds.col(0).data(), s.data(), n);
+    bots = spline_length[n] - xof;
+    sinvrt(tops, xof, points.col(0).data(), dpoints_ds.col(0).data(), spline_length.data(), n);
+    sinvrt(bots, xof, points.col(0).data(), dpoints_ds.col(0).data(), spline_length.data(), n);
   }
 
-  topx = spline::seval(tops, points.col(0).data(), dpoints_ds.col(0).data(), s.data(), n);
-  topy = spline::seval(tops, points.col(1).data(), dpoints_ds.col(1).data(), s.data(), n);
-  botx = spline::seval(bots, points.col(0).data(), dpoints_ds.col(0).data(), s.data(), n);
-  boty = spline::seval(bots, points.col(1).data(), dpoints_ds.col(1).data(), s.data(), n);
+  topx = spline::seval(tops, points.col(0).data(), dpoints_ds.col(0).data(), spline_length.data(), n);
+  topy = spline::seval(tops, points.col(1).data(), dpoints_ds.col(1).data(), spline_length.data(), n);
+  botx = spline::seval(bots, points.col(0).data(), dpoints_ds.col(0).data(), spline_length.data(), n);
+  boty = spline::seval(bots, points.col(1).data(), dpoints_ds.col(1).data(), spline_length.data(), n);
 
   hmom = 0.0;
   hfx = 0.0;
@@ -3722,7 +3722,7 @@ bool XFoil::mhinge() {
 
   //---- integrate pressures on top and bottom sides of flap
   for (i = 2; i <= n; i++) {
-    if (s[i - 1] < tops || s[i] > bots) {
+    if (spline_length[i - 1] < tops || spline_length[i] > bots) {
       dx = points.row(i).x() - points.row(i - 1).x();
       dy = points.row(i).y() - points.row(i - 1).y();
       xmid = 0.5 * (points.row(i).x() + points.row(i - 1).x()) - xof;
@@ -3739,30 +3739,30 @@ bool XFoil::mhinge() {
     }
   }
 
-  //---- find s[i]..s[i-1] interval containing s=tops
+  //---- find spline_length[i]..spline_length[i-1] interval containing s=tops
   i = 2;
   bool bexit = false;
   while (!bexit) {
-    if (s[i] < tops)
+    if (spline_length[i] < tops)
       i++;
     else
       bexit = true;
     if (i > n) {
-    }  // we have a problem...
+    }  // we have a problem...row
   }
 
   //	for (i=2; i<=n; i++)  {
-  //		if(s[i]>tops) goto stop31;
+  //		if(spline_length[i]>tops) goto stop31;
   //	}
 
   // stop31
-  //---- add on top surface chunk tops..s[i-1],  missed in the do 20 loop.
+  //---- add on top surface chunk tops..spline_length[i-1],  missed in the do 20 loop.
   dx = topx - points.row(i - 1).x();
   dy = topy - points.row(i - 1).y();
   xmid = 0.5 * (topx + points.row(i - 1).x()) - xof;
   ymid = 0.5 * (topy + points.row(i - 1).y()) - yof;
-  if (s[i] != s[i - 1])
-    frac = (tops - s[i - 1]) / (s[i] - s[i - 1]);
+  if (spline_length[i] != spline_length[i - 1])
+    frac = (tops - spline_length[i - 1]) / (spline_length[i] - spline_length[i - 1]);
   else
     frac = 0.0;
 
@@ -3786,20 +3786,20 @@ bool XFoil::mhinge() {
   hfx = hfx - pmid * dy;
   hfy = hfy + pmid * dx;
 
-  //---- find s[i]..s[i-1] interval containing s=bots
+  //---- find spline_length[i]..spline_length[i-1] interval containing s=bots
   for (i = n; i >= 2; i--) {
-    if (s[i - 1] < bots) goto stop41;
+    if (spline_length[i - 1] < bots) goto stop41;
   }
 
 stop41:
-  //---- add on bottom surface chunk bots..s[i],	missed in the do 20
+  //---- add on bottom surface chunk bots..spline_length[i],	missed in the do 20
   // loop.
   dx = points.row(i).x() - botx;
   dy = points.row(i).y() - boty;
   xmid = 0.5 * (botx + points.row(i).x()) - xof;
   ymid = 0.5 * (boty + points.row(i).y()) - yof;
-  if (s[i] != s[i - 1])
-    frac = (bots - s[i - 1]) / (s[i] - s[i - 1]);
+  if (spline_length[i] != spline_length[i - 1])
+    frac = (bots - spline_length[i - 1]) / (spline_length[i] - spline_length[i - 1]);
   else
     frac = 0.0;
 
@@ -4536,13 +4536,13 @@ bool XFoil::mrcl(double cls, double &m_cls, double &r_cls) {
   return true;
 }
 
-bool XFoil::ncalc(double x[], double y[], double s[], int n, double xn[],
+bool XFoil::ncalc(double x[], double y[], double spline_length[], int n, double xn[],
                   double yn[]) {
   double sx, sy, smod;
   int i;
   if (n <= 1) return false;
-  segspl(x, xn, s, n);
-  segspl(y, yn, s, n);
+  segspl(x, xn, spline_length, n);
+  segspl(y, yn, spline_length, n);
   for (i = 1; i <= n; i++) {
     sx = yn[i];
     sy = -xn[i];
@@ -4553,7 +4553,7 @@ bool XFoil::ncalc(double x[], double y[], double s[], int n, double xn[],
 
   //---- average normal vectors at corner points
   for (i = 1; i <= n - 1; i++) {
-    if (s[i] == s[i + 1]) {
+    if (spline_length[i] == spline_length[i + 1]) {
       sx = 0.5 * (xn[i] + xn[i + 1]);
       sy = 0.5 * (yn[i] + yn[i + 1]);
       smod = sqrt(sx * sx + sy * sy);
@@ -4612,27 +4612,27 @@ void XFoil::pangen() {
   //      endif
   //
   //---- set arc length spline parameter
-  sb = spline::scalc(buffer_points, nb, sb.size());
+  buffer_spline_length = spline::scalc(buffer_points, nb, buffer_spline_length.size());
 
   //---- spline raw airfoil coordinates
-  segspl(buffer_points.col(0).data(), xbp.data(), sb.data(), nb);
-  segspl(buffer_points.col(1).data(), ybp.data(), sb.data(), nb);
+  segspl(buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+  segspl(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
 
   //---- normalizing length (~ chord)
-  sbref = 0.5 * (sb[nb] - sb[1]);
+  sbref = 0.5 * (buffer_spline_length[nb] - buffer_spline_length[1]);
 
   //---- set up curvature array
   for (i = 1; i <= nb; i++)
-    w5[i] = fabs(curv(sb[i], buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), sb.data(), nb)) * sbref;
+    w5[i] = fabs(curv(buffer_spline_length[i], buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb)) * sbref;
 
   //---- locate LE point arc length value and the normalized curvature there
-  lefind(sble, buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), sb.data(), nb);
-  cvle = fabs(curv(sble, buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), sb.data(), nb)) * sbref;
+  lefind(sble, buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
+  cvle = fabs(curv(sble, buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb)) * sbref;
 
   //---- check for doubled point (sharp corner) at LE
   ible = 0;
   for (i = 1; i <= nb - 1; i++) {
-    if (sble == sb[i] && sble == sb[i + 1]) {
+    if (sble == buffer_spline_length[i] && sble == buffer_spline_length[i + 1]) {
       ible = i;
       // TRACE("Sharp leading edge\n");
       //			QString str;
@@ -4645,8 +4645,8 @@ void XFoil::pangen() {
   // stop21:
 
   //---- set LE, TE points
-  xble = spline::seval(sble, buffer_points.col(0).data(), xbp.data(), sb.data(), nb);
-  yble = spline::seval(sble, buffer_points.col(1).data(), ybp.data(), sb.data(), nb);
+  xble = spline::seval(sble, buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+  yble = spline::seval(sble, buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
   xbte = 0.5 * (buffer_points.row(1).x() + buffer_points.row(nb).x());
   ybte = 0.5 * (buffer_points.row(1).y() + buffer_points.row(nb).y());
   chbsq = (xbte - xble) * (xbte - xble) + (ybte - yble) * (ybte - yble);
@@ -4657,7 +4657,7 @@ void XFoil::pangen() {
   for (k = -nk; k <= nk; k++) {
     frac = double(k) / double(nk);
     sbk = sble + frac * sbref / std::max(cvle, 20.0);
-    cvk = fabs(curv(sbk, buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), sb.data(), nb)) * sbref;
+    cvk = fabs(curv(sbk, buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb)) * sbref;
     cvsum = cvsum + cvk;
   }
   cvavg = cvsum / double(2 * nk + 1);
@@ -4685,9 +4685,9 @@ void XFoil::pangen() {
   w2[1] = 1.0;
   w3[1] = 0.0;
   for (i = 2; i <= nb - 1; i++) {
-    dsm = sb[i] - sb[i - 1];
-    dsp = sb[i + 1] - sb[i];
-    dso = 0.5 * (sb[i + 1] - sb[i - 1]);
+    dsm = buffer_spline_length[i] - buffer_spline_length[i - 1];
+    dsp = buffer_spline_length[i + 1] - buffer_spline_length[i];
+    dso = 0.5 * (buffer_spline_length[i + 1] - buffer_spline_length[i - 1]);
 
     if (dsm == 0.0 || dsp == 0.0) {
       //------- leave curvature at corner point unchanged
@@ -4706,17 +4706,17 @@ void XFoil::pangen() {
 
   //---- fix curvature at LE point by modifying equations adjacent to LE
   for (i = 2; i <= nb - 1; i++) {
-    if (sb[i] == sble || i == ible || i == ible + 1) {
+    if (buffer_spline_length[i] == sble || i == ible || i == ible + 1) {
       //------- if node falls right on LE point, fix curvature there
       w1[i] = 0.0;
       w2[i] = 1.0;
       w3[i] = 0.0;
       w5[i] = cvle;
-    } else if (sb[i - 1] < sble && sb[i] > sble) {
+    } else if (buffer_spline_length[i - 1] < sble && buffer_spline_length[i] > sble) {
       //------- modify equation at node just before LE point
-      dsm = sb[i - 1] - sb[i - 2];
-      dsp = sble - sb[i - 1];
-      dso = 0.5 * (sble - sb[i - 2]);
+      dsm = buffer_spline_length[i - 1] - buffer_spline_length[i - 2];
+      dsp = sble - buffer_spline_length[i - 1];
+      dso = 0.5 * (sble - buffer_spline_length[i - 2]);
 
       w1[i - 1] = smoosq * (-1.0 / dsm) / dso;
       w2[i - 1] = smoosq * (1.0 / dsp + 1.0 / dsm) / dso + 1.0;
@@ -4724,9 +4724,9 @@ void XFoil::pangen() {
       w5[i - 1] = w5[i - 1] + smoosq * cvle / (dsp * dso);
 
       //------- modify equation at node just after LE point
-      dsm = sb[i] - sble;
-      dsp = sb[i + 1] - sb[i];
-      dso = 0.5 * (sb[i + 1] - sble);
+      dsm = buffer_spline_length[i] - sble;
+      dsp = buffer_spline_length[i + 1] - buffer_spline_length[i];
+      dso = 0.5 * (buffer_spline_length[i + 1] - sble);
       w1[i] = 0.0;
       w2[i] = smoosq * (1.0 / dsp + 1.0 / dsm) / dso + 1.0;
       w3[i] = smoosq * (-1.0 / dsp) / dso;
@@ -4743,7 +4743,7 @@ stop51:
     xoc = ((buffer_points.row(i).x() - xble) * (xbte - xble) + (buffer_points.row(i).y() - yble) * (ybte - yble)) /
           chbsq;
 
-    if (sb[i] < sble) {
+    if (buffer_spline_length[i] < sble) {
       //------- check if top side point is in refinement area
       if (xoc > xsref1 && xoc < xsref2) {
         w1[i] = 0.;
@@ -4784,7 +4784,7 @@ stop51:
   }
 
   //---- spline curvature array
-  segspl(w5, w6, sb.data(), nb);
+  segspl(w5, w6, buffer_spline_length.data(), nb);
 
   //---- set initial guess for node positions uniform in s.
   //     more nodes than specified (by factor of ipfac) are
@@ -4796,38 +4796,38 @@ stop51:
   rtf = (rdste - 1.0) * (double)ipfac + 1.0;
 
   if (ible == 0) {
-    dsavg = (sb[nb] - sb[1]) / ((double)(nn - 3) + 2.0 * rtf);
-    snew[1] = sb[1];
+    dsavg = (buffer_spline_length[nb] - buffer_spline_length[1]) / ((double)(nn - 3) + 2.0 * rtf);
+    snew[1] = buffer_spline_length[1];
     for (i = 2; i <= nn - 1; i++) {
-      snew[i] = sb[1] + dsavg * ((double)(i - 2) + rtf);
+      snew[i] = buffer_spline_length[1] + dsavg * ((double)(i - 2) + rtf);
     }
-    snew[nn] = sb[nb];
+    snew[nn] = buffer_spline_length[nb];
   } else {
     nfrac1 = (n * ible) / nb;
 
     nn1 = ipfac * (nfrac1 - 1) + 1;
-    dsavg1 = (sble - sb[1]) / ((double)(nn1 - 2) + rtf);
-    snew[1] = sb[1];
+    dsavg1 = (sble - buffer_spline_length[1]) / ((double)(nn1 - 2) + rtf);
+    snew[1] = buffer_spline_length[1];
     for (i = 2; i <= nn1; i++) {
-      snew[i] = sb[1] + dsavg1 * ((double)(i - 2) + rtf);
+      snew[i] = buffer_spline_length[1] + dsavg1 * ((double)(i - 2) + rtf);
     }
 
     nn2 = nn - nn1 + 1;
-    dsavg2 = (sb[nb] - sble) / (double(nn2 - 2) + rtf);
+    dsavg2 = (buffer_spline_length[nb] - sble) / (double(nn2 - 2) + rtf);
     for (i = 2; i <= nn2 - 1; i++) {
       snew[i - 1 + nn1] = sble + dsavg2 * ((double)(i - 2) + rtf);
     }
-    snew[nn] = sb[nb];
+    snew[nn] = buffer_spline_length[nb];
   }
 
   //---- newton iteration loop for new node positions
   for (int iter = 1; iter <= 20; iter++) {  // iter 10
 
     //------ set up tri-diagonal system for node position deltas
-    cv1 = spline::seval(snew[1], w5, w6, sb.data(), nb);
-    cv2 = spline::seval(snew[2], w5, w6, sb.data(), nb);
-    cvs1 = spline::deval(snew[1], w5, w6, sb.data(), nb);
-    cvs2 = spline::deval(snew[2], w5, w6, sb.data(), nb);
+    cv1 = spline::seval(snew[1], w5, w6, buffer_spline_length.data(), nb);
+    cv2 = spline::seval(snew[2], w5, w6, buffer_spline_length.data(), nb);
+    cvs1 = spline::deval(snew[1], w5, w6, buffer_spline_length.data(), nb);
+    cvs2 = spline::deval(snew[2], w5, w6, buffer_spline_length.data(), nb);
 
     cavm = sqrt(cv1 * cv1 + cv2 * cv2);
     if (cavm == 0.0) {
@@ -4841,8 +4841,8 @@ stop51:
     for (i = 2; i <= nn - 1; i++) {  // 110
       dsm = snew[i] - snew[i - 1];
       dsp = snew[i] - snew[i + 1];
-      cv3 = spline::seval(snew[i + 1], w5, w6, sb.data(), nb);
-      cvs3 = spline::deval(snew[i + 1], w5, w6, sb.data(), nb);
+      cv3 = spline::seval(snew[i + 1], w5, w6, buffer_spline_length.data(), nb);
+      cvs3 = spline::deval(snew[i + 1], w5, w6, buffer_spline_length.data(), nb);
 
       cavp = sqrt(cv3 * cv3 + cv2 * cv2);
       if (cavp == 0.0) {
@@ -4940,34 +4940,34 @@ stop11:
   //---- set new panel node coordinates
   for (i = 1; i <= n; i++) {
     ind = ipfac * (i - 1) + 1;
-    s[i] = snew[ind];
-    points.row(i).x() = spline::seval(snew[ind], buffer_points.col(0).data(), xbp.data(), sb.data(), nb);
-    points.row(i).y() = spline::seval(snew[ind], buffer_points.col(1).data(), ybp.data(), sb.data(), nb);
+    spline_length[i] = snew[ind];
+    points.row(i).x() = spline::seval(snew[ind], buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+    points.row(i).y() = spline::seval(snew[ind], buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
   }
 
   //---- go over buffer airfoil again, checking for corners (double points)
   ncorn = 0;
   for (int ib = 1; ib <= nb - 1; ib++) {  // 25
-    if (sb[ib] == sb[ib + 1]) {
+    if (buffer_spline_length[ib] == buffer_spline_length[ib + 1]) {
       //------- found one !
 
       ncorn = ncorn + 1;
       xbcorn = buffer_points.row(ib).x();
       ybcorn = buffer_points.row(ib).y();
-      sbcorn = sb[ib];
+      sbcorn = buffer_spline_length[ib];
 
       //------- find current-airfoil panel which contains corner
       for (i = 1; i <= n; i++) {  // 252
 
         //--------- keep stepping until first node past corner
-        if (s[i] <= sbcorn) goto stop252;
+        if (spline_length[i] <= sbcorn) goto stop252;
 
         //---------- move remainder of panel nodes to make room for additional
         // node
         for (j = n; j >= i; j--) {
           points.row(j + 1).x() = points.row(j).x();
           points.row(j + 1).y() = points.row(j).y();
-          s[j + 1] = s[j];
+          spline_length[j + 1] = spline_length[j];
         }
         n = n + 1;
 
@@ -4978,20 +4978,20 @@ stop11:
         }
         points.row(i).x() = xbcorn;
         points.row(i).y() = ybcorn;
-        s[i] = sbcorn;
+        spline_length[i] = sbcorn;
 
         //---------- shift nodes adjacent to corner to keep panel sizes
         // comparable
         if (i - 2 >= 1) {
-          s[i - 1] = 0.5 * (s[i] + s[i - 2]);
-          points.row(i - 1).x() = spline::seval(s[i - 1], buffer_points.col(0).data(), xbp.data(), sb.data(), nb);
-          points.row(i - 1).y() = spline::seval(s[i - 1], buffer_points.col(1).data(), ybp.data(), sb.data(), nb);
+          spline_length[i - 1] = 0.5 * (spline_length[i] + spline_length[i - 2]);
+          points.row(i - 1).x() = spline::seval(spline_length[i - 1], buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+          points.row(i - 1).y() = spline::seval(spline_length[i - 1], buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
         }
 
         if (i + 2 <= n) {
-          s[i + 1] = 0.5 * (s[i] + s[i + 2]);
-          points.row(i + 1).x() = spline::seval(s[i + 1], buffer_points.col(0).data(), xbp.data(), sb.data(), nb);
-          points.row(i + 1).y() = spline::seval(s[i + 1], buffer_points.col(0).data(), ybp.data(), sb.data(), nb);
+          spline_length[i + 1] = 0.5 * (spline_length[i] + spline_length[i + 2]);
+          points.row(i + 1).x() = spline::seval(spline_length[i + 1], buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+          points.row(i + 1).y() = spline::seval(spline_length[i + 1], buffer_points.col(0).data(), ybp.data(), buffer_spline_length.data(), nb);
         }
 
         //---------- go on to next input geometry point to check for corner
@@ -5004,13 +5004,13 @@ stop11:
     nothing = 0;  // C++ doesn't like gotos
   }
 
-  s = spline::scalc(points, n, s.size());
-  segspl(points.col(0).data(), dpoints_ds.col(0).data(), s.data(), n);
-  segspl(points.col(1).data(), dpoints_ds.col(1).data(), s.data(), n);
-  lefind(sle, points.col(0).data(), dpoints_ds.col(0).data(), points.col(1).data(), dpoints_ds.col(1).data(), s.data(), n);
+  spline_length = spline::scalc(points, n, spline_length.size());
+  segspl(points.col(0).data(), dpoints_ds.col(0).data(), spline_length.data(), n);
+  segspl(points.col(1).data(), dpoints_ds.col(1).data(), spline_length.data(), n);
+  lefind(sle, points.col(0).data(), dpoints_ds.col(0).data(), points.col(1).data(), dpoints_ds.col(1).data(), spline_length.data(), n);
 
-  xle = spline::seval(sle, points.col(0).data(), dpoints_ds.col(0).data(), s.data(), n);
-  yle = spline::seval(sle, points.col(1).data(), dpoints_ds.col(1).data(), s.data(), n);
+  xle = spline::seval(sle, points.col(0).data(), dpoints_ds.col(0).data(), spline_length.data(), n);
+  yle = spline::seval(sle, points.col(1).data(), dpoints_ds.col(1).data(), spline_length.data(), n);
   xte = 0.5 * (points.row(1).x() + points.row(n).x());
   yte = 0.5 * (points.row(1).y() + points.row(n).y());
   chord = sqrt((xte - xle) * (xte - xle) + (yte - yle) * (yte - yle));
@@ -5019,15 +5019,15 @@ stop11:
   dsmin = 1000.0;
   dsmax = -1000.0;
   for (i = 1; i <= n - 1; i++) {
-    ds = s[i + 1] - s[i];
+    ds = spline_length[i + 1] - spline_length[i];
     if (ds != 0.0) {
       dsmin = min(dsmin, ds);
       dsmax = max(dsmax, ds);
     }
   }
 
-  dsmin = dsmin * (double)(n - 1) / s[n];
-  dsmax = dsmax * (double)(n - 1) / s[n];
+  dsmin = dsmin * (double)(n - 1) / spline_length[n];
+  dsmax = dsmax * (double)(n - 1) / spline_length[n];
 
   //---- set various flags for new airfoil
   lgamu = false;
@@ -5049,7 +5049,7 @@ stop11:
   tecalc();
 
   //---- calculate normal vectors
-  ncalc(points.col(0).data(), points.col(1).data(), s.data(), n, nx.data(), ny.data());
+  ncalc(points.col(0).data(), points.col(1).data(), spline_length.data(), n, nx.data(), ny.data());
 
   //---- calculate panel angles for panel routines
   apcalc();
@@ -5069,10 +5069,10 @@ bool XFoil::Preprocess() {
     area = area + 0.5 * (dpoints_ds.row(i).y() + dpoints_ds.row(ip).y()) * (dpoints_ds.row(i).x() - dpoints_ds.row(ip).x());
   }
 
-  sb = spline::scalc(dpoints_ds, nb, sb.size());
-  segspl(dpoints_ds.col(0).data(), xbp.data(), sb.data(), nb);
-  //	segspl(yb,ybp,sb,nb);
-  geopar(dpoints_ds.col(0).data(), xbp.data(), dpoints_ds.col(1).data(), ybp.data(), sb.data(), nb, w1, sble, chordb, areab, radble, angbte,
+  buffer_spline_length = spline::scalc(dpoints_ds, nb, buffer_spline_length.size());
+  segspl(dpoints_ds.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+  //	segspl(yb,ybp,buffer_spline_length,nb);
+  geopar(dpoints_ds.col(0).data(), xbp.data(), dpoints_ds.col(1).data(), ybp.data(), buffer_spline_length.data(), nb, w1, sble, chordb, areab, radble, angbte,
          ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
 
   //---- wipe out old flap hinge location
@@ -5118,7 +5118,7 @@ bool XFoil::psilin(int iNode, double xi, double yi, double nxi, double nyi,
   double seps;
 
   //---- distance tolerance for determining if two points are the same
-  seps = (s[n] - s[1]) * 0.00001;
+  seps = (spline_length[n] - spline_length[1]) * 0.00001;
 
   apan = yy = logr12 = logr22 = x1i = x2i = yyi = x1o = x1p = x2o = x2p = yyo =
       yyp = 0.0;
@@ -5853,27 +5853,27 @@ bool XFoil::saveblData(int icom) {
  *      at segment joints.  Segment joints are    |
  *      defined by identical successive s values. |
  * ----------------------------------------------- */
-bool XFoil::segspl(double x[], double xs[], double s[], int n) {
+bool XFoil::segspl(double x[], double xs[], double spline_length[], int n) {
   int nseg, iseg, iseg0;
 
-  if (s[1] == s[2])
+  if (spline_length[1] == spline_length[2])
     return false;  // stop 'segspl:  first input point duplicated'
-  if (s[n] == s[n - 1])
+  if (spline_length[n] == spline_length[n - 1])
     return false;  // stop 'segspl:  last  input point duplicated'
 
   iseg0 = 1;
   for (iseg = 2; iseg <= n - 2; iseg++) {
-    if (s[iseg] == s[iseg + 1]) {
+    if (spline_length[iseg] == spline_length[iseg + 1]) {
       nseg = iseg - iseg0 + 1;
       
-      spline::splind(x + iseg0 - 1, xs + iseg0 - 1, s + iseg0 - 1, nseg, -999.0,
+      spline::splind(x + iseg0 - 1, xs + iseg0 - 1, spline_length + iseg0 - 1, nseg, -999.0,
              -999.0);
       iseg0 = iseg + 1;
     }
   }
   nseg = n - iseg0 + 1;
 
-  spline::splind(x + iseg0 - 1, xs + iseg0 - 1, s + iseg0 - 1, nseg, -999.0, -999.0);
+  spline::splind(x + iseg0 - 1, xs + iseg0 - 1, spline_length + iseg0 - 1, nseg, -999.0, -999.0);
 
   return true;
 }
@@ -5884,25 +5884,25 @@ bool XFoil::segspl(double x[], double xs[], double s[], int n) {
  *     at segment joints.  segment joints are    |
  *     defined by identical successive s values. |
  * ----------------------------------------------- */
-bool XFoil::segspld(double x[], double xs[], double s[], int n, double xs1,
+bool XFoil::segspld(double x[], double xs[], double spline_length[], int n, double xs1,
                     double xs2) {
   int nseg, iseg, iseg0;
 
-  if (s[1] == s[2])
+  if (spline_length[1] == spline_length[2])
     return false;  // stop 'segspl:  first input point duplicated';
-  if (s[n] == s[n - 1])
+  if (spline_length[n] == spline_length[n - 1])
     return false;  // stop 'segspl:  last  input point duplicated';
 
   iseg0 = 1;
   for (iseg = 2; iseg <= n - 2; iseg++) {
-    if (s[iseg] == s[iseg + 1]) {
+    if (spline_length[iseg] == spline_length[iseg + 1]) {
       nseg = iseg - iseg0 + 1;
-      spline::splind(x + iseg0 - 1, xs + iseg0 - 1, s + iseg0 - 1, nseg, xs1, xs2);
+      spline::splind(x + iseg0 - 1, xs + iseg0 - 1, spline_length + iseg0 - 1, nseg, xs1, xs2);
       iseg0 = iseg + 1;
     }
   }
   nseg = n - iseg0 + 1;
-  spline::splind(x + iseg0 - 1, xs + iseg0 - 1, s + iseg0 - 1, nseg, xs1, xs2);
+  spline::splind(x + iseg0 - 1, xs + iseg0 - 1, spline_length + iseg0 - 1, nseg, xs1, xs2);
   return true;
 }
 
@@ -6319,8 +6319,8 @@ bool XFoil::setbl() {
         chx = xte - xle;
         chy = yte - yle;
         chsq = chx * chx + chy * chy;
-        xtr = spline::seval(str, points.col(0).data(), dpoints_ds.col(0).data(), s.data(), n);
-        ytr = spline::seval(str, points.col(1).data(), dpoints_ds.col(1).data(), s.data(), n);
+        xtr = spline::seval(str, points.col(0).data(), dpoints_ds.col(0).data(), spline_length.data(), n);
+        ytr = spline::seval(str, points.col(1).data(), dpoints_ds.col(1).data(), spline_length.data(), n);
         xoctr[is] = ((xtr - xle) * chx + (ytr - yle) * chy) / chsq;
         yoctr[is] = ((ytr - yle) * chx - (xtr - xle) * chy) / chsq;
       }
@@ -6438,14 +6438,14 @@ void XFoil::scheck(double x[], double y[], int *n, double stol, bool *lchange) {
   }
 }
 
-bool XFoil::setexp(double s[], double ds1, double smax, int nn) {
+bool XFoil::setexp(double spline_length[], double ds1, double smax, int nn) {
   //........................................................
   //     sets geometriy stretched array s:
   //
   //       s(i+1) - s(i)  =  r * [s(i) - s(i-1)]
   //
   //       s     (output)  array to be set
-  //       ds1   (input)   first s increment:  s[2] - s[1]
+  //       ds1   (input)   first s increment:  spline_length[2] - spline_length[1]
   //       smax  (input)   final s value:      s(nn)
   //       nn    (input)   number of points
   //........................................................
@@ -6496,10 +6496,10 @@ bool XFoil::setexp(double s[], double ds1, double smax, int nn) {
 
   //-- set up stretched array using converged geometric ratio
 stop11:
-  s[1] = 0.0;
+  spline_length[1] = 0.0;
   ds = ds1;
   for (n = 2; n <= nn; n++) {
-    s[n] = s[n - 1] + ds;
+    spline_length[n] = spline_length[n - 1] + ds;
     ds = ds * ratio;
   }
   return true;
@@ -6537,18 +6537,18 @@ double XFoil::sign(double a, double b) {
  * 	   si	   calculated s(xi) value  (input,output)
  * 	   x,xs,s  usual spline arrays	   (input)
  */
-bool XFoil::sinvrt(double &si, double xi, double x[], double xs[], double s[],
+bool XFoil::sinvrt(double &si, double xi, double x[], double xs[], double spline_length[],
                    int n) {
   int iter;
   double sisav;
   sisav = si;
 
   for (iter = 1; iter <= 10; iter++) {
-    const double res = spline::seval(si, x, xs, s, n) - xi;
-    const double resp = spline::deval(si, x, xs, s, n);
+    const double res = spline::seval(si, x, xs, spline_length, n) - xi;
+    const double resp = spline::deval(si, x, xs, spline_length, n);
     const double ds = -res / resp;
     si = si + ds;
-    if (fabs(ds / (s[n] - s[1])) < 1.0e-5) return true;
+    if (fabs(ds / (spline_length[n] - spline_length[1])) < 1.0e-5) return true;
   }
 
   writeString("Sinvrt: spline inversion failed, input value returned\n", true);
@@ -6747,7 +6747,7 @@ bool XFoil::speccl() {
 
 void XFoil::sss(double ss, double *s1, double *s2, double del, double xbf,
                 double ybf, double x[], double xp[], double y[], double yp[],
-                double s[], int n, int iside) {
+                double spline_length[], int n, int iside) {
   //      dimension x(*),xp(*),y(*),yp(*),s(*)
   //----------------------------------------------------------------
   //     returns arc length points s1,s2 at flap surface break
@@ -6786,7 +6786,7 @@ void XFoil::sss(double ss, double *s1, double *s2, double del, double xbf,
   //---- convergence epsilon
   eps = 1.0e-5;
 
-  stot = fabs(s[n] - s[1]);
+  stot = fabs(spline_length[n] - spline_length[1]);
 
   sind = sin(0.5 * fabs(del));
 
@@ -6795,23 +6795,23 @@ void XFoil::sss(double ss, double *s1, double *s2, double del, double xbf,
 
   //---- initial guesses for s1, s2
 
-  r1 = (spline::seval(ss, x, xp, s, n) - xbf);
-  r2 = (spline::seval(ss, y, yp, s, n) - ybf);
+  r1 = (spline::seval(ss, x, xp, spline_length, n) - xbf);
+  r2 = (spline::seval(ss, y, yp, spline_length, n) - ybf);
   rsq = r1 * r1 + r2 * r2;
   *s1 = ss - (sind * sqrt(rsq) + eps * stot) * ssgn;
   *s2 = ss + (sind * sqrt(rsq) + eps * stot) * ssgn;
 
   //---- newton iteration loop
   for (int iter = 1; iter <= 10; iter++) {
-    const double x1 = spline::seval(*s1, x, xp, s, n);
-    const double x1p = spline::deval(*s1, x, xp, s, n);
-    const double y1 = spline::seval(*s1, y, yp, s, n);
-    const double y1p = spline::deval(*s1, y, yp, s, n);
+    const double x1 = spline::seval(*s1, x, xp, spline_length, n);
+    const double x1p = spline::deval(*s1, x, xp, spline_length, n);
+    const double y1 = spline::seval(*s1, y, yp, spline_length, n);
+    const double y1p = spline::deval(*s1, y, yp, spline_length, n);
 
-    const double x2 = spline::seval(*s2, x, xp, s, n);
-    const double x2p = spline::deval(*s2, x, xp, s, n);
-    const double y2 = spline::seval(*s2, y, yp, s, n);
-    const double y2p = spline::deval(*s2, y, yp, s, n);
+    const double x2 = spline::seval(*s2, x, xp, spline_length, n);
+    const double x2p = spline::deval(*s2, x, xp, spline_length, n);
+    const double y2 = spline::seval(*s2, y, yp, spline_length, n);
+    const double y2p = spline::deval(*s2, y, yp, spline_length, n);
 
     const double r1sq = (x1 - xbf) * (x1 - xbf) + (y1 - ybf) * (y1 - ybf);
     const double r2sq = (x2 - xbf) * (x2 - xbf) + (y2 - ybf) * (y2 - ybf);
@@ -6857,10 +6857,10 @@ void XFoil::sss(double ss, double *s1, double *s2, double del, double xbf,
 
       //------- residual 2: set vector sum of line segments beteen the
       //-       endpoints and flap hinge to be perpendicular to airfoil surface.
-      x1pp = spline::d2val(*s1, x, xp, s, n);
-      y1pp = spline::d2val(*s1, y, yp, s, n);
-      x2pp = spline::d2val(*s2, x, xp, s, n);
-      y2pp = spline::d2val(*s2, y, yp, s, n);
+      x1pp = spline::d2val(*s1, x, xp, spline_length, n);
+      y1pp = spline::d2val(*s1, y, yp, spline_length, n);
+      x2pp = spline::d2val(*s2, x, xp, spline_length, n);
+      y2pp = spline::d2val(*s2, y, yp, spline_length, n);
 
       xtot = x1 + x2 - 2.0 * xbf;
       ytot = y1 + y2 - 2.0 * ybf;
@@ -6924,20 +6924,20 @@ bool XFoil::stfind() {
   // stop11:
   ist = i;
   dgam = gam[i + 1] - gam[i];
-  ds = s[i + 1] - s[i];
+  ds = spline_length[i + 1] - spline_length[i];
 
   //---- evaluate so as to minimize roundoff for very small gam[i] or gam[i+1]
   if (gam[i] < -gam[i + 1])
-    sst = s[i] - ds * (gam[i] / dgam);
+    sst = spline_length[i] - ds * (gam[i] / dgam);
   else
-    sst = s[i + 1] - ds * (gam[i + 1] / dgam);
+    sst = spline_length[i + 1] - ds * (gam[i + 1] / dgam);
 
   //---- tweak stagnation point if it falls right on a node (very unlikely)
-  if (sst <= s[i]) sst = s[i] + 0.0000001;
-  if (sst >= s[i + 1]) sst = s[i + 1] - 0.0000001;
+  if (sst <= spline_length[i]) sst = spline_length[i] + 0.0000001;
+  if (sst >= spline_length[i + 1]) sst = spline_length[i + 1] - 0.0000001;
 
-  sst_go = (sst - s[i + 1]) / dgam;
-  sst_gp = (s[i] - sst) / dgam;
+  sst_go = (sst - spline_length[i + 1]) / dgam;
+  sst_gp = (spline_length[i] - sst) / dgam;
 
   return true;
 }
@@ -8217,7 +8217,7 @@ bool XFoil::xicalc() {
 
   for (ibl = 2; ibl <= iblte[is]; ibl++) {
     i = ipan[ibl][is];
-    xssi[ibl][is] = sst - s[i];
+    xssi[ibl][is] = sst - spline_length[i];
   }
 
   is = 2;
@@ -8226,7 +8226,7 @@ bool XFoil::xicalc() {
 
   for (ibl = 2; ibl <= iblte[is]; ibl++) {
     i = ipan[ibl][is];
-    xssi[ibl][is] = s[i] - sst;
+    xssi[ibl][is] = spline_length[i] - sst;
   }
 
   ibl = iblte[is] + 1;
@@ -8295,23 +8295,23 @@ bool XFoil::xifset(int is) {
     w2[i] = ((points.row(i).y() - yle) * chx - (points.row(i).x() - xle) * chy) / chsq;
   }
 
-  spline::splind(w1, w3, s.data(), n, -999.0, -999.0);
-  spline::splind(w2, w4, s.data(), n, -999.0, -999.0);
+  spline::splind(w1, w3, spline_length.data(), n, -999.0, -999.0);
+  spline::splind(w2, w4, spline_length.data(), n, -999.0, -999.0);
 
   if (is == 1) {
     //----- set approximate arc length of forced transition point for sinvrt
-    str = sle + (s[1] - sle) * xstrip[is];
+    str = sle + (spline_length[1] - sle) * xstrip[is];
 
     //----- calculate actual arc length
-    sinvrt(str, xstrip[is], w1, w3, s.data(), n);
+    sinvrt(str, xstrip[is], w1, w3, spline_length.data(), n);
 
     //----- set bl coordinate value
     xiforc = std::min((sst - str), xssi[iblte[is]][is]);
   } else {
     //----- same for bottom side
 
-    str = sle + (s[n] - sle) * xstrip[is];
-    sinvrt(str, xstrip[is], w1, w3, s.data(), n);
+    str = sle + (spline_length[n] - sle) * xstrip[is];
+    sinvrt(str, xstrip[is], w1, w3, spline_length.data(), n);
     xiforc = std::min((str - sst), xssi[iblte[is]][is]);
   }
 
@@ -8345,7 +8345,7 @@ bool XFoil::xyWake() {
     nw = IWX;
   }
 
-  ds1 = 0.5 * (s[2] - s[1] + s[n] - s[n - 1]);
+  ds1 = 0.5 * (spline_length[2] - spline_length[1] + spline_length[n] - spline_length[n - 1]);
   setexp(snew.data() + n, ds1, waklen * chord, nw);
 
   xte = 0.5 * (points.row(1).x() + points.row(n).x());
@@ -8360,7 +8360,7 @@ bool XFoil::xyWake() {
   ny[i] = sy / smod;
   points.row(i).x() = xte - 0.0001 * ny[i];
   points.row(i).y() = yte + 0.0001 * nx[i];
-  s[i] = s[n];
+  spline_length[i] = spline_length[n];
 
   //---- calculate streamfunction gradient components at first point
   psilin(i, points.row(i).x(), points.row(i).y(), 1.0, 0.0, psi, psi_x, false, false);
@@ -8380,7 +8380,7 @@ bool XFoil::xyWake() {
     //------ set new point ds downstream of last point
     points.row(i).x() = points.row(i - 1).x() - ds * ny[i];
     points.row(i).y() = points.row(i - 1).y() + ds * nx[i];
-    s[i] = s[i - 1] + ds;
+    spline_length[i] = spline_length[i - 1] + ds;
 
     if (i != n + nw) {
       //------- calculate normal vector for next point
@@ -8405,7 +8405,7 @@ bool XFoil::xyWake() {
   return true;
 }
 
-int XFoil::arefine(double x[], double y[], double s[], double xs[], double ys[],
+int XFoil::arefine(double x[], double y[], double spline_length[], double xs[], double ys[],
                    int n, double atol, int ndim, double xnew[], double ynew[],
                    double x1, double x2) {
   //-------------------------------------------------------------
@@ -8455,9 +8455,9 @@ int XFoil::arefine(double x[], double y[], double s[], double xs[], double ys[],
 
     if (lref) {
       //------- add extra point just before this node
-      smid = s[i] - 0.3333 * (s[i] - s[i - 1]);
-      xk = spline::seval(smid, x, xs, s, n);
-      yk = spline::seval(smid, y, ys, s, n);
+      smid = spline_length[i] - 0.3333 * (spline_length[i] - spline_length[i - 1]);
+      xk = spline::seval(smid, x, xs, spline_length, n);
+      yk = spline::seval(smid, y, ys, spline_length, n);
       if (xk >= x1 && xk <= x2) {
         k = k + 1;
         if (k > ndim) goto stop90;
@@ -8474,9 +8474,9 @@ int XFoil::arefine(double x[], double y[], double s[], double xs[], double ys[],
 
     if (lref) {
       //------- add extra point just after this node
-      smid = s[i] + 0.3333 * (s[i + 1] - s[i]);
-      xk = spline::seval(smid, x, xs, s, n);
-      yk = spline::seval(smid, y, ys, s, n);
+      smid = spline_length[i] + 0.3333 * (spline_length[i + 1] - spline_length[i]);
+      xk = spline::seval(smid, x, xs, spline_length, n);
+      yk = spline::seval(smid, y, ys, spline_length, n);
       if (xk >= x1 && xk <= x2) {
         k = k + 1;
         if (k > ndim) goto stop90;
@@ -8503,18 +8503,18 @@ int XFoil::cadd(int ispl, double atol, double xrf1, double xrf2) {
   int nnew, nbadd;
 
   if (ispl == 1) {
-    sb[1] = 0.0;
+    buffer_spline_length[1] = 0.0;
     for (int i = 2; i <= nb; i++) {
       if (buffer_points.row(i).x() == buffer_points.row(i - 1).x() && buffer_points.row(i).y() == buffer_points.row(i - 1).y())
-        sb[i] = sb[i - 1];
+        buffer_spline_length[i] = buffer_spline_length[i - 1];
       else
-        sb[i] = sb[i - 1] + 1.0;
+        buffer_spline_length[i] = buffer_spline_length[i - 1] + 1.0;
     }
-    segspl(buffer_points.col(0).data(), xbp.data(), sb.data(), nb);
-    segspl(buffer_points.col(1).data(), ybp.data(), sb.data(), nb);
+    segspl(buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+    segspl(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
   }
 
-  nnew = arefine(buffer_points.col(0).data(), buffer_points.col(1).data(), sb.data(), xbp.data(), ybp.data(), nb, atol, IBX, w1, w2, xrf1, xrf2);
+  nnew = arefine(buffer_points.col(0).data(), buffer_points.col(1).data(), buffer_spline_length.data(), xbp.data(), ybp.data(), nb, atol, IBX, w1, w2, xrf1, xrf2);
 
   nbadd = nnew - nb;
 
@@ -8524,11 +8524,11 @@ int XFoil::cadd(int ispl, double atol, double xrf1, double xrf2) {
     buffer_points.row(i).y() = w2[i];
   }
 
-  sb = spline::scalc(buffer_points, nb, sb.size());
-  segspl(buffer_points.col(0).data(), xbp.data(), sb.data(), nb);
-  segspl(buffer_points.col(1).data(), ybp.data(), sb.data(), nb);
+  buffer_spline_length = spline::scalc(buffer_points, nb, buffer_spline_length.size());
+  segspl(buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+  segspl(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
 
-  geopar(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), sb.data(), nb, w1, sble, chordb, areab, radble, angbte,
+  geopar(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb, w1, sble, chordb, areab, radble, angbte,
          ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
   //TODO plotsに置き換え
   vector<Vector2d> plots;
@@ -8582,7 +8582,7 @@ void XFoil::flap() {
   double xb2new = 0.0;
   double yb2new = 0.0;
 
-  getxyf(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), sb.data(), nb, tops, bots, xbf, ybf);
+  getxyf(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb, tops, bots, xbf, ybf);
   //TODO plot置き換え
   vector<Vector2d> plots;
   for (int i=INDEX_START_WITH; i<n+INDEX_START_WITH; i++) {
@@ -8597,10 +8597,10 @@ void XFoil::flap() {
     atop = std::max(0.0, -rdef);
     abot = std::max(0.0, rdef);
   } else {
-    const double chx = spline::deval(bots, buffer_points.col(0).data(), xbp.data(), sb.data(), nb) - spline::deval(tops, buffer_points.col(0).data(), xbp.data(), sb.data(), nb);
-    const double chy = spline::deval(bots, buffer_points.col(1).data(), ybp.data(), sb.data(), nb) - spline::deval(tops, buffer_points.col(1).data(), ybp.data(), sb.data(), nb);
-    const double fvx = spline::seval(bots, buffer_points.col(0).data(), xbp.data(), sb.data(), nb) + spline::seval(tops, buffer_points.col(0).data(), xbp.data(), sb.data(), nb);
-    const double fvy = spline::seval(bots, buffer_points.col(1).data(), ybp.data(), sb.data(), nb) + spline::seval(tops, buffer_points.col(1).data(), ybp.data(), sb.data(), nb);
+    const double chx = spline::deval(bots, buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb) - spline::deval(tops, buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+    const double chy = spline::deval(bots, buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb) - spline::deval(tops, buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
+    const double fvx = spline::seval(bots, buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb) + spline::seval(tops, buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+    const double fvy = spline::seval(bots, buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb) + spline::seval(tops, buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
     const double crsp = chx * (ybf - 0.5 * fvy) - chy * (xbf - 0.5 * fvx);
     if (crsp > 0.0) {
       //------ flap hinge is above airfoil
@@ -8615,87 +8615,87 @@ void XFoil::flap() {
 
   //-- find upper and lower surface break arc length values...
 
-  sss(tops, &st1, &st2, atop, xbf, ybf, buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), sb.data(), nb, 1);
-  sss(bots, &sb1, &sb2, abot, xbf, ybf, buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), sb.data(), nb, 2);
+  sss(tops, &st1, &st2, atop, xbf, ybf, buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb, 1);
+  sss(bots, &sb1, &sb2, abot, xbf, ybf, buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb, 2);
 
   //-- ... and x,y coordinates
-  xt1 = spline::seval(st1, buffer_points.col(0).data(), xbp.data(), sb.data(), nb);
-  yt1 = spline::seval(st1, buffer_points.col(1).data(), ybp.data(), sb.data(), nb);
+  xt1 = spline::seval(st1, buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+  yt1 = spline::seval(st1, buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
 
-  xb1 = spline::seval(sb1, buffer_points.col(0).data(), xbp.data(), sb.data(), nb);
-  yb1 = spline::seval(sb1, buffer_points.col(1).data(), ybp.data(), sb.data(), nb);
+  xb1 = spline::seval(sb1, buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+  yb1 = spline::seval(sb1, buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
 
   //-- find points adjacent to breaks
   for (i = 1; i <= nb - 1; i++) {
-    if (sb[i] <= st1 && sb[i + 1] > st1) it1 = i + 1;
-    if (sb[i] < st2 && sb[i + 1] >= st2) it2 = i;
-    if (sb[i] <= sb1 && sb[i + 1] > sb1) ib1 = i;
-    if (sb[i] < sb2 && sb[i + 1] >= sb2) ib2 = i + 1;
+    if (buffer_spline_length[i] <= st1 && buffer_spline_length[i + 1] > st1) it1 = i + 1;
+    if (buffer_spline_length[i] < st2 && buffer_spline_length[i + 1] >= st2) it2 = i;
+    if (buffer_spline_length[i] <= sb1 && buffer_spline_length[i + 1] > sb1) ib1 = i;
+    if (buffer_spline_length[i] < sb2 && buffer_spline_length[i + 1] >= sb2) ib2 = i + 1;
   }
 
-  dsavg = (sb[nb] - sb[1]) / double(nb - 1);
+  dsavg = (buffer_spline_length[nb] - buffer_spline_length[1]) / double(nb - 1);
 
   //-- smallest fraction of s increments i+1 and i+2 away from break point
   sfrac = 0.33333;
 
   if (atop != 0.0) {
-    const double st1p = st1 + sfrac * (sb[it1] - st1);
-    const double st1q = st1 + sfrac * (sb[it1 + 1] - st1);
-    if (sb[it1] < st1q) {
+    const double st1p = st1 + sfrac * (buffer_spline_length[it1] - st1);
+    const double st1q = st1 + sfrac * (buffer_spline_length[it1 + 1] - st1);
+    if (buffer_spline_length[it1] < st1q) {
       //------ simply move adjacent point to ideal sfrac location
-      xt1new = spline::seval(st1q, buffer_points.col(0).data(), xbp.data(), sb.data(), nb);
-      yt1new = spline::seval(st1q, buffer_points.col(1).data(), ybp.data(), sb.data(), nb);
+      xt1new = spline::seval(st1q, buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+      yt1new = spline::seval(st1q, buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
       lt1new = false;
     } else {
       //------ make new point at sfrac location
-      xt1new = spline::seval(st1p, buffer_points.col(0).data(), xbp.data(), sb.data(), nb);
-      yt1new = spline::seval(st1p, buffer_points.col(1).data(), ybp.data(), sb.data(), nb);
+      xt1new = spline::seval(st1p, buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+      yt1new = spline::seval(st1p, buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
       lt1new = true;
     }
 
-    const double st2p = st2 + sfrac * (sb[it2] - st2);
+    const double st2p = st2 + sfrac * (buffer_spline_length[it2] - st2);
     const int it2q = max(it2 - 1, 1);
-    const double st2q = st2 + sfrac * (sb[it2q] - st2);
-    if (sb[it2] > st2q) {
+    const double st2q = st2 + sfrac * (buffer_spline_length[it2q] - st2);
+    if (buffer_spline_length[it2] > st2q) {
       //------ simply move adjacent point
-      xt2new = spline::seval(st2q, buffer_points.col(0).data(), xbp.data(), sb.data(), nb);
-      yt2new = spline::seval(st2q, buffer_points.col(1).data(), ybp.data(), sb.data(), nb);
+      xt2new = spline::seval(st2q, buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+      yt2new = spline::seval(st2q, buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
       lt2new = false;
     } else {
       //------ make new point
-      xt2new = spline::seval(st2p, buffer_points.col(0).data(), xbp.data(), sb.data(), nb);
-      yt2new = spline::seval(st2p, buffer_points.col(1).data(), ybp.data(), sb.data(), nb);
+      xt2new = spline::seval(st2p, buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+      yt2new = spline::seval(st2p, buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
       lt2new = true;
     }
   }
 
   if (abot != 0.0) {
-    const double sb1p = sb1 + sfrac * (sb[ib1] - sb1);
-    const double sb1q = sb1 + sfrac * (sb[ib1 - 1] - sb1);
-    if (sb[ib1] > sb1q) {
+    const double sb1p = sb1 + sfrac * (buffer_spline_length[ib1] - sb1);
+    const double sb1q = sb1 + sfrac * (buffer_spline_length[ib1 - 1] - sb1);
+    if (buffer_spline_length[ib1] > sb1q) {
       //------ simply move adjacent point
-      xb1new = spline::seval(sb1q, buffer_points.col(0).data(), xbp.data(), sb.data(), nb);
-      yb1new = spline::seval(sb1q, buffer_points.col(1).data(), ybp.data(), sb.data(), nb);
+      xb1new = spline::seval(sb1q, buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+      yb1new = spline::seval(sb1q, buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
       lb1new = false;
     } else {
       //------ make new point
-      xb1new = spline::seval(sb1p, buffer_points.col(0).data(), xbp.data(), sb.data(), nb);
-      yb1new = spline::seval(sb1p, buffer_points.col(1).data(), ybp.data(), sb.data(), nb);
+      xb1new = spline::seval(sb1p, buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+      yb1new = spline::seval(sb1p, buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
       lb1new = true;
     }
 
-    const double sb2p = sb2 + sfrac * (sb[ib2] - sb2);
+    const double sb2p = sb2 + sfrac * (buffer_spline_length[ib2] - sb2);
     const int ib2q = std::min(ib2 + 1, nb);
-    const double sb2q = sb2 + sfrac * (sb[ib2q] - sb2);
-    if (sb[ib2] < sb2q) {
+    const double sb2q = sb2 + sfrac * (buffer_spline_length[ib2q] - sb2);
+    if (buffer_spline_length[ib2] < sb2q) {
       //------ simply move adjacent point
-      xb2new = spline::seval(sb2q, buffer_points.col(0).data(), xbp.data(), sb.data(), nb);
-      yb2new = spline::seval(sb2q, buffer_points.col(1).data(), ybp.data(), sb.data(), nb);
+      xb2new = spline::seval(sb2q, buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+      yb2new = spline::seval(sb2q, buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
       lb2new = false;
     } else {
       //------ make new point
-      xb2new = spline::seval(sb2p, buffer_points.col(0).data(), xbp.data(), sb.data(), nb);
-      yb2new = spline::seval(sb2p, buffer_points.col(1).data(), ybp.data(), sb.data(), nb);
+      xb2new = spline::seval(sb2p, buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+      yb2new = spline::seval(sb2p, buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
       lb2new = true;
     }
   }
@@ -8722,7 +8722,7 @@ void XFoil::flap() {
     ib1 = ib1 - idif;
     ib2 = ib2 - idif;
     for (i = it2 + 1; i <= nb; i++) {
-      sb[i] = sb[i + idif];
+      buffer_spline_length[i] = buffer_spline_length[i + idif];
       buffer_points.row(i).x() = buffer_points.row(i + idif).x();
       buffer_points.row(i).y() = buffer_points.row(i + idif).y();
     }
@@ -8734,7 +8734,7 @@ void XFoil::flap() {
     nb = nb - idif;
     ib2 = ib2 - idif;
     for (i = ib1 + 1; i <= nb; i++) {
-      sb[i] = sb[i + idif];
+      buffer_spline_length[i] = buffer_spline_length[i + idif];
       buffer_points.row(i).x() = buffer_points.row(i + idif).x();
       buffer_points.row(i).y() = buffer_points.row(i + idif).y();
     }
@@ -8888,11 +8888,11 @@ void XFoil::flap() {
   scheck(buffer_points.col(0).data(), buffer_points.col(1).data(), &nb, stol, &lchange);
 
   //-- spline new geometry
-  sb = spline::scalc(buffer_points, nb, sb.size());
-  segspl(buffer_points.col(0).data(), xbp.data(), sb.data(), nb);
-  segspl(buffer_points.col(1).data(), ybp.data(), sb.data(), nb);
+  buffer_spline_length = spline::scalc(buffer_points, nb, buffer_spline_length.size());
+  segspl(buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+  segspl(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
 
-  geopar(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), sb.data(), nb, w1, sble, chordb, areab, radble, angbte,
+  geopar(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb, w1, sble, chordb, areab, radble, angbte,
          ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
 
   lbflap = true;
@@ -8958,7 +8958,7 @@ bool XFoil::eiwset(int nc1) {
 }
 
 void XFoil::scinit(int n, double x[], double xp[], double y[], double yp[],
-                   double s[], double sle) {
+                   double spline_length[], double sle) {
   //----------------------------------------------------------
   //     calculates the circle-plane coordinate s(w) = sc
   //     at each point of the current geometry.
@@ -8984,8 +8984,8 @@ void XFoil::scinit(int n, double x[], double xp[], double y[], double yp[],
   //     --- avoids gibbs problems with q(w)'s fourier sine transform
   qim0 = ag0 + 0.5 * PI * (1.0 + agte);
 
-  xle = spline::seval(sle, x, xp, s, n);
-  yle = spline::seval(sle, y, yp, s, n);
+  xle = spline::seval(sle, x, xp, spline_length, n);
+  yle = spline::seval(sle, y, yp, spline_length, n);
 
   //---- save te gap and airfoil chord
   double dxte = x[1] - x[n];
@@ -9003,12 +9003,12 @@ void XFoil::scinit(int n, double x[], double xp[], double y[], double yp[],
   //      write(*,*) 'initializing mapping coordinate ...'
 
   //---- set approximate slope ds/dw at airfoil nose
-  double cvle = curv(sle, x, xp, y, yp, s, n) * s[n];
+  double cvle = curv(sle, x, xp, y, yp, spline_length, n) * spline_length[n];
   double cvabs = fabs(cvle);
   double dsdwle = std::max(0.001, 0.5 / cvabs);
 
-  double tops = sle / s[n];
-  double bots = (s[n] - sle) / s[n];
+  double tops = sle / spline_length[n];
+  double bots = (spline_length[n] - sle) / spline_length[n];
 
   //---- set initial top surface s(w)
   double wwt = 1.0 - 2.0 * dsdwle / tops;
@@ -9025,9 +9025,9 @@ void XFoil::scinit(int n, double x[], double xp[], double y[], double yp[],
   for (ipass = 1; ipass <= 30; ipass++) {
     //---- calculate imaginary part of harmonic function  p(w) + iq(w)
     for (ic = 1; ic <= nc; ic++) {
-      sic = s[1] + (s[n] - s[1]) * sc[ic];
-      dxds = spline::deval(sic, x, xp, s, n);
-      dyds = spline::deval(sic, y, yp, s, n);
+      sic = spline_length[1] + (spline_length[n] - spline_length[1]) * sc[ic];
+      dxds = spline::deval(sic, x, xp, spline_length, n);
+      dyds = spline::deval(sic, y, yp, spline_length, n);
 
       //------ set q(w) - qo   (qo defined so that q(w)-qo = 0  at  w = 0 , 2
       // PI)
@@ -9355,12 +9355,12 @@ void XFoil::mapgam(int iac, double &alg, double &clg, double &cmg) {
   for (int i = 1; i <= nsp; i++) {
     qgamm[i] = w6[i];
     sspec[i] = w5[i];
-    double xic = spline::seval(s[n] * sspec[i], points.col(0).data(), dpoints_ds.col(0).data(), s.data(), n);
-    double yic = spline::seval(s[n] * sspec[i], points.col(1).data(), dpoints_ds.col(1).data(), s.data(), n);
+    double xic = spline::seval(spline_length[n] * sspec[i], points.col(0).data(), dpoints_ds.col(0).data(), spline_length.data(), n);
+    double yic = spline::seval(spline_length[n] * sspec[i], points.col(1).data(), dpoints_ds.col(1).data(), spline_length.data(), n);
     xspoc[i] = ((xic - xle) * chx + (yic - yle) * chy) / chsq;
     yspoc[i] = ((yic - yle) * chx - (xic - xle) * chy) / chsq;
   }
-  ssple = sle / s[n];
+  ssple = sle / spline_length[n];
 
   return;
 }
@@ -9794,11 +9794,11 @@ void XFoil::ExecMDES() {
   mapgen(nb, buffer_points.col(0).data(), buffer_points.col(1).data());
 
   //----- spline new buffer airfoil
-  sb = spline::scalc(buffer_points, nb, sb.size());
-  spline::splind(buffer_points.col(0).data(), xbp.data(), sb.data(), nb, -999.0, -999.0);
-  spline::splind(buffer_points.col(1).data(), ybp.data(), sb.data(), nb, -999.0, -999.0);
+  buffer_spline_length = spline::scalc(buffer_points, nb, buffer_spline_length.size());
+  spline::splind(buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb, -999.0, -999.0);
+  spline::splind(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb, -999.0, -999.0);
 
-  geopar(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), sb.data(), nb, w1, sble, chordb, areab, radble, angbte,
+  geopar(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb, w1, sble, chordb, areab, radble, angbte,
          ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
 }
 
@@ -10093,7 +10093,7 @@ void XFoil::InitMDES() {
 
   if (!lscini) {
     //------ initialize s(w) for current airfoil, generating its cn coefficients
-    scinit(n, points.col(0).data(), dpoints_ds.col(0).data(), points.col(1).data(), dpoints_ds.col(1).data(), s.data(), sle);
+    scinit(n, points.col(0).data(), dpoints_ds.col(0).data(), points.col(1).data(), dpoints_ds.col(1).data(), spline_length.data(), sle);
     lscini = true;
 
     //------ set up to initialize qspec to current conditions
@@ -10146,11 +10146,11 @@ bool XFoil::InitQDES() {
   nsp = n;
   for (int i = 1; i <= nsp; i++) {
     qgamm[i] = gam[i];
-    sspec[i] = s[i] / s[n];
+    sspec[i] = spline_length[i] / spline_length[n];
     xspoc[i] = ((points.row(i).x() - xle) * chx + (points.row(i).y() - yle) * chy) / chsq;
     yspoc[i] = ((points.row(i).y() - yle) * chx - (points.row(i).x() - xle) * chy) / chsq;
   }
-  ssple = sle / s[n];
+  ssple = sle / spline_length[n];
 
 
   if (!lqspec) {
@@ -10206,7 +10206,7 @@ bool XFoil::mixed(int kqsp) {
   //    (fraction of smaller panel length adjacent to te)
   bwt = 0.1;
 
-  s = spline::scalc(points, n, s.size());
+  spline_length = spline::scalc(points, n, spline_length.size());
 
   //---- zero-out and set dof shape functions
   for (i = 1; i <= n; i++) {
@@ -10218,7 +10218,7 @@ bool XFoil::mixed(int kqsp) {
 
   //---- set dof shape functions and specified speed
   for (i = iq1; i <= iq2; i++) {
-    const double fs = (s[i] - s[iq1]) / (s[iq2] - s[iq1]);
+    const double fs = (spline_length[i] - spline_length[iq1]) / (spline_length[iq2] - spline_length[iq1]);
 
     qf0[i] = 1.0 - fs;
     qf1[i] = fs;
@@ -10242,7 +10242,7 @@ bool XFoil::mixed(int kqsp) {
     }
 
     //---- calculate normal direction vectors along which the nodes move
-    ncalc(points.col(0).data(), points.col(1).data(), s.data(), n, nx.data(), ny.data());
+    ncalc(points.col(0).data(), points.col(1).data(), spline_length.data(), n, nx.data(), ny.data());
 
     //---- go over all nodes, setting up  psi = psi0  equations
     for (i = 1; i <= n; i++) {
@@ -10393,7 +10393,7 @@ bool XFoil::mixed(int kqsp) {
     qdof2 = qdof2 + dq[n + 4];
     qdof3 = qdof3 + dq[n + 5];
 
-    s = spline::scalc(points, n, s.size());
+    spline_length = spline::scalc(points, n, spline_length.size());
 
     //---- set correct surface speed over target segment including dof
     // contributions
@@ -10460,7 +10460,7 @@ bool XFoil::ExecQDES() {
   for (i = 1; i <= n; i++) {
     buffer_points.row(i).x() = points.row(i).x();
     buffer_points.row(i).y() = points.row(i).y();
-    sb[i] = s[i];
+    buffer_spline_length[i] = spline_length[i];
     xbp[i] = dpoints_ds.row(i).x();
     ybp[i] = dpoints_ds.row(i).y();;
   }
@@ -10471,13 +10471,13 @@ bool XFoil::ExecQDES() {
   adeg = alfa / dtor;
 
   //----- spline new airfoil shape
-  s = spline::scalc(points, n, s.size());
-  spline::splind(points.col(0).data(), dpoints_ds.col(0).data(), s.data(), n, -999.0, -999.0);
-  spline::splind(points.col(1).data(), dpoints_ds.col(1).data(), s.data(), n, -999.0, -999.0);
-  ncalc(points.col(0).data(), points.col(1).data(), s.data(), n, nx.data(), ny.data());
-  lefind(sle, points.col(0).data(), dpoints_ds.col(0).data(), points.col(1).data(), dpoints_ds.col(1).data(), s.data(), n);
-  xle = spline::seval(sle, points.col(0).data(), dpoints_ds.col(0).data(), s.data(), n);
-  yle = spline::seval(sle, points.col(1).data(), dpoints_ds.col(1).data(), s.data(), n);
+  spline_length = spline::scalc(points, n, spline_length.size());
+  spline::splind(points.col(0).data(), dpoints_ds.col(0).data(), spline_length.data(), n, -999.0, -999.0);
+  spline::splind(points.col(1).data(), dpoints_ds.col(1).data(), spline_length.data(), n, -999.0, -999.0);
+  ncalc(points.col(0).data(), points.col(1).data(), spline_length.data(), n, nx.data(), ny.data());
+  lefind(sle, points.col(0).data(), dpoints_ds.col(0).data(), points.col(1).data(), dpoints_ds.col(1).data(), spline_length.data(), n);
+  xle = spline::seval(sle, points.col(0).data(), dpoints_ds.col(0).data(), spline_length.data(), n);
+  yle = spline::seval(sle, points.col(1).data(), dpoints_ds.col(1).data(), spline_length.data(), n);
   chord = sqrt((0.5 * (points.row(1).x() + points.row(n).x()) - xle) * (0.5 * (points.row(1).x() + points.row(n).x()) - xle) +
                (0.5 * (points.row(1).y() + points.row(n).y()) - yle) * (0.5 * (points.row(1).y() + points.row(n).y()) - yle));
   tecalc();
@@ -10488,9 +10488,9 @@ bool XFoil::ExecQDES() {
   nsp = n;
   for (i = 1; i <= n; i++) {
     qgamm[i] = gam[i];
-    sspec[i] = s[i] / s[n];
+    sspec[i] = spline_length[i] / spline_length[n];
   }
-  ssple = sle / s[n];
+  ssple = sle / spline_length[n];
 
   //----- set inviscid surface speeds and calculate compressible cp
   for (i = 1; i <= n; i++) {
@@ -10517,13 +10517,13 @@ bool XFoil::ExecQDES() {
 void XFoil::RestoreQDES() {
   //	Foil is restored from CXInverse rather than from XFoil
 
-  s = spline::scalc(points, n, s.size());
-  spline::splind(points.col(0).data(), dpoints_ds.col(0).data(), s.data(), n, -999.0, -999.0);
-  spline::splind(points.col(1).data(), dpoints_ds.col(1).data(), s.data(), n, -999.0, -999.0);
-  ncalc(points.col(0).data(), points.col(1).data(), s.data(), n, nx.data(), ny.data());
-  lefind(sle, points.col(0).data(), dpoints_ds.col(0).data(), points.col(1).data(), dpoints_ds.col(1).data(), s.data(), n);
-  xle = spline::seval(sle, points.col(0).data(), dpoints_ds.col(0).data(), s.data(), n);
-  yle = spline::seval(sle, points.col(1).data(), dpoints_ds.col(1).data(), s.data(), n);
+  spline_length = spline::scalc(points, n, spline_length.size());
+  spline::splind(points.col(0).data(), dpoints_ds.col(0).data(), spline_length.data(), n, -999.0, -999.0);
+  spline::splind(points.col(1).data(), dpoints_ds.col(1).data(), spline_length.data(), n, -999.0, -999.0);
+  ncalc(points.col(0).data(), points.col(1).data(), spline_length.data(), n, nx.data(), ny.data());
+  lefind(sle, points.col(0).data(), dpoints_ds.col(0).data(), points.col(1).data(), dpoints_ds.col(1).data(), spline_length.data(), n);
+  xle = spline::seval(sle, points.col(0).data(), dpoints_ds.col(0).data(), spline_length.data(), n);
+  yle = spline::seval(sle, points.col(1).data(), dpoints_ds.col(1).data(), spline_length.data(), n);
   chord = sqrt((0.5 * (points.row(1).x() + points.row(n).x()) - xle) * (0.5 * (points.row(1).x() + points.row(n).x()) - xle) +
                (0.5 * (points.row(1).y() + points.row(n).y()) - yle) * (0.5 * (points.row(1).y() + points.row(n).y()) - yle));
   tecalc();
@@ -10546,7 +10546,7 @@ void XFoil::tcset(double cnew, double tnew) {
   double xcm[IQX], ycm[IQX], xtk[IQX], ytk[IQX], ycmp[IQX], ytkp[IQX];
   double txmax, tymax, cxmax, cymax;
   int ncm, ntk;
-  getcam(xcm, ycm, ncm, xtk, ytk, ntk, buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), sb.data(), nb);
+  getcam(xcm, ycm, ncm, xtk, ytk, ntk, buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
   getmax(xcm, ycm, ycmp, ncm, cxmax, cymax);
   getmax(xtk, ytk, ytkp, ntk, txmax, tymax);
 
@@ -10559,7 +10559,7 @@ void XFoil::tcset(double cnew, double tnew) {
 
   // ccc      if (tfac.lt.0.0) tfac = 0.0
   thkcam(tfac, cfac);
-  getcam(xcm, ycm, ncm, xtk, ytk, ntk, buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), sb.data(), nb);
+  getcam(xcm, ycm, ncm, xtk, ytk, ntk, buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
 }
 
 void XFoil::thkcam(double tfac, double cfac) {
@@ -10568,11 +10568,11 @@ void XFoil::thkcam(double tfac, double cfac) {
   //---------------------------------------------------
   int i;
   double dxc, dyc, sbopp;
-  lefind(sble, buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), sb.data(), nb);
+  lefind(sble, buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
 
   //---rational alternative 4/24/01 hhy
-  xle = spline::seval(sble, buffer_points.col(0).data(), xbp.data(), sb.data(), nb);
-  yle = spline::seval(sble, buffer_points.col(1).data(), ybp.data(), sb.data(), nb);
+  xle = spline::seval(sble, buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+  yle = spline::seval(sble, buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
   xte = 0.5 * (buffer_points.row(1).x() + buffer_points.row(nb).x());
   yte = 0.5 * (buffer_points.row(1).y() + buffer_points.row(nb).y());
   chord = sqrt((xte - xle) * (xte - xle) + (yte - yle) * (yte - yle));
@@ -10583,9 +10583,9 @@ void XFoil::thkcam(double tfac, double cfac) {
   //---- go over each point, changing the y-thickness appropriately
   for (i = 1; i <= nb; i++) {
     //------ coordinates of point on the opposite side with the same x value
-    sopps(sbopp, sb[i], buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), sb.data(), nb, sble);
-    const double xbopp = spline::seval(sbopp, buffer_points.col(0).data(), xbp.data(), sb.data(), nb);
-    const double ybopp = spline::seval(sbopp, buffer_points.col(1).data(), ybp.data(), sb.data(), nb);
+    sopps(sbopp, buffer_spline_length[i], buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb, sble);
+    const double xbopp = spline::seval(sbopp, buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+    const double ybopp = spline::seval(sbopp, buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
 
     //------ set new y coordinate by changing camber & thickness appropriately
     const double xcavg = (0.5 * (buffer_points.row(i).x() + xbopp) * dxc + 0.5 * (buffer_points.row(i).y() + ybopp) * dyc);
@@ -10603,11 +10603,11 @@ void XFoil::thkcam(double tfac, double cfac) {
     buffer_points.row(i).y() = w2[i];
   }
 
-  sb = spline::scalc(buffer_points, nb, sb.size());
-  segspl(buffer_points.col(0).data(), xbp.data(), sb.data(), nb);
-  segspl(buffer_points.col(1).data(), ybp.data(), sb.data(), nb);
+  buffer_spline_length = spline::scalc(buffer_points, nb, buffer_spline_length.size());
+  segspl(buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+  segspl(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
 
-  geopar(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), sb.data(), nb, w1, sble, chordb, areab, radble, angbte,
+  geopar(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb, w1, sble, chordb, areab, radble, angbte,
          ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
 }
 
@@ -10672,7 +10672,8 @@ void XFoil::interpolate(double xf1[], double yf1[], int n1, double xf2[],
   points1.resize(IBX, 2);
   points2.resize(IBX, 2);
   double xp1[IBX], yp1[IBX], xp2[IBX], yp2[IBX];
-  vector<double> s1(IBX, 0), s2(IBX, 0);
+  VectorXd s1(IBX), s2(IBX);
+  
   double sleint1, sleint2;
 
   for (i = 0; i < n1; i++) {
@@ -10697,18 +10698,18 @@ void XFoil::interpolate(double xf1[], double yf1[], int n1, double xf2[],
   inter(points1.col(0).data(), xp1, points1.col(1).data(), yp1, s1.data(), n1, sleint1, points2.col(0).data(), xp2, points2.col(1).data(), yp2, s2.data(), n2, sleint2,
         buffer_points.col(0).data(), buffer_points.col(1).data(), nb, mixt);
 
-  sb = spline::scalc(buffer_points, nb, sb.size());
-  segspl(buffer_points.col(0).data(), xbp.data(), sb.data(), nb);
-  segspl(buffer_points.col(0).data(), ybp.data(), sb.data(), nb);
+  buffer_spline_length = spline::scalc(buffer_points, nb, buffer_spline_length.size());
+  segspl(buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+  segspl(buffer_points.col(0).data(), ybp.data(), buffer_spline_length.data(), nb);
 
-  geopar(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), sb.data(), nb, w1, sble, chordb, areab, radble, angbte,
+  geopar(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb, w1, sble, chordb, areab, radble, angbte,
          ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
 }
 
 double XFoil::DeRotate() {
-  lefind(sble, buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), sb.data(), nb);
-  xle = spline::seval(sble, buffer_points.col(0).data(), xbp.data(), sb.data(), nb);
-  yle = spline::seval(sble, buffer_points.col(1).data(), ybp.data(), sb.data(), nb);
+  lefind(sble, buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
+  xle = spline::seval(sble, buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+  yle = spline::seval(sble, buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
   xte = 0.5 * (buffer_points.row(1).x() + buffer_points.row(nb).x());
   yte = 0.5 * (buffer_points.row(1).y() + buffer_points.row(nb).y());
 
@@ -10727,11 +10728,11 @@ double XFoil::DeRotate() {
     buffer_points.row(i).y() = ca * yt - sa * xt + yoff;
   }
 
-  sb = spline::scalc(buffer_points, nb, sb.size());
-  segspl(buffer_points.col(0).data(), xbp.data(), sb.data(), nb);
-  segspl(buffer_points.col(1).data(), ybp.data(), sb.data(), nb);
+  buffer_spline_length = spline::scalc(buffer_points, nb, buffer_spline_length.size());
+  segspl(buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+  segspl(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
 
-  geopar(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), sb.data(), nb, w1, sble, chordb, areab, radble, angbte,
+  geopar(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb, w1, sble, chordb, areab, radble, angbte,
          ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
 
   return arad * 180.0 / PI;
@@ -10745,9 +10746,9 @@ void XFoil::tgap(double gapnew, double blend) {
   double dxn, dyn, dxu, dyu;
   double gap, dgap, doc;
   double arg;
-  lefind(sble, buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), sb.data(), nb);
-  xble = spline::seval(sble, buffer_points.col(0).data(), xbp.data(), sb.data(), nb);
-  yble = spline::seval(sble, buffer_points.col(1).data(), ybp.data(), sb.data(), nb);
+  lefind(sble, buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
+  xble = spline::seval(sble, buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+  yble = spline::seval(sble, buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
   xbte = 0.5 * (buffer_points.row(1).x() + buffer_points.row(nb).x());
   ybte = 0.5 * (buffer_points.row(1).y() + buffer_points.row(nb).y());
   chbsq = (xbte - xble) * (xbte - xble) + (ybte - yble) * (ybte - yble);
@@ -10784,7 +10785,7 @@ void XFoil::tgap(double gapnew, double blend) {
       tfac = exp(-arg);
     }
 
-    if (sb[i] <= sble) {
+    if (buffer_spline_length[i] <= sble) {
       buffer_points.row(i).x() += 0.5 * dgap * xoc * tfac * dxu;
       buffer_points.row(i).y() += 0.5 * dgap * xoc * tfac * dyu;
     } else {
@@ -10793,11 +10794,11 @@ void XFoil::tgap(double gapnew, double blend) {
     }
   }
 
-  sb = spline::scalc(buffer_points, nb, sb.size());
-  segspl(buffer_points.col(0).data(), xbp.data(), sb.data(), nb);
-  segspl(buffer_points.col(1).data(), ybp.data(), sb.data(), nb);
+  buffer_spline_length = spline::scalc(buffer_points, nb, buffer_spline_length.size());
+  segspl(buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+  segspl(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
 
-  geopar(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), sb.data(), nb, w1, sble, chordb, areab, radble, angbte,
+  geopar(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb, w1, sble, chordb, areab, radble, angbte,
          ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
 
   //	lgeopl = false;
@@ -10813,7 +10814,7 @@ void XFoil::lerad(double rfac, double blend) {
 
   doc = std::max(blend, 0.001);
 
-  lerscl(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), sb.data(), nb, doc, rfac, w1, w2);
+  lerscl(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb, doc, rfac, w1, w2);
 
   for (i = 1; i <= nb; i++) {
     buffer_points.row(i).x() = w1[i];
@@ -10821,17 +10822,17 @@ void XFoil::lerad(double rfac, double blend) {
   }
 
   //---- spline new coordinates
-  sb = spline::scalc(buffer_points, nb, sb.size());
-  segspl(buffer_points.col(0).data(), xbp.data(), sb.data(), nb);
-  segspl(buffer_points.col(1).data(), ybp.data(), sb.data(), nb);
+  buffer_spline_length = spline::scalc(buffer_points, nb, buffer_spline_length.size());
+  segspl(buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+  segspl(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
 
-  geopar(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), sb.data(), nb, w1, sble, chordb, areab, radble, angbte,
+  geopar(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb, w1, sble, chordb, areab, radble, angbte,
          ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
 
   //---- find max curvature
   cvmax = 0.0;
   for (i = (int)(nb / 4); i <= (3 * nb) / 4; i++) {
-    const double cv = curv(sb[i], buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), sb.data(), nb);
+    const double cv = curv(buffer_spline_length[i], buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
     cvmax = std::max(fabs(cv), cvmax);
   }
 
@@ -10865,7 +10866,7 @@ void XFoil::lerscl(double *x, double *xp, double *y, double *yp, double *s,
     const double ybar = (y[i] - yle) * dxc - (x[i] - xle) * dyc;
 
     //------ set point on the opposite side with the same chord x value
-    sopps(sopp, s[i], x, xp, y, yp, s, n, sle);
+    sopps(sopp, spline_length[i], x, xp, y, yp, s, n, sle);
     const double xopp = spline::seval(sopp, x, xp, s, n);
     const double yopp = spline::seval(sopp, y, yp, s, n);
 
@@ -10948,11 +10949,11 @@ void XFoil::naca4(int ides, int nside) {
   }
   nb = ib;
 
-  sb = spline::scalc(buffer_points, nb, sb.size());
-  segspl(buffer_points.col(0).data(), xbp.data(), sb.data(), nb);
-  segspl(buffer_points.col(1).data(), ybp.data(), sb.data(), nb);
+  buffer_spline_length = spline::scalc(buffer_points, nb, buffer_spline_length.size());
+  segspl(buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+  segspl(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
 
-  geopar(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), sb.data(), nb, w1, sble, chordb, areab, radble, angbte,
+  geopar(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb, w1, sble, chordb, areab, radble, angbte,
          ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
 }
 

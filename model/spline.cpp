@@ -1,9 +1,8 @@
 #include "spline.hpp"
 #include "matrix.hpp"
 #include <iostream>
-std::vector<double> spline::scalc(Eigen::MatrixX2d points, int n, const int s_size) {
-    //TODO 引数のVector2d化
-    std::vector<double> s(s_size, 0);
+Eigen::VectorXd spline::scalc(Eigen::MatrixX2d points, int n, const int s_size) {
+    Eigen::VectorXd s = Eigen::VectorXd::Zero(s_size);
     
     for (int i = 1 + INDEX_START_WITH; i < n + INDEX_START_WITH; i++) {
         s[i] = s[i - 1] + (points.row(i) - points.row(i - 1)).norm();
