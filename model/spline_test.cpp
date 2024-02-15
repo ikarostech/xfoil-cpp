@@ -5,22 +5,20 @@
 
 TEST(scalc, test_value) {
     //given
-    Eigen::MatrixX2d points(5, 2);
+    Eigen::MatrixX2d points(4, 2);
     points <<   0.0, 0.0,
-                0.0, 0.0,
                 1.0, 0.0,
                 2.0, 2.0,
                 3.0, 3.0;
 
     //when
-    Eigen::VectorXd actual = spline::scalc(points, 4, 5);
+    Eigen::VectorXd actual = spline::scalc(points, 4, 4);
 
     //then
     ASSERT_EQ(0, actual[0]);
-    ASSERT_EQ(0, actual[1]);
-    ASSERT_EQ(1.0, actual[2]);
-    ASSERT_EQ(3.2360679774997898, actual[3]);
-    ASSERT_EQ(4.6502815398728847, actual[4]);
+    ASSERT_EQ(1.0, actual[1]);
+    ASSERT_EQ(3.2360679774997898, actual[2]);
+    ASSERT_EQ(4.6502815398728847, actual[3]);
 }
 
 TEST(seval, test_value) {
