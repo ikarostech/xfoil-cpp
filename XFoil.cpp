@@ -565,8 +565,8 @@ bool XFoil::abcopy() {
   }
   cout<<"strip out"<<endl;
   spline_length.segment(1, spline_length.size() - 1) = spline::scalc(points.middleRows(1, points.rows() - 1), n, spline_length.size() - 1);
-  segspl(points.col(0).data(), dpoints_ds.col(0).data(), spline_length.data(), n);
-  segspl(points.col(1).data(), dpoints_ds.col(1).data(), spline_length.data(), n);
+  spline::segspl(points.col(0).data(), dpoints_ds.col(0).data(), spline_length.data(), n);
+  spline::segspl(points.col(1).data(), dpoints_ds.col(1).data(), spline_length.data(), n);
   ncalc(points.col(0).data(), points.col(1).data(), spline_length.data(), n, nx.data(), ny.data());
   lefind(sle, points.col(0).data(), dpoints_ds.col(0).data(), points.col(1).data(), dpoints_ds.col(1).data(), spline_length.data(), n);
   xle = spline::seval(sle, points.col(0).data(), dpoints_ds.col(0).data(), spline_length.data(), n);
@@ -2759,7 +2759,7 @@ void XFoil::getmax(double x[], double y[], double yp[], int n, double &xmax,
   xlen = x[n] - x[1];
   xtol = xlen * 0.00001;
 
-  segspl(y, yp, x, n);
+  spline::segspl(y, yp, x, n);
 
   //---- get approx max point and rough interval size
   ymax0 = y[1];
@@ -3248,8 +3248,8 @@ void XFoil::hipnt(double chpnt, double thpnt) {
   //---- make new airfoil from thickness and camber
   //     new airfoil points are spaced to match the original
   //--- hhy 4/24/01 got rid of splining vs x,y vs s (buggy), now spline y(x)
-  segspl(ytk, ytkp, xtk, ntk);
-  segspl(ycm, ycmp, xcm, ncm);
+  spline::segspl(ytk, ytkp, xtk, ntk);
+  spline::segspl(ycm, ycmp, xcm, ncm);
 
   //---- for each orig. airfoil point setup new yb from camber and thickness
   for (int i = 1; i <= nb; i++) {
@@ -3268,8 +3268,8 @@ void XFoil::hipnt(double chpnt, double thpnt) {
   }
 
   buffer_spline_length.segment(1, buffer_spline_length.size() - 1) = spline::scalc(buffer_points.middleRows(1, buffer_points.rows() - 1), nb, buffer_spline_length.size() - 1);
-  segspl(buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
-  segspl(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
+  spline::segspl(buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+  spline::segspl(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
 
   geopar(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb, w1, sble, chordb, areab, radble, angbte,
          ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
@@ -4541,8 +4541,8 @@ bool XFoil::ncalc(double x[], double y[], double spline_length[], int n, double 
   double sx, sy, smod;
   int i;
   if (n <= 1) return false;
-  segspl(x, xn, spline_length, n);
-  segspl(y, yn, spline_length, n);
+  spline::segspl(x, xn, spline_length, n);
+  spline::segspl(y, yn, spline_length, n);
   for (i = 1; i <= n; i++) {
     sx = yn[i];
     sy = -xn[i];
@@ -4615,8 +4615,8 @@ void XFoil::pangen() {
   buffer_spline_length.segment(1, buffer_spline_length.size() - 1) = spline::scalc(buffer_points.middleRows(1, buffer_points.rows() - 1), nb, buffer_spline_length.size() - 1);
 
   //---- spline raw airfoil coordinates
-  segspl(buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
-  segspl(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
+  spline::segspl(buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+  spline::segspl(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
 
   //---- normalizing length (~ chord)
   sbref = 0.5 * (buffer_spline_length[nb] - buffer_spline_length[1]);
@@ -4784,7 +4784,7 @@ stop51:
   }
 
   //---- spline curvature array
-  segspl(w5, w6, buffer_spline_length.data(), nb);
+  spline::segspl(w5, w6, buffer_spline_length.data(), nb);
 
   //---- set initial guess for node positions uniform in s.
   //     more nodes than specified (by factor of ipfac) are
@@ -5005,8 +5005,8 @@ stop11:
   }
 
   spline_length.segment(1, spline_length.size() - 1) = spline::scalc(points.middleRows(1, points.rows() - 1), n, spline_length.size() - 1);
-  segspl(points.col(0).data(), dpoints_ds.col(0).data(), spline_length.data(), n);
-  segspl(points.col(1).data(), dpoints_ds.col(1).data(), spline_length.data(), n);
+  spline::segspl(points.col(0).data(), dpoints_ds.col(0).data(), spline_length.data(), n);
+  spline::segspl(points.col(1).data(), dpoints_ds.col(1).data(), spline_length.data(), n);
   lefind(sle, points.col(0).data(), dpoints_ds.col(0).data(), points.col(1).data(), dpoints_ds.col(1).data(), spline_length.data(), n);
 
   xle = spline::seval(sle, points.col(0).data(), dpoints_ds.col(0).data(), spline_length.data(), n);
@@ -5070,8 +5070,8 @@ bool XFoil::Preprocess() {
   }
 
   buffer_spline_length.segment(1, buffer_spline_length.size() - 1) = spline::scalc(dpoints_ds.middleRows(1, dpoints_ds.rows() - 1), nb, buffer_spline_length.size() - 1);
-  segspl(dpoints_ds.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
-  //	segspl(yb,ybp,buffer_spline_length,nb);
+  spline::segspl(dpoints_ds.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+  
   geopar(dpoints_ds.col(0).data(), xbp.data(), dpoints_ds.col(1).data(), ybp.data(), buffer_spline_length.data(), nb, w1, sble, chordb, areab, radble, angbte,
          ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
 
@@ -5844,65 +5844,6 @@ bool XFoil::saveblData(int icom) {
   } else {
     blsav[icom] = blData2;
   }
-  return true;
-}
-
-/** -----------------------------------------------
- *      Splines x(s) array just like spline,      |
- *      but allows derivative discontinuities     |
- *      at segment joints.  Segment joints are    |
- *      defined by identical successive s values. |
- * ----------------------------------------------- */
-bool XFoil::segspl(double x[], double xs[], double spline_length[], int n) {
-  int nseg, iseg, iseg0;
-
-  if (spline_length[1] == spline_length[2])
-    return false;  // stop 'segspl:  first input point duplicated'
-  if (spline_length[n] == spline_length[n - 1])
-    return false;  // stop 'segspl:  last  input point duplicated'
-
-  iseg0 = 1;
-  for (iseg = 2; iseg <= n - 2; iseg++) {
-    if (spline_length[iseg] == spline_length[iseg + 1]) {
-      nseg = iseg - iseg0 + 1;
-      
-      spline::splind(x + iseg0 - 1, xs + iseg0 - 1, spline_length + iseg0 - 1, nseg, -999.0,
-             -999.0);
-      iseg0 = iseg + 1;
-    }
-  }
-  nseg = n - iseg0 + 1;
-
-  spline::splind(x + iseg0 - 1, xs + iseg0 - 1, spline_length + iseg0 - 1, nseg, -999.0, -999.0);
-
-  return true;
-}
-
-/** -----------------------------------------------
- *     splines x(s) array just like splind,      |
- *     but allows derivative discontinuities     |
- *     at segment joints.  segment joints are    |
- *     defined by identical successive s values. |
- * ----------------------------------------------- */
-bool XFoil::segspld(double x[], double xs[], double spline_length[], int n, double xs1,
-                    double xs2) {
-  int nseg, iseg, iseg0;
-
-  if (spline_length[1] == spline_length[2])
-    return false;  // stop 'segspl:  first input point duplicated';
-  if (spline_length[n] == spline_length[n - 1])
-    return false;  // stop 'segspl:  last  input point duplicated';
-
-  iseg0 = 1;
-  for (iseg = 2; iseg <= n - 2; iseg++) {
-    if (spline_length[iseg] == spline_length[iseg + 1]) {
-      nseg = iseg - iseg0 + 1;
-      spline::splind(x + iseg0 - 1, xs + iseg0 - 1, spline_length + iseg0 - 1, nseg, xs1, xs2);
-      iseg0 = iseg + 1;
-    }
-  }
-  nseg = n - iseg0 + 1;
-  spline::splind(x + iseg0 - 1, xs + iseg0 - 1, spline_length + iseg0 - 1, nseg, xs1, xs2);
   return true;
 }
 
@@ -8510,8 +8451,8 @@ int XFoil::cadd(int ispl, double atol, double xrf1, double xrf2) {
       else
         buffer_spline_length[i] = buffer_spline_length[i - 1] + 1.0;
     }
-    segspl(buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
-    segspl(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
+    spline::segspl(buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+    spline::segspl(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
   }
 
   nnew = arefine(buffer_points.col(0).data(), buffer_points.col(1).data(), buffer_spline_length.data(), xbp.data(), ybp.data(), nb, atol, IBX, w1, w2, xrf1, xrf2);
@@ -8525,8 +8466,8 @@ int XFoil::cadd(int ispl, double atol, double xrf1, double xrf2) {
   }
 
   buffer_spline_length.segment(1, buffer_spline_length.size() - 1) = spline::scalc(buffer_points.middleRows(1, buffer_points.rows() - 1), nb, buffer_spline_length.size() - 1);
-  segspl(buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
-  segspl(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
+  spline::segspl(buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+  spline::segspl(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
 
   geopar(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb, w1, sble, chordb, areab, radble, angbte,
          ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
@@ -8889,8 +8830,8 @@ void XFoil::flap() {
 
   //-- spline new geometry
   buffer_spline_length.segment(1, buffer_spline_length.size() - 1) = spline::scalc(buffer_points.middleRows(1, buffer_points.rows() - 1), nb, buffer_spline_length.size() - 1);
-  segspl(buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
-  segspl(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
+  spline::segspl(buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+  spline::segspl(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
 
   geopar(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb, w1, sble, chordb, areab, radble, angbte,
          ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
@@ -10604,8 +10545,8 @@ void XFoil::thkcam(double tfac, double cfac) {
   }
 
   buffer_spline_length.segment(1, buffer_spline_length.size() - 1) = spline::scalc(buffer_points.middleRows(1, buffer_points.rows() - 1), nb, buffer_spline_length.size() - 1);
-  segspl(buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
-  segspl(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
+  spline::segspl(buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+  spline::segspl(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
 
   geopar(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb, w1, sble, chordb, areab, radble, angbte,
          ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
@@ -10686,21 +10627,21 @@ void XFoil::interpolate(double xf1[], double yf1[], int n1, double xf2[],
   }
 
   s1.segment(1, s1.size() - 1) = spline::scalc(points1.middleRows(1, points1.rows() - 1), n1, s1.size() - 1);
-  segspld(points1.col(0).data(), xp1, s1.data(), n1, -999.0, -999.0);
-  segspld(points1.col(1).data(), yp1, s1.data(), n1, -999.0, -999.0);
+  spline::segspld(points1.col(0).data(), xp1, s1.data(), n1, -999.0, -999.0);
+  spline::segspld(points1.col(1).data(), yp1, s1.data(), n1, -999.0, -999.0);
   lefind(sleint1, points1.col(0).data(), xp1, points1.col(1).data(), yp1, s1.data(), n1);
 
   s2.segment(1, s2.size() - 1) = spline::scalc(points2.middleRows(1, points2.rows() - 1), n2, s2.size() - 1);
-  segspld(points2.col(0).data(), xp2, s2.data(), n2, -999.0, -999.0);
-  segspld(points2.col(1).data(), yp2, s2.data(), n2, -999.0, -999.0);
+  spline::segspld(points2.col(0).data(), xp2, s2.data(), n2, -999.0, -999.0);
+  spline::segspld(points2.col(1).data(), yp2, s2.data(), n2, -999.0, -999.0);
   lefind(sleint2, points2.col(0).data(), xp2, points2.col(1).data(), yp2, s2.data(), n2);
 
   inter(points1.col(0).data(), xp1, points1.col(1).data(), yp1, s1.data(), n1, sleint1, points2.col(0).data(), xp2, points2.col(1).data(), yp2, s2.data(), n2, sleint2,
         buffer_points.col(0).data(), buffer_points.col(1).data(), nb, mixt);
 
   buffer_spline_length.segment(1, buffer_points.size() - 1) = spline::scalc(buffer_points.middleRows(1, buffer_points.rows() - 1), nb, buffer_spline_length.size() - 1);
-  segspl(buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
-  segspl(buffer_points.col(0).data(), ybp.data(), buffer_spline_length.data(), nb);
+  spline::segspl(buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+  spline::segspl(buffer_points.col(0).data(), ybp.data(), buffer_spline_length.data(), nb);
 
   geopar(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb, w1, sble, chordb, areab, radble, angbte,
          ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
@@ -10729,8 +10670,8 @@ double XFoil::DeRotate() {
   }
 
   buffer_spline_length.segment(1, buffer_spline_length.size() - 1) = spline::scalc(buffer_points.middleRows(1, buffer_points.rows() - 1), nb, buffer_spline_length.size() - 1);
-  segspl(buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
-  segspl(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
+  spline::segspl(buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+  spline::segspl(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
 
   geopar(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb, w1, sble, chordb, areab, radble, angbte,
          ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
@@ -10795,8 +10736,8 @@ void XFoil::tgap(double gapnew, double blend) {
   }
 
   buffer_spline_length.segment(1, buffer_spline_length.size() - 1) = spline::scalc(buffer_points.middleRows(1, buffer_points.rows() - 1), nb, buffer_spline_length.size() - 1);
-  segspl(buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
-  segspl(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
+  spline::segspl(buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+  spline::segspl(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
 
   geopar(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb, w1, sble, chordb, areab, radble, angbte,
          ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
@@ -10823,8 +10764,8 @@ void XFoil::lerad(double rfac, double blend) {
 
   //---- spline new coordinates
   buffer_spline_length.segment(1, buffer_spline_length.size() - 1) = spline::scalc(buffer_points.middleRows(1, buffer_points.rows() - 1), nb, buffer_spline_length.size() - 1);
-  segspl(buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
-  segspl(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
+  spline::segspl(buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+  spline::segspl(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
 
   geopar(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb, w1, sble, chordb, areab, radble, angbte,
          ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
@@ -10950,8 +10891,8 @@ void XFoil::naca4(int ides, int nside) {
   nb = ib;
 
   buffer_spline_length.segment(1, buffer_spline_length.size() - 1) = spline::scalc(buffer_points.middleRows(1, buffer_points.rows() - 1), nb, buffer_spline_length.size() - 1);
-  segspl(buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
-  segspl(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
+  spline::segspl(buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
+  spline::segspl(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
 
   geopar(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb, w1, sble, chordb, areab, radble, angbte,
          ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);

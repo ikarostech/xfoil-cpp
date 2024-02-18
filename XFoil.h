@@ -302,9 +302,7 @@ class XFoil {
   bool qiset();
   bool qvfue();
   bool qwcalc();
-  bool segspl(double x[], double xs[], double s[], int n);
-  bool segspld(double x[], double xs[], double s[], int n, double xs1,
-               double xs2);
+  
   bool setbl();
   bool setexp(double s[], double ds1, double smax, int nn);
   bool sinvrt(double &si, double xi, double x[], double xs[], double s[],

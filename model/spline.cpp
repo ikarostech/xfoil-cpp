@@ -200,3 +200,61 @@ bool spline::splind(double x[], double xs[], double s[], int n, double xs1, doub
   }
   return true;
 }
+
+/** -----------------------------------------------
+ *      Splines x(s) array just like spline,      |
+ *      but allows derivative discontinuities     |
+ *      at segment joints.  Segment joints are    |
+ *      defined by identical successive s values. |
+ * ----------------------------------------------- */
+bool spline::segspl(double x[], double xs[], double spline_length[], int n) {
+  int nseg, iseg, iseg0;
+
+  if (spline_length[1] == spline_length[2])
+    return false;  // stop 'segspl:  first input point duplicated'
+  if (spline_length[n] == spline_length[n - 1])
+    return false;  // stop 'segspl:  last  input point duplicated'
+
+  iseg0 = 1;
+  for (iseg = 2; iseg <= n - 2; iseg++) {
+    if (spline_length[iseg] == spline_length[iseg + 1]) {
+      nseg = iseg - iseg0 + 1;
+      
+      spline::splind(x + iseg0 - 1, xs + iseg0 - 1, spline_length + iseg0 - 1, nseg, -999.0,
+             -999.0);
+      iseg0 = iseg + 1;
+    }
+  }
+  nseg = n - iseg0 + 1;
+
+  spline::splind(x + iseg0 - 1, xs + iseg0 - 1, spline_length + iseg0 - 1, nseg, -999.0, -999.0);
+
+  return true;
+}
+
+/** -----------------------------------------------
+ *     splines x(s) array just like splind,      |
+ *     but allows derivative discontinuities     |
+ *     at segment joints.  segment joints are    |
+ *     defined by identical successive s values. |
+ * ----------------------------------------------- */
+bool spline::segspld(double x[], double xs[], double spline_length[], int n, double xs1, double xs2) {
+  int nseg, iseg, iseg0;
+
+  if (spline_length[1] == spline_length[2])
+    return false;  // stop 'segspl:  first input point duplicated';
+  if (spline_length[n] == spline_length[n - 1])
+    return false;  // stop 'segspl:  last  input point duplicated';
+
+  iseg0 = 1;
+  for (iseg = 2; iseg <= n - 2; iseg++) {
+    if (spline_length[iseg] == spline_length[iseg + 1]) {
+      nseg = iseg - iseg0 + 1;
+      spline::splind(x + iseg0 - 1, xs + iseg0 - 1, spline_length + iseg0 - 1, nseg, xs1, xs2);
+      iseg0 = iseg + 1;
+    }
+  }
+  nseg = n - iseg0 + 1;
+  spline::splind(x + iseg0 - 1, xs + iseg0 - 1, spline_length + iseg0 - 1, nseg, xs1, xs2);
+  return true;
+}
