@@ -3179,7 +3179,7 @@ bool XFoil::hct(double hk, double msq, double &hc, double &hc_hk,
 void XFoil::hipnt(double chpnt, double thpnt) {
   //      include 'xfoil.inc'
   std::stringstream ss;
-  vector<double> xfn(5), yfn(5), yfnp(5);  // sfn[5]
+  VectorXd xfn(5), yfn(5), yfnp(5);  // sfn[5]
   double ybl, cxmax, cymax, txmax, tymax;
   double arot, sbl;
   double xcm[IQX], ycm[IQX], xtk[IQX], ytk[IQX], ycmp[IQX], ytkp[IQX];
@@ -3229,7 +3229,7 @@ void XFoil::hipnt(double chpnt, double thpnt) {
     yfn[1] = xtk[1];
     yfn[2] = thpnt;
     yfn[3] = xtk[ntk];
-    yfnp = spline::splina(yfn.data(), xfn.data(), 3, 5);
+    yfnp = spline::splina(yfn, xfn, 3, 5);
     for (int i = 1; i <= ntk; i++) xtk[i] = spline::seval(xtk[i], yfn.data(), yfnp.data(), xfn.data(), 3);
   }
 
@@ -3241,7 +3241,7 @@ void XFoil::hipnt(double chpnt, double thpnt) {
     yfn[1] = xcm[1];
     yfn[2] = chpnt;
     yfn[3] = xcm[ncm];
-    yfnp = spline::splina(yfn.data(), xfn.data(), 3, 5);
+    yfnp = spline::splina(yfn, xfn, 3, 5);
     for (int i = 1; i <= ncm; i++) xcm[i] = spline::seval(xcm[i], yfn.data(), yfnp.data(), xfn.data(), 3);
   }
 

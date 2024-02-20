@@ -62,11 +62,13 @@ TEST(d2val, test_value) {
 
 TEST(splina, test_value) {
     //given
-    std::vector<double> x{0.0, 1.0, 0.6, 0.0, 0.0, 0.4, 1.0};
-    std::vector<double> s{0.0, 0.0, 0.8, 1.2, 1.2, 1.8, 2.5};
+    Eigen::VectorXd x(7);
+    x << 0.0, 1.0, 0.6, 0.0, 0.0, 0.4, 1.0;
+    Eigen::VectorXd s(7);
+    s << 0.0, 0.0, 0.8, 1.2, 1.2, 1.8, 2.5;
     
     //when
-    std::vector<double> xs = spline::splina(x.data(), s.data(), x.size() - spline::INDEX_START_WITH, x.size());
+    Eigen::VectorXd xs = spline::splina(x, s, x.size() - spline::INDEX_START_WITH, x.size());
 
     //then
     ASSERT_EQ(0, xs[0]);

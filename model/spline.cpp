@@ -86,8 +86,8 @@ double spline::d2val(double ss, const double x[], const double xs[], const doubl
  *      n        number of points           (input)       |
  *                                                        |
  * -------------------------------------------------------*/
-std::vector<double> spline::splina(const double x[], const double s[], int n, int xs_size) {
-    std::vector<double> xs(xs_size, 0);
+Eigen::VectorXd spline::splina(Eigen::VectorXd x, Eigen::VectorXd s, int n, int xs_size) {
+    Eigen::VectorXd xs = Eigen::VectorXd::Zero(xs_size);
     double xs_former, xs_later;
     xs_former = xs_later = 0.0;
 

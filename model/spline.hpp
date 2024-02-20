@@ -44,7 +44,7 @@ class spline {
      *      n        number of points           (input)       |
      *                                                        |
      * -------------------------------------------------------*/
-    static std::vector<double> splina(const double x[], const double s[], int n, int xs_size);
+    static Eigen::VectorXd splina(Eigen::VectorXd x, Eigen::VectorXd s, int n, int xs_size);
 
     /** -------------------------------------------------------
      *      Calculates spline coefficients for x(s).          |
