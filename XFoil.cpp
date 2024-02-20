@@ -433,14 +433,11 @@ bool XFoil::initialize() {
   areab = 0.0;
   radble = 0.0;
   angbte = 0.0;
-  ei11ba = 0.0;
-  ei22ba = 0.0;
-  apx1ba = 0.0;
-  apx2ba = 0.0;
-  ei11bt = 0.0;
-  ei22bt = 0.0;
-  apx1bt = 0.0;
-  apx2bt = 0.0;
+  bending_inertia_xy = Matrix2d::Zero();
+  bending_inertia_ts = Matrix2d::Zero();
+  principal_axis_xy = Matrix2d::Zero();
+  principal_axis_ts = Matrix2d::Zero();
+
   sle = 0.0;
   xle = 0.0;
   yle = 0.0;
@@ -3272,7 +3269,7 @@ void XFoil::hipnt(double chpnt, double thpnt) {
   spline::segspl(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
 
   geopar(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb, w1, sble, chordb, areab, radble, angbte,
-         ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
+         bending_inertia_xy(0, 0), bending_inertia_xy(1, 1), principal_axis_xy(0, 0), principal_axis_xy(1, 1), bending_inertia_ts(0, 0), bending_inertia_ts(1, 1), principal_axis_ts(0, 0), principal_axis_ts(1, 1));
 }
 
 bool XFoil::hkin(double h, double msq, double &hk, double &hk_h,
@@ -5073,7 +5070,7 @@ bool XFoil::Preprocess() {
   spline::segspl(dpoints_ds.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
   
   geopar(dpoints_ds.col(0).data(), xbp.data(), dpoints_ds.col(1).data(), ybp.data(), buffer_spline_length.data(), nb, w1, sble, chordb, areab, radble, angbte,
-         ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
+         bending_inertia_xy(0, 0), bending_inertia_xy(1, 1), principal_axis_xy(0, 0), principal_axis_xy(1, 1), bending_inertia_ts(0, 0), bending_inertia_ts(1, 1), principal_axis_ts(0, 0), principal_axis_ts(1, 1));
 
   //---- wipe out old flap hinge location
   xbf = 0.0;
@@ -8470,7 +8467,7 @@ int XFoil::cadd(int ispl, double atol, double xrf1, double xrf2) {
   spline::segspl(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
 
   geopar(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb, w1, sble, chordb, areab, radble, angbte,
-         ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
+         bending_inertia_xy(0, 0), bending_inertia_xy(1, 1), principal_axis_xy(0, 0), principal_axis_xy(1, 1), bending_inertia_ts(0, 0), bending_inertia_ts(1, 1), principal_axis_ts(0, 0), principal_axis_ts(1, 1));
   //TODO plotsに置き換え
   vector<Vector2d> plots;
   for(int i=INDEX_START_WITH; i<=n; i++) {
@@ -8834,7 +8831,7 @@ void XFoil::flap() {
   spline::segspl(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
 
   geopar(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb, w1, sble, chordb, areab, radble, angbte,
-         ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
+         bending_inertia_xy(0, 0), bending_inertia_xy(1, 1), principal_axis_xy(0, 0), principal_axis_xy(1, 1), bending_inertia_ts(0, 0), bending_inertia_ts(1, 1), principal_axis_ts(0, 0), principal_axis_ts(1, 1));
 
   lbflap = true;
   lgsame = false;
@@ -9740,7 +9737,7 @@ void XFoil::ExecMDES() {
   spline::splind(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb, -999.0, -999.0);
 
   geopar(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb, w1, sble, chordb, areab, radble, angbte,
-         ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
+         bending_inertia_xy(0, 0), bending_inertia_xy(1, 1), principal_axis_xy(0, 0), principal_axis_xy(1, 1), bending_inertia_ts(0, 0), bending_inertia_ts(1, 1), principal_axis_ts(0, 0), principal_axis_ts(1, 1));
 }
 
 /** ---------------------------------------------
@@ -10549,7 +10546,7 @@ void XFoil::thkcam(double tfac, double cfac) {
   spline::segspl(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
 
   geopar(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb, w1, sble, chordb, areab, radble, angbte,
-         ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
+         bending_inertia_xy(0, 0), bending_inertia_xy(1, 1), principal_axis_xy(0, 0), principal_axis_xy(1, 1), bending_inertia_ts(0, 0), bending_inertia_ts(1, 1), principal_axis_ts(0, 0), principal_axis_ts(1, 1));
 }
 
 void XFoil::inter(double x0[], double xp0[], double y0[], double yp0[],
@@ -10644,7 +10641,7 @@ void XFoil::interpolate(double xf1[], double yf1[], int n1, double xf2[],
   spline::segspl(buffer_points.col(0).data(), ybp.data(), buffer_spline_length.data(), nb);
 
   geopar(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb, w1, sble, chordb, areab, radble, angbte,
-         ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
+         bending_inertia_xy(0, 0), bending_inertia_xy(1, 1), principal_axis_xy(0, 0), principal_axis_xy(1, 1), bending_inertia_ts(0, 0), bending_inertia_ts(1, 1), principal_axis_ts(0, 0), principal_axis_ts(1, 1));
 }
 
 double XFoil::DeRotate() {
@@ -10674,7 +10671,7 @@ double XFoil::DeRotate() {
   spline::segspl(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
 
   geopar(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb, w1, sble, chordb, areab, radble, angbte,
-         ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
+         bending_inertia_xy(0, 0), bending_inertia_xy(1, 1), principal_axis_xy(0, 0), principal_axis_xy(1, 1), bending_inertia_ts(0, 0), bending_inertia_ts(1, 1), principal_axis_ts(0, 0), principal_axis_ts(1, 1));
 
   return arad * 180.0 / PI;
 }
@@ -10740,7 +10737,7 @@ void XFoil::tgap(double gapnew, double blend) {
   spline::segspl(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
 
   geopar(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb, w1, sble, chordb, areab, radble, angbte,
-         ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
+         bending_inertia_xy(0, 0), bending_inertia_xy(1, 1), principal_axis_xy(0, 0), principal_axis_xy(1, 1), bending_inertia_ts(0, 0), bending_inertia_ts(1, 1), principal_axis_ts(0, 0), principal_axis_ts(1, 1));
 
   //	lgeopl = false;
   lgsame = false;
@@ -10768,7 +10765,7 @@ void XFoil::lerad(double rfac, double blend) {
   spline::segspl(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
 
   geopar(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb, w1, sble, chordb, areab, radble, angbte,
-         ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
+         bending_inertia_xy(0, 0), bending_inertia_xy(1, 1), principal_axis_xy(0, 0), principal_axis_xy(1, 1), bending_inertia_ts(0, 0), bending_inertia_ts(1, 1), principal_axis_ts(0, 0), principal_axis_ts(1, 1));
 
   //---- find max curvature
   cvmax = 0.0;
@@ -10895,7 +10892,7 @@ void XFoil::naca4(int ides, int nside) {
   spline::segspl(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
 
   geopar(buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb, w1, sble, chordb, areab, radble, angbte,
-         ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt);
+         bending_inertia_xy(0, 0), bending_inertia_xy(1, 1), principal_axis_xy(0, 0), principal_axis_xy(1, 1), bending_inertia_ts(0, 0), bending_inertia_ts(1, 1), principal_axis_ts(0, 0), principal_axis_ts(1, 1));
 }
 
 /**

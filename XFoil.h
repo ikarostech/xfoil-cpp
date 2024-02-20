@@ -438,7 +438,8 @@ class XFoil {
   VectorXd buffer_spline_length;
   double xof, yof, sble, chordb;
   double areab, radble, angbte;
-  double ei11ba, ei22ba, apx1ba, apx2ba, ei11bt, ei22bt, apx1bt, apx2bt;
+  Matrix2d bending_inertia_xy, bending_inertia_ts;
+  Matrix2d principal_axis_xy, principal_axis_ts;
 
 
   double sle, xle, yle, xte, yte;
