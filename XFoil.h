@@ -219,7 +219,7 @@ class XFoil {
   
   bool setbl();
   bool setexp(double s[], double ds1, double smax, int nn);
-  bool sinvrt(double &si, double xi, double x[], double xs[], double s[],
+  bool sinvrt(double &si, double xi, VectorXd x, VectorXd xs, VectorXd s,
               int n);
 
   bool stepbl();
@@ -306,12 +306,12 @@ class XFoil {
   double sccon, gacon, gbcon, gbc0, gbc1, gccon, dlcon, ctcon;
 
   //---- dimension temporary work and storage arrays [equivalenced below]
-  double w1[6 * IQX], w2[6 * IQX], w3[6 * IQX], w4[6 * IQX];
+  VectorXd w1, w2, w3, w4;
 
   int nsys;
   double isys[IVX][ISX];
-  vector<double> xbp, ybp, snew;
-  VectorXd buffer_spline_length;
+  vector<double> xbp, ybp;
+  VectorXd snew, buffer_spline_length;
   double xof, yof;
 
   double sle;

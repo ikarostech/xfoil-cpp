@@ -12,7 +12,7 @@ Eigen::VectorXd spline::scalc(Eigen::MatrixX2d points, int n, const int s_size) 
 }
 /**	  Calculates x(ss)
  *	   xs array must have been calculated by spline */
-double spline::seval(double ss, const double x[], const double xs[], const double s[], int n) {
+double spline::seval(double ss, Eigen::VectorXd x, Eigen::VectorXd xs, Eigen::VectorXd s, int n) {
 
     //TODO: INDEX_START_WITH=1
     int l = 1;
@@ -41,12 +41,10 @@ double spline::seval(double ss, const double x[], const double xs[], const doubl
 *	   calculates dx/ds(ss)                         |
 *	   xs array must have been calculated by spline |
 * -------------------------------------------------- */
-double spline::deval(double ss, const double x[], const double xs[], const double s[], int n) {
+double spline::deval(double ss, Eigen::VectorXd x, Eigen::VectorXd xs, Eigen::VectorXd s, int n) {
 
-    //FIXME 引数のVector化
-    std::vector<double> s_vector(s, s + n - 1 + INDEX_START_WITH);
-    int i = std::distance(s_vector.begin(), std::lower_bound(s_vector.begin(), s_vector.end(), ss));
-
+    int i = std::distance(s.begin(), std::lower_bound(s.begin(), s.begin() + n, ss));
+    
     const double ds = s[i] - s[i - 1];
     const double dx = x[i] - x[i - 1];
     const double t = (ss - s[i - 1]) / ds;
@@ -60,11 +58,10 @@ double spline::deval(double ss, const double x[], const double xs[], const doubl
  *      calculates d2x/ds2(ss)                          /
  *      xs array must have been calculated by spline    /
  * --------------------------------------------------- */
-double spline::d2val(double ss, const double x[], const double xs[], const double s[], int n) {
-    //FIXME 引数のVector化
-    std::vector<double> s_vector(s, s + n - 1 + INDEX_START_WITH);
-    int i = std::distance(s_vector.begin(), std::lower_bound(s_vector.begin(), s_vector.end(), ss));
+double spline::d2val(double ss, Eigen::VectorXd x, Eigen::VectorXd xs, Eigen::VectorXd s, int n) {
 
+    int i = std::distance(s.begin(), std::lower_bound(s.begin(), s.begin() + n, ss));
+    
     const double ds = s[i] - s[i - 1];
     const double t = (ss - s[i - 1]) / ds;
     const double cx1 = ds * xs[i - 1] - x[i] + x[i - 1];

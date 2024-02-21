@@ -138,7 +138,7 @@ bool XFoil::initialize() {
   spline_length.resize(IZX);
   buffer_spline_length.resize(IBX);
   memset(sig, 0, sizeof(sig));
-  snew.resize(4 * IBX, 0);
+  snew = VectorXd::Zero(4 * IBX);
   memset(sig, 0, sizeof(sig));
   memset(tau, 0, sizeof(tau));
   memset(thet, 0, sizeof(thet));
@@ -166,10 +166,10 @@ bool XFoil::initialize() {
   memset(vsm, 0, sizeof(vsm));
   memset(vsx, 0, sizeof(vsx));
   memset(vz, 0, sizeof(vz));
-  memset(w1, 0, sizeof(w1));
-  memset(w2, 0, sizeof(w2));
-  memset(w3, 0, sizeof(w3));
-  memset(w4, 0, sizeof(w4));
+  w1 = VectorXd::Zero(6 * IQX);
+  w2 = VectorXd::Zero(6 * IQX);
+  w3 = VectorXd::Zero(6 * IQX);
+  w4 = VectorXd::Zero(6 * IQX);
 
   memset(ctau, 0, sizeof(ctau));
   memset(ctq, 0, sizeof(ctq));
@@ -410,8 +410,8 @@ bool XFoil::abcopy() {
   spline::segspl(points.col(1).data(), dpoints_ds.col(1).data(), spline_length.data(), n);
   ncalc(points, spline_length, n, nx.data(), ny.data());
   lefind(sle, points, dpoints_ds, spline_length, n);
-  point_le.x() = spline::seval(sle, points.col(0).data(), dpoints_ds.col(0).data(), spline_length.data(), n);
-  point_le.y() = spline::seval(sle, points.col(1).data(), dpoints_ds.col(1).data(), spline_length.data(), n);
+  point_le.x() = spline::seval(sle, points.col(0), dpoints_ds.col(0), spline_length, n);
+  point_le.y() = spline::seval(sle, points.col(1), dpoints_ds.col(1), spline_length, n);
   point_te.x() = 0.5 * (points.row(1).x() + points.row(n).x());
   point_te.y() = 0.5 * (points.row(1).y() + points.row(n).y());
   chord = (point_le - point_te).norm();
@@ -425,11 +425,6 @@ bool XFoil::abcopy() {
   lwdij = false;
   lipan = false;
   lvconv = false;
-  //	lscini = false;
-
-  //   write(*,1200) n
-  // 1200 format(/' current airfoil nodes set from buffer airfoil nodes (', i4,'
-  // )')
 
   return true;
 }
@@ -2239,10 +2234,10 @@ bool XFoil::getxyf(MatrixX2d points, MatrixX2d dpoints_ds, VectorXd s,
 
   tops = s[1] + (points.row(1).x() - xf);
   bots = s[n] - (points.row(n).x() - xf);
-  sinvrt(tops, xf, points.col(0).data(), dpoints_ds.col(0).data(), s.data(), n);
-  sinvrt(bots, xf, points.col(0).data(), dpoints_ds.col(0).data(), s.data(), n);
-  topy = spline::seval(tops, points.col(1).data(), dpoints_ds.col(1).data(), s.data(), n);
-  boty = spline::seval(bots, points.col(1).data(), dpoints_ds.col(1).data(), s.data(), n);
+  sinvrt(tops, xf, points.col(0), dpoints_ds.col(0), s, n);
+  sinvrt(bots, xf, points.col(0), dpoints_ds.col(0), s, n);
+  topy = spline::seval(tops, points.col(1), dpoints_ds.col(1), s, n);
+  boty = spline::seval(bots, points.col(1), dpoints_ds.col(1), s, n);
 
   yrel = yf;
 
@@ -2714,12 +2709,12 @@ bool XFoil::lefind(double &sle, MatrixX2d points, MatrixX2d dpoints_ds, VectorXd
 
   //---- newton iteration to get exact sle value
   for (iter = 1; iter <= 50; iter++) {
-    point_le.x() = spline::seval(sle, points.col(0).data(), dpoints_ds.col(0).data(), s.data(), n);
-    point_le.y() = spline::seval(sle, points.col(1).data(), dpoints_ds.col(1).data(), s.data(), n);
-    const double dxds = spline::deval(sle, points.col(0).data(), dpoints_ds.col(0).data(), s.data(), n);
-    const double dyds = spline::deval(sle, points.col(1).data(), dpoints_ds.col(1).data(), s.data(), n);
-    const double dxdd = spline::d2val(sle, points.col(0).data(), dpoints_ds.col(0).data(), s.data(), n);
-    const double dydd = spline::d2val(sle, points.col(1).data(), dpoints_ds.col(1).data(), s.data(), n);
+    point_le.x() = spline::seval(sle, points.col(0), dpoints_ds.col(0), s, n);
+    point_le.y() = spline::seval(sle, points.col(1), dpoints_ds.col(1), s, n);
+    const double dxds = spline::deval(sle, points.col(0), dpoints_ds.col(0), s, n);
+    const double dyds = spline::deval(sle, points.col(1), dpoints_ds.col(1), s, n);
+    const double dxdd = spline::d2val(sle, points.col(0), dpoints_ds.col(0), s, n);
+    const double dydd = spline::d2val(sle, points.col(1), dpoints_ds.col(1), s, n);
 
     Vector2d point_chord = point_le - point_te;
 
@@ -2829,14 +2824,14 @@ bool XFoil::mhinge() {
     //------ find top and bottom y at hinge x location
     tops = xof;
     bots = spline_length[n] - xof;
-    sinvrt(tops, xof, points.col(0).data(), dpoints_ds.col(0).data(), spline_length.data(), n);
-    sinvrt(bots, xof, points.col(0).data(), dpoints_ds.col(0).data(), spline_length.data(), n);
+    sinvrt(tops, xof, points.col(0), dpoints_ds.col(0), spline_length, n);
+    sinvrt(bots, xof, points.col(0), dpoints_ds.col(0), spline_length, n);
   }
 
-  topx = spline::seval(tops, points.col(0).data(), dpoints_ds.col(0).data(), spline_length.data(), n);
-  topy = spline::seval(tops, points.col(1).data(), dpoints_ds.col(1).data(), spline_length.data(), n);
-  botx = spline::seval(bots, points.col(0).data(), dpoints_ds.col(0).data(), spline_length.data(), n);
-  boty = spline::seval(bots, points.col(1).data(), dpoints_ds.col(1).data(), spline_length.data(), n);
+  topx = spline::seval(tops, points.col(0), dpoints_ds.col(0), spline_length, n);
+  topy = spline::seval(tops, points.col(1), dpoints_ds.col(1), spline_length, n);
+  botx = spline::seval(bots, points.col(0), dpoints_ds.col(0), spline_length, n);
+  boty = spline::seval(bots, points.col(1), dpoints_ds.col(1), spline_length, n);
 
   hmom = 0.0;
   hfx = 0.0;
@@ -4855,8 +4850,8 @@ bool XFoil::setbl() {
         chx = point_te.x() - point_le.x();
         chy = point_te.y() - point_le.y();
         chsq = chx * chx + chy * chy;
-        xtr = spline::seval(str, points.col(0).data(), dpoints_ds.col(0).data(), spline_length.data(), n);
-        ytr = spline::seval(str, points.col(1).data(), dpoints_ds.col(1).data(), spline_length.data(), n);
+        xtr = spline::seval(str, points.col(0), dpoints_ds.col(0), spline_length, n);
+        ytr = spline::seval(str, points.col(1), dpoints_ds.col(1), spline_length, n);
         xoctr[is] = ((xtr - point_le.x()) * chx + (ytr - point_le.y()) * chy) / chsq;
         yoctr[is] = ((ytr - point_le.y()) * chx - (xtr - point_le.x()) * chy) / chsq;
       }
@@ -5011,8 +5006,7 @@ double XFoil::sign(double a, double b) {
  * 	   si	   calculated s(xi) value  (input,output)
  * 	   x,xs,s  usual spline arrays	   (input)
  */
-bool XFoil::sinvrt(double &si, double xi, double x[], double xs[], double spline_length[],
-                   int n) {
+bool XFoil::sinvrt(double &si, double xi, VectorXd x, VectorXd xs, VectorXd spline_length, int n) {
   int iter;
   double sisav;
   sisav = si;
@@ -6619,15 +6613,15 @@ bool XFoil::xifset(int is) {
     w2[i] = ((points.row(i).y() - point_le.y()) * chx - (points.row(i).x() - point_le.x()) * chy) / chsq;
   }
 
-  spline::splind(w1, w3, spline_length.data(), n, -999.0, -999.0);
-  spline::splind(w2, w4, spline_length.data(), n, -999.0, -999.0);
+  spline::splind(w1.data(), w3.data(), spline_length.data(), n, -999.0, -999.0);
+  spline::splind(w2.data(), w4.data(), spline_length.data(), n, -999.0, -999.0);
 
   if (is == 1) {
     //----- set approximate arc length of forced transition point for sinvrt
     str = sle + (spline_length[1] - sle) * xstrip[is];
 
     //----- calculate actual arc length
-    sinvrt(str, xstrip[is], w1, w3, spline_length.data(), n);
+    sinvrt(str, xstrip[is], w1, w3, spline_length, n);
 
     //----- set bl coordinate value
     xiforc = std::min((sst - str), xssi[iblte[is]][is]);
@@ -6635,7 +6629,7 @@ bool XFoil::xifset(int is) {
     //----- same for bottom side
 
     str = sle + (spline_length[n] - sle) * xstrip[is];
-    sinvrt(str, xstrip[is], w1, w3, spline_length.data(), n);
+    sinvrt(str, xstrip[is], w1, w3, spline_length, n);
     xiforc = std::min((str - sst), xssi[iblte[is]][is]);
   }
 

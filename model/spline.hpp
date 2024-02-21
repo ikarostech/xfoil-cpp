@@ -16,19 +16,19 @@ class spline {
      * @return std::vector<double> 始点からの累計長さのデータ
      */
     static Eigen::VectorXd scalc(const Eigen::MatrixX2d points, int n, const int s_size);
-    static double seval(double ss, const double x[], const double xs[], const double s[], int n);
+    static double seval(double ss, Eigen::VectorXd x, Eigen::VectorXd xs, Eigen::VectorXd s, int n);
 
     /** --------------------------------------------------
     *	   calculates dx/ds(ss)                         |
     *	   xs array must have been calculated by spline |
     * -------------------------------------------------- */
-    static double deval(double ss, const double x[], const double xs[], const double s[], int n);
+    static double deval(double ss, Eigen::VectorXd x, Eigen::VectorXd xs, Eigen::VectorXd s, int n);
 
     /** --------------------------------------------------
      *      calculates d2x/ds2(ss)                          /
      *      xs array must have been calculated by spline    /
      * --------------------------------------------------- */
-    static double d2val(double ss, const double x[], const double xs[], const double s[], int n);
+    static double d2val(double ss, Eigen::VectorXd x, Eigen::VectorXd xs, Eigen::VectorXd s, int n);
 
     /** -------------------------------------------------------
      *      Calculates spline coefficients for x(s).          |
