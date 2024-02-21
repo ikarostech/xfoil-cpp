@@ -184,22 +184,6 @@ TEST_F(DatGoogleTest, test_blmid_turbulent_wake) {
   ASSERT_DOUBLE_EQ(0, foil->cfm_re);
 }
 
-TEST_F(DatGoogleTest, test_isInside_true) {
-  //when
-  bool actual = foil->isInside(plots, {0.1, 0.05});
-
-  //then
-  ASSERT_TRUE(actual);
-}
-
-TEST_F(DatGoogleTest, test_isInside_false) {
-  //when
-  bool actual = foil->isInside(plots, {0.1, 0.35});
-
-  //then
-  ASSERT_FALSE(actual);
-}
-
 TEST_F(DatGoogleTest, test_blvar_cfz_wake) {
   //given
   foil->blData1.hkz = foil->blData2.hkz = 6.0;

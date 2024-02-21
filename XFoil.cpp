@@ -52,8 +52,6 @@ XFoil::XFoil() {
   //	ncom = 73;
 
   // imx   number of complex mapping coefficients  cn
-  m_bTrace = false;
-  m_ctrl = 0.0;
 
   sccon = 5.6;
   gacon = 6.70;
@@ -72,18 +70,6 @@ XFoil::XFoil() {
   acrit = 9.0;
   xstrip[1] = 1.0;
   xstrip[2] = 1.0;
-
-  // intialize analysis parameter  until user changes them
-  //---- default paneling parameters
-  cvpar = 1.0;
-  cterat = 0.15;
-  ctrrat = 0.2;
-
-  //---- default paneling refinement zone x/c endpoints
-  xsref1 = 1.0;
-  xsref2 = 1.0;
-  xpref1 = 1.0;
-  xpref2 = 1.0;
 
   //---- initialize freestream mach number to zero
   mach_type = MachType::CONSTANT;
@@ -124,16 +110,12 @@ bool XFoil::initialize() {
   memset(ctq, 0, sizeof(ctq));
   memset(dij, 0, sizeof(dij));
   memset(dis, 0, sizeof(dis));
-  memset(dq, 0, sizeof(dq));
   memset(dqdg, 0, sizeof(dqdg));
   memset(dqdm, 0, sizeof(dqdm));
-  memset(delt, 0, sizeof(delt));
   memset(dstr, 0, sizeof(dstr));
   memset(dzdg, 0, sizeof(dzdg));
   memset(dzdm, 0, sizeof(dzdm));
   memset(dzdn, 0, sizeof(dzdn));
-  memset(guxd, 0, sizeof(guxd));
-  memset(guxq, 0, sizeof(guxq));
   memset(iblte, 0, sizeof(iblte));
   memset(ipan, 0, sizeof(ipan));
   memset(isys, 0, sizeof(isys));
@@ -145,7 +127,6 @@ bool XFoil::initialize() {
   memset(gamu, 0, sizeof(gamu));
   memset(gam, 0, sizeof(gam));
   memset(gam_a, 0, sizeof(gam_a));
-  memset(q, 0, sizeof(q));
   memset(qf0, 0, sizeof(qf0));
   memset(qf1, 0, sizeof(qf1));
   memset(qf2, 0, sizeof(qf2));
@@ -163,7 +144,6 @@ bool XFoil::initialize() {
   memset(thet, 0, sizeof(thet));
   memset(uedg, 0, sizeof(uedg));
   memset(uinv, 0, sizeof(uinv));
-  memset(uslp, 0, sizeof(uslp));
   memset(vti, 0, sizeof(vti));
   points.resize(IZX, 2);
   buffer_points.resize(IBX, 2);
@@ -190,10 +170,6 @@ bool XFoil::initialize() {
   memset(w2, 0, sizeof(w2));
   memset(w3, 0, sizeof(w3));
   memset(w4, 0, sizeof(w4));
-  memset(w5, 0, sizeof(w5));
-  memset(w6, 0, sizeof(w6));
-  memset(w7, 0, sizeof(w7));
-  memset(w8, 0, sizeof(w8));
 
   memset(ctau, 0, sizeof(ctau));
   memset(ctq, 0, sizeof(ctq));
@@ -202,40 +178,10 @@ bool XFoil::initialize() {
   memset(tau, 0, sizeof(tau));
   memset(thet, 0, sizeof(thet));
   memset(uedg, 0, sizeof(uedg));
-  memset(xbl, 0, sizeof(xbl));
-  memset(Hk, 0, sizeof(Hk));
-  memset(RTheta, 0, sizeof(RTheta));
   memset(itran, 0, sizeof(itran));
-  m_nSide1 = m_nSide2 = 0;
+  
   // mdes
-  memset(wc, 0, sizeof(wc));
-  memset(sc, 0, sizeof(sc));
-  memset(scold, 0, sizeof(scold));
-  memset(xcold, 0, sizeof(xcold));
-  memset(ycold, 0, sizeof(ycold));
-  memset(sspec, 0, sizeof(sspec));
-  memset(xspoc, 0, sizeof(xspoc));
-  memset(yspoc, 0, sizeof(yspoc));
   memset(qgamm, 0, sizeof(qgamm));
-  memset(qspec, 0, sizeof(qspec));
-  memset(qspecp, 0, sizeof(qspecp));
-  memset(alqsp, 0, sizeof(alqsp));
-  memset(clqsp, 0, sizeof(clqsp));
-  memset(cmqsp, 0, sizeof(cmqsp));
-
-  ncam = nthk = 0;
-
-  agte = 0.0;
-  ag0 = 0.0;
-  qim0 = 0.0;
-  qimold = 0.0;
-  ssple = 0.0;
-  dwc = 0.0;
-  algam = 0.0;
-  clgam = 0.0;
-  cmgam = 0.0;
-
-  niterq = 6;
 
   //---- default cp/cv (air)
   gamma = 1.4;
@@ -252,58 +198,23 @@ bool XFoil::initialize() {
 
   sigte = 0.0;
   gamte = 0.0;
-  //	sigte_a = 0.0;
-  //	gamte_a = 0.0;
-
-  nsp = 0;
-  nqsp = 0;
 
   awake = 0.0;
   avisc = 0.0;
 
-  //	kimage = 1;
-  yimage = -10.0;
-  limage = false;
-
-  liqset = false;  //???
   lgamu = false;
-  lqinu = false;  //???
   lvisc = false;
   lwake = false;
-  //	lpacc  = false;
   lblini = false;
   lipan = false;
   lqaij = false;
   ladij = false;
   lwdij = false;
-  lcpxx = false;
-  //	lqvdes = false;
-  lqspec = false;
-  //	lqrefl = false;
   lvconv = false;
-  //	lcpref = false;
-  //	lforef = false;
-  //	lpfile = false;
-  //	lpfilx = false;
-  //	lppsho = false;
-  leiw = false;
-  lscini = false;
-
-  //	lclip  = false;
-  //	lvlab  = true;
-  //	lcminp = false;
-  //	lhmomp = false;
-
-  //	lcurs  = true;
-  //	lland  = true;
   lgsame = false;
-
-  //	lgparm = true;
-  //	lplcam = false;
 
   sharp = false;
   lalfa = false;
-  lbflap = false;
   lflap = false;
   trforc = false;
   simi = false;
@@ -314,18 +225,6 @@ bool XFoil::initialize() {
   tforce[0] = false;
   tforce[1] = false;
   tforce[2] = false;
-
-  //---- input airfoil will not be normalized
-  //	lnorm = false;
-
-  //---- airfoil will not be forced symmetric
-  lqsym = false;
-  //	lgsym = false;
-
-  //---- endpoint slopes will be matched
-  lqslop = true;
-  //	lgslop = true;
-  //	lcslop = true;
 
   //---- buffer and current airfoil flap hinge coordinates
   xbf = 0.0;
@@ -379,8 +278,6 @@ bool XFoil::initialize() {
   ist = 0;
   nb = 0;
 
-  iacqsp = 1;
-
   dwte = 0.0;
   qinfbl = 0.0;
   tkbl = 0.0;
@@ -408,7 +305,6 @@ bool XFoil::initialize() {
   rmsbl = 0.0;
   rlx = 0.0;
   ante = 0.0;
-  ddef = 0.0;
   cpmn = 0.0;
   clspec = 0.0;
   minf = 0.0;
@@ -416,15 +312,9 @@ bool XFoil::initialize() {
   minf_cl = 0.0;
   reinf_cl = 0.0;
 
-  sble = 0.0;
-
   sle = 0.0;
-  xle = 0.0;
-  yle = 0.0;
-  xte = 0.0;
-  yte = 0.0;
+
   chord = 0.0;
-  ch = 0.0;
   cl_alf = 0.0;
   cl_msq = 0.0;
   cosa = 0.0;
@@ -437,21 +327,12 @@ bool XFoil::initialize() {
   cpmnv = 0.0;
   xcpmni = 0.0;
   xcpmnv = 0.0;
-  arad = 0.0;
   sst = 0.0;
   sst_go = 0.0;
   sst_gp = 0.0;
   dste = 0.0;
   aste = 0.0;
 
-  qtan1 = 0.0;
-  qtan2 = 0.0;
-  z_qinf = 0.0;
-  z_alfa = 0.0;
-  z_qdof0 = 0.0;
-  z_qdof1 = 0.0;
-  z_qdof2 = 0.0;
-  z_qdof3 = 0.0;
   cfm = 0.0;
   cfm_ms = 0.0;
   cfm_re = 0.0;
@@ -474,16 +355,6 @@ bool XFoil::initialize() {
   xt_t2 = 0.0;
   xt_d2 = 0.0;
   xt_u2 = 0.0;
-
-  cvpar = 1.0;
-  cterat = 0.15;
-  ctrrat = 0.2;
-
-  //---- default paneling refinement zone x/c endpoints
-  xsref1 = 1.0;
-  xsref2 = 1.0;
-  xpref1 = 1.0;
-  xpref2 = 1.0;
 
   //---- drop tolerance for bl system solver
   vaccel = 0.01;
@@ -520,12 +391,6 @@ bool XFoil::abcopy() {
   }
   lgsame = true;
 
-  if (lbflap) {
-    xof = xbf;
-    yof = ybf;
-    lflap = true;
-  }
-
   //---- strip out doubled points
   i = 1;
 
@@ -539,22 +404,21 @@ bool XFoil::abcopy() {
       n = n - 1;
     }
   }
-  cout<<"strip out"<<endl;
+
   spline_length.segment(1, spline_length.size() - 1) = spline::scalc(points.middleRows(1, points.rows() - 1), n, spline_length.size() - 1);
   spline::segspl(points.col(0).data(), dpoints_ds.col(0).data(), spline_length.data(), n);
   spline::segspl(points.col(1).data(), dpoints_ds.col(1).data(), spline_length.data(), n);
-  ncalc(points.col(0).data(), points.col(1).data(), spline_length.data(), n, nx.data(), ny.data());
-  lefind(sle, points.col(0).data(), dpoints_ds.col(0).data(), points.col(1).data(), dpoints_ds.col(1).data(), spline_length.data(), n);
-  xle = spline::seval(sle, points.col(0).data(), dpoints_ds.col(0).data(), spline_length.data(), n);
-  yle = spline::seval(sle, points.col(1).data(), dpoints_ds.col(1).data(), spline_length.data(), n);
-  xte = 0.5 * (points.row(1).x() + points.row(n).x());
-  yte = 0.5 * (points.row(1).y() + points.row(n).y());
-  chord = sqrt((xte - xle) * (xte - xle) + (yte - yle) * (yte - yle));
+  ncalc(points, spline_length, n, nx.data(), ny.data());
+  lefind(sle, points, dpoints_ds, spline_length, n);
+  point_le.x() = spline::seval(sle, points.col(0).data(), dpoints_ds.col(0).data(), spline_length.data(), n);
+  point_le.y() = spline::seval(sle, points.col(1).data(), dpoints_ds.col(1).data(), spline_length.data(), n);
+  point_te.x() = 0.5 * (points.row(1).x() + points.row(n).x());
+  point_te.y() = 0.5 * (points.row(1).y() + points.row(n).y());
+  chord = (point_le - point_te).norm();
   tecalc();
   apcalc();
 
   lgamu = false;
-  lqinu = false;
   lwake = false;
   lqaij = false;
   ladij = false;
@@ -566,136 +430,6 @@ bool XFoil::abcopy() {
   //   write(*,1200) n
   // 1200 format(/' current airfoil nodes set from buffer airfoil nodes (', i4,'
   // )')
-
-  return true;
-}
-
-/** ---------------------------------------------------------------
- *      calculates geometric properties of shape x,y
- *
- *      input:
- *        n      number of points
- *        x(.)   shape coordinate point arrays
- *        y(.)
- *        t(.)   skin-thickness array, used only if itype = 2
- *        itype  = 1 ...   integration is over whole area  dx dy
- *               = 2 ...   integration is over skin  area   t ds
- *
- *      output:
- *        xcen,ycen  centroid location
- *        ei11,ei22  principal moments of inertia
- *        apx1,apx2  principal-axis angles
- * ---------------------------------------------------------------*/
-bool XFoil::aecalc(int n, const double x[], const double y[], const double t[], int itype,
-                   double &area, double &xcen, double &ycen, double &ei11,
-                   double &ei22, double &apx1, double &apx2) {
-  double sint, aint, xint, yint, xxint, yyint, xyint;
-  double eixx, eiyy, eixy, eisq;
-  double da, c1, c2, sgn;
-  int ip, io;
-  sint = 0.0;
-  aint = 0.0;
-  xint = 0.0;
-  yint = 0.0;
-  xxint = 0.0;
-  xyint = 0.0;
-  yyint = 0.0;
-
-  for (io = 1; io <= n; io++) {
-    if (io == n)
-      ip = 1;
-    else
-      ip = io + 1;
-
-    double dx = x[io] - x[ip];
-    double dy = y[io] - y[ip];
-    double xa = (x[io] + x[ip]) * 0.50;
-    double ya = (y[io] + y[ip]) * 0.50;
-    double ta = (t[io] + t[ip]) * 0.50;
-
-    double ds = sqrt(dx * dx + dy * dy);
-    sint = sint + ds;
-
-    if (itype == 1) {
-      //-------- integrate over airfoil cross-section
-      da = ya * dx;
-      aint = aint + da;
-      xint = xint + xa * da;
-      yint = yint + ya * da / 2.0;
-      xxint = xxint + xa * xa * da;
-      xyint = xyint + xa * ya * da / 2.0;
-      yyint = yyint + ya * ya * da / 3.0;
-    } else {
-      //-------- integrate over skin thickness
-      da = ta * ds;
-      aint = aint + da;
-      xint = xint + xa * da;
-      yint = yint + ya * da;
-      xxint = xxint + xa * xa * da;
-      xyint = xyint + xa * ya * da;
-      yyint = yyint + ya * ya * da;
-    }
-  }
-
-  area = aint;
-
-  if (aint == 0.0) {
-    xcen = 0.0;
-    ycen = 0.0;
-    ei11 = 0.0;
-    ei22 = 0.0;
-    apx1 = 0.0;
-    apx2 = atan2(1.0, 0.0);
-    return false;
-  }
-
-  //---- calculate centroid location
-  xcen = xint / aint;
-  ycen = yint / aint;
-
-  //---- calculate inertias
-  eixx = yyint - (ycen) * (ycen)*aint;
-  eixy = xyint - (xcen) * (ycen)*aint;
-  eiyy = xxint - (xcen) * (xcen)*aint;
-
-  //---- set principal-axis inertias, ei11 is closest to "up-down" bending
-  // inertia
-  eisq = 0.25 * (eixx - eiyy) * (eixx - eiyy) + eixy * eixy;
-  sgn = sign(1.0, eiyy - eixx);
-  ei11 = 0.5 * (eixx + eiyy) - sgn * sqrt(eisq);
-  ei22 = 0.5 * (eixx + eiyy) + sgn * sqrt(eisq);
-
-  if (ei11 == 0.0 || ei22 == 0.0) {
-    //----- vanishing section stiffness
-    apx1 = 0.0;
-    apx2 = atan2(1.0, 0.0);
-  } else {
-    if (eisq / ((ei11) * (ei22)) < pow((0.001 * sint), 4.0)) {
-      //----- rotationally-invariant section (circle, square, etc.)
-      apx1 = 0.0;
-      apx2 = atan2(1.0, 0.0);
-    } else {
-      //----- normal airfoil section
-      c1 = eixy;
-      blData1.sz = eixx - ei11;
-
-      c2 = eixy;
-      blData2.sz = eixx - ei22;
-
-      if (fabs(blData1.sz) > fabs(blData2.sz)) {
-        apx1 = atan2(blData1.sz, c1);
-        apx2 = apx1 + 0.5 * PI;
-      } else {
-        apx2 = atan2(blData2.sz, c2);
-        apx1 = apx2 - 0.5 * PI;
-      }
-
-      if (apx1 < -0.5 * PI) apx1 = apx1 + PI;
-      if (apx1 > +0.5 * PI) apx1 = apx1 - PI;
-      if (apx2 < -0.5 * PI) apx2 = apx2 + PI;
-      if (apx2 > +0.5 * PI) apx2 = apx2 - PI;
-    }
-  }
 
   return true;
 }
@@ -2231,8 +1965,6 @@ bool XFoil::cpcalc(int n, const double q[], double qinf, double minf, double cp[
 }
 
 void XFoil::writeString(std::string str, bool bFullReport) {
-  // if (!bFullReport && !s_bFullReport) return;
-  // if (!m_pOutStream) return;
   *m_pOutStream << str;
 }
 
@@ -2501,215 +2233,16 @@ bool XFoil::Gauss(int nn, double z[][6], double r[5]) {
   return true;
 }
 
-/** *****************************************************
- *                                                     *
- *   solves general nxn system in nn unknowns          *
- *    with arbitrary number (nrhs) of righthand sides. *
- *   assumes system is invertible...                   *
- *    ...if it isn't, a divide by zero will result.    *
- *                                                     *
- *   z is the coefficient matrix...                    *
- *     ...destroyed during solution process.           *
- *   r is the righthand side(s)...                     *
- *     ...replaced by the solution vector(s).          *
- *                                                     *
- *                              mark drela  1984       *
- ****************************************************** */
-bool XFoil::Gauss(int nn, double z[IQX][IQX], double r[IQX]) {
-  // techwinder : only one rhs is enough ! nrhs = 1
-  // dimension z(nsiz,nsiz), r(nsiz,nrhs)
-
-  int loc;
-  int np, nnpp, nt, k;
-
-  double temp, ztmp;
-
-  for (np = 1; np <= nn - 1; np++) {
-    nnpp = np + 1;
-    //------ find max pivot index nx
-    int nx = np;
-    for (nt = nnpp; nt <= nn; nt++) {
-      if (fabs(z[nt][np]) > fabs(z[nx][np])) nx = nt;
-    }
-
-    double pivot = 1.0 / z[nx][np];
-
-    //------ switch pivots
-    z[nx][np] = z[np][np];
-
-    //------ switch rows & normalize pivot row
-    for (loc = nnpp; loc <= nn; loc++) {
-      temp = z[nx][loc] * pivot;
-      z[nx][loc] = z[np][loc];
-      z[np][loc] = temp;
-    }
-
-    temp = r[nx] * pivot;
-    r[nx] = r[np];
-    r[np] = temp;
-
-    //------ forward eliminate everything
-    for (k = nnpp; k <= nn; k++) {
-      ztmp = z[k][np];
-      for (loc = nnpp; loc <= nn; loc++)
-        z[k][loc] = z[k][loc] - ztmp * z[np][loc];
-      r[k] = r[k] - ztmp * r[np];
-    }
-  }
-
-  //---- solve for last row
-  r[nn] = r[nn] / z[nn][nn];
-
-  //---- back substitute everything
-  for (np = nn - 1; np >= 1; np--) {
-    nnpp = np + 1;
-    for (k = nnpp; k <= nn; k++) r[np] = r[np] - z[np][k] * r[k];
-  }
-
-  return true;
-}
-
-/** ------------------------------------------------------
- *      locates leftmost (minimum x) point location sle
- *
- *      the defining condition is
- *
- *       x' = 0     at  s = sle
- *
- *      i.e. the surface tangent is vertical
- * ------------------------------------------------------ */
-void XFoil::xlfind(double &sle, double x[], double xp[], double y[],
-                   double yp[], double s[], int n) {
-  double dslen, dseps;
-  int i, iter;
-  dslen = s[n] - s[1];
-
-  //---- convergence tolerance
-  dseps = (s[n] - s[1]) * 0.00001;
-
-  //---- get first guess for sle
-  for (i = 3; i <= n - 2; i++) {
-    double dx = x[i + 1] - x[i];
-    if (dx > 0.0) break;
-  }
-
-  sle = s[i];
-
-  //---- check for sharp le case
-  if (fabs(s[i] - s[i - 1]) < 1.e-06) {  // changed techwinder
-    // ccc        write(*,*) 'sharp le found at ',i,sle
-    return;
-  }
-
-  //---- newton iteration to get exact sle value
-  for (iter = 1; iter <= 50; iter++) {
-    double dxds = spline::deval(sle, x, xp, s, n);
-    double dxdd = spline::d2val(sle, x, xp, s, n);
-
-    //------ drive dxds to zero
-    double res = dxds;
-    double ress = dxdd;
-
-    //------ newton delta for sle
-    double dsle = -res / ress;
-
-    dsle = max(dsle, -0.01 * fabs(dslen));
-    dsle = min(dsle, 0.01 * fabs(dslen));
-    sle += dsle;
-    if (fabs(dsle) < dseps) return;
-  }
-  //      write(*,*) 'xlfind:  left point not found.  continuing...'
-  sle = s[i];
-}
-
-/** --------------------------------------------------
- *      calculates arc length sopp of point
- *      which is opposite of point si, on the
- *      other side of the airfoil baseline
- * -------------------------------------------------- */
-void XFoil::sopps(double &sopp, double si, double x[], double xp[], double y[],
-                  double yp[], double s[], int n, double sle) {
-  //      dimension x(*),xp(*),y(*),yp(*),s(*)
-  double chord, slen, dxc, dyc, sfrac;
-  double xi, yi, xbar;
-  int in, inopp;
-  //---- reference length for testing convergence
-  slen = s[n] - s[1];
-
-  //---rational alternative 4/24/01 hhy
-  xle = spline::seval(sle, x, xp, s, n);
-  yle = spline::seval(sle, y, yp, s, n);
-  xte = 0.5 * (x[1] + x[n]);
-  yte = 0.5 * (y[1] + y[n]);
-  chord = sqrt((xte - xle) * (xte - xle) + (yte - yle) * (yte - yle));
-  //---- set unit chord-line vector
-  dxc = (xte - xle) / chord;
-  dyc = (yte - yle) / chord;
-
-  if (si < sle) {
-    in = 1;
-    inopp = n;
-  } else {
-    in = n;
-    inopp = 1;
-  }
-  sfrac = (si - sle) / (s[in] - sle);
-  sopp = sle + sfrac * (s[inopp] - sle);
-
-  if (fabs(sfrac) <= 1.0e-5) {
-    sopp = sle;
-    return;
-  }
-
-  //---- xbar = x coordinate in chord-line axes
-  xi = spline::seval(si, x, xp, s, n);
-  yi = spline::seval(si, y, yp, s, n);
-  xle = spline::seval(sle, x, xp, s, n);
-  yle = spline::seval(sle, y, yp, s, n);
-  xbar = (xi - xle) * dxc + (yi - yle) * dyc;
-
-  //---- converge on exact opposite point with same xbar value
-  bool bFound = false;
-  for (int iter = 1; iter <= 12; iter++) {
-    const double xopp = spline::seval(sopp, x, xp, s, n);
-    const double yopp = spline::seval(sopp, y, yp, s, n);
-    const double xoppd = spline::deval(sopp, x, xp, s, n);
-    const double yoppd = spline::deval(sopp, y, yp, s, n);
-
-    const double res = (xopp - xle) * dxc + (yopp - yle) * dyc - xbar;
-    const double resd = xoppd * dxc + yoppd * dyc;
-
-    if (fabs(res) / slen < 1.0e-5) {
-      bFound = true;
-      break;
-    }
-    if (resd == 0.0) {
-      bFound = false;
-      break;
-    }
-    const double dsopp = -res / resd;
-    sopp += dsopp;
-
-    if (fabs(dsopp) / slen < 1.0e-5) {
-      bFound = true;
-      break;
-    }
-  }
-  if (!bFound) {
-    sopp = sle + sfrac * (s[inopp] - sle);
-  }
-}
-
-bool XFoil::getxyf(double x[], double xp[], double y[], double yp[], double s[],
+bool XFoil::getxyf(MatrixX2d points, MatrixX2d dpoints_ds, VectorXd s,
                    int n, double &tops, double &bots, double xf, double &yf) {
   double topy, boty, yrel;
 
-  tops = s[1] + (x[1] - xf);
-  bots = s[n] - (x[n] - xf);
-  sinvrt(tops, xf, x, xp, s, n);
-  sinvrt(bots, xf, x, xp, s, n);
-  topy = spline::seval(tops, y, yp, s, n);
-  boty = spline::seval(bots, y, yp, s, n);
+  tops = s[1] + (points.row(1).x() - xf);
+  bots = s[n] - (points.row(n).x() - xf);
+  sinvrt(tops, xf, points.col(0).data(), dpoints_ds.col(0).data(), s.data(), n);
+  sinvrt(bots, xf, points.col(0).data(), dpoints_ds.col(0).data(), s.data(), n);
+  topy = spline::seval(tops, points.col(1).data(), dpoints_ds.col(1).data(), s.data(), n);
+  boty = spline::seval(bots, points.col(1).data(), dpoints_ds.col(1).data(), s.data(), n);
 
   yrel = yf;
 
@@ -2802,8 +2335,8 @@ bool XFoil::ggcalc() {
     const double bwt = 0.1;
 
     //----- control point on bisector just ahead of TE point
-    const double xbis = xte - bwt * dsmin * cbis;
-    const double ybis = yte - bwt * dsmin * sbis;
+    const double xbis = point_te.x() - bwt * dsmin * cbis;
+    const double ybis = point_te.y() - bwt * dsmin * sbis;
 
     //----- set velocity component along bisector line
     double qbis;
@@ -3087,14 +2620,10 @@ bool XFoil::initXFoilGeometry(int fn, const double *fx, const double *fy, double
 
   nb = fn;
   lflap = false;
-  lbflap = false;
 
-  ddef = 0.0;
   xbf = 1.0;
   ybf = 0.0;
 
-  lscini = false;
-  lqspec = false;
   lvisc = false;
 
   if (Preprocess()) {
@@ -3148,27 +2677,6 @@ bool XFoil::initXFoilAnalysis(double Re, double alpha, double Mach,
   return true;
 }
 
-/**     logical function inside(x,y,n, xf,yf)
- *      dimension x(n),y(n)
- *-------------------------------------
- *     returns true if point xf,yf
- *     is inside contour x(i),y(i).
- *------------------------------------- */
-bool XFoil::isInside(vector<Vector2d> plots, Vector2d target) {
- 
-  double angle = 0.0;
-  for (int i = 0; i < plots.size(); i++) {
-    int ip = (i + 1) % plots.size();
-    const Vector2d delta_former = plots[i] - target;
-    const Vector2d delta_later = plots[ip] - target;
-
-    angle += cross2(delta_former.normalized(), delta_later.normalized());
-  }
-
-  //---- angle = 0 if xf,yf is outside, angle = +/- 2 pi  if xf,yf is inside
-  return (fabs(angle) > 1.0);
-}
-
 /** ------------------------------------------------------
  *     locates leading edge spline-parameter value sle
  *
@@ -3179,23 +2687,22 @@ bool XFoil::isInside(vector<Vector2d> plots, Vector2d target) {
  *     i.e. the surface tangent is normal to the chord
  *     line connecting x(sle),y(sle) and the te point.
 //------------------------------------------------------ */
-bool XFoil::lefind(double &sle, double x[], double xp[], double y[],
-                   double yp[], double s[], int n) {
+bool XFoil::lefind(double &sle, MatrixX2d points, MatrixX2d dpoints_ds, VectorXd s, int n) {
   int i, iter;
   double dseps;
   //---- convergence tolerance
   dseps = (s[n] - s[1]) * 0.00001;
 
   //---- set trailing edge point coordinates
-  xte = 0.5 * (x[1] + x[n]);
-  yte = 0.5 * (y[1] + y[n]);
+  point_te.x() = 0.5 * (points.row(1).x() + points.row(n).x());
+  point_te.y() = 0.5 * (points.row(1).y() + points.row(n).y());
 
   //---- get first guess for sle
   for (i = 3; i <= n - 2; i++) {
-    const double dxte = x[i] - xte;
-    const double dyte = y[i] - yte;
-    const double dx = x[i + 1] - x[i];
-    const double dy = y[i + 1] - y[i];
+    const double dxte = points.row(i).x() - point_te.x();
+    const double dyte = points.row(i).y() - point_te.y();
+    const double dx = points.row(i + 1).x() - points.row(i).x();
+    const double dy = points.row(i + 1).y() - points.row(i).y();
     const double dotp = dxte * dx + dyte * dy;
     if (dotp < 0.0) break;
   }
@@ -3207,15 +2714,17 @@ bool XFoil::lefind(double &sle, double x[], double xp[], double y[],
 
   //---- newton iteration to get exact sle value
   for (iter = 1; iter <= 50; iter++) {
-    xle = spline::seval(sle, x, xp, s, n);
-    yle = spline::seval(sle, y, yp, s, n);
-    const double dxds = spline::deval(sle, x, xp, s, n);
-    const double dyds = spline::deval(sle, y, yp, s, n);
-    const double dxdd = spline::d2val(sle, x, xp, s, n);
-    const double dydd = spline::d2val(sle, y, yp, s, n);
+    point_le.x() = spline::seval(sle, points.col(0).data(), dpoints_ds.col(0).data(), s.data(), n);
+    point_le.y() = spline::seval(sle, points.col(1).data(), dpoints_ds.col(1).data(), s.data(), n);
+    const double dxds = spline::deval(sle, points.col(0).data(), dpoints_ds.col(0).data(), s.data(), n);
+    const double dyds = spline::deval(sle, points.col(1).data(), dpoints_ds.col(1).data(), s.data(), n);
+    const double dxdd = spline::d2val(sle, points.col(0).data(), dpoints_ds.col(0).data(), s.data(), n);
+    const double dydd = spline::d2val(sle, points.col(1).data(), dpoints_ds.col(1).data(), s.data(), n);
 
-    const double xchord = xle - xte;
-    const double ychord = yle - yte;
+    Vector2d point_chord = point_le - point_te;
+
+    const double xchord = point_le.x() - point_te.x();
+    const double ychord = point_le.y() - point_te.y();
 
     //------ drive dot product between chord line and le tangent to zero
     const double res = xchord * dxds + ychord * dyds;
@@ -3314,7 +2823,7 @@ bool XFoil::mhinge() {
   double dx, dy;
 
   if (!lflap) {
-    getxyf(points.col(0).data(), dpoints_ds.col(0).data(), points.col(1).data(), dpoints_ds.col(1).data(), spline_length.data(), n, tops, bots, xof, yof);
+    getxyf(points, dpoints_ds, spline_length, n, tops, bots, xof, yof);
     lflap = true;
   } else {
     //------ find top and bottom y at hinge x location
@@ -3750,7 +3259,6 @@ bool XFoil::mrchdu() {
 
         //------- save transition location
         tforce[is] = trforc;
-        xssitr[is] = xt;
       }
 
       tran = false;
@@ -4051,7 +3559,6 @@ bool XFoil::mrchue() {
       tau[ibl][is] = 0.5 * blData2.rz * blData2.uz * blData2.uz * blData2.cfz;
       dis[ibl][is] = blData2.rz * blData2.uz * blData2.uz * blData2.uz * blData2.diz * blData2.hsz * 0.5;
       ctq[ibl][is] = blData2.cqz;
-      delt[ibl][is] = blData2.dez;
 
       //------ set "1" variables to "2" variables for next streamwise station
       blprv(xsi, ami, cti, thi, dsi, dswaki, uei);
@@ -4065,7 +3572,6 @@ bool XFoil::mrchue() {
 
         //------- save transition location
         tforce[is] = trforc;
-        xssitr[is] = xt;
       }
 
       tran = false;
@@ -4149,13 +3655,13 @@ bool XFoil::mrcl(double cls, double &m_cls, double &r_cls) {
   return true;
 }
 
-bool XFoil::ncalc(double x[], double y[], double spline_length[], int n, double xn[],
+bool XFoil::ncalc(MatrixX2d points, VectorXd spline_length, int n, double xn[],
                   double yn[]) {
   double sx, sy, smod;
   int i;
   if (n <= 1) return false;
-  spline::segspl(x, xn, spline_length, n);
-  spline::segspl(y, yn, spline_length, n);
+  spline::segspl(points.col(0).data(), xn, spline_length.data(), n);
+  spline::segspl(points.col(1).data(), yn, spline_length.data(), n);
   for (i = 1; i <= n; i++) {
     sx = yn[i];
     sy = -xn[i];
@@ -4198,7 +3704,6 @@ bool XFoil::Preprocess() {
   //---- wipe out old flap hinge location
   xbf = 0.0;
   ybf = 0.0;
-  lbflap = false;
 
   // end "load"
   abcopy();
@@ -4260,13 +3765,6 @@ bool XFoil::psilin(int iNode, double xi, double yi, double nxi, double nyi,
     dzdm[jo] = 0.0;
     dqdm[jo] = 0.0;
   }
-
-  z_qinf = 0.0;
-  z_alfa = 0.0;
-  z_qdof0 = 0.0;
-  z_qdof1 = 0.0;
-  z_qdof2 = 0.0;
-  z_qdof3 = 0.0;
 
   psi = 0.0;
   psi_ni = 0.0;
@@ -4521,11 +4019,6 @@ bool XFoil::psilin(int iNode, double xi, double yi, double nxi, double nyi,
                   qopi * gdif * (pdx1 * x1o + pdx2 * x2o + pdyy * yyo);
       dzdn[jp] += qopi * gsum * (psx1 * x1p + psx2 * x2p + psyy * yyp) +
                   qopi * gdif * (pdx1 * x1p + pdx2 * x2p + pdyy * yyp);
-      //------- dpsi/dp
-      z_qdof0 += qopi * ((psis - psid) * qf0[jo] + (psis + psid) * qf0[jp]);
-      z_qdof1 += qopi * ((psis - psid) * qf1[jo] + (psis + psid) * qf1[jp]);
-      z_qdof2 += qopi * ((psis - psid) * qf2[jo] + (psis + psid) * qf2[jp]);
-      z_qdof3 += qopi * ((psis - psid) * qf3[jo] + (psis + psid) * qf3[jp]);
     }
   stop10:
     int nothing;
@@ -4583,15 +4076,6 @@ stop11:
     dzdn[jp] += hopi * (psigx1 * x1p + psigx2 * x2p + psigyy * yyp) * sigte +
                 hopi * (pgamx1 * x1p + pgamx2 * x2p + pgamyy * yyp) * gamte;
 
-    //----- dpsi/dp
-    z_qdof0 += hopi * psig * 0.5 * (qf0[jp] - qf0[jo]) * scs -
-               hopi * pgam * 0.5 * (qf0[jp] - qf0[jo]) * sds;
-    z_qdof1 += hopi * psig * 0.5 * (qf1[jp] - qf1[jo]) * scs -
-               hopi * pgam * 0.5 * (qf1[jp] - qf1[jo]) * sds;
-    z_qdof2 += hopi * psig * 0.5 * (qf2[jp] - qf2[jo]) * scs -
-               hopi * pgam * 0.5 * (qf2[jp] - qf2[jo]) * sds;
-    z_qdof3 += hopi * psig * 0.5 * (qf3[jp] - qf3[jo]) * scs -
-               hopi * pgam * 0.5 * (qf3[jp] - qf3[jo]) * sds;
   }
 stop12:
 
@@ -4603,12 +4087,6 @@ stop12:
 
   qtan1 += qinf * nyi;
   qtan2 += -qinf * nxi;
-
-  //---- dpsi/dqinf
-  z_qinf += (cosa * yi - sina * xi);
-
-  //---- dpsi/dalfa
-  z_alfa += -qinf * (sina * yi + cosa * xi);
 
   // techwinder: removed image calculattion
   return false;
@@ -5251,8 +4729,6 @@ bool XFoil::setbl() {
       tau[ibl][is] = 0.5 * blData2.rz * blData2.uz * blData2.uz * blData2.cfz;
       dis[ibl][is] = blData2.rz * blData2.uz * blData2.uz * blData2.uz * blData2.diz * blData2.hsz * 0.5;
       ctq[ibl][is] = blData2.cqz;
-      delt[ibl][is] = blData2.dez;
-      uslp[ibl][is] = 1.60 / (1.0 + blData2.usz);
 
       //---- set xi sensitivities wrt le ue changes
       if (is == 1) {
@@ -5368,7 +4844,6 @@ bool XFoil::setbl() {
         //------ save transition location
         itran[is] = ibl;
         tforce[is] = trforc;
-        xssitr[is] = xt;
 
         //------ interpolate airfoil geometry to find transition x/c
         //		(for user output)
@@ -5377,13 +4852,13 @@ bool XFoil::setbl() {
         else
           str = sst + xt;
 
-        chx = xte - xle;
-        chy = yte - yle;
+        chx = point_te.x() - point_le.x();
+        chy = point_te.y() - point_le.y();
         chsq = chx * chx + chy * chy;
         xtr = spline::seval(str, points.col(0).data(), dpoints_ds.col(0).data(), spline_length.data(), n);
         ytr = spline::seval(str, points.col(1).data(), dpoints_ds.col(1).data(), spline_length.data(), n);
-        xoctr[is] = ((xtr - xle) * chx + (ytr - yle) * chy) / chsq;
-        yoctr[is] = ((ytr - yle) * chx - (xtr - xle) * chy) / chsq;
+        xoctr[is] = ((xtr - point_le.x()) * chx + (ytr - point_le.y()) * chy) / chsq;
+        yoctr[is] = ((ytr - point_le.y()) * chx - (xtr - point_le.x()) * chy) / chsq;
       }
 
       tran = false;
@@ -7134,14 +6609,14 @@ bool XFoil::xifset(int is) {
     return false;
   }
 
-  chx = xte - xle;
-  chy = yte - yle;
+  chx = point_te.x() - point_le.x();
+  chy = point_te.y() - point_le.y();
   chsq = chx * chx + chy * chy;
 
   //---- calculate chord-based x/c, y/c
   for (int i = 1; i <= n; i++) {
-    w1[i] = ((points.row(i).x() - xle) * chx + (points.row(i).y() - yle) * chy) / chsq;
-    w2[i] = ((points.row(i).y() - yle) * chx - (points.row(i).x() - xle) * chy) / chsq;
+    w1[i] = ((points.row(i).x() - point_le.x()) * chx + (points.row(i).y() - point_le.y()) * chy) / chsq;
+    w2[i] = ((points.row(i).y() - point_le.y()) * chx - (points.row(i).x() - point_le.x()) * chy) / chsq;
   }
 
   spline::splind(w1, w3, spline_length.data(), n, -999.0, -999.0);
@@ -7197,8 +6672,8 @@ bool XFoil::xyWake() {
   ds1 = 0.5 * (spline_length[2] - spline_length[1] + spline_length[n] - spline_length[n - 1]);
   setexp(snew.data() + n, ds1, waklen * chord, nw);
 
-  xte = 0.5 * (points.row(1).x() + points.row(n).x());
-  yte = 0.5 * (points.row(1).y() + points.row(n).y());
+  point_te.x() = 0.5 * (points.row(1).x() + points.row(n).x());
+  point_te.y() = 0.5 * (points.row(1).y() + points.row(n).y());
 
   //-- set first wake point a tiny distance behind te
   int i = n + 1;
@@ -7207,8 +6682,8 @@ bool XFoil::xyWake() {
   smod = sqrt(sx * sx + sy * sy);
   nx[i] = sx / smod;
   ny[i] = sy / smod;
-  points.row(i).x() = xte - 0.0001 * ny[i];
-  points.row(i).y() = yte + 0.0001 * nx[i];
+  points.row(i).x() = point_te.x() - 0.0001 * ny[i];
+  points.row(i).y() = point_te.y() + 0.0001 * nx[i];
   spline_length[i] = spline_length[n];
 
   //---- calculate streamfunction gradient components at first point
@@ -7267,1147 +6742,4 @@ bool XFoil::CheckAngles() {
     return true;  // we have a coarse paneling
   }
   return false;  // we have a fine paneling
-}
-
-bool XFoil::eiwset(int nc1) {
-  //----------------------------------------------------
-  //     calculates the uniformly-spaced circle-plane
-  //     coordinate array wc (omega), and the
-  //     corresponding complex unit numbers exp(inw)
-  //     for slow fourier transform operations.
-  //----------------------------------------------------
-  //      include 'circle.inc'
-
-  //      PI = 4.0*atan(1.0)
-  int ic;
-  //---- set requested number of points in circle plane
-  nc = nc1;
-  mc = int(nc1 / 4);
-  mct = int(nc1 / 16);
-
-  if (nc > ICX) {
-    writeString("eiwset: Array overflow. Increase ICX.");
-    return false;
-  }
-
-  dwc = 2.0 * PI / double(nc - 1);
-
-  for (ic = 1; ic <= nc; ic++) wc[ic] = dwc * double(ic - 1);
-
-  //---- set  m = 0  numbers
-  for (ic = 1; ic <= nc; ic++) eiw[ic][0] = complex<double>(1.0, 0.0);
-
-  //---- set  m = 1  numbers
-  for (ic = 1; ic <= nc; ic++) eiw[ic][1] = exp(complex<double>(0.0, wc[ic]));
-
-  //---- set  m > 1  numbers by indexing appropriately from  m = 1  numbers
-  for (int m = 2; m <= mc; m++) {
-    for (int ic = 1; ic <= nc; ic++) {
-      int ic1 = m * (ic - 1);
-      ic1 = ic1 % (nc - 1) + 1;
-      eiw[ic][m] = eiw[ic1][1];
-    }
-  }
-
-  return true;
-}
-
-complex<double> XFoil::conjg(complex<double> cplx) {
-  double a = real(cplx);
-  double b = imag(cplx);
-  return complex<double>(a, -b);
-}
-
-void XFoil::zcnorm(int mtest) {
-  //-----------------------------------------------
-  //    normalizes the complex airfoil z(w) to
-  //    the old chord and angle, and resets the
-  //    influence coefficients  dz/dcn .
-  //-----------------------------------------------
-  //      include 'circle.inc'
-  complex<double> dzdw1, dzdw2;
-  complex<double> zcnew, zle, zte, zc_zte, zte_cn[IMX4 + 1];
-  int m, ic;
-  //---- find current le location
-  zlefind(&zle, zc, wc, nc, piq, agte);
-
-  //---- place leading edge at origin
-  for (ic = 1; ic <= nc; ic++) {
-    zc[ic] = zc[ic] - zle;
-  }
-
-  //---- set normalizing quantities and sensitivities
-  zte = 0.5 * (zc[1] + zc[nc]);
-  for (m = 1; m <= mtest; m++) zte_cn[m] = 0.5 * (zc_cn[1][m] + zc_cn[nc][m]);
-
-  //---- normalize airfoil to proper chord, put le at old position,
-  //-    and set sensitivities dz/dcn for the rescaled coordinates
-  for (ic = 1; ic <= nc; ic++) {
-    zcnew = chordz * zc[ic] / zte;
-    zc_zte = -zcnew / zte;
-    zc[ic] = zcnew;
-    for (m = 1; m <= mtest; m++)
-      zc_cn[ic][m] = chordz * zc_cn[ic][m] / zte + zc_zte * zte_cn[m];
-  }
-
-  //---- add on rotation to mapping coefficient so qccalc gets the right alpha
-  double qimoff = -imag(log(chordz / zte));
-  cn[0] = cn[0] - complex<double>(0.0, qimoff);
-
-  //---- shift airfoil to put le at old location
-  for (ic = 1; ic <= nc; ic++) zc[ic] = zc[ic] + zleold;
-
-  return;
-}
-
-void XFoil::zccalc(int mtest) {
-  //--------------------------------------------------------
-  //    calculates the airfoil geometry z(w) from the
-  //    harmonic function p(w) + iq(w).  also normalizes
-  //    the coordinates to the old chord and calculates
-  //    the geometry sensitivities dz/dcn  (1 < n < mtest)
-  //    for each point.
-  //--------------------------------------------------------
-  //      include 'circle.inc'
-  complex<double> dzdw1, dzdw2, dz_piq1, dz_piq2;
-
-  //---- integrate upper airfoil surface coordinates from x,y = 4,0
-  int ic = 1;
-  zc[ic] = complex<double>(4.0, 0.0);
-  for (int m = 1; m <= mtest; m++) zc_cn[ic][m] = complex<double>(0.0, 0.0);
-
-  double sinw = 2.0 * sin(0.5 * wc[ic]);
-  double sinwe = 0.0;
-  if (sinw > 0.0) sinwe = pow(sinw, (1.0 - agte));
-
-  double hwc = 0.5 * (wc[ic] - PI) * (1.0 + agte) - 0.5 * PI;
-  dzdw1 = sinwe * exp(piq[ic] + complex<double>(0.0, hwc));
-
-  for (ic = 2; ic <= nc; ic++) {
-    sinw = 2.0 * sin(0.5 * wc[ic]);
-    sinwe = 0.0;
-    if (sinw > 0.0) sinwe = pow(sinw, (1.0 - agte));
-
-    hwc = 0.5 * (wc[ic] - PI) * (1.0 + agte) - 0.5 * PI;
-    dzdw2 = sinwe * exp(piq[ic] + complex<double>(0.0, hwc));
-
-    zc[ic] = 0.5 * (dzdw1 + dzdw2) * dwc + zc[ic - 1];
-    dz_piq1 = 0.5 * (dzdw1)*dwc;
-    dz_piq2 = 0.5 * (dzdw2)*dwc;
-
-    for (int m = 1; m <= mtest; m++) {
-      zc_cn[ic][m] = dz_piq1 * conjg(eiw[ic - 1][m]) +
-                     dz_piq2 * conjg(eiw[ic][m]) + zc_cn[ic - 1][m];
-    }
-
-    dzdw1 = dzdw2;
-  }
-
-  //---- set arc length array s(w)
-  sc[1] = 0.0;
-  for (ic = 2; ic <= nc; ic++)
-    sc[ic] = sc[ic - 1] + std::abs(zc[ic] - zc[ic - 1]);
-
-  //---- normalize arc length
-  for (ic = 1; ic <= nc; ic++) sc[ic] = sc[ic] / sc[nc];
-
-  return;
-}
-
-void XFoil::zlefind(complex<double> *zle, complex<double> zc[], double wc[],
-                    int nc, const complex<double> piq[], double agte) {
-  complex<double> dzdw1, dzdw2, zte;
-  int ic, ic1, ic2;
-  //---- temporary work arrays for splining near leading edge
-  int ntx = 33;
-  double xc[33 + 1], yc[33 + 1], xcw[33 + 1], ycw[33 + 1];
-
-  int icle, nic;
-  icle = 0;  // added techwinder
-
-  zte = 0.5 * (zc[1] + zc[nc]);
-
-  //---- find point farthest from te
-  double dmax = 0.0;
-  for (ic = 1; ic <= nc; ic++) {
-    double dist = std::abs(zc[ic] - zte);
-
-    if (dist > dmax) {
-      dmax = dist;
-      icle = ic;
-    }
-  }
-
-  //---- set restricted spline limits around leading edge
-  ic1 = max(icle - (ntx - 1) / 2, 1);
-  ic2 = min(icle + (ntx - 1) / 2, nc);
-
-  //---- set up derivatives at spline endpoints
-  double sinw = 2.0 * sin(0.5 * wc[ic1]);
-  double sinwe = pow(sinw, (1.0 - agte));
-  double hwc = 0.5 * (wc[ic1] - PI) * (1.0 + agte) - 0.5 * PI;
-  dzdw1 = sinwe * exp(piq[ic1] + complex<double>(0.0, hwc));
-
-  sinw = 2.0 * sin(0.5 * wc[ic2]);
-  sinwe = pow(sinw, (1.0 - agte));
-  hwc = 0.5 * (wc[ic2] - PI) * (1.0 + agte) - 0.5 * PI;
-  dzdw2 = sinwe * exp(piq[ic2] + complex<double>(0.0, hwc));
-
-  //---- fill temporary x,y coordinate arrays
-  for (ic = ic1; ic <= ic2; ic++) {
-    int i = ic - ic1 + 1;
-    xc[i] = real(zc[ic]);
-    yc[i] = imag(zc[ic]);
-  }
-
-  //---- calculate spline near leading edge with derivative end conditions
-  nic = ic2 - ic1 + 1;
-
-  spline::splind(xc, xcw, wc + ic1 - 1, nic, real(dzdw1), real(dzdw2));
-  spline::splind(yc, ycw, wc + ic1 - 1, nic, imag(dzdw1), imag(dzdw2));
-
-  double xcte = 0.5 * real(zc[1] + zc[nc]);
-  double ycte = 0.5 * imag(zc[1] + zc[nc]);
-
-  //---- initial guess for leading edge coordinate
-  double wcle = wc[icle];
-
-  //---- newton loop for improved leading edge coordinate
-  double xcle, ycle;
-  bool found = false;
-
-  for (int itcle = 1; itcle <= 10; itcle++) {
-    xcle = spline::seval(wcle, xc, xcw, wc + ic1 - 1, nic);
-    ycle = spline::seval(wcle, yc, ycw, wc + ic1 - 1, nic);
-    const double dxdw = spline::deval(wcle, xc, xcw, wc + ic1 - 1, nic);
-    const double dydw = spline::deval(wcle, yc, ycw, wc + ic1 - 1, nic);
-    const double dxdd = spline::d2val(wcle, xc, xcw, wc + ic1 - 1, nic);
-    const double dydd = spline::d2val(wcle, yc, ycw, wc + ic1 - 1, nic);
-
-    const double xchord = xcle - xcte;
-    const double ychord = ycle - ycte;
-
-    //------ drive dot product between chord line and le tangent to zero
-    const double res = xchord * dxdw + ychord * dydw;
-    const double resw = dxdw * dxdw + dydw * dydw + xchord * dxdd + ychord * dydd;
-
-    const double dwcle = -res / resw;
-    wcle = wcle + dwcle;
-
-    if (fabs(dwcle) < 0.00001) {
-      found = true;
-      break;  // go to 51
-    }
-  }
-  if (!found) {
-    writeString("zlefind: le location failed.");
-    wcle = wc[icle];
-  }
-  //   51 continue
-
-  //---- set final leading edge point complex coordinate
-  xcle = spline::seval(wcle, xc, xcw, wc + ic1 - 1, nic);
-  ycle = spline::seval(wcle, yc, ycw, wc + ic1 - 1, nic);
-  *zle = complex<double>(xcle, ycle);
-
-  return;
-}
-
-void XFoil::mapgam(int iac, double &alg, double &clg, double &cmg) {
-  //--------------------------------------------
-  //     sets mapped q for current airfoil
-  //     for angle of attack or cl.
-  //
-  //       iac=1: specified algam
-  //       iac=2: specified clgam
-  //--------------------------------------------
-  //
-  //---- calculate q(w), set number of circle points nsp
-  qccalc(iac, &alg, &clg, &cmg, minf, qinf, &nsp, w1, w2, w5, w6);
-
-  //---- store q(w), s(w), x(w), y(w)
-  double chx = xte - xle;
-  double chy = yte - yle;
-  double chsq = chx * chx + chy * chy;
-  for (int i = 1; i <= nsp; i++) {
-    qgamm[i] = w6[i];
-    sspec[i] = w5[i];
-    double xic = spline::seval(spline_length[n] * sspec[i], points.col(0).data(), dpoints_ds.col(0).data(), spline_length.data(), n);
-    double yic = spline::seval(spline_length[n] * sspec[i], points.col(1).data(), dpoints_ds.col(1).data(), spline_length.data(), n);
-    xspoc[i] = ((xic - xle) * chx + (yic - yle) * chy) / chsq;
-    yspoc[i] = ((yic - yle) * chx - (xic - xle) * chy) / chsq;
-  }
-  ssple = sle / spline_length[n];
-
-  return;
-}
-
-void XFoil::qccalc(int ispec, double *alfa, double *cl, double *cm, double minf,
-                   double qinf, int *ncir, double xcir[], double ycir[],
-                   double scir[], double qcir[]) {
-  //---------------------------------------------------
-  //    Calculates the surface speed from the complex
-  //    speed function so that either a prescribed
-  //    alfa or cl is achieved, depending on whether
-  //    ispec=1 or 2.  The cl calculation uses the
-  //    transformed karman-tsien cp.
-  //---------------------------------------------------
-  std::stringstream ss;
-  complex<double> dz, za, eia, cmt, cft, cft_a;
-  int icp, ic, ipass;
-  double dalfa = 0.0;
-  double ppp, eppp;
-  double sinw, sinwe;
-  double cpinc2, cpi_q2, cpcom2, cpc_q2, cpc_a2;
-  double qc_a[ICX + 1];
-  double aeps = 5.0e-007;
-
-  //---- karman-tsien quantities
-  double beta = sqrt(1.0 - minf * minf);
-  double bfac = 0.5 * minf * minf / (1.0 + beta);
-
-  *ncir = nc;
-
-  //---- newton iteration loop (executed only once if alpha specified)
-  for (ipass = 1; ipass <= 10; ipass++) {
-    //------ set alpha in the circle plane
-    const double alfcir = *alfa - imag(cn[0]);
-
-    cmt = complex<double>(0.0, 0.0);
-    cft = complex<double>(0.0, 0.0);
-    cft_a = complex<double>(0.0, 0.0);
-
-    //------ set surface speed for current circle plane alpha
-    for (ic = 1; ic <= nc; ic++) {
-      ppp = real(piq[ic]);
-      eppp = exp(-ppp);
-      sinw = 2.0 * sin(0.5 * wc[ic]);
-
-      if (fabs(agte) <= 0.0001)
-        sinwe = 1.0;
-      else if (sinw > 0.0)
-        sinwe = pow(sinw, agte);
-      else
-        sinwe = 0.0;
-
-      qcir[ic] = 2.0 * cos(0.5 * wc[ic] - alfcir) * sinwe * eppp;
-      qc_a[ic] = 2.0 * sin(0.5 * wc[ic] - alfcir) * sinwe * eppp;
-
-      xcir[ic] = real(zc[ic]);
-      ycir[ic] = imag(zc[ic]);
-      scir[ic] = sc[ic];
-    }
-
-    //------ integrate compressible  cp dz  to get complex force  cl + icd
-    ic = 1;
-    const double cpinc1 = 1.0 - (qcir[ic] / qinf) * (qcir[ic] / qinf);
-    const double cpi_q1 = -2.0 * qcir[ic] / qinf / qinf;
-    double cpcom1 = cpinc1 / (beta + bfac * cpinc1);
-    const double cpc_q1 = (1.0 - bfac * cpcom1) / (beta + bfac * cpinc1) * cpi_q1;
-    double cpc_a1 = cpc_q1 * qc_a[ic];
-    for (ic = 1; ic <= nc; ic++) {
-      icp = ic + 1;
-      if (ic == nc) icp = 1;
-
-      cpinc2 = 1.0 - (qcir[icp] / qinf) * (qcir[icp] / qinf);
-      cpi_q2 = -2.0 * qcir[icp] / qinf / qinf;
-      cpcom2 = cpinc2 / (beta + bfac * cpinc2);
-      cpc_q2 = (1.0 - bfac * cpcom2) / (beta + bfac * cpinc2) * cpi_q2;
-      cpc_a2 = cpc_q2 * qc_a[icp];
-
-      za = (zc[icp] + zc[ic]) * 0.5 - complex<double>(0.25, 0.0);
-      dz = zc[icp] - zc[ic];
-
-      cmt = cmt - 0.5 * (cpcom1 + cpcom2) * dz * conjg(za) +
-            (cpcom1 - cpcom2) * dz * conjg(dz) / 12.0;
-      cft = cft + 0.5 * (cpcom1 + cpcom2) * dz;
-      cft_a = cft_a + 0.5 * (cpc_a1 + cpc_a2) * dz;
-
-      cpcom1 = cpcom2;
-      cpc_a1 = cpc_a2;
-    }
-
-    //------ rotate force vector into freestream coordinates
-
-    eia = exp(complex<double>(0.0, -*alfa));
-    cft = cft * eia;
-    cft_a = cft_a * eia + cft * complex<double>(0.0, -1.0);
-
-    //------ lift is real part of complex force vector
-    double clt = real(cft);
-    double clt_a = real(cft_a);
-
-    //------ moment is real part of complex moment
-    *cm = real(cmt);
-
-    if (ispec == 1) {
-      //------- if alpha is prescribed, we're done
-      *cl = clt;
-      return;
-    } else {
-      //------- adjust alpha with newton-raphson to get specified cl
-      dalfa = (*cl - clt) / clt_a;
-      *alfa = *alfa + dalfa;
-      if (fabs(dalfa) < aeps) return;
-    }
-  }
-  ss << "qccalc: cl convergence failed.  dalpha=" << std::fixed
-     << std::setprecision(4) << dalfa << "\n";
-  writeString(ss.str());
-}
-
-void XFoil::cgauss(int nn, complex<double> z[IMX4 + 1][IMX4 + 1],
-                   complex<double> r[IMX4 + 1]) {
-  //*******************************************
-  //     solves general complex linear systems.
-  //*******************************************
-  //      complex z(nsiz,nsiz), r(nsiz,nrhs)
-  // nrhs = 1 // techwinder : one right hand side is enough !
-  complex<double> pivot, temp, ztmp;
-  int np1;
-  int l, k, n, np;
-
-  for (np = 1; np <= nn - 1; np++) {
-    np1 = np + 1;
-
-    //----- find max pivot index nx
-    int nx = np;
-    for (n = np1; n <= nn; n++) {
-      if (std::abs(z[n][np]) - std::abs(z[nx][np]) > 0) nx = n;
-    }
-
-    pivot = complex<double>(1.0, 0.0) / z[nx][np];
-
-    //----- switch pivots
-    z[nx][np] = z[np][np];
-
-    //----- switch rows & normalize pivot row
-    for (l = np1; l <= nn; l++) {
-      temp = z[nx][l] * pivot;
-      z[nx][l] = z[np][l];
-      z[np][l] = temp;
-    }
-    temp = r[nx] * pivot;
-    r[nx] = r[np];
-    r[np] = temp;
-
-    //----- forward eliminate everything
-    for (k = np1; k <= nn; k++) {
-      ztmp = z[k][np];
-
-      for (l = np1; l <= nn; l++) {
-        z[k][l] = z[k][l] - ztmp * z[np][l];
-      }
-      r[k] = r[k] - ztmp * r[np];
-    }
-  }
-
-  r[nn] = r[nn] / z[nn][nn];
-
-  //--- back substitute everything
-  for (np = nn - 1; np >= 1; np--) {
-    np1 = np + 1;
-
-    for (k = np1; k <= nn; k++) {
-      r[np] = r[np] - z[np][k] * r[k];
-    }
-  }
-}
-
-double XFoil::qcomp(double g) {
-  return g * (1.0 - tklam) / (1.0 - tklam * (g / qinf) * (g / qinf));
-}
-
-double XFoil::qincom(double qc, double qinf, double tklam) {
-  //-------------------------------------
-  //     sets incompressible speed from
-  //     karman-tsien compressible speed
-  //-------------------------------------
-
-  if (tklam < 1.0e-4 || fabs(qc) < 1.0e-4)
-    //----- for nearly incompressible case or very small speed, use asymptotic
-    //      expansion of singular quadratic formula to avoid numerical problems
-    return qc / (1.0 - tklam);
-  else {
-    //----- use quadratic formula for typical case
-    double tmp = 0.5 * (1.0 - tklam) * qinf / (qc * tklam);
-    return qinf * tmp * (sqrt(1.0 + 1.0 / (tklam * tmp * tmp)) - 1.0);
-  }
-}
-
-void XFoil::cnfilt(double ffilt) {
-  //-------------------------------------
-  //     filters out upper harmonics
-  //     with modified hanning filter.
-  //-------------------------------------
-  if (ffilt <= 0.00001) return;
-
-  for (int m = 0; m <= mc; m++) {
-    const double freq = double(m) / double(mc);
-    const double cwt = 0.5 * (1.0 + cos(PI * freq));
-    double cwtx = cwt;
-    if (ffilt > 0.0) cwtx = pow(cwt, ffilt);
-    cn[m] = complex<double>(real(cn[m]) * cwtx, imag(cn[m]) * cwtx);
-  }
-}
-
-bool XFoil::mixed(int kqsp) {
-  //-------------------------------------------------
-  //     performs a mixed-inverse calculation using
-  //     the specified surface speed array qspec.
-  //-------------------------------------------------
-  int i, j, iter;
-  double bwt, psi, psi_n;
-  double ag1, ag2, abis, cbis, sbis;
-  double ds1, ds2, dsmin, xbis, ybis, qbis;
-  double res;
-
-  //---- distance of internal control point ahead of sharp te
-  //    (fraction of smaller panel length adjacent to te)
-  bwt = 0.1;
-
-  spline_length.segment(1, spline_length.size() - 1) = spline::scalc(points.middleRows(1, points.rows() - 1), n, spline_length.size() - 1);
-
-  //---- zero-out and set dof shape functions
-  for (i = 1; i <= n; i++) {
-    qf0[i] = 0.0;
-    qf1[i] = 0.0;
-    qf2[i] = 0.0;
-    qf3[i] = 0.0;
-  }
-
-  //---- set dof shape functions and specified speed
-  for (i = iq1; i <= iq2; i++) {
-    const double fs = (spline_length[i] - spline_length[iq1]) / (spline_length[iq2] - spline_length[iq1]);
-
-    qf0[i] = 1.0 - fs;
-    qf1[i] = fs;
-    if (lcpxx) {
-      qf2[i] = exp(-5.0 * fs);
-      qf3[i] = exp(-5.0 * (1.0 - fs));
-    } else {
-      qf2[i] = 0.0;
-      qf3[i] = 0.0;
-    }
-    gam[i] = qspec[kqsp][i] + qdof0 * qf0[i] + qdof1 * qf1[i] + qdof2 * qf2[i] +
-             qdof3 * qf3[i];
-  }
-
-  //---- perform newton iterations on the new geometry
-  for (iter = 1; iter <= niterq; iter++) {
-    for (i = 1; i <= n + 5; i++) {
-      for (j = 1; j <= n + 5; j++) {
-        q[i][j] = 0.0;
-      }
-    }
-
-    //---- calculate normal direction vectors along which the nodes move
-    ncalc(points.col(0).data(), points.col(1).data(), spline_length.data(), n, nx.data(), ny.data());
-
-    //---- go over all nodes, setting up  psi = psi0  equations
-    for (i = 1; i <= n; i++) {
-      psilin(i, points.row(i).x(), points.row(i).y(), nx[i], ny[i], psi, psi_n, true, false);
-
-      dzdn[i] = dzdn[i] + psi_n;
-
-      //------ fill columns for specified geometry location
-      for (j = 1; j <= iq1 - 1; j++) q[i][j] += +dzdg[j];
-
-      //------ fill columns for specified surface speed location
-      for (j = iq1; j <= iq2; j++) q[i][j] += dzdn[j];
-
-      //------ fill columns for specified geometry location
-      for (j = iq2 + 1; j <= n; j++) q[i][j] += dzdg[j];
-
-      //------ set residual
-      dq[i] = psio - psi;
-
-      //------ fill global unknown columns
-      q[i][n + 1] += -1.0;
-      q[i][n + 2] += z_qdof0;
-      q[i][n + 3] += z_qdof1;
-      q[i][n + 4] += z_qdof2;
-      q[i][n + 5] += z_qdof3;
-    }
-
-    //---- set up kutta condition
-    dq[n + 1] = -(gam[1] + gam[n]);
-    gamlin(n + 1, 1, 1.0);
-    gamlin(n + 1, n, 1.0);
-
-    if (sharp) {
-      //----- set zero internal velocity in te corner
-
-      //----- set te bisector angle
-      ag1 = atan2(-dpoints_ds.row(1).y(), -dpoints_ds.row(1).x());
-      ag2 = atanc(dpoints_ds.row(n).y(), dpoints_ds.row(n).x(), ag1);
-      abis = 0.5 * (ag1 + ag2);
-      cbis = cos(abis);
-      sbis = sin(abis);
-
-      //----- minimum panel length adjacent to te
-      ds1 = sqrt((points.row(1).x() - points.row(2).x()) * (points.row(1).x() - points.row(2).x()) + (points.row(1).y() - points.row(2).y()) * (points.row(1).y() - points.row(2).y()));
-      ds2 = sqrt((points.row(n).x() - points.row(n - 1).x()) * (points.row(n).x() - points.row(n - 1).x()) +
-                 (points.row(n).y() - points.row(n - 1).y()) * (points.row(n).y() - points.row(n - 1).y()));
-      dsmin = min(ds1, ds2);
-
-      //----- control point on bisector just ahead of te point
-      xbis = xte - bwt * dsmin * cbis;
-      ybis = yte - bwt * dsmin * sbis;
-
-      //----- set velocity component along bisector line
-      psilin(0, xbis, ybis, -sbis, cbis, psi, qbis, false, true);
-
-      // c//--- res = dqdgj*gamj + dqdmj*massj + qinf*(cosa*cbis + sina*sbis)
-      res = qbis;
-
-      for (j = 1; j <= n + 5; j++) {
-        q[n][j] = 0.0;
-      }
-
-      //----- dres/dgamj
-      for (j = 1; j <= n; j++) {
-        gamlin(n, j, dqdg[j]);
-        q[n][j] = dqdg[j];
-      }
-
-      //----- dres/dpsio
-      q[n][n + 1] = 0.0;
-
-      //----- -dres/duinf
-      dq[n] = -res;
-    }
-
-    //---- pinned iq1 point condition
-    q[n + 2][iq1] = 1.0;
-    dq[n + 2] = 0.0;
-
-    //---- pinned iq2 point condition
-    q[n + 3][iq2] = 1.0;
-    dq[n + 3] = 0.0;
-
-    if (iq1 > 1 && lcpxx) {
-      //----- speed regularity iq1 condition
-      res = gam[iq1 - 1] - 2.0 * gam[iq1] + gam[iq1 + 1] -
-            (qspec[kqsp][iq1 - 1] - 2.0 * qspec[kqsp][iq1] +
-             qspec[kqsp][iq1 + 1]);
-      gamlin(n + 4, iq1 - 1, 1.0);
-      gamlin(n + 4, iq1, -2.0);
-      gamlin(n + 4, iq1 + 1, 1.0);
-      dq[n + 4] = -res;
-    } else {
-      //----- zero dof condition
-      q[n + 4][n + 4] = 1.0;
-      dq[n + 4] = -qdof2;
-    }
-
-    if (iq2 < n && lcpxx) {
-      //----- speed regularity iq2 condition
-      res = gam[iq2 - 1] - 2.0 * gam[iq2] + gam[iq2 + 1] -
-            (qspec[kqsp][iq2 - 1] - 2.0 * qspec[kqsp][iq2] +
-             qspec[kqsp][iq2 + 1]);
-      gamlin(n + 5, iq2 - 1, 1.0);
-      gamlin(n + 5, iq2, -2.0);
-      gamlin(n + 5, iq2 + 1, 1.0);
-      dq[n + 5] = -res;
-    } else {
-      //----- zero dof condition
-      q[n + 5][n + 5] = 1.0;
-      dq[n + 5] = -qdof3;
-    }
-
-    Gauss(n + 5, q, dq);
-
-    double dnmax = 0.0;
-    double dgmax = 0.0;
-
-    //---- update surface speed gam before target segment
-    for (i = 1; i <= iq1 - 1; i++) {
-      gam[i] += dq[i];
-      if (fabs(dq[i]) > fabs(dgmax)) {
-        dgmax = dq[i];
-      }
-    }
-
-    //---- update panel nodes inside target segment
-    for (i = iq1; i <= iq2; i++) {
-      points.row(i).x() += nx[i] * dq[i];
-      points.row(i).y() += ny[i] * dq[i];
-      if (fabs(dq[i]) > fabs(dnmax)) {
-        dnmax = dq[i];
-      }
-    }
-
-    //---- update surface speed gam after target segment
-    for (i = iq2 + 1; i <= n; i++) {
-      gam[i] += dq[i];
-      if (fabs(dq[i]) > fabs(dgmax)) {
-        dgmax = dq[i];
-      }
-    }
-
-    //---- update gloabal variables
-    psio = psio + dq[n + 1];
-    qdof0 = qdof0 + dq[n + 2];
-    qdof1 = qdof1 + dq[n + 3];
-    qdof2 = qdof2 + dq[n + 4];
-    qdof3 = qdof3 + dq[n + 5];
-
-    spline_length.segment(1, spline_length.size() - 1) = spline::scalc(points.middleRows(1, points.rows() - 1), n, spline_length.size() - 1);
-
-    //---- set correct surface speed over target segment including dof
-    // contributions
-    for (i = iq1; i <= iq2; i++) {
-      gam[i] = qspec[kqsp][i] + qdof0 * qf0[i] + qdof1 * qf1[i] +
-               qdof2 * qf2[i] + qdof3 * qf3[i];
-    }
-
-    //---- update everything else
-    tecalc();
-    clcalc(xcmref, ycmref);
-
-    dnTrace[iter] = fabs(dnmax);
-    dgTrace[iter] = fabs(dgmax);
-
-    if (fabs(dnmax) < 5.0e-5 && fabs(dgmax) < 5.0e-4) {
-
-      QMax = iter;
-      return true;
-    }
-  }
-  QMax = niterq;
-
-  return false;
-}
-void XFoil::gamlin(int i, int j, double coef) {
-  //-------------------------------------------------------------------
-  //     adds on jacobian entry for point i due to node speed gam at j.
-  //     gam is either a local unknown if outside target segment,
-  //     or dependent on global qspec dof's if inside target segment.
-  //-------------------------------------------------------------------
-
-  if (j >= iq1 && j <= iq2) {
-    //----- inside target segment
-    q[i][n + 2] += coef * qf0[j];
-    q[i][n + 3] += coef * qf1[j];
-    q[i][n + 4] += coef * qf2[j];
-    q[i][n + 6] += coef * qf3[j];
-  } else {
-    //----- outside target segment
-    q[i][j] += coef;
-  }
-}
-
-void XFoil::inter(double x0[], double xp0[], double y0[], double yp0[],
-                  double s0[], int n0, double sle0, double x1[], double xp1[],
-                  double y1[], double yp1[], double s1[], int n1, double sle1,
-                  double x[], double y[], int n, double frac) {
-  //     .....................................................................
-  //
-  //     interpolates two source airfoil shapes into an "intermediate" shape.
-  //
-  //     procedure:
-  //        The interpolated x coordinate at a given normalized spline
-  //        parameter value is a weighted average of the two source
-  //        x coordinates at the same normalized spline parameter value.
-  //        ditto for the y coordinates. The normalized spline parameter
-  //        runs from 0 at the leading edge to 1 at the trailing edge on
-  //        each surface.
-  //     .....................................................................
-
-  double f0, f1, tops0, tops1, bots0, bots1;
-  double sn, st1;
-  //---- number of points in interpolated airfoil is the same as in airfoil 0
-  n = n0;
-
-  //---- interpolation weighting fractions
-  f0 = 1.0 - frac;
-  f1 = frac;
-
-  //---- top side spline parameter increments
-  tops0 = s0[1] - sle0;
-  tops1 = s1[1] - sle1;
-
-  //---- bottom side spline parameter increments
-  bots0 = s0[n0] - sle0;
-  bots1 = s1[n1] - sle1;
-
-  for (int i = 1; i <= n; i++) {
-    //------ normalized spline parameter is taken from airfoil 0 value
-    if (s0[i] < sle0)
-      sn = (s0[i] - sle0) / tops0;  // top side
-    else
-      sn = (s0[i] - sle0) / bots0;  // bottom side
-
-    //------ set actual spline parameters
-    const double st0 = s0[i];
-    if (st0 < sle0) st1 = sle1 + tops1 * sn;
-    //		if(st0>=sle0) st1 = sle1 + bots1 * sn;
-    else
-      st1 = sle1 + bots1 * sn;
-
-    //------ set interpolated x,y coordinates
-    x[i] = f0 * spline::seval(st0, x0, xp0, s0, n0) + f1 * spline::seval(st1, x1, xp1, s1, n1);
-    y[i] = f0 * spline::seval(st0, y0, yp0, s0, n0) + f1 * spline::seval(st1, y1, yp1, s1, n1);
-  }
-}
-
-void XFoil::interpolate(double xf1[], double yf1[], int n1, double xf2[],
-                        double yf2[], int n2, double mixt) {
-  int i;
-  MatrixX2d points1, points2;
-  points1.resize(IBX, 2);
-  points2.resize(IBX, 2);
-  double xp1[IBX], yp1[IBX], xp2[IBX], yp2[IBX];
-  VectorXd s1(IBX), s2(IBX);
-  
-  double sleint1, sleint2;
-
-  for (i = 0; i < n1; i++) {
-    points1.row(i + 1).x() = xf1[i];
-    points1.row(i + 1).y() = yf1[i];
-  }
-  for (i = 0; i < n2; i++) {
-    points2.row(i + 1).x() = xf2[i];
-    points2.row(i + 1).y() = yf2[i];
-  }
-
-  s1.segment(1, s1.size() - 1) = spline::scalc(points1.middleRows(1, points1.rows() - 1), n1, s1.size() - 1);
-  spline::segspld(points1.col(0).data(), xp1, s1.data(), n1, -999.0, -999.0);
-  spline::segspld(points1.col(1).data(), yp1, s1.data(), n1, -999.0, -999.0);
-  lefind(sleint1, points1.col(0).data(), xp1, points1.col(1).data(), yp1, s1.data(), n1);
-
-  s2.segment(1, s2.size() - 1) = spline::scalc(points2.middleRows(1, points2.rows() - 1), n2, s2.size() - 1);
-  spline::segspld(points2.col(0).data(), xp2, s2.data(), n2, -999.0, -999.0);
-  spline::segspld(points2.col(1).data(), yp2, s2.data(), n2, -999.0, -999.0);
-  lefind(sleint2, points2.col(0).data(), xp2, points2.col(1).data(), yp2, s2.data(), n2);
-
-  inter(points1.col(0).data(), xp1, points1.col(1).data(), yp1, s1.data(), n1, sleint1, points2.col(0).data(), xp2, points2.col(1).data(), yp2, s2.data(), n2, sleint2,
-        buffer_points.col(0).data(), buffer_points.col(1).data(), nb, mixt);
-
-  buffer_spline_length.segment(1, buffer_points.size() - 1) = spline::scalc(buffer_points.middleRows(1, buffer_points.rows() - 1), nb, buffer_spline_length.size() - 1);
-  spline::segspl(buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
-  spline::segspl(buffer_points.col(0).data(), ybp.data(), buffer_spline_length.data(), nb);
-}
-
-double XFoil::DeRotate() {
-  lefind(sble, buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
-  xle = spline::seval(sble, buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
-  yle = spline::seval(sble, buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
-  xte = 0.5 * (buffer_points.row(1).x() + buffer_points.row(nb).x());
-  yte = 0.5 * (buffer_points.row(1).y() + buffer_points.row(nb).y());
-
-  arad = atan2(yte - yle, xte - xle);
-  //	call rotate(xb,yb,nb,arad);
-
-  double sa = sin(arad);
-  double ca = cos(arad);
-  double xoff = 0.0;
-  double yoff = 0.0;
-
-  for (int i = 1; i <= n; i++) {
-    const double xt = buffer_points.row(i).x();
-    const double yt = buffer_points.row(i).y();
-    buffer_points.row(i).x() = ca * xt + sa * yt + xoff;
-    buffer_points.row(i).y() = ca * yt - sa * xt + yoff;
-  }
-
-  buffer_spline_length.segment(1, buffer_spline_length.size() - 1) = spline::scalc(buffer_points.middleRows(1, buffer_points.rows() - 1), nb, buffer_spline_length.size() - 1);
-  spline::segspl(buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
-  spline::segspl(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
-
-  return arad * 180.0 / PI;
-}
-
-/** -------------------------------------------------
- *      used to set buffer airfoil trailing edge gap
- * -------------------------------------------------- */
-void XFoil::tgap(double gapnew, double blend) {
-  double xble, yble, xbte, ybte, chbsq, tfac;
-  double dxn, dyn, dxu, dyu;
-  double gap, dgap, doc;
-  double arg;
-  lefind(sble, buffer_points.col(0).data(), xbp.data(), buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
-  xble = spline::seval(sble, buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
-  yble = spline::seval(sble, buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
-  xbte = 0.5 * (buffer_points.row(1).x() + buffer_points.row(nb).x());
-  ybte = 0.5 * (buffer_points.row(1).y() + buffer_points.row(nb).y());
-  chbsq = (xbte - xble) * (xbte - xble) + (ybte - yble) * (ybte - yble);
-
-  dxn = buffer_points.row(1).x() - buffer_points.row(nb).x();
-  dyn = buffer_points.row(1).y() - buffer_points.row(nb).y();
-  gap = sqrt(dxn * dxn + dyn * dyn);
-
-  //---- components of unit vector parallel to te gap
-  if (gap > 0.0) {
-    dxu = dxn / gap;
-    dyu = dyn / gap;
-  } else {
-    dxu = -.5 * (ybp[nb] - ybp[1]);
-    dyu = 0.5 * (xbp[nb] - xbp[1]);
-  }
-
-  doc = std::min(std::max(blend, 0.0), 1.0);
-
-  dgap = gapnew - gap;
-
-  //---- go over each point, changing the y-thickness appropriately
-  for (int i = 1; i <= nb; i++) {
-    //------ chord-based x/c
-    const double xoc = ((buffer_points.row(i).x() - xble) * (xbte - xble) + (buffer_points.row(i).y() - yble) * (ybte - yble)) /
-          chbsq;
-
-    //------ thickness factor tails off exponentially away from trailing edge
-    if (doc == 0.0) {
-      tfac = 0.0;
-      if (i == 1 || i == nb) tfac = 1.0;
-    } else {
-      arg = std::min((1.0 - xoc) * (1.0 / doc - 1.0), 15.0);
-      tfac = exp(-arg);
-    }
-
-    if (buffer_spline_length[i] <= sble) {
-      buffer_points.row(i).x() += 0.5 * dgap * xoc * tfac * dxu;
-      buffer_points.row(i).y() += 0.5 * dgap * xoc * tfac * dyu;
-    } else {
-      buffer_points.row(i).x() -= 0.5 * dgap * xoc * tfac * dxu;
-      buffer_points.row(i).y() -= 0.5 * dgap * xoc * tfac * dyu;
-    }
-  }
-
-  buffer_spline_length.segment(1, buffer_spline_length.size() - 1) = spline::scalc(buffer_points.middleRows(1, buffer_points.rows() - 1), nb, buffer_spline_length.size() - 1);
-  spline::segspl(buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
-  spline::segspl(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
-
-  //	lgeopl = false;
-  lgsame = false;
-}
-
-/** ---------------------------------------------------------
- *      Adjusts airfoil to scale LE radius by factor rfac.
- *      Blending of new shape is done with decay length doc.
- * --------------------------------------------------------- */
-void XFoil::lerscl(double *x, double *xp, double *y, double *yp, double *s,
-                   int n, double doc, double rfac, double *xnew, double *ynew) {
-  double dxc, dyc, srfac, sopp;
-
-  lefind(sle, x, xp, y, yp, s, n);
-  xle = spline::seval(sle, x, xp, s, n);
-  yle = spline::seval(sle, y, yp, s, n);
-  xte = 0.5 * (x[1] + x[n]);
-  yte = 0.5 * (y[1] + y[n]);
-  chord = sqrt((xte - xle) * (xte - xle) + (yte - yle) * (yte - yle));
-
-  //---- set unit chord-line vector
-  dxc = (xte - xle) / chord;
-  dyc = (yte - yle) / chord;
-
-  srfac = sqrt(fabs(rfac));
-
-  //---- go over each point, changing the y-thickness appropriately
-  for (int i = 1; i <= n; i++) {
-    const double xbar = (x[i] - xle) * dxc + (y[i] - yle) * dyc;
-    const double ybar = (y[i] - yle) * dxc - (x[i] - xle) * dyc;
-
-    //------ set point on the opposite side with the same chord x value
-    sopps(sopp, spline_length[i], x, xp, y, yp, s, n, sle);
-    const double xopp = spline::seval(sopp, x, xp, s, n);
-    const double yopp = spline::seval(sopp, y, yp, s, n);
-
-    const double ybarop = (yopp - yle) * dxc - (xopp - xle) * dyc;
-
-    //------ thickness factor tails off exponentially towards trailing edge
-    const double xoc = xbar / chord;
-    const double arg = min(xoc / doc, 15.0);
-    const double tfac = 1.0 - (1.0 - srfac) * exp(-arg);
-
-    //------ set new chord x,y coordinates by changing thickness locally
-    const double ybarct = 0.5 * (ybar + ybarop) + tfac * 0.5 * (ybar - ybarop);
-
-    xnew[i] = xle + xbar * dxc - ybarct * dyc;
-    ynew[i] = yle + ybarct * dxc + xbar * dyc;
-  }
-}
-
-/**
- * @brief Creates a 4-digit naca foil
- * @param ides the identification digits of the naca foil
- * @param nside the number of points of the generated foil
- */
-void XFoil::naca4(int ides, int nside) {
-  int n1, n2, n3, n4, ib, i;
-
-  double *xx = w1;
-  double *yt = w2;  // thickness function
-  double *yc = w3;  // mean camber line function
-  memset(w1, 0, sizeof(w1));
-  memset(w2, 0, sizeof(w2));
-  memset(w3, 0, sizeof(w3));
-
-  double m, p, t;
-
-  if (nside > (int)(IQX / 3)) nside = (int)(IQX / 3);
-
-  //---- te point bunching parameter
-  //      data an / 1.5 /
-  double an = 1.5;
-  double anp;
-
-  n4 = ides / 1000;
-  n3 = (ides - n4 * 1000) / 100;
-  n2 = (ides - n4 * 1000 - n3 * 100) / 10;
-  n1 = (ides - n4 * 1000 - n3 * 100 - n2 * 10);
-
-  m = (double)(n4) /
-      100.0;  // maximum value of the mean line in hundredths of chord,
-  p = (double)(n3) /
-      10.0;  // chordwise position of the maximum camber in tenths of the chord.
-  t = (double)(n2 * 10 + n1) /
-      100.0;  // maximum thickness, t/c, in percent chord.
-
-  anp = an + 1.0;
-  for (i = 1; i <= nside; i++) {
-    const double frac = (double)(i - 1) / (double)(nside - 1);
-    xx[i] = 1.0 - anp * frac * pow((1.0 - frac), an) - pow((1.0 - frac), anp);
-    yt[i] = (1.4845 * sqrt(xx[i]) - 0.6300 * xx[i] - 1.7580 * xx[i] * xx[i] +
-             1.4215 * xx[i] * xx[i] * xx[i] -
-             0.5075 * xx[i] * xx[i] * xx[i] * xx[i]) *
-            t;
-    if (xx[i] < p)
-      yc[i] = m / p / p * (2.0 * p * xx[i] - xx[i] * xx[i]);
-    else
-      yc[i] = m / (1.0 - p) / (1.0 - p) *
-              (1.0 - 2.0 * p + 2.0 * p * xx[i] - xx[i] * xx[i]);
-  }
-
-  ib = 0;
-  for (i = nside; i >= 1; i--) {
-    ib = ib + 1;
-    buffer_points.row(ib).x() = xx[i];
-    buffer_points.row(ib).y() = yc[i] + yt[i];
-  }
-  for (i = 2; i <= nside; i++) {
-    ib = ib + 1;
-    buffer_points.row(ib).x() = xx[i];
-    buffer_points.row(ib).y() = yc[i] - yt[i];
-  }
-  nb = ib;
-
-  buffer_spline_length.segment(1, buffer_spline_length.size() - 1) = spline::scalc(buffer_points.middleRows(1, buffer_points.rows() - 1), nb, buffer_spline_length.size() - 1);
-  spline::segspl(buffer_points.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
-  spline::segspl(buffer_points.col(1).data(), ybp.data(), buffer_spline_length.data(), nb);
-}
-
-/**
- * @brief Creates a 5-digit naca foil
- * @param ides the identification digits of the naca 5 foil
- * @param nside the number of points of the generated foil
- * @return true if successful, false if not a valid 5-digit number.
- */
-bool XFoil::naca5(int ides, int nside) {
-  //      real xx(nside), yt(nside), yc(nside)
-  //     real xb(2*nside), yb(2*nside)
-  double m, c, t, anp;
-  int n1, n2, n3, n4, n5, n543, i, ib;
-  if (nside > (int)(IQX / 3)) nside = (int)(IQX / 3);
-  double *xx = w1;
-  double *yt = w2;
-  double *yc = w3;
-
-  //---- te point bunching parameter
-  double an = 1.5;
-
-  n5 = ides / 10000;
-  n4 = (ides - n5 * 10000) / 1000;
-  n3 = (ides - n5 * 10000 - n4 * 1000) / 100;
-  n2 = (ides - n5 * 10000 - n4 * 1000 - n3 * 100) / 10;
-  n1 = (ides - n5 * 10000 - n4 * 1000 - n3 * 100 - n2 * 10);
-
-  n543 = 100 * n5 + 10 * n4 + n3;
-
-  if (n543 == 210) {
-    //     p = 0.05
-    m = 0.0580;
-    c = 361.4;
-  } else if (n543 == 220) {
-    //     p = 0.10
-    m = 0.1260;
-    c = 51.64;
-  } else if (n543 == 230) {
-    //     p = 0.15
-    m = 0.2025;
-    c = 15.957;
-  } else if (n543 == 240) {
-    //     p = 0.20
-    m = 0.2900;
-    c = 6.643;
-  } else if (n543 == 250) {
-    //     p = 0.25
-    m = 0.3910;
-    c = 3.230;
-  } else {
-    ides = 0;
-    writeString(
-        "Illegal 5-digit designation\nfirst three digits must be 210, 220, ... "
-        "250");
-
-    return false;
-  }
-
-  t = (double)(n2 * 10 + n1) / 100.0;
-
-  anp = an + 1.0;
-  for (i = 1; i <= nside; i++) {
-    const double frac = (double)(i - 1) / (double)(nside - 1);
-    xx[i] = 1.0 - anp * frac * pow((1.0 - frac), an) - pow((1.0 - frac), anp);
-    yt[i] = (0.29690 * sqrt(xx[i]) - 0.12600 * xx[i] - 0.35160 * xx[i] * xx[i] +
-             0.28430 * xx[i] * xx[i] * xx[i] -
-             0.10150 * xx[i] * xx[i] * xx[i] * xx[i]) *
-            t / 0.20;
-    if (xx[i] < m)
-      yc[i] = (c / 6.0) * (xx[i] * xx[i] * xx[i] - 3.0 * m * xx[i] * xx[i] +
-                           m * m * (3.0 - m) * xx[i]);
-    else
-      yc[i] = (c / 6.0) * m * m * m * (1.0 - xx[i]);
-  }
-
-  ib = 0;
-  for (i = nside; i >= 1; i--) {
-    ib = ib + 1;
-    buffer_points.row(ib).x() = xx[i];
-    buffer_points.row(ib).y() = yc[i] + yt[i];
-  }
-
-  for (i = 2; i <= nside; i++) {
-    ib = ib + 1;
-    buffer_points.row(ib).x() = xx[i];
-    buffer_points.row(ib).y() = yc[i] - yt[i];
-  }
-  nb = ib;
-  return true;
-}
-
-/**
- * @brief Creates the x coordinates of the boundary layer points.
- * @param xs the pre-allocated array of coordinates
- * @param nside1 the number of nodes on side 1 (top?)
- * @param nside2 the number of nodes on side 2 (bottom?)
- */
-void XFoil::createXBL(double xs[IVX][3]) {
-  int i;
-  //---- set up cartesian bl x-arrays for plotting
-  for (int is = 1; is <= 2; is++) {
-    for (int ibl = 2; ibl <= nbl[is]; ibl++) {
-      i = ipan[ibl][is];
-      xs[ibl][is] = points.row(i).x();
-      //			xxtr[is] = xle + (xte-xle)*xoctr[is] -
-      //(yte-yle)*yoctr[is];
-    }
-  }
-
-  m_nSide1 = nbl[2] + iblte[1] - iblte[2];
-  m_nSide2 = nbl[2];
-
-  for (int iblw = 1; iblw <= nbl[2] - iblte[2]; iblw++)
-    xs[iblte[1] + iblw][1] = xs[iblte[2] + iblw][2];
 }

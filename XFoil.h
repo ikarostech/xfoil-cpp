@@ -61,7 +61,7 @@ struct blData {
       hz, hz_tz, hz_dz, 
       mz, mz_uz, mz_ms, 
       rz, rz_uz, rz_ms, 
-      vz, vz_uz, vz_ms, vz_re, 
+      vz, vz_uz, vz_ms, vz_re,
       hkz, hkz_uz, hkz_tz, hkz_dz, hkz_ms, 
       hsz, hsz_uz, hsz_tz, hsz_dz, hsz_ms, hsz_re, 
       hcz, hcz_uz, hcz_tz, hcz_dz, hcz_ms, 
@@ -88,8 +88,6 @@ class XFoil {
   virtual ~XFoil();
 
  public:
-  void interpolate(double xf1[], double yf1[], int n1, double xf2[],
-                   double yf2[], int n2, double mixt);
 
   bool CheckAngles();
   bool Preprocess();
@@ -115,13 +113,9 @@ class XFoil {
                          bool bViscous, std::stringstream &outStream);
 
 
-  double qcomp(double g);
   bool clcalc(double xref, double yref);
 
-  void createXBL(double xs[IVX][3]);
-
   void writeString(std::string str, bool bFullReport = false);
-  double DeRotate();
   bool specal();
   bool speccl();
   bool viscal();
@@ -130,10 +124,6 @@ class XFoil {
   bool fcpmin();
   
   bool abcopy();
-  
-  void naca4(int ides, int nside);
-  bool naca5(int ides, int nside);
-  void tgap(double gapnew, double blend);
 
   bool isBLInitialized() const { return lblini; }
   void setBLInitialized(bool bInitialized) { lblini = bInitialized; }
@@ -154,38 +144,13 @@ class XFoil {
   static double VAccel() { return vaccel; }
   static void setVAccel(double accel) { vaccel = accel; }
 
-  void inter(double x0[], double xp0[], double y0[], double yp0[], double s0[],
-             int n0, double sle0, double x1[], double xp1[], double y1[],
-             double yp1[], double s1[], int n1, double sle1, double x[],
-             double y[], int n, double frac);
-  double qincom(double qc, double qinf, double tklam);
-  void qccalc(int ispec, double *alfa, double *cl, double *cm, double minf,
-              double qinf, int *ncir, double xcir[], double ycir[],
-              double scir[], double qcir[]);
-  void mapgam(int iac, double &alg, double &clg, double &cmg);
-  bool eiwset(int nc1);
-  void cgauss(int nn, complex<double> z[IMX4 + 1][IMX4 + 1],
-              complex<double> r[IMX4 + 1]);
-  void zccalc(int mtest);
-  void zcnorm(int mtest);
-  void zlefind(complex<double> *zle, complex<double> zc[], double wc[], int nc,
-               const complex<double> piq[], double agte);
-  void gamlin(int i, int j, double coef);
-  bool mixed(int kqsp);
-  void cnfilt(double ffilt);
-
   bool setMach();
-
-  bool isInside(vector<Vector2d> plots, Vector2d target);
 
   bool comset();
   bool mrcl(double cls, double &m_cls, double &r_cls);
   bool restoreblData(int icom);
   bool saveblData(int icom);
 
-  bool aecalc(int n, const double x[], const double y[], const double t[], int itype,
-              double &area, double &xcen, double &ycen, double &ei11,
-              double &ei22, double &apx1, double &apx2);
   bool apcalc();
   bool axset(double hk1, double thet1, double rt1, double a1, double hk2,
              double thet2, double rt2, double a2, double acrit, double &ax,
@@ -226,12 +191,7 @@ class XFoil {
 
   bool gamqv();
   bool Gauss(int nn, double z[][6], double r[5]);
-  bool Gauss(int nn, double z[IQX][IQX], double r[IQX]);
-  void sopps(double &sopp, double si, double x[], double xp[], double y[],
-             double yp[], double s[], int n, double sle);
-  void xlfind(double &sle, double x[], double xp[], double y[], double yp[],
-              double s[], int n);
-  bool getxyf(double x[], double xp[], double y[], double yp[], double s[],
+  bool getxyf(MatrixX2d points, MatrixX2d dpoints_ds, VectorXd s,
               int n, double &tops, double &bots, double xf, double &yf);
   bool ggcalc();
   bool hct(double hk, double msq, double &hc, double &hc_hk, double &hc_msq);
@@ -241,16 +201,13 @@ class XFoil {
            double &hs_rt, double &hs_msq);
   bool iblpan();
   bool iblsys();
-  bool lefind(double &sle, double x[], double xp[], double y[], double yp[],
-              double s[], int n);
-  void lerscl(double *x, double *xp, double *y, double *yp, double *s, int n,
-              double doc, double rfac, double *xnew, double *ynew);
+  bool lefind(double &sle, MatrixX2d points, MatrixX2d dpoints_ds, VectorXd s, int n);
+
   bool ludcmp(int n, double a[IQX][IQX], int indx[IQX]);
   bool mhinge();
   bool mrchdu();
   bool mrchue();
-  bool ncalc(double x[], double y[], double s[], int n, double xn[],
-             double yn[]);
+  bool ncalc(MatrixX2d point, VectorXd s, int n, double xn[], double yn[]);
   bool psilin(int i, double xi, double yi, double nxi, double nyi, double &psi,
               double &psi_ni, bool geolin, bool siglin);
   bool pswlin(int i, double xi, double yi, double nxi, double nyi, double &psi,
@@ -289,28 +246,13 @@ class XFoil {
   static bool s_bFullReport;
   std::stringstream *m_pOutStream;
 
-  double agte, ag0, qim0, qimold;
-  double ssple, dwc, algam, clgam, cmgam;
   double clspec;
-  double sspec[IBX + 1], xspoc[IBX + 1], yspoc[IBX + 1];
-  double qspec[IPX + 1][IBX + 1], qspecp[IPX + 1][IBX + 1];
-  double alqsp[IPX + 1], clqsp[IPX + 1], cmqsp[IPX + 1];
-  complex<double> dzte, chordz, zleold, zcoldw[ICX + 1];
-  complex<double> piq[ICX + 1], cn[IMX + 1], eiw[ICX + 1][IMX + 1];
-  double dnTrace[100];  //... added techwinder
-  double dgTrace[100];  //... added techwinder
-  int QMax;
 
-  bool lqspec, lsym, leiw, lqslop, lscini, lrecalc, lcnpl;
-  int nsp, nqsp, iacqsp;
-  int nc, nc1, mc, mct;
-  int iq1, iq2;
+  int nc1;
   int imax;  // needed for preprocessing
 
   MatrixX2d buffer_points; //formerly xb, yb
   vector<double> nx, ny;
-  double xpref1, xpref2;
-  double cvpar, cterat, ctrrat, xsref1, xsref2;
 
   double cl, cm, cd, cdp, cdf, cpi[IZX], cpv[IZX], acrit;
   double xcp;
@@ -320,22 +262,21 @@ class XFoil {
   bool lalfa, lvisc, lvconv, lwake;
   double qgamm[IBX + 1];
   double hmom;
-  bool lcpxx;
-  int niterq;
   double xbf, ybf;
-  double ddef;  // flap angle
+
   double rmxbl;
 
+  double qtan1, qtan2;
   double amax;  // needed for preprocessing
   double minf1;
-  bool lblini, lipan, lqsym;
-  bool lbflap, lflap;
+  bool lblini, lipan;
+  bool lflap;
   int n, nb, iblte[ISX], ipan[IVX][ISX], nbl[ISX];
   
   MatrixX2d points; //formerly x,y
   double xstrip[ISX], xoctr[ISX], yoctr[ISX];
   double qvis[IZX];
-  bool liqset;
+  
   double adeg, xcmref, ycmref;
   double tklam;
   MatrixX2d dpoints_ds; //formerly xp, yp
@@ -344,24 +285,13 @@ class XFoil {
 
   double thet[IVX][ISX], tau[IVX][ISX], ctau[IVX][ISX], ctq[IVX][ISX];
   double dis[IVX][ISX], uedg[IVX][ISX];
-  double xbl[IVX][ISX], Hk[IVX][ISX], RTheta[IVX][ISX];
+
   double dstr[IVX][ISX];
-  double delt[IVX][ISX];
-  int m_nSide1, m_nSide2;
+  
   int itran[ISX];
 
-  double m_ctrl; /** information storage for xflr5 gui */
-
  public: //private:
-  double wc[ICX + 1], sc[ICX + 1];
-  double scold[ICX + 1], xcold[ICX + 1], ycold[ICX + 1];
   double qf0[IQX + 1], qf1[IQX + 1], qf2[IQX + 1], qf3[IQX + 1];
-
-  double qdof0, qdof1, qdof2, qdof3, ffilt;
-
-  complex<double> zc[ICX + 1], zc_cn[ICX + 1][IMX4 + 1];
-  complex<double> cnsav[IMX + 1];
-
 
   double rlx;
 
@@ -369,31 +299,25 @@ class XFoil {
   double minf_cl, reinf_cl;
   double angtol;
 
-  int ncam, nthk;
-
   blData blsav[3];
-  complex<double> conjg(complex<double> cplx);
 
-  bool m_bTrace;
-
-  bool limage, lgamu, sharp, lqaij, ladij, lwdij;
-  bool lqinu,
-      lgsame;
+  bool lgamu, sharp, lqaij, ladij, lwdij, lgsame;
 
   double sccon, gacon, gbcon, gbc0, gbc1, gccon, dlcon, ctcon;
 
   //---- dimension temporary work and storage arrays [equivalenced below]
   double w1[6 * IQX], w2[6 * IQX], w3[6 * IQX], w4[6 * IQX];
-  double w5[6 * IQX], w6[6 * IQX], w7[6 * IQX], w8[6 * IQX];
+
   int nsys;
   double isys[IVX][ISX];
   vector<double> xbp, ybp, snew;
   VectorXd buffer_spline_length;
-  double xof, yof, sble;
+  double xof, yof;
 
-  double sle, xle, yle, xte, yte;
-  double chord, yimage, wgap[IWX], waklen;
-  double ch;
+  double sle;
+  Vector2d point_le;
+  Vector2d point_te;
+  double chord, wgap[IWX], waklen;
   int nw, ist;
 
   int aijpiv[IQX];
@@ -402,18 +326,16 @@ class XFoil {
   double psio, cosa, sina, gamma, gamm1;
   double tkl_msq, cpstar, qstar;
   double cpmni, cpmnv, xcpmni, xcpmnv;
-  double arad;  // added arcds
   double xssi[IVX][ISX], uinv[IVX][ISX], mass[IVX][ISX];
-  double uslp[IVX][ISX], guxq[IVX][ISX], guxd[IVX][ISX];
+
   double vti[IVX][ISX];
-  double xssitr[ISX], uinv_a[IVX][ISX];
+  double uinv_a[IVX][ISX];
   double gam[IQX], gam_a[IQX], gamu[IQX][ISX], sig[IZX];
   double apanel[IZX], sst, sst_go, sst_gp, gamte, sigte;
   double dste, aste;
   double qinv[IZX], qinvu[IZX][3], qinv_a[IZX];
-  double q[IQX][IQX], dq[IQX], dzdg[IQX], dzdn[IQX], dzdm[IZX], dqdg[IQX];
-  double dqdm[IZX], qtan1, qtan2, z_qinf, z_alfa, z_qdof0, z_qdof1, z_qdof2,
-      z_qdof3;
+  double dzdg[IQX], dzdn[IQX], dzdm[IZX], dqdg[IQX];
+  double dqdm[IZX];
   double aij[IQX][IQX];
   double bij[IQX][IZX], dij[IZX][IZX];
   double cij[IWX][IQX];
@@ -434,8 +356,7 @@ class XFoil {
   double cfm, cfm_ms, cfm_re, cfm_u1, cfm_t1, cfm_d1, cfm_u2, cfm_t2, cfm_d2;
   double xt, xt_a1, xt_ms, xt_re, xt_xf, xt_x1, xt_t1, xt_d1, xt_u1, xt_x2,
       xt_t2, xt_d2, xt_u2;
-  double va[4][3][IZX], vb[4][3][IZX], vdel[4][3][IZX], vm[4][IZX][IZX],
-      vz[4][3];
+  double va[4][3][IZX], vb[4][3][IZX], vdel[4][3][IZX], vm[4][IZX][IZX], vz[4][3];
 
 
   /*
