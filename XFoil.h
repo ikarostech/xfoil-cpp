@@ -92,14 +92,8 @@ class XFoil {
                    double yf2[], int n2, double mixt);
 
   bool CheckAngles();
-  void pangen();
   bool Preprocess();
-  void pert_process(int kqsp);
-  void pert_init(int kqsp);
-  void HanningFilter(double cfilt, std::stringstream &ts);
-  void smooq(int kq1, int kq2, int kqsp);
-  void ExecMDES();
-  bool ExecQDES();
+  
   bool initialize();
   bool initXFoilGeometry(int fn, const double *fx, const double *fy, double *fnx,
                          double *fny);
@@ -120,17 +114,12 @@ class XFoil {
                          double XtrTop, double XtrBot, ReynoldsType reType, MachType maType,
                          bool bViscous, std::stringstream &outStream);
 
-  void splqsp(int kqsp);
-  void qspcir();
-  void InitMDES();
-  bool InitQDES();
-  void cncalc(double qc[], bool lsymm);
+
   double qcomp(double g);
   bool clcalc(double xref, double yref);
 
   void createXBL(double xs[IVX][3]);
-  void fillHk(double ws[IVX][3]);
-  void fillRTheta(double ws[IVX][3]);
+
   void writeString(std::string str, bool bFullReport = false);
   double DeRotate();
   bool specal();
@@ -139,11 +128,9 @@ class XFoil {
   bool ViscalEnd();
   bool ViscousIter();
   bool fcpmin();
-  int cadd(int ispl, double atol, double xrf1, double xrf2);
+  
   bool abcopy();
-  void tcset(double cnew, double tnew);
-  void hipnt(double xhc, double xht);
-  void lerad(double rfac, double blend);
+  
   void naca4(int ides, int nside);
   bool naca5(int ides, int nside);
   void tgap(double gapnew, double blend);
@@ -171,9 +158,6 @@ class XFoil {
              int n0, double sle0, double x1[], double xp1[], double y1[],
              double yp1[], double s1[], int n1, double sle1, double x[],
              double y[], int n, double frac);
-  void thkcam(double tfac, double cfac);
-  void qspint(int kqsp, double &clq);
-
   double qincom(double qc, double qinf, double tklam);
   void qccalc(int ispec, double *alfa, double *cl, double *cm, double minf,
               double qinf, int *ncir, double xcir[], double ycir[],
@@ -186,29 +170,13 @@ class XFoil {
   void zcnorm(int mtest);
   void zlefind(complex<double> *zle, complex<double> zc[], double wc[], int nc,
                const complex<double> piq[], double agte);
-  void piqsum();
-  void ftp();
-  void scinit(int n, double x[], double xp[], double y[], double yp[],
-              double s[], double sle);
-  void mapgen(int n, double x[], double y[]);
-
-  //	int kqtarg,nname,nprefix;
   void gamlin(int i, int j, double coef);
   bool mixed(int kqsp);
-  void gamqsp(int kqsp);
   void cnfilt(double ffilt);
-  void RestoreQDES();
 
   bool setMach();
-  void scheck(double x[], double y[], int *n, double stol, bool *lchange);
-  void sss(double ss, double *s1, double *s2, double del, double xbf,
-           double ybf, double x[], double xp[], double y[], double yp[],
-           double s[], int n, int iside);
+
   bool isInside(vector<Vector2d> plots, Vector2d target);
-  void flap();
-  int arefine(double x[], double y[], double s[], double xs[], double ys[],
-              int n, double atol, int ndim, double xnew[], double ynew[],
-              double x1, double x2);
 
   bool comset();
   bool mrcl(double cls, double &m_cls, double &r_cls);
@@ -259,21 +227,10 @@ class XFoil {
   bool gamqv();
   bool Gauss(int nn, double z[][6], double r[5]);
   bool Gauss(int nn, double z[IQX][IQX], double r[IQX]);
-  bool geopar(double x[], double xp[], double y[], double yp[], double s[],
-              int n, double t[], double &sle, double &chord, double &area,
-              double &radle, double &angte, double &ei11a, double &ei22a,
-              double &apx1a, double &apx2a, double &ei11t, double &ei22t,
-              double &apx1t, double &apx2t);
   void sopps(double &sopp, double si, double x[], double xp[], double y[],
              double yp[], double s[], int n, double sle);
-  void getcam(double xcm[], double ycm[], int &ncm, double xtk[], double ytk[],
-              int &ntk, double x[], double xp[], double y[], double yp[],
-              double s[], int n);
-  void getmax(double x[], double y[], double yp[], int n, double &xmax,
-              double &ymax);
   void xlfind(double &sle, double x[], double xp[], double y[], double yp[],
               double s[], int n);
-  void sortol(double tol, int &kk, double s[], double w[]);
   bool getxyf(double x[], double xp[], double y[], double yp[], double s[],
               int n, double &tops, double &bots, double xf, double &yf);
   bool ggcalc();
@@ -323,8 +280,7 @@ class XFoil {
   bool xyWake();
   double aint(double number);
   double atanc(double y, double x, double thold);
-  double curv(double ss, const double x[], const double xs[], const double y[], const double ys[],
-              const double s[], int n);
+
   double sign(double a, double b);
 
  public:
@@ -351,7 +307,6 @@ class XFoil {
   int iq1, iq2;
   int imax;  // needed for preprocessing
 
-  double thickb, cambrb;
   MatrixX2d buffer_points; //formerly xb, yb
   vector<double> nx, ny;
   double xpref1, xpref2;
@@ -376,7 +331,7 @@ class XFoil {
   bool lblini, lipan, lqsym;
   bool lbflap, lflap;
   int n, nb, iblte[ISX], ipan[IVX][ISX], nbl[ISX];
-  int npan;
+  
   MatrixX2d points; //formerly x,y
   double xstrip[ISX], xoctr[ISX], yoctr[ISX];
   double qvis[IZX];
@@ -414,8 +369,6 @@ class XFoil {
   double minf_cl, reinf_cl;
   double angtol;
 
-  double xcam[IQX], ycam[IQX], xthk[IQX], ythk[IQX], ycamp[IQX], ythkp[IQX];
-  double thick, xthick, cambr, xcambr;
   int ncam, nthk;
 
   blData blsav[3];
@@ -436,11 +389,7 @@ class XFoil {
   double isys[IVX][ISX];
   vector<double> xbp, ybp, snew;
   VectorXd buffer_spline_length;
-  double xof, yof, sble, chordb;
-  double areab, radble, angbte;
-  Matrix2d bending_inertia_xy, bending_inertia_ts;
-  Matrix2d principal_axis_xy, principal_axis_ts;
-
+  double xof, yof, sble;
 
   double sle, xle, yle, xte, yte;
   double chord, yimage, wgap[IWX], waklen;
@@ -481,7 +430,6 @@ class XFoil {
   blData blData1, blData2;
 
   int imxbl, ismxbl;
-  double xsf, ysf;
 
   double cfm, cfm_ms, cfm_re, cfm_u1, cfm_t1, cfm_d1, cfm_u2, cfm_t2, cfm_d2;
   double xt, xt_a1, xt_ms, xt_re, xt_xf, xt_x1, xt_t1, xt_d1, xt_u1, xt_x2,
