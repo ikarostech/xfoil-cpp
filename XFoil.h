@@ -72,16 +72,7 @@ struct blData {
       cqz, cqz_uz, cqz_tz, cqz_dz, cqz_ms, cqz_re, 
       dez, dez_uz, dez_tz, dez_dz, dez_ms;
 };
-class PairIndex {
-  public:
-    int index;
-    double value;
-    PairIndex(int index, double value) {
-      this->index = index;
-      this->value = value;
-    }
-    PairIndex() {}
-};
+
 class XFoil {
  public:
   XFoil();
@@ -89,8 +80,8 @@ class XFoil {
 
  public:
 
-  bool CheckAngles();
-  bool Preprocess();
+  bool isValidFoilAngles(MatrixX2d points);
+  bool isValidFoilPointSize(MatrixX2d points);
   
   bool initialize();
   bool initXFoilGeometry(int fn, const double *fx, const double *fy, double *fnx,
@@ -123,7 +114,7 @@ class XFoil {
   bool ViscousIter();
   bool fcpmin();
   
-  bool abcopy();
+  bool abcopy(MatrixX2d copyFrom);
 
   bool isBLInitialized() const { return lblini; }
   void setBLInitialized(bool bInitialized) { lblini = bInitialized; }
@@ -165,7 +156,7 @@ class XFoil {
   bool blsolve();
   bool blsys();
   bool blvar(int ityp);
-  PairIndex cang(const vector<Vector2d> plots);
+  double cang(MatrixX2d points);
   bool cdcalc();
 
   /**
@@ -249,9 +240,7 @@ class XFoil {
   double clspec;
 
   int nc1;
-  int imax;  // needed for preprocessing
 
-  MatrixX2d buffer_points; //formerly xb, yb
   vector<double> nx, ny;
 
   double cl, cm, cd, cdp, cdf, cpi[IZX], cpv[IZX], acrit;
@@ -262,7 +251,6 @@ class XFoil {
   bool lalfa, lvisc, lvconv, lwake;
   double qgamm[IBX + 1];
   double hmom;
-  double xbf, ybf;
 
   double rmxbl;
 
@@ -271,7 +259,7 @@ class XFoil {
   double minf1;
   bool lblini, lipan;
   
-  int n, nb, iblte[ISX], ipan[IVX][ISX], nbl[ISX];
+  int n, iblte[ISX], ipan[IVX][ISX], nbl[ISX];
   
   MatrixX2d points; //formerly x,y
   double xstrip[ISX], xoctr[ISX], yoctr[ISX];
@@ -295,13 +283,12 @@ class XFoil {
 
   double rlx;
 
-  double hfx, hfy;
   double minf_cl, reinf_cl;
-  double angtol;
+  const double angtol = 40.0; // foil angle tolerance
 
   blData blsav[3];
 
-  bool lgamu, sharp, lqaij, ladij, lwdij, lgsame;
+  bool lgamu, sharp, lqaij, ladij, lwdij;
 
   double sccon, gacon, gbcon, gbc0, gbc1, gccon, dlcon, ctcon;
 
@@ -311,8 +298,7 @@ class XFoil {
   int nsys;
   double isys[IVX][ISX];
   vector<double> xbp, ybp;
-  VectorXd snew, buffer_spline_length;
-  double xof, yof;
+  VectorXd snew;
 
   double sle;
   Vector2d point_le;

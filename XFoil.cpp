@@ -61,7 +61,6 @@ XFoil::XFoil() {
   gccon = 18.0;
   dlcon = 0.9;
   ctcon = 0.01485111754659538130244;  //(ctcon = 0.5/(gacon**2 * gbcon))
-  angtol = 40.0;
 
   // fortran seems to initializes variables to 0
   mvisc = 0.0;
@@ -136,7 +135,6 @@ bool XFoil::initialize() {
   memset(qinv_a, 0, sizeof(qinv_a));
   memset(qvis, 0, sizeof(qvis));
   spline_length.resize(IZX);
-  buffer_spline_length.resize(IBX);
   memset(sig, 0, sizeof(sig));
   snew = VectorXd::Zero(4 * IBX);
   memset(sig, 0, sizeof(sig));
@@ -146,7 +144,6 @@ bool XFoil::initialize() {
   memset(uinv, 0, sizeof(uinv));
   memset(vti, 0, sizeof(vti));
   points.resize(IZX, 2);
-  buffer_points.resize(IBX, 2);
   xbp.resize(IBX, 0);
   dpoints_ds.resize(IZX, 2);
   
@@ -211,7 +208,6 @@ bool XFoil::initialize() {
   ladij = false;
   lwdij = false;
   lvconv = false;
-  lgsame = false;
 
   sharp = false;
   lalfa = false;
@@ -226,14 +222,6 @@ bool XFoil::initialize() {
   tforce[1] = false;
   tforce[2] = false;
 
-  //---- buffer and current airfoil flap hinge coordinates
-  xbf = 0.0;
-  ybf = 0.0;
-  xof = 0.0;
-  yof = 0.0;
-
-  //	ncpref = 0;
-  //                                       n
   //---- circle plane array size (largest 2  + 1 that will fit array size)
   double ann = log(double((2 * IQX) - 1)) / log(2.0);
   int nn = int(ann + 0.00001);
@@ -269,14 +257,11 @@ bool XFoil::initialize() {
 
   // added techwinder : no flap yet
   hmom = 0.0;
-  hfx = 0.0;
-  hfy = 0.0;
 
   // added techwinder : fortran initializes to 0
   imxbl = 0;
   ismxbl = 0;
   ist = 0;
-  nb = 0;
 
   dwte = 0.0;
   qinfbl = 0.0;
@@ -368,28 +353,24 @@ bool XFoil::initialize() {
   return true;
 }
 
-bool XFoil::abcopy() {
+bool XFoil::abcopy(MatrixX2d copyFrom) {
   int i;
-  std::stringstream ss;
-  if (nb <= 1) {
-    writeString("abcopy: buffer airfoil not available");
-    return false;
-  } else if (nb > IQX - 2) {
+  std::stringstream ss; /*
+  if (nb > IQX - 2) {
     ss << "Maximum number of panel nodes  : " << IQX - 2 << "\n";
     ss << "Number of buffer airfoil points: " << nb << "\n ";
     ss << "Current airfoil cannot be set\n";
     ss << "Try executing PANE at top level instead";
     writeString(ss.str());
     return false;
-  }
-  if (n != nb) lblini = false;
+  } */
+  if (n != copyFrom.rows() - 1) lblini = false;
 
-  n = nb;
+  n = copyFrom.rows() - 1;
   for (i = 1; i <= n; i++) {
-    points.row(i).x() = buffer_points.row(i).x();
-    points.row(i).y() = buffer_points.row(i).y();
+    points.row(i).x() = copyFrom.row(i).x();
+    points.row(i).y() = copyFrom.row(i).y();
   }
-  lgsame = true;
 
   //---- strip out doubled points
   i = 1;
@@ -1701,25 +1682,20 @@ bool XFoil::blvar(int ityp) {
  * @param n foil plot size
  * @return PairIndex index: index of max angle diff, value: angle of max angle diff[degree]
  */
-PairIndex XFoil::cang(vector<Vector2d> plots) {
-  //TODO INDEX_START_WITH
-  PairIndex pair_index = PairIndex(0, 0.0);
-
+double XFoil::cang(MatrixX2d points) {
+  
+  double max_angle = 0;
   //---- go over each point, calculating corner angle
-  //TODO INDEX_START_WITH
-  for (int i = 1; i < plots.size() - 1; i++) {
-    Vector2d delta_former = plots[i] - plots[i-1];
-    Vector2d delta_later =  plots[i] - plots[i+1];
+  for (int i = 1; i < points.rows() - 1; i++) {
+    Vector2d delta_former = points.row(i) - points.row(i - 1);
+    Vector2d delta_later =  points.row(i) - points.row(i + 1);
 
     double sin = cross2(delta_later, delta_former) / delta_former.norm() / delta_later.norm();
     double delta_angle = asin(sin) * 180.0 / PI;
-    
-    if (fabs(delta_angle) > fabs(pair_index.value)) {
-      pair_index.index = i;
-      pair_index.value = delta_angle;
-    }
+
+    max_angle = max(fabs(delta_angle), max_angle);
   }
-  return pair_index;
+  return max_angle;
 }
 
 bool XFoil::cdcalc() {
@@ -2604,34 +2580,21 @@ bool XFoil::iblsys() {
 /** Loads the Foil's geometry in XFoil,
  *  calculates the normal vectors,
  *  and sets the results in current foil */
-bool XFoil::initXFoilGeometry(int fn, const double *fx, const double *fy, double *fnx,
-                              double *fny) {
-  int i;
+bool XFoil::initXFoilGeometry(int fn, const double *fx, const double *fy, double *fnx, double *fny) {
 
-  for (i = 0; i < fn; i++) {
+  MatrixX2d buffer_points = MatrixX2d::Zero(fn + 1, 2);
+  for (int i = 0; i < fn; i++) {
     buffer_points.row(i + 1).x() = fx[i];
     buffer_points.row(i + 1).y() = fy[i];
   }
 
-  nb = fn;
-
-  xbf = 1.0;
-  ybf = 0.0;
-
-  lvisc = false;
-
-  if (Preprocess()) {
-    CheckAngles();
-    for (int k = 0; k < n; k++) {
-      fnx[k] = nx[k + 1];
-      fny[k] = ny[k + 1];
-    }
-    fn = n;
-    return true;
-  } else {
+  if (!isValidFoilPointSize(buffer_points) || !isValidFoilAngles(buffer_points)) {
     writeString("Unrecognized foil format");
     return false;
   }
+
+  abcopy(buffer_points);
+  return true;
 }
 
 bool XFoil::initXFoilAnalysis(double Re, double alpha, double Mach,
@@ -3527,30 +3490,6 @@ bool XFoil::ncalc(MatrixX2d points, VectorXd spline_length, int n, double xn[],
     }
   }
 
-  return true;
-}
-
-bool XFoil::Preprocess() {
-
-  //---- calculate airfoil area assuming counterclockwise ordering
-  if (nb <= 2) return false;  // added techwinder
-
-  double area = 0.0;
-  for (int i = 1; i <= nb; i++) {
-    int ip = i + 1;
-    if (i == nb) ip = 1;
-    area = area + 0.5 * (dpoints_ds.row(i).y() + dpoints_ds.row(ip).y()) * (dpoints_ds.row(i).x() - dpoints_ds.row(ip).x());
-  }
-
-  buffer_spline_length.segment(1, buffer_spline_length.size() - 1) = spline::scalc(dpoints_ds.middleRows(1, dpoints_ds.rows() - 1), nb, buffer_spline_length.size() - 1);
-  spline::segspl(dpoints_ds.col(0).data(), xbp.data(), buffer_spline_length.data(), nb);
-  
-  //---- wipe out old flap hinge location
-  xbf = 0.0;
-  ybf = 0.0;
-
-  // end "load"
-  abcopy();
   return true;
 }
 
@@ -6554,17 +6493,13 @@ bool XFoil::xyWake() {
   return true;
 }
 
-bool XFoil::CheckAngles() {
-  //TODO plotsに置き換え
-  vector<Vector2d> plots;
-  for(int i=INDEX_START_WITH; i<=n; i++) {
-    plots.push_back(points.row(i));
-  }
-  PairIndex pair_cang = cang(plots);
-  imax = pair_cang.index;
-  amax = pair_cang.value;
-  if (fabs(amax) > angtol) {
-    return true;  // we have a coarse paneling
-  }
-  return false;  // we have a fine paneling
+bool XFoil::isValidFoilAngles(MatrixX2d points) {
+  
+  double max_angle = cang(points.middleRows(INDEX_START_WITH, points.rows() - INDEX_START_WITH));
+  cout<<max_angle<<endl;
+  return max_angle <= angtol;
+}
+
+bool XFoil::isValidFoilPointSize(MatrixX2d points) {
+  return points.rows() >= 3 + INDEX_START_WITH;
 }

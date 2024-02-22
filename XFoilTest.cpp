@@ -62,13 +62,11 @@ protected:
 
 TEST_F(DatGoogleTest, test_cang) {
   //when
-  PairIndex actual = foil->cang(plots);
+  double actual = foil->cang(foil->points);
 
   //then
-  ASSERT_EQ(78, actual.index);
-  ASSERT_DOUBLE_EQ(9.9742071999702819, actual.value);
+  ASSERT_DOUBLE_EQ(9.9742071999702819, actual);
 }
-
 TEST(cfl_test, hk_over_5_5) {
   //given
   XFoil *foil = new XFoil();
