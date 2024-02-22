@@ -204,7 +204,7 @@ class XFoil {
   bool lefind(double &sle, MatrixX2d points, MatrixX2d dpoints_ds, VectorXd s, int n);
 
   bool ludcmp(int n, double a[IQX][IQX], int indx[IQX]);
-  bool mhinge();
+  
   bool mrchdu();
   bool mrchue();
   bool ncalc(MatrixX2d point, VectorXd s, int n, double xn[], double yn[]);
@@ -270,7 +270,7 @@ class XFoil {
   double amax;  // needed for preprocessing
   double minf1;
   bool lblini, lipan;
-  bool lflap;
+  
   int n, nb, iblte[ISX], ipan[IVX][ISX], nbl[ISX];
   
   MatrixX2d points; //formerly x,y

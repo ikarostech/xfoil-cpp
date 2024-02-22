@@ -215,7 +215,7 @@ bool XFoil::initialize() {
 
   sharp = false;
   lalfa = false;
-  lflap = false;
+  
   trforc = false;
   simi = false;
   tran = false;
@@ -2614,7 +2614,6 @@ bool XFoil::initXFoilGeometry(int fn, const double *fx, const double *fy, double
   }
 
   nb = fn;
-  lflap = false;
 
   xbf = 1.0;
   ybf = 0.0;
@@ -2804,156 +2803,6 @@ bool XFoil::ludcmp(int n, double a[IQX][IQX], int indx[IQX]) {
       for (i = j + 1; i <= n; i++) a[i][j] = a[i][j] * dum;
     }
   }
-  return true;
-}
-
-/** ----------------------------------------------------
- * 	   calculates the hinge moment of the flap about
- * 	   (xof,yof) by integrating surface pressures.
- * ---------------------------------------------------- */
-bool XFoil::mhinge() {
-  int i;
-  double tops, bots, botp, botx, boty, frac, topp, topx, topy;
-  double xmid, ymid, pmid;
-  double dx, dy;
-
-  if (!lflap) {
-    getxyf(points, dpoints_ds, spline_length, n, tops, bots, xof, yof);
-    lflap = true;
-  } else {
-    //------ find top and bottom y at hinge x location
-    tops = xof;
-    bots = spline_length[n] - xof;
-    sinvrt(tops, xof, points.col(0), dpoints_ds.col(0), spline_length, n);
-    sinvrt(bots, xof, points.col(0), dpoints_ds.col(0), spline_length, n);
-  }
-
-  topx = spline::seval(tops, points.col(0), dpoints_ds.col(0), spline_length, n);
-  topy = spline::seval(tops, points.col(1), dpoints_ds.col(1), spline_length, n);
-  botx = spline::seval(bots, points.col(0), dpoints_ds.col(0), spline_length, n);
-  boty = spline::seval(bots, points.col(1), dpoints_ds.col(1), spline_length, n);
-
-  hmom = 0.0;
-  hfx = 0.0;
-  hfy = 0.0;
-
-  //---- integrate pressures on top and bottom sides of flap
-  for (i = 2; i <= n; i++) {
-    if (spline_length[i - 1] < tops || spline_length[i] > bots) {
-      dx = points.row(i).x() - points.row(i - 1).x();
-      dy = points.row(i).y() - points.row(i - 1).y();
-      xmid = 0.5 * (points.row(i).x() + points.row(i - 1).x()) - xof;
-      ymid = 0.5 * (points.row(i).y() + points.row(i - 1).y()) - yof;
-
-      if (lvisc)
-        pmid = 0.5 * (cpv[i] + cpv[i - 1]);
-      else
-        pmid = 0.5 * (cpi[i] + cpi[i - 1]);
-
-      hmom = hmom + pmid * (xmid * dx + ymid * dy);
-      hfx = hfx - pmid * dy;
-      hfy = hfy + pmid * dx;
-    }
-  }
-
-  //---- find spline_length[i]..spline_length[i-1] interval containing s=tops
-  i = 2;
-  bool bexit = false;
-  while (!bexit) {
-    if (spline_length[i] < tops)
-      i++;
-    else
-      bexit = true;
-    if (i > n) {
-    }  // we have a problem...row
-  }
-
-  //	for (i=2; i<=n; i++)  {
-  //		if(spline_length[i]>tops) goto stop31;
-  //	}
-
-  // stop31
-  //---- add on top surface chunk tops..spline_length[i-1],  missed in the do 20 loop.
-  dx = topx - points.row(i - 1).x();
-  dy = topy - points.row(i - 1).y();
-  xmid = 0.5 * (topx + points.row(i - 1).x()) - xof;
-  ymid = 0.5 * (topy + points.row(i - 1).y()) - yof;
-  if (spline_length[i] != spline_length[i - 1])
-    frac = (tops - spline_length[i - 1]) / (spline_length[i] - spline_length[i - 1]);
-  else
-    frac = 0.0;
-
-  if (lvisc) {
-    topp = cpv[i] * frac + cpv[i - 1] * (1.0 - frac);
-    pmid = 0.5 * (topp + cpv[i - 1]);
-  } else {
-    topp = cpi[i] * frac + cpi[i - 1] * (1.0 - frac);
-    pmid = 0.5 * (topp + cpi[i - 1]);
-  }
-  hmom = hmom + pmid * (xmid * dx + ymid * dy);
-  hfx = hfx - pmid * dy;
-  hfy = hfy + pmid * dx;
-
-  //---- add on inside flap surface contribution from hinge to top surface
-  dx = xof - topx;
-  dy = yof - topy;
-  xmid = 0.5 * (topx + xof) - xof;
-  ymid = 0.5 * (topy + yof) - yof;
-  hmom = hmom + pmid * (xmid * dx + ymid * dy);
-  hfx = hfx - pmid * dy;
-  hfy = hfy + pmid * dx;
-
-  //---- find spline_length[i]..spline_length[i-1] interval containing s=bots
-  for (i = n; i >= 2; i--) {
-    if (spline_length[i - 1] < bots) goto stop41;
-  }
-
-stop41:
-  //---- add on bottom surface chunk bots..spline_length[i],	missed in the do 20
-  // loop.
-  dx = points.row(i).x() - botx;
-  dy = points.row(i).y() - boty;
-  xmid = 0.5 * (botx + points.row(i).x()) - xof;
-  ymid = 0.5 * (boty + points.row(i).y()) - yof;
-  if (spline_length[i] != spline_length[i - 1])
-    frac = (bots - spline_length[i - 1]) / (spline_length[i] - spline_length[i - 1]);
-  else
-    frac = 0.0;
-
-  if (lvisc) {
-    botp = cpv[i] * frac + cpv[i - 1] * (1.0 - frac);
-    pmid = 0.5 * (botp + cpv[i]);
-  } else {
-    botp = cpi[i] * frac + cpi[i - 1] * (1.0 - frac);
-    pmid = 0.5 * (botp + cpi[i]);
-  }
-  hmom = hmom + pmid * (xmid * dx + ymid * dy);
-  hfx = hfx - pmid * dy;
-  hfy = hfy + pmid * dx;
-
-  //---- add on inside flap surface contribution from hinge to bottom surface
-  dx = botx - xof;
-  dy = boty - yof;
-  xmid = 0.5 * (botx + xof) - xof;
-  ymid = 0.5 * (boty + yof) - yof;
-  hmom = hmom + pmid * (xmid * dx + ymid * dy);
-  hfx = hfx - pmid * dy;
-  hfy = hfy + pmid * dx;
-
-  //---- add on T.E. base thickness contribution
-  dx = points.row(1).x() - points.row(n).x();
-  dy = points.row(1).y() - points.row(n).y();
-  xmid = 0.5 * (points.row(1).x() + points.row(n).x()) - xof;
-  ymid = 0.5 * (points.row(1).y() + points.row(n).y()) - yof;
-  if (lvisc)
-    pmid = 0.5 * (cpv[1] + cpv[n]);
-  else
-    pmid = 0.5 * (cpi[1] + cpi[n]);
-
-  hmom = hmom + pmid * (xmid * dx + ymid * dy);
-  hfx = hfx - pmid * dy;
-  hfy = hfy + pmid * dx;
-
   return true;
 }
 
@@ -5115,8 +4964,6 @@ bool XFoil::specal() {
   } else
     cpcalc(n, qinv, qinf, minf, cpi);
 
-  if (lflap) mhinge();
-
   // Added techwinder to get inviscid q after viscous calculation
   for (i = 1; i <= n; i++) {
     qgamm[i] = gam[i];
@@ -5207,8 +5054,6 @@ bool XFoil::speccl() {
   } else {
     cpcalc(n, qinv, qinf, minf, cpi);
   }
-
-  if (lflap) mhinge();
 
   return true;
 }
@@ -6374,19 +6219,6 @@ bool XFoil::update() {
     ctq[iblte[1] + kbl][1] = ctq[iblte[2] + kbl][2];
   }
 
-  //      equivalence (va(1,1,1), unew(1,1)) , (vb(1,1,1), qnew(1)  )
-  //      equivalence (va(1,1,IVX), u_ac(1,1)) , (vb(1,1,ivx), q_ac(1)  )
-  /*	for (int kk = 1; kk<250; kk++) {
-                  vb[kk][1][1]   = qnew[kk];
-                  vb[kk][1][IVX] = q_ac[kk];
-          }
-
-          for (is=1; is<= 2; is++){
-                  for(ibl=2;ibl<= nbl[is];ibl++){
-                          va[ibl][is][1]   = unew[ibl][is];
-                          va[ibl][is][IVX] = u_ac[ibl][is];
-                  }
-          }*/
   return true;
 }
 
@@ -6459,7 +6291,6 @@ bool XFoil::ViscalEnd() {
 
   cpcalc(n + nw, qinv, qinf, minf, cpi);
   cpcalc(n + nw, qvis, qinf, minf, cpv);
-  if (lflap) mhinge();
 
   return true;
 }
