@@ -6481,7 +6481,6 @@ bool XFoil::xyWake() {
 bool XFoil::isValidFoilAngles(MatrixX2d points) {
   
   double max_angle = cang(points.middleRows(INDEX_START_WITH, points.rows() - INDEX_START_WITH));
-  cout<<max_angle<<endl;
   return max_angle <= angtol;
 }
 
