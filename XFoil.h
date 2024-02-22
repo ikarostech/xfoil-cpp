@@ -241,7 +241,7 @@ class XFoil {
 
   int nc1;
 
-  vector<double> nx, ny;
+  VectorXd nx, ny;
 
   double cl, cm, cd, cdp, cdf, cpi[IZX], cpv[IZX], acrit;
   double xcp;

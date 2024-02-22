@@ -67,7 +67,7 @@ class spline {
      * ------------------------------------------------------- */
     static bool splind(double x[], double xs[], double s[], int n, double xs1, double xs2);
 
-    static bool segspl(double x[], double xs[], double spline_length[], int n);
+    static Eigen::VectorXd segspl(Eigen::VectorXd x, Eigen::VectorXd spline_length, int n);
 
     static bool segspld(double x[], double xs[], double spline_length[], int n, double xs1, double xs2);
 };

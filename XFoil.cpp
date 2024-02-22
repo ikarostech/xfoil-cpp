@@ -121,8 +121,8 @@ bool XFoil::initialize() {
   memset(itran, 0, sizeof(itran));
   memset(mass, 0, sizeof(mass));
   memset(nbl, 0, sizeof(nbl));
-  nx.resize(IZX, 0);
-  ny.resize(IZX, 0);
+  nx = VectorXd::Zero(IZX);
+  ny = VectorXd::Zero(IZX);
   memset(gamu, 0, sizeof(gamu));
   memset(gam, 0, sizeof(gam));
   memset(gam_a, 0, sizeof(gam_a));
@@ -387,8 +387,8 @@ bool XFoil::abcopy(MatrixX2d copyFrom) {
   }
 
   spline_length.segment(1, spline_length.size() - 1) = spline::scalc(points.middleRows(1, points.rows() - 1), n, spline_length.size() - 1);
-  spline::segspl(points.col(0).data(), dpoints_ds.col(0).data(), spline_length.data(), n);
-  spline::segspl(points.col(1).data(), dpoints_ds.col(1).data(), spline_length.data(), n);
+  dpoints_ds.col(0) = spline::segspl(points.col(0), spline_length, n);
+  dpoints_ds.col(1) = spline::segspl(points.col(1), spline_length, n);
   ncalc(points, spline_length, n, nx.data(), ny.data());
   lefind(sle, points, dpoints_ds, spline_length, n);
   point_le.x() = spline::seval(sle, points.col(0), dpoints_ds.col(0), spline_length, n);
@@ -3462,13 +3462,12 @@ bool XFoil::mrcl(double cls, double &m_cls, double &r_cls) {
   return true;
 }
 
-bool XFoil::ncalc(MatrixX2d points, VectorXd spline_length, int n, double xn[],
-                  double yn[]) {
+bool XFoil::ncalc(MatrixX2d points, VectorXd spline_length, int n, double xn[], double yn[]) {
   double sx, sy, smod;
   int i;
   if (n <= 1) return false;
-  spline::segspl(points.col(0).data(), xn, spline_length.data(), n);
-  spline::segspl(points.col(1).data(), yn, spline_length.data(), n);
+  xn = spline::segspl(points.col(0), spline_length, n).data();
+  yn = spline::segspl(points.col(1), spline_length, n).data();
   for (i = 1; i <= n; i++) {
     sx = yn[i];
     sy = -xn[i];
@@ -4971,21 +4970,7 @@ bool XFoil::speccl() {
   //---- set final surface speed and cp distributions
   tecalc();
   qiset();
-  /*
-          if(lvisc) {
-                  if(!cpcalc(n+nw,qvis,qinf,minf,cpv)){
-                          return false;
-                  }
-                  if(!cpcalc(n+nw,qinv,qinf,minf,cpi)){
-                          return false;
-                  }
-          }
-          else{
-                  if(!cpcalc(n,qinv,qinf,minf,cpi)){
-                          return false;
-                  }
-          }
-  */
+
   if (lvisc) {
     cpcalc(n + nw, qvis, qinf, minf, cpv);
     cpcalc(n + nw, qinv, qinf, minf, cpi);

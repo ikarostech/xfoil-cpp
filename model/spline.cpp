@@ -204,29 +204,26 @@ bool spline::splind(double x[], double xs[], double s[], int n, double xs1, doub
  *      at segment joints.  Segment joints are    |
  *      defined by identical successive s values. |
  * ----------------------------------------------- */
-bool spline::segspl(double x[], double xs[], double spline_length[], int n) {
+Eigen::VectorXd spline::segspl(Eigen::VectorXd x, Eigen::VectorXd spline_length, int n) {
+  //TODO xsはxより1つ要素が多いのでそれに対応する
+  Eigen::VectorXd xs = Eigen::VectorXd::Zero(x.size());
   int nseg, iseg, iseg0;
-
-  if (spline_length[1] == spline_length[2])
-    return false;  // stop 'segspl:  first input point duplicated'
-  if (spline_length[n] == spline_length[n - 1])
-    return false;  // stop 'segspl:  last  input point duplicated'
 
   iseg0 = 1;
   for (iseg = 2; iseg <= n - 2; iseg++) {
     if (spline_length[iseg] == spline_length[iseg + 1]) {
       nseg = iseg - iseg0 + 1;
       
-      spline::splind(x + iseg0 - 1, xs + iseg0 - 1, spline_length + iseg0 - 1, nseg, -999.0,
+      spline::splind(x.data() + iseg0 - 1, xs.data() + iseg0 - 1, spline_length.data() + iseg0 - 1, nseg, -999.0,
              -999.0);
       iseg0 = iseg + 1;
     }
   }
   nseg = n - iseg0 + 1;
 
-  spline::splind(x + iseg0 - 1, xs + iseg0 - 1, spline_length + iseg0 - 1, nseg, -999.0, -999.0);
+  spline::splind(x.data() + iseg0 - 1, xs.data() + iseg0 - 1, spline_length.data() + iseg0 - 1, nseg, -999.0, -999.0);
 
-  return true;
+  return xs;
 }
 
 /** -----------------------------------------------
