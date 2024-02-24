@@ -387,8 +387,8 @@ bool XFoil::abcopy(MatrixX2d copyFrom) {
   }
 
   spline_length.segment(1, spline_length.size() - 1) = spline::scalc(points.middleRows(1, points.rows() - 1), n, spline_length.size() - 1);
-  dpoints_ds.col(0) = spline::segspl(points.col(0), spline_length, n);
-  dpoints_ds.col(1) = spline::segspl(points.col(1), spline_length, n);
+  dpoints_ds.col(0) = spline::splind(points.col(0), spline_length, n);
+  dpoints_ds.col(1) = spline::splind(points.col(1), spline_length, n);
   ncalc(points, spline_length, n, nx.data(), ny.data());
   lefind(sle, points, dpoints_ds, spline_length, n);
   point_le.x() = spline::seval(sle, points.col(0), dpoints_ds.col(0), spline_length, n);
@@ -3466,8 +3466,8 @@ bool XFoil::ncalc(MatrixX2d points, VectorXd spline_length, int n, double xn[], 
   double sx, sy, smod;
   int i;
   if (n <= 1) return false;
-  xn = spline::segspl(points.col(0), spline_length, n).data();
-  yn = spline::segspl(points.col(1), spline_length, n).data();
+  xn = spline::splind(points.col(0), spline_length, n).data();
+  yn = spline::splind(points.col(1), spline_length, n).data();
   for (i = 1; i <= n; i++) {
     sx = yn[i];
     sy = -xn[i];
@@ -6368,8 +6368,8 @@ bool XFoil::xifset(int is) {
     w2[i] = ((points.row(i).y() - point_le.y()) * chx - (points.row(i).x() - point_le.x()) * chy) / chsq;
   }
 
-  spline::splind(w1.data(), w3.data(), spline_length.data(), n, -999.0, -999.0);
-  spline::splind(w2.data(), w4.data(), spline_length.data(), n, -999.0, -999.0);
+  w3 = spline::splind(w1, spline_length, n);
+  w4 = spline::splind(w2, spline_length, n);
 
   if (is == 1) {
     //----- set approximate arc length of forced transition point for sinvrt
