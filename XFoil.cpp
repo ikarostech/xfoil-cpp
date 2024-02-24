@@ -89,7 +89,6 @@ XFoil::~XFoil() {}
  *      variable initialization/default routine.
  * --------------------------------------------------- */
 bool XFoil::initialize() {
-  int l;
 
   hopi = 0.50 / PI;
   qopi = 0.25 / PI;
@@ -227,14 +226,14 @@ bool XFoil::initialize() {
   int nn = int(ann + 0.00001);
   int tmp = 1;
 
-  for (l = 0; l < nn; l++) {
+  for (int l = 0; l < nn; l++) {
     tmp = 2 * tmp;
   }
   nc1 = tmp + 1;
   //	nc1 = (int)pow(2,nn) + 1;
   if (nc1 > ICX) {
     tmp = 1;
-    for (l = 0; l < nn - 1; l++) {
+    for (int l = 0; l < nn - 1; l++) {
       tmp = 2 * tmp;
     }
     nc1 = tmp + 1;
@@ -354,31 +353,22 @@ bool XFoil::initialize() {
 }
 
 bool XFoil::abcopy(MatrixX2d copyFrom) {
-  int i;
-  std::stringstream ss; /*
-  if (nb > IQX - 2) {
-    ss << "Maximum number of panel nodes  : " << IQX - 2 << "\n";
-    ss << "Number of buffer airfoil points: " << nb << "\n ";
-    ss << "Current airfoil cannot be set\n";
-    ss << "Try executing PANE at top level instead";
-    writeString(ss.str());
-    return false;
-  } */
+
   if (n != copyFrom.rows() - 1) lblini = false;
 
   n = copyFrom.rows() - 1;
-  for (i = 1; i <= n; i++) {
+  for (int i = 1; i <= n; i++) {
     points.row(i).x() = copyFrom.row(i).x();
     points.row(i).y() = copyFrom.row(i).y();
   }
 
   //---- strip out doubled points
-  i = 1;
+  int r = 1;
 
-  while (i < n) {
-    i++;
-    if (points.row(i - 1).x() == points.row(i).x() && points.row(i - 1).y() == points.row(i).y()) {
-      for (int j = i; j <= n - 1; j++) {
+  while (r < n) {
+    r++;
+    if (points.row(r - 1).x() == points.row(r).x() && points.row(r - 1).y() == points.row(r).y()) {
+      for (int j = r; j <= n - 1; j++) {
         points.row(j).x() = points.row(j + 1).x();
         points.row(j).y() = points.row(j + 1).y();
       }
@@ -419,10 +409,9 @@ double XFoil::aint(double number) {
 
 bool XFoil::apcalc() {
   double sx, sy;
-  int i, ip;
 
   //---- set angles of airfoil panels
-  for (i = 1; i <= n - 1; i++) {
+  for (int i = 1; i <= n - 1; i++) {
     sx = points.row(i + 1).x() - points.row(i).x();
     sy = points.row(i + 1).y() - points.row(i).y();
     if (sx == 0.0 && sy == 0.0)
@@ -432,14 +421,12 @@ bool XFoil::apcalc() {
   }
 
   //---- TE panel
-  i = n;
-  ip = 1;
   if (sharp)
-    apanel[i] = PI;
+    apanel[n] = PI;
   else {
-    sx = points.row(ip).x() - points.row(i).x();
-    sy = points.row(ip).y() - points.row(i).y();
-    apanel[i] = atan2(-sx, sy) + PI;
+    sx = points.row(1).x() - points.row(n).x();
+    sy = points.row(1).y() - points.row(n).y();
+    apanel[n] = atan2(-sx, sy) + PI;
   }
 
   return true;
@@ -568,7 +555,7 @@ bool XFoil::axset(double hk1, double t1, double rt1, double a1, double hk2,
  *      which is taken care of by trdif.
  * ------------------------------------------------------------ */
 bool XFoil::bldif(int ityp) {
-  int k, l;
+
   double hupwt, hdcon, hl, hd_hk1, hd_hk2, hlsq, ehh;
   double upw, upw_hl, upw_hd, upw_hk1, upw_hk2, upw_u1, upw_t1, upw_d1;
   double upw_u2, upw_t2, upw_d2, upw_ms;
@@ -606,12 +593,12 @@ bool XFoil::bldif(int ityp) {
     ddlog = 1.0;
   }
 
-  for (k = 1; k <= 4; k++) {
+  for (int k = 1; k <= 4; k++) {
     vsrez[k] = 0.0;
     vsm[k] = 0.0;
     vsr[k] = 0.0;
     vsx[k] = 0.0;
-    for (l = 1; l <= 5; l++) {
+    for (int l = 1; l <= 5; l++) {
       vs1[k][l] = 0.0;
       vs2[k][l] = 0.0;
     }
@@ -1113,12 +1100,12 @@ bool XFoil::blprv(double xsi, double ami, double cti, double thi, double dsi,
  *       s        3x1  re influence vectors
  * ------------------------------------------------------------------ */
 bool XFoil::blsolve() {
-  int iv, kv, k, l, ivte1, ivz;
+  
   double vtmp, vtmp3;
 
-  ivte1 = isys[iblte[1]][1];
+  int ivte1 = isys[iblte[1]][1];
   //
-  for (iv = 1; iv <= nsys; iv++) {
+  for (int iv = 1; iv <= nsys; iv++) {
     //
     int ivp = iv + 1;
     //
@@ -1127,12 +1114,12 @@ bool XFoil::blsolve() {
     //------ normalize first row
     double pivot = 1.0 / va[1][1][iv];
     va[1][2][iv] *= pivot;
-    for (l = iv; l <= nsys; l++) vm[1][l][iv] *= pivot;
+    for (int l = iv; l <= nsys; l++) vm[1][l][iv] *= pivot;
     vdel[1][1][iv] *= pivot;
     vdel[1][2][iv] *= pivot;
     //
     //------ eliminate lower first column in va block
-    for (k = 2; k <= 3; k++) {
+    for (int k = 2; k <= 3; k++) {
       vtmp = va[k][1][iv];
       va[k][2][iv] -= vtmp * va[1][2][iv];
       for (int l = iv; l <= nsys; l++) vm[k][l][iv] -= vtmp * vm[1][l][iv];
@@ -1142,20 +1129,20 @@ bool XFoil::blsolve() {
     //
     //------ normalize second row
     pivot = 1.0 / va[2][2][iv];
-    for (l = iv; l <= nsys; l++) vm[2][l][iv] *= pivot;
+    for (int l = iv; l <= nsys; l++) vm[2][l][iv] *= pivot;
     vdel[2][1][iv] *= pivot;
     vdel[2][2][iv] *= pivot;
     //
     //------ eliminate lower second column in va block
-    k = 3;
-    vtmp = va[k][2][iv];
-    for (l = iv; l <= nsys; l++) vm[k][l][iv] -= vtmp * vm[2][l][iv];
-    vdel[k][1][iv] -= vtmp * vdel[2][1][iv];
-    vdel[k][2][iv] -= vtmp * vdel[2][2][iv];
+    
+    vtmp = va[3][2][iv];
+    for (int l = iv; l <= nsys; l++) vm[3][l][iv] -= vtmp * vm[2][l][iv];
+    vdel[3][1][iv] -= vtmp * vdel[2][1][iv];
+    vdel[3][2][iv] -= vtmp * vdel[2][2][iv];
 
     //------ normalize third row
     pivot = 1.0 / vm[3][iv][iv];
-    for (l = ivp; l <= nsys; l++) vm[3][l][iv] *= pivot;
+    for (int l = ivp; l <= nsys; l++) vm[3][l][iv] *= pivot;
     vdel[3][1][iv] *= pivot;
     vdel[3][2][iv] *= pivot;
     //
@@ -1163,7 +1150,7 @@ bool XFoil::blsolve() {
     //------ eliminate upper third column in va block
     double vtmp1 = vm[1][iv][iv];
     double vtmp2 = vm[2][iv][iv];
-    for (l = ivp; l <= nsys; l++) {
+    for (int l = ivp; l <= nsys; l++) {
       vm[1][l][iv] -= vtmp1 * vm[3][l][iv];
       vm[2][l][iv] -= vtmp2 * vm[3][l][iv];
     }
@@ -1174,7 +1161,7 @@ bool XFoil::blsolve() {
     //
     //------ eliminate upper second column in va block
     vtmp = va[1][2][iv];
-    for (l = ivp; l <= nsys; l++) vm[1][l][iv] -= vtmp * vm[2][l][iv];
+    for (int l = ivp; l <= nsys; l++) vm[1][l][iv] -= vtmp * vm[2][l][iv];
 
     vdel[1][1][iv] -= vtmp * vdel[2][1][iv];
     vdel[1][2][iv] -= vtmp * vdel[2][2][iv];
@@ -1183,11 +1170,11 @@ bool XFoil::blsolve() {
     if (iv != nsys) {
       //
       //====== eliminate vb(iv+1) block][ rows  1 -> 3
-      for (k = 1; k <= 3; k++) {
+      for (int k = 1; k <= 3; k++) {
         vtmp1 = vb[k][1][ivp];
         vtmp2 = vb[k][2][ivp];
         vtmp3 = vm[k][iv][ivp];
-        for (l = ivp; l <= nsys; l++)
+        for (int l = ivp; l <= nsys; l++)
           vm[k][l][ivp] -= (vtmp1 * vm[1][l][iv] + vtmp2 * vm[2][l][iv] +
                             vtmp3 * vm[3][l][iv]);
         vdel[k][1][ivp] -= (vtmp1 * vdel[1][1][iv] + vtmp2 * vdel[2][1][iv] +
@@ -1198,12 +1185,12 @@ bool XFoil::blsolve() {
       //
       if (iv == ivte1) {
         //------- eliminate vz block
-        ivz = isys[iblte[2] + 1][2];
+        int ivz = isys[iblte[2] + 1][2];
         //
-        for (k = 1; k <= 3; k++) {
+        for (int k = 1; k <= 3; k++) {
           vtmp1 = vz[k][1];
           vtmp2 = vz[k][2];
-          for (l = ivp; l <= nsys; l++) {
+          for (int l = ivp; l <= nsys; l++) {
             vm[k][l][ivz] -= (vtmp1 * vm[1][l][iv] + vtmp2 * vm[2][l][iv]);
           }
           vdel[k][1][ivz] -= (vtmp1 * vdel[1][1][iv] + vtmp2 * vdel[2][1][iv]);
@@ -1214,25 +1201,25 @@ bool XFoil::blsolve() {
       if (ivp != nsys) {
         //
         //====== eliminate lower vm column
-        for (kv = iv + 2; kv <= nsys; kv++) {
+        for (int kv = iv + 2; kv <= nsys; kv++) {
           vtmp1 = vm[1][iv][kv];
           vtmp2 = vm[2][iv][kv];
           vtmp3 = vm[3][iv][kv];
           //
           if (fabs(vtmp1) > vaccel) {
-            for (l = ivp; l <= nsys; l++) vm[1][l][kv] -= vtmp1 * vm[3][l][iv];
+            for (int l = ivp; l <= nsys; l++) vm[1][l][kv] -= vtmp1 * vm[3][l][iv];
             vdel[1][1][kv] -= vtmp1 * vdel[3][1][iv];
             vdel[1][2][kv] -= vtmp1 * vdel[3][2][iv];
           }
           //
           if (fabs(vtmp2) > vaccel) {
-            for (l = ivp; l <= nsys; l++) vm[2][l][kv] -= vtmp2 * vm[3][l][iv];
+            for (int l = ivp; l <= nsys; l++) vm[2][l][kv] -= vtmp2 * vm[3][l][iv];
             vdel[2][1][kv] -= vtmp2 * vdel[3][1][iv];
             vdel[2][2][kv] -= vtmp2 * vdel[3][2][iv];
           }
           //
           if (fabs(vtmp3) > vaccel) {
-            for (l = ivp; l <= nsys; l++) vm[3][l][kv] -= vtmp3 * vm[3][l][iv];
+            for (int l = ivp; l <= nsys; l++) vm[3][l][kv] -= vtmp3 * vm[3][l][iv];
             vdel[3][1][kv] -= vtmp3 * vdel[3][1][iv];
             vdel[3][2][kv] -= vtmp3 * vdel[3][2][iv];
           }
@@ -1243,16 +1230,16 @@ bool XFoil::blsolve() {
   }  // 1000
 
   //
-  for (iv = nsys; iv >= 2; iv--) {
+  for (int iv = nsys; iv >= 2; iv--) {
     //------ eliminate upper vm columns
     vtmp = vdel[3][1][iv];
-    for (kv = iv - 1; kv >= 1; kv--) {
+    for (int kv = iv - 1; kv >= 1; kv--) {
       vdel[1][1][kv] -= vm[1][iv][kv] * vtmp;
       vdel[2][1][kv] -= vm[2][iv][kv] * vtmp;
       vdel[3][1][kv] -= vm[3][iv][kv] * vtmp;
     }
     vtmp = vdel[3][2][iv];
-    for (kv = iv - 1; kv >= 1; kv--) {
+    for (int kv = iv - 1; kv >= 1; kv--) {
       vdel[1][2][kv] -= vm[1][iv][kv] * vtmp;
       vdel[2][2][kv] -= vm[2][iv][kv] * vtmp;
       vdel[3][2][kv] -= vm[3][iv][kv] * vtmp;
@@ -1280,7 +1267,6 @@ bool XFoil::blsolve() {
  *
  * ------------------------------------------------------------------ */
 bool XFoil::blsys() { 
-  int k;
 
   //---- calculate secondary bl variables and their sensitivities
   if (wake) {
@@ -1316,7 +1302,7 @@ bool XFoil::blsys() {
 
   if (simi) {
     //----- at similarity station, "1" variables are really "2" variables
-    for (k = 1; k <= 4; k++) {
+    for (int k = 1; k <= 4; k++) {
       for (int l = 1; l <= 5; l++) {
         vs2[k][l] = vs1[k][l] + vs2[k][l];
         vs1[k][l] = 0.0;
@@ -1325,7 +1311,7 @@ bool XFoil::blsys() {
   }
 
   //---- change system over into incompressible uei and mach
-  for (k = 1; k <= 4; k++) {
+  for (int k = 1; k <= 4; k++) {
     //------ residual derivatives wrt compressible uec
     double res_u1 = vs1[k][4];
     double res_u2 = vs2[k][4];
@@ -1700,7 +1686,7 @@ double XFoil::cang(MatrixX2d points) {
 
 bool XFoil::cdcalc() {
   double dx;
-  int i, im, is, ibl;
+
   double sa = sin(alfa);
   double ca = cos(alfa);
 
@@ -1720,10 +1706,10 @@ bool XFoil::cdcalc() {
 
   //--- calculate friction drag coefficient
   cdf = 0.0;
-  for (is = 1; is <= 2; is++) {
-    for (ibl = 3; ibl <= iblte[is]; ibl++) {
-      i = ipan[ibl][is];
-      im = ipan[ibl - 1][is];
+  for (int is = 1; is <= 2; is++) {
+    for (int ibl = 3; ibl <= iblte[is]; ibl++) {
+      int i = ipan[ibl][is];
+      int im = ipan[ibl - 1][is];
       dx = (points.row(i).x() - points.row(im).x()) * ca + (points.row(i).y() - points.row(im).y()) * sa;
       cdf = cdf +
             0.5 * (tau[ibl][is] + tau[ibl - 1][is]) * dx * 2.0 / qinf / qinf;
@@ -1821,16 +1807,16 @@ bool XFoil::clcalc(double xref, double yref) {
   cl_alf = 0.0;
   cl_msq = 0.0;
 
-  int i = 1;
-  cginc = 1.0 - (gam[i] / qinf) * (gam[i] / qinf);
+  
+  cginc = 1.0 - (gam[1] / qinf) * (gam[1] / qinf);
   cpg1 = cginc / (beta + bfac * cginc);
   cpg1_msq = -cpg1 / (beta + bfac * cginc) * (beta_msq + bfac_msq * cginc);
 
-  cpi_gam = -2.0 * gam[i] / qinf / qinf;
+  cpi_gam = -2.0 * gam[1] / qinf / qinf;
   cpc_cpi = (1.0 - bfac * cpg1) / (beta + bfac * cginc);
-  cpg1_alf = cpc_cpi * cpi_gam * gam_a[i];
+  cpg1_alf = cpc_cpi * cpi_gam * gam_a[1];
 
-  for (i = 1; i <= n; i++) {
+  for (int i = 1; i <= n; i++) {
     int ip = i + 1;
     if (i == n) ip = 1;
 
@@ -1908,7 +1894,7 @@ bool XFoil::comset() {
  *      sets compressible cp from speed.
  * ---------------------------------------------- */
 bool XFoil::cpcalc(int n, const double q[], double qinf, double minf, double cp[]) {
-  int i;
+
   bool denneg;
   double beta, bfac;
 
@@ -1917,7 +1903,7 @@ bool XFoil::cpcalc(int n, const double q[], double qinf, double minf, double cp[
 
   denneg = false;
 
-  for (i = 1; i <= n; i++) {
+  for (int i = 1; i <= n; i++) {
     const double cpinc = 1.0 - (q[i] / qinf) * (q[i] / qinf);
     const double den = beta + bfac * cpinc;
     cp[i] = cpinc / den;
@@ -2100,13 +2086,12 @@ bool XFoil::dslim(double &dstr, double thet, double msq, double hklim) {
  *     finds minimum cp on dist for cavitation work
  * ------------------------------------------------ */
 bool XFoil::fcpmin() {
-  int i;
   xcpmni = points.row(1).x();
   xcpmnv = points.row(1).x();
   cpmni = cpi[1];
   cpmnv = cpv[1];
 
-  for (i = 2; i <= n + nw; i++) {
+  for (int i = 2; i <= n + nw; i++) {
     if (cpi[i] < cpmni) {
       xcpmni = points.row(i).x();
       cpmni = cpi[i];
@@ -2129,8 +2114,7 @@ bool XFoil::fcpmin() {
 }
 
 bool XFoil::gamqv() {
-  int i;
-  for (i = 1; i <= n; i++) {
+  for (int i = 1; i <= n; i++) {
     gam[i] = qvis[i];
     gam_a[i] = qinv_a[i];
   }
@@ -2227,7 +2211,7 @@ bool XFoil::getxyf(MatrixX2d points, MatrixX2d dpoints_ds, VectorXd s,
  *     in specal or speccl for specified alpha or cl.
  *-------------------------------------------------------------- */
 bool XFoil::ggcalc() {
-  int i, j, iu;
+
   double psi, psi_n, res;
   double bbb[IQX];
   //	double psiinf;
@@ -2237,7 +2221,7 @@ bool XFoil::ggcalc() {
 
   writeString("   Calculating unit vorticity distributions ...\n");
 
-  for (i = 1; i <= n; i++) {
+  for (int i = 1; i <= n; i++) {
     gam[i] = 0.0;
     gamu[i][1] = 0.0;
     gamu[i][2] = 0.0;
@@ -2246,7 +2230,7 @@ bool XFoil::ggcalc() {
 
   //---- set up matrix system for  psi = psio  on airfoil surface.
   //-    the unknowns are (dgamma)i and dpsio.
-  for (i = 1; i <= n; i++) {
+  for (int i = 1; i <= n; i++) {
     //------ calculate psi and dpsi/dgamma array for current node
     psilin(i, points.row(i).x(), points.row(i).y(), nx[i], ny[i], psi, psi_n, false, true);
 
@@ -2254,11 +2238,11 @@ bool XFoil::ggcalc() {
     const double res2 = -qinf * points.row(i).x();
 
     //------ dres/dgamma
-    for (j = 1; j <= n; j++) {
+    for (int j = 1; j <= n; j++) {
       aij[i][j] = dzdg[j];
     }
 
-    for (j = 1; j <= n; j++) {
+    for (int j = 1; j <= n; j++) {
       bij[i][j] = -dzdm[j];
     }
 
@@ -2273,7 +2257,7 @@ bool XFoil::ggcalc() {
   //-    res = gam(1) + gam[n]
   res = 0.0;
 
-  for (j = 1; j <= n + 1; j++) aij[n + 1][j] = 0.0;
+  for (int j = 1; j <= n + 1; j++) aij[n + 1][j] = 0.0;
 
   aij[n + 1][1] = 1.0;
   aij[n + 1][n] = 1.0;
@@ -2282,7 +2266,7 @@ bool XFoil::ggcalc() {
   gamu[n + 1][2] = -res;
 
   //---- set up Kutta condition (no direct source influence)
-  for (j = 1; j <= n; j++) bij[n + 1][j] = 0.0;
+  for (int j = 1; j <= n; j++) bij[n + 1][j] = 0.0;
 
   if (sharp) {
     //----- set zero internal velocity in TE corner
@@ -2314,10 +2298,10 @@ bool XFoil::ggcalc() {
     psilin(0, xbis, ybis, -sbis, cbis, psi, qbis, false, true);
 
     //----- dres/dgamma
-    for (j = 1; j <= n; j++) aij[n][j] = dqdg[j];
+    for (int j = 1; j <= n; j++) aij[n][j] = dqdg[j];
 
     //----- -dres/dmass
-    for (j = 1; j <= n; j++) bij[n][j] = -dqdm[j];
+    for (int j = 1; j <= n; j++) bij[n][j] = -dqdm[j];
 
     //----- dres/dpsio
     aij[n][n + 1] = 0.0;
@@ -2334,18 +2318,18 @@ bool XFoil::ggcalc() {
   lqaij = true;
 
   //---- solve system for the two vorticity distributions
-  for (iu = 0; iu < IQX; iu++)
+  for (int iu = 0; iu < IQX; iu++)
     bbb[iu] = gamu[iu][1];  // techwinder : create a dummy array
   baksub(n + 1, aij, aijpiv, bbb);
-  for (iu = 0; iu < IQX; iu++) gamu[iu][1] = bbb[iu];
+  for (int iu = 0; iu < IQX; iu++) gamu[iu][1] = bbb[iu];
 
-  for (iu = 0; iu < IQX; iu++)
+  for (int iu = 0; iu < IQX; iu++)
     bbb[iu] = gamu[iu][2];  // techwinder : create a dummy array
   baksub(n + 1, aij, aijpiv, bbb);
-  for (iu = 0; iu < IQX; iu++) gamu[iu][2] = bbb[iu];
+  for (int iu = 0; iu < IQX; iu++) gamu[iu][2] = bbb[iu];
 
   //---- set inviscid alpha=0,90 surface speeds for this geometry
-  for (i = 1; i <= n + 1; i++) {
+  for (int i = 1; i <= n + 1; i++) {
     qinvu[i][1] = gamu[i][1];
     qinvu[i][2] = gamu[i][2];
   }
@@ -2357,24 +2341,24 @@ bool XFoil::ggcalc() {
 
 bool XFoil::baksub(int n, double a[IQX][IQX], const int indx[], double b[]) {
   double sum;
-  int i, ii, j;
+  int ii;
   ii = 0;
-  for (i = 1; i <= n; i++) {
+  for (int i = 1; i <= n; i++) {
     int ll = indx[i];
     sum = b[ll];
     b[ll] = b[i];
     if (ii != 0)
-      for (j = ii; j <= i - 1; j++) sum = sum - a[i][j] * b[j];
+      for (int j = ii; j <= i - 1; j++) sum = sum - a[i][j] * b[j];
     else if (sum != 0.0)
       ii = i;
 
     b[i] = sum;
   }
   //
-  for (i = n; i >= 1; i--) {
+  for (int i = n; i >= 1; i--) {
     sum = b[i];
     if (i < n)
-      for (j = i + 1; j <= n; j++) sum = sum - a[i][j] * b[j];
+      for (int j = i + 1; j <= n; j++) sum = sum - a[i][j] * b[j];
 
     b[i] = sum / a[i][i];
   }
@@ -2499,14 +2483,14 @@ bool XFoil::hst(double hk, double rt, double msq, double &hs, double &hs_hk,
  *     sets  bl location -> panel location  pointer array ipan
  * -----------------------------------------------------------*/
 bool XFoil::iblpan() {
-  int iblmax, is, ibl, i, iw;
+  int iblmax, is, ibl;
   std::stringstream ss;
 
   //-- top surface first
   is = 1;
 
   ibl = 1;
-  for (i = ist; i >= 1; i--) {
+  for (int i = ist; i >= 1; i--) {
     ibl = ibl + 1;
     ipan[ibl][is] = i;
     vti[ibl][is] = 1.0;
@@ -2518,7 +2502,7 @@ bool XFoil::iblpan() {
   //-- bottom surface next
   is = 2;
   ibl = 1;
-  for (i = ist + 1; i <= n; i++) {
+  for (int i = ist + 1; i <= n; i++) {
     ibl = ibl + 1;
     ipan[ibl][is] = i;
     vti[ibl][is] = -1.0;
@@ -2527,8 +2511,8 @@ bool XFoil::iblpan() {
   //-- wake
   iblte[is] = ibl;
 
-  for (iw = 1; iw <= nw; iw++) {
-    i = n + iw;
+  for (int iw = 1; iw <= nw; iw++) {
+    int i = n + iw;
     ibl = iblte[is] + iw;
     ipan[ibl][is] = i;
     vti[ibl][is] = -1.0;
@@ -2537,7 +2521,7 @@ bool XFoil::iblpan() {
   nbl[is] = iblte[is] + nw;
 
   //-- upper wake pointers (for plotting only)
-  for (iw = 1; iw <= nw; iw++) {
+  for (int iw = 1; iw <= nw; iw++) {
     ipan[iblte[1] + iw][1] = ipan[iblte[2] + iw][2];
     vti[iblte[1] + iw][1] = 1.0;
   }
@@ -2558,12 +2542,10 @@ bool XFoil::iblpan() {
  *     corresponding to each bl station.
  * --------------------------------------------- */
 bool XFoil::iblsys() {
-  int iv, is, ibl;
-
-  iv = 0;
-  for (is = 1; is <= 2; is++) {
-    for (ibl = 2; ibl <= nbl[is]; ibl++) {
-      iv = iv + 1;
+  int iv = 0;
+  for (int is = 1; is <= 2; is++) {
+    for (int ibl = 2; ibl <= nbl[is]; ibl++) {
+      iv++;
       isys[ibl][is] = iv;
     }
   }
@@ -2645,7 +2627,7 @@ bool XFoil::initXFoilAnalysis(double Re, double alpha, double Mach,
  *     line connecting x(sle),y(sle) and the te point.
 //------------------------------------------------------ */
 bool XFoil::lefind(double &sle, MatrixX2d points, MatrixX2d dpoints_ds, VectorXd s, int n) {
-  int i, iter;
+  int i;
   double dseps;
   //---- convergence tolerance
   dseps = (s[n] - s[1]) * 0.00001;
@@ -2670,7 +2652,7 @@ bool XFoil::lefind(double &sle, MatrixX2d points, MatrixX2d dpoints_ds, VectorXd
   if (s[i] == s[i - 1]) return false;
 
   //---- newton iteration to get exact sle value
-  for (iter = 1; iter <= 50; iter++) {
+  for (int iter = 1; iter <= 50; iter++) {
     point_le.x() = spline::seval(sle, points.col(0), dpoints_ds.col(0), s, n);
     point_le.y() = spline::seval(sle, points.col(1), dpoints_ds.col(1), s, n);
     const double dxds = spline::deval(sle, points.col(0), dpoints_ds.col(0), s, n);
@@ -2717,7 +2699,7 @@ bool XFoil::lefind(double &sle, MatrixX2d points, MatrixX2d dpoints_ds, VectorXd
 bool XFoil::ludcmp(int n, double a[IQX][IQX], int indx[IQX]) {
   int imax = 0;  // added techwinder
   int nvx = IQX;
-  int i, j, k;
+
   double vv[IQX];
   double dum, sum, aamax;
   if (n > nvx) {
@@ -2725,24 +2707,24 @@ bool XFoil::ludcmp(int n, double a[IQX][IQX], int indx[IQX]) {
     return false;
   }
 
-  for (i = 1; i <= n; i++) {
+  for (int i = 1; i <= n; i++) {
     aamax = 0.0;
-    for (j = 1; j <= n; j++) aamax = std::max(fabs(a[i][j]), aamax);
+    for (int j = 1; j <= n; j++) aamax = std::max(fabs(a[i][j]), aamax);
     vv[i] = 1.0 / aamax;
   }
 
-  for (j = 1; j <= n; j++) {
-    for (i = 1; i <= j - 1; i++) {
+  for (int j = 1; j <= n; j++) {
+    for (int i = 1; i <= j - 1; i++) {
       sum = a[i][j];
-      for (k = 1; k <= i - 1; k++) sum = sum - a[i][k] * a[k][j];
+      for (int k = 1; k <= i - 1; k++) sum = sum - a[i][k] * a[k][j];
       a[i][j] = sum;
     }
 
     aamax = 0.0;
 
-    for (i = j; i <= n; i++) {
+    for (int i = j; i <= n; i++) {
       sum = a[i][j];
-      for (k = 1; k <= j - 1; k++) sum = sum - a[i][k] * a[k][j];
+      for (int k = 1; k <= j - 1; k++) sum = sum - a[i][k] * a[k][j];
       a[i][j] = sum;
       dum = (vv[i] * fabs(sum));
       if (dum >= aamax) {
@@ -2752,7 +2734,7 @@ bool XFoil::ludcmp(int n, double a[IQX][IQX], int indx[IQX]) {
     }
     //		ASSERT(bimaxok);// to check imax has been initialized
     if (j != imax) {
-      for (k = 1; k <= n; k++) {
+      for (int k = 1; k <= n; k++) {
         dum = a[imax][k];
         a[imax][k] = a[j][k];
         a[j][k] = dum;
@@ -2763,7 +2745,7 @@ bool XFoil::ludcmp(int n, double a[IQX][IQX], int indx[IQX]) {
     indx[j] = imax;
     if (j != n) {
       dum = 1.0 / a[j][j];
-      for (i = j + 1; i <= n; i++) a[i][j] = a[i][j] * dum;
+      for (int i = j + 1; i <= n; i++) a[i][j] = a[i][j] * dum;
     }
   }
   return true;
@@ -3464,11 +3446,11 @@ bool XFoil::mrcl(double cls, double &m_cls, double &r_cls) {
 
 bool XFoil::ncalc(MatrixX2d points, VectorXd spline_length, int n, double xn[], double yn[]) {
   double sx, sy, smod;
-  int i;
+
   if (n <= 1) return false;
   xn = spline::splind(points.col(0), spline_length, n).data();
   yn = spline::splind(points.col(1), spline_length, n).data();
-  for (i = 1; i <= n; i++) {
+  for (int i = 1; i <= n; i++) {
     sx = yn[i];
     sy = -xn[i];
     smod = sqrt(sx * sx + sy * sy);
@@ -3477,7 +3459,7 @@ bool XFoil::ncalc(MatrixX2d points, VectorXd spline_length, int n, double xn[], 
   }
 
   //---- average normal vectors at corner points
-  for (i = 1; i <= n - 1; i++) {
+  for (int i = 1; i <= n - 1; i++) {
     if (spline_length[i] == spline_length[i + 1]) {
       sx = 0.5 * (xn[i] + xn[i + 1]);
       sy = 0.5 * (yn[i] + yn[i + 1]);
