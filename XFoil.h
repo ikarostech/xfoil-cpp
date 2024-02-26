@@ -243,7 +243,7 @@ class XFoil {
 
   VectorXd nx, ny;
 
-  double cl, cm, cd, cdp, cdf, cpi[IZX], cpv[IZX], acrit;
+  double cl, cm, cd, cpi[IZX], cpv[IZX], acrit;
   double xcp;
   double alfa, avisc, awake, reinf1, qinf, mvisc, rmsbl, ante;
   double cpmn;
@@ -271,8 +271,7 @@ class XFoil {
   VectorXd spline_length;
   double dtor;
 
-  double thet[IVX][ISX], tau[IVX][ISX], ctau[IVX][ISX], ctq[IVX][ISX];
-  double dis[IVX][ISX], uedg[IVX][ISX];
+  double thet[IVX][ISX], ctau[IVX][ISX], ctq[IVX][ISX], uedg[IVX][ISX];
 
   double dstr[IVX][ISX];
   
@@ -464,7 +463,6 @@ class XFoil {
   c   mvisc       mach number corresponding to bl solution
   c   cl,cm       current cl and cm calculated from gam[.] distribution
   c   cd          current cd from bl solution
-  c   cdf         current friction cd from bl solution
   c   cl_alf      dcl/dalfa
   c   cl_msq      dcl/d[minf^2]
   c
@@ -688,8 +686,6 @@ class XFoil {
   c   ctau[..]    sqrt[max shear coefficient] array
   c               [in laminar regions, log of amplification ratio]
   c
-  c   tau[..]     wall shear stress array                 [for plotting only]
-  c   dis[..]     dissipation array                       [for plotting only]
   c   ctq[..]     sqrt[equilibrium max shear coefficient] array [  "  ]
   c   vti[..]     +/-1 conversion factor between panel and bl variables
   c   uinv_a[..]  duinv/dalfa array

@@ -107,7 +107,6 @@ bool XFoil::initialize() {
   memset(ctau, 0, sizeof(ctau));
   memset(ctq, 0, sizeof(ctq));
   memset(dij, 0, sizeof(dij));
-  memset(dis, 0, sizeof(dis));
   memset(dqdg, 0, sizeof(dqdg));
   memset(dqdm, 0, sizeof(dqdm));
   memset(dstr, 0, sizeof(dstr));
@@ -137,7 +136,6 @@ bool XFoil::initialize() {
   memset(sig, 0, sizeof(sig));
   snew = VectorXd::Zero(4 * IBX);
   memset(sig, 0, sizeof(sig));
-  memset(tau, 0, sizeof(tau));
   memset(thet, 0, sizeof(thet));
   memset(uedg, 0, sizeof(uedg));
   memset(uinv, 0, sizeof(uinv));
@@ -169,9 +167,7 @@ bool XFoil::initialize() {
 
   memset(ctau, 0, sizeof(ctau));
   memset(ctq, 0, sizeof(ctq));
-  memset(dis, 0, sizeof(dis));
   memset(dstr, 0, sizeof(dstr));
-  memset(tau, 0, sizeof(tau));
   memset(thet, 0, sizeof(thet));
   memset(uedg, 0, sizeof(uedg));
   memset(itran, 0, sizeof(itran));
@@ -280,8 +276,6 @@ bool XFoil::initialize() {
   xiforc = 0.0;
   amcrit = 0.0;
 
-  cdp = 0.0;
-  cdf = 0.0;
   alfa = 0.0;
   amax = 0.0;
   adeg = 0.0;
@@ -1704,18 +1698,6 @@ bool XFoil::cdcalc() {
     cd = 0.0;
   }
 
-  //--- calculate friction drag coefficient
-  cdf = 0.0;
-  for (int is = 1; is <= 2; is++) {
-    for (int ibl = 3; ibl <= iblte[is]; ibl++) {
-      int i = ipan[ibl][is];
-      int im = ipan[ibl - 1][is];
-      dx = (points.row(i).x() - points.row(im).x()) * ca + (points.row(i).y() - points.row(im).y()) * sa;
-      cdf = cdf +
-            0.5 * (tau[ibl][is] + tau[ibl - 1][is]) * dx * 2.0 / qinf / qinf;
-    }
-  }
-
   return true;
 }
 
@@ -1802,8 +1784,6 @@ bool XFoil::clcalc(double xref, double yref) {
   cl = 0.0;
   cm = 0.0;
 
-  cdp = 0.0;
-
   cl_alf = 0.0;
   cl_msq = 0.0;
 
@@ -1843,7 +1823,6 @@ bool XFoil::clcalc(double xref, double yref) {
     const double ag_msq = 0.5 * (cpg2_msq + cpg1_msq);
 
     cl = cl + dx * ag;
-    cdp = cdp - dy * ag;
     cm = cm - dx * (ag * ax + dg * dx / 12.0) - dy * (ag * ay + dg * dy / 12.0);
 
     xcp += dx * ag * (points.row(ip).x() + points.row(i).x()) / 2.0;
@@ -3032,8 +3011,6 @@ bool XFoil::mrchdu() {
       dstr[ibl][is] = dsi;
       uedg[ibl][is] = uei;
       mass[ibl][is] = dsi * uei;
-      tau[ibl][is] = 0.5 * blData2.rz * blData2.uz * blData2.uz * blData2.cfz;
-      dis[ibl][is] = blData2.rz * blData2.uz * blData2.uz * blData2.uz * blData2.diz * blData2.hsz * 0.5;
       ctq[ibl][is] = blData2.cqz;
 
       //------ set "1" variables to "2" variables for next streamwise station
@@ -3345,8 +3322,6 @@ bool XFoil::mrchue() {
       dstr[ibl][is] = dsi;
       uedg[ibl][is] = uei;
       mass[ibl][is] = dsi * uei;
-      tau[ibl][is] = 0.5 * blData2.rz * blData2.uz * blData2.uz * blData2.cfz;
-      dis[ibl][is] = blData2.rz * blData2.uz * blData2.uz * blData2.uz * blData2.diz * blData2.hsz * 0.5;
       ctq[ibl][is] = blData2.cqz;
 
       //------ set "1" variables to "2" variables for next streamwise station
@@ -4490,8 +4465,6 @@ bool XFoil::setbl() {
 
       //---- save wall shear and equil. max shear coefficient for plotting
       // output
-      tau[ibl][is] = 0.5 * blData2.rz * blData2.uz * blData2.uz * blData2.cfz;
-      dis[ibl][is] = blData2.rz * blData2.uz * blData2.uz * blData2.uz * blData2.diz * blData2.hsz * 0.5;
       ctq[ibl][is] = blData2.cqz;
 
       //---- set xi sensitivities wrt le ue changes
@@ -6120,8 +6093,6 @@ bool XFoil::update() {
     thet[iblte[1] + kbl][1] = thet[iblte[2] + kbl][2];
     dstr[iblte[1] + kbl][1] = dstr[iblte[2] + kbl][2];
     uedg[iblte[1] + kbl][1] = uedg[iblte[2] + kbl][2];
-    tau[iblte[1] + kbl][1] = tau[iblte[2] + kbl][2];
-    dis[iblte[1] + kbl][1] = dis[iblte[2] + kbl][2];
     ctq[iblte[1] + kbl][1] = ctq[iblte[2] + kbl][2];
   }
 
@@ -6239,16 +6210,6 @@ bool XFoil::ViscousIter() {
        << "   max:" << std::scientific << std::setprecision(2) << rmxbl
        << " at " << imxbl << " " << ismxbl << "\n";
   }
-
-  writeString(ss.str());
-  ss.str("");
-
-  cdp = cd - cdf;
-
-  ss << "     a=" << alfa / dtor << "    cl=" << cl << "\n     cm=" << cm
-     << "  cd=" << cd << " => cdf=" << cdf << " cdp=" << cdp << "\n\n";
-  writeString(ss.str());
-  ss.str("");
 
   if (rmsbl < eps1) {
     lvconv = true;
