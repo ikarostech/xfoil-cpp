@@ -5,11 +5,11 @@
 
 TEST(scalc, test_value) {
     //given
-    Eigen::MatrixX2d points(4, 2);
-    points <<   0.0, 0.0,
-                1.0, 0.0,
-                2.0, 2.0,
-                3.0, 3.0;
+    //Eigen::Matrix2Xd points {{0.0, 0.0}, {1.0, 0.0}, {2.0, 2.0}, {3.0, 3.0}};
+    Eigen::Matrix2Xd points {
+        {0.0, 1.0, 2.0, 3.0}, 
+        {0.0, 0.0, 2.0, 3.0}
+    };
 
     //when
     Eigen::VectorXd actual = spline::scalc(points, 4, 4);

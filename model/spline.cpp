@@ -1,11 +1,11 @@
 #include "spline.hpp"
 #include "matrix.hpp"
 #include <iostream>
-Eigen::VectorXd spline::scalc(Eigen::MatrixX2d points, int n, const int s_size) {
+Eigen::VectorXd spline::scalc(Eigen::Matrix2Xd points, int n, const int s_size) {
     Eigen::VectorXd s = Eigen::VectorXd::Zero(s_size);
     
     for (int i = 1; i < n; i++) {
-        s[i] = s[i - 1] + (points.row(i) - points.row(i - 1)).norm();
+        s[i] = s[i - 1] + (points.col(i) - points.col(i - 1)).norm();
     }
 
     return s;

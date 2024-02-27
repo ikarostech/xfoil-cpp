@@ -140,9 +140,9 @@ bool XFoil::initialize() {
   memset(uedg, 0, sizeof(uedg));
   memset(uinv, 0, sizeof(uinv));
   memset(vti, 0, sizeof(vti));
-  points.resize(IZX, 2);
+  points.resize(2, IZX);
   xbp.resize(IBX, 0);
-  dpoints_ds.resize(IZX, 2);
+  dpoints_ds.resize(2, IZX);
   
   memset(xssi, 0, sizeof(xssi));
   
@@ -343,14 +343,14 @@ bool XFoil::initialize() {
   return true;
 }
 
-bool XFoil::abcopy(MatrixX2d copyFrom) {
+bool XFoil::abcopy(Matrix2Xd copyFrom) {
 
-  if (n != copyFrom.rows() - 1) lblini = false;
+  if (n != copyFrom.cols() - 1) lblini = false;
 
-  n = copyFrom.rows() - 1;
+  n = copyFrom.cols() - 1;
   for (int i = 1; i <= n; i++) {
-    points.row(i).x() = copyFrom.row(i).x();
-    points.row(i).y() = copyFrom.row(i).y();
+    points.col(i).x() = copyFrom.col(i).x();
+    points.col(i).y() = copyFrom.col(i).y();
   }
 
   //---- strip out doubled points
@@ -358,24 +358,24 @@ bool XFoil::abcopy(MatrixX2d copyFrom) {
 
   while (r < n) {
     r++;
-    if (points.row(r - 1).x() == points.row(r).x() && points.row(r - 1).y() == points.row(r).y()) {
+    if (points.col(r - 1).x() == points.col(r).x() && points.col(r - 1).y() == points.col(r).y()) {
       for (int j = r; j <= n - 1; j++) {
-        points.row(j).x() = points.row(j + 1).x();
-        points.row(j).y() = points.row(j + 1).y();
+        points.col(j).x() = points.col(j + 1).x();
+        points.col(j).y() = points.col(j + 1).y();
       }
       n = n - 1;
     }
   }
 
-  spline_length.segment(1, spline_length.size() - 1) = spline::scalc(points.middleRows(1, points.rows() - 1), n, spline_length.size() - 1);
-  dpoints_ds.col(0) = spline::splind(points.col(0), spline_length, n);
-  dpoints_ds.col(1) = spline::splind(points.col(1), spline_length, n);
+  spline_length.segment(1, spline_length.size() - 1) = spline::scalc(points.middleCols(1, points.cols() - 1), n, spline_length.size() - 1);
+  dpoints_ds.row(0) = spline::splind(points.row(0), spline_length, n);
+  dpoints_ds.row(1) = spline::splind(points.row(1), spline_length, n);
   ncalc(points, spline_length, n, nx.data(), ny.data());
   lefind(sle, points, dpoints_ds, spline_length, n);
-  point_le.x() = spline::seval(sle, points.col(0), dpoints_ds.col(0), spline_length, n);
-  point_le.y() = spline::seval(sle, points.col(1), dpoints_ds.col(1), spline_length, n);
-  point_te.x() = 0.5 * (points.row(1).x() + points.row(n).x());
-  point_te.y() = 0.5 * (points.row(1).y() + points.row(n).y());
+  point_le.x() = spline::seval(sle, points.row(0), dpoints_ds.row(0), spline_length, n);
+  point_le.y() = spline::seval(sle, points.row(1), dpoints_ds.row(1), spline_length, n);
+  point_te.x() = 0.5 * (points.col(1).x() + points.col(n).x());
+  point_te.y() = 0.5 * (points.col(1).y() + points.col(n).y());
   chord = (point_le - point_te).norm();
   tecalc();
   apcalc();
@@ -403,8 +403,8 @@ bool XFoil::apcalc() {
 
   //---- set angles of airfoil panels
   for (int i = 1; i <= n - 1; i++) {
-    sx = points.row(i + 1).x() - points.row(i).x();
-    sy = points.row(i + 1).y() - points.row(i).y();
+    sx = points.col(i + 1).x() - points.col(i).x();
+    sy = points.col(i + 1).y() - points.col(i).y();
     if (sx == 0.0 && sy == 0.0)
       apanel[i] = atan2(-ny[i], -nx[i]);
     else
@@ -415,8 +415,8 @@ bool XFoil::apcalc() {
   if (sharp)
     apanel[n] = PI;
   else {
-    sx = points.row(1).x() - points.row(n).x();
-    sy = points.row(1).y() - points.row(n).y();
+    sx = points.col(1).x() - points.col(n).x();
+    sy = points.col(1).y() - points.col(n).y();
     apanel[n] = atan2(-sx, sy) + PI;
   }
 
@@ -1659,13 +1659,13 @@ bool XFoil::blvar(int ityp) {
  * @param n foil plot size
  * @return PairIndex index: index of max angle diff, value: angle of max angle diff[degree]
  */
-double XFoil::cang(MatrixX2d points) {
+double XFoil::cang(Matrix2Xd points) {
   
   double max_angle = 0;
   //---- go over each point, calculating corner angle
-  for (int i = 1; i < points.rows() - 1; i++) {
-    Vector2d delta_former = points.row(i) - points.row(i - 1);
-    Vector2d delta_later =  points.row(i) - points.row(i + 1);
+  for (int i = 1; i < points.cols() - 1; i++) {
+    Vector2d delta_former = points.col(i) - points.col(i - 1);
+    Vector2d delta_later =  points.col(i) - points.col(i + 1);
 
     double sin = cross2(delta_later, delta_former) / delta_former.norm() / delta_later.norm();
     double delta_angle = asin(sin) * 180.0 / PI;
@@ -1805,24 +1805,24 @@ bool XFoil::clcalc(double xref, double yref) {
     cpc_cpi = (1.0 - bfac * cpg2) / (beta + bfac * cginc);
     double cpg2_alf = cpc_cpi * cpi_gam * gam_a[ip];
 
-    const double dx = (points.row(ip).x() - points.row(i).x()) * ca + (points.row(ip).y() - points.row(i).y()) * sa;
-    const double dy = (points.row(ip).y() - points.row(i).y()) * ca - (points.row(ip).x() - points.row(i).x()) * sa;
+    const double dx = (points.col(ip).x() - points.col(i).x()) * ca + (points.col(ip).y() - points.col(i).y()) * sa;
+    const double dy = (points.col(ip).y() - points.col(i).y()) * ca - (points.col(ip).x() - points.col(i).x()) * sa;
     const double dg = cpg2 - cpg1;
 
     const double ax =
-        (0.5 * (points.row(ip).x() + points.row(i).x()) - xref) * ca + (0.5 * (points.row(ip).y() + points.row(i).y()) - yref) * sa;
+        (0.5 * (points.col(ip).x() + points.col(i).x()) - xref) * ca + (0.5 * (points.col(ip).y() + points.col(i).y()) - yref) * sa;
     const double ay =
-        (0.5 * (points.row(ip).y() + points.row(i).y()) - yref) * ca - (0.5 * (points.row(ip).x() + points.row(i).x()) - xref) * sa;
+        (0.5 * (points.col(ip).y() + points.col(i).y()) - yref) * ca - (0.5 * (points.col(ip).x() + points.col(i).x()) - xref) * sa;
     const double ag = 0.5 * (cpg2 + cpg1);
 
-    const double dx_alf = -(points.row(ip).x() - points.row(i).x()) * sa + (points.row(ip).y() - points.row(i).y()) * ca;
+    const double dx_alf = -(points.col(ip).x() - points.col(i).x()) * sa + (points.col(ip).y() - points.col(i).y()) * ca;
     const double ag_alf = 0.5 * (cpg2_alf + cpg1_alf);
     const double ag_msq = 0.5 * (cpg2_msq + cpg1_msq);
 
     cl = cl + dx * ag;
     cm = cm - dx * (ag * ax + dg * dx / 12.0) - dy * (ag * ay + dg * dy / 12.0);
 
-    xcp += dx * ag * (points.row(ip).x() + points.row(i).x()) / 2.0;
+    xcp += dx * ag * (points.col(ip).x() + points.col(i).x()) / 2.0;
 
     cl_alf = cl_alf + dx * ag_alf + ag * dx_alf;
     cl_msq = cl_msq + dx * ag_msq;
@@ -2062,18 +2062,18 @@ bool XFoil::dslim(double &dstr, double thet, double msq, double hklim) {
  *     finds minimum cp on dist for cavitation work
  * ------------------------------------------------ */
 bool XFoil::fcpmin() {
-  xcpmni = points.row(1).x();
-  xcpmnv = points.row(1).x();
+  xcpmni = points.col(1).x();
+  xcpmnv = points.col(1).x();
   cpmni = cpi[1];
   cpmnv = cpv[1];
 
   for (int i = 2; i <= n + nw; i++) {
     if (cpi[i] < cpmni) {
-      xcpmni = points.row(i).x();
+      xcpmni = points.col(i).x();
       cpmni = cpi[i];
     }
     if (cpv[i] < cpmnv) {
-      xcpmnv = points.row(i).x();
+      xcpmnv = points.col(i).x();
       cpmnv = cpv[i];
     }
   }
@@ -2164,16 +2164,16 @@ bool XFoil::Gauss(int nn, double z[][6], double r[5]) {
   return true;
 }
 
-bool XFoil::getxyf(MatrixX2d points, MatrixX2d dpoints_ds, VectorXd s,
+bool XFoil::getxyf(Matrix2Xd points, Matrix2Xd dpoints_ds, VectorXd s,
                    int n, double &tops, double &bots, double xf, double &yf) {
   double topy, boty, yrel;
 
-  tops = s[1] + (points.row(1).x() - xf);
-  bots = s[n] - (points.row(n).x() - xf);
-  spline::sinvrt(tops, xf, points.col(0), dpoints_ds.col(0), s, n);
-  spline::sinvrt(bots, xf, points.col(0), dpoints_ds.col(0), s, n);
-  topy = spline::seval(tops, points.col(1), dpoints_ds.col(1), s, n);
-  boty = spline::seval(bots, points.col(1), dpoints_ds.col(1), s, n);
+  tops = s[1] + (points.col(1).x() - xf);
+  bots = s[n] - (points.col(n).x() - xf);
+  spline::sinvrt(tops, xf, points.row(0), dpoints_ds.row(0), s, n);
+  spline::sinvrt(bots, xf, points.row(0), dpoints_ds.row(0), s, n);
+  topy = spline::seval(tops, points.row(1), dpoints_ds.row(1), s, n);
+  boty = spline::seval(bots, points.row(1), dpoints_ds.row(1), s, n);
 
   yrel = yf;
 
@@ -2208,10 +2208,10 @@ bool XFoil::ggcalc() {
   //-    the unknowns are (dgamma)i and dpsio.
   for (int i = 1; i <= n; i++) {
     //------ calculate psi and dpsi/dgamma array for current node
-    psilin(i, points.row(i).x(), points.row(i).y(), nx[i], ny[i], psi, psi_n, false, true);
+    psilin(i, points.col(i).x(), points.col(i).y(), nx[i], ny[i], psi, psi_n, false, true);
 
-    const double res1 = qinf * points.row(i).y();
-    const double res2 = -qinf * points.row(i).x();
+    const double res1 = qinf * points.col(i).y();
+    const double res2 = -qinf * points.col(i).x();
 
     //------ dres/dgamma
     for (int j = 1; j <= n; j++) {
@@ -2248,17 +2248,17 @@ bool XFoil::ggcalc() {
     //----- set zero internal velocity in TE corner
 
     //----- set TE bisector angle
-    const double ag1 = atan2(-dpoints_ds.row(1).y(), -dpoints_ds.row(1).x());
-    const double ag2 = atanc(dpoints_ds.row(n).y(), dpoints_ds.row(n).x(), ag1);
+    const double ag1 = atan2(-dpoints_ds.col(1).y(), -dpoints_ds.col(1).x());
+    const double ag2 = atanc(dpoints_ds.col(n).y(), dpoints_ds.col(n).x(), ag1);
     const double abis = 0.5 * (ag1 + ag2);
 
     const double cbis = cos(abis);
     const double sbis = sin(abis);
 
     //----- minimum panel length adjacent to TE
-    const double ds1 = sqrt((points.row(1).x() - points.row(2).x()) * (points.row(1).x() - points.row(2).x()) + (points.row(1).y() - points.row(2).y()) * (points.row(1).y() - points.row(2).y()));
-    const double ds2 = sqrt((points.row(n).x() - points.row(n - 1).x()) * (points.row(n).x() - points.row(n - 1).x()) +
-               (points.row(n).y() - points.row(n - 1).y()) * (points.row(n).y() - points.row(n - 1).y()));
+    const double ds1 = sqrt((points.col(1).x() - points.col(2).x()) * (points.col(1).x() - points.col(2).x()) + (points.col(1).y() - points.col(2).y()) * (points.col(1).y() - points.col(2).y()));
+    const double ds2 = sqrt((points.col(n).x() - points.col(n - 1).x()) * (points.col(n).x() - points.col(n - 1).x()) +
+               (points.col(n).y() - points.col(n - 1).y()) * (points.col(n).y() - points.col(n - 1).y()));
     const double dsmin = std::min(ds1, ds2);
 
     //---- distance of internal control point ahead of sharp TE
@@ -2540,10 +2540,10 @@ bool XFoil::iblsys() {
  *  and sets the results in current foil */
 bool XFoil::initXFoilGeometry(int fn, const double *fx, const double *fy, double *fnx, double *fny) {
 
-  MatrixX2d buffer_points = MatrixX2d::Zero(fn + 1, 2);
+  Matrix2Xd buffer_points = Matrix2Xd::Zero(2, fn + 1);
   for (int i = 0; i < fn; i++) {
-    buffer_points.row(i + 1).x() = fx[i];
-    buffer_points.row(i + 1).y() = fy[i];
+    buffer_points.col(i + 1).x() = fx[i];
+    buffer_points.col(i + 1).y() = fy[i];
   }
 
   if (!isValidFoilPointSize(buffer_points) || !isValidFoilAngles(buffer_points)) {
@@ -2602,22 +2602,22 @@ bool XFoil::initXFoilAnalysis(double Re, double alpha, double Mach,
  *     i.e. the surface tangent is normal to the chord
  *     line connecting x(sle),y(sle) and the te point.
 //------------------------------------------------------ */
-bool XFoil::lefind(double &sle, MatrixX2d points, MatrixX2d dpoints_ds, VectorXd s, int n) {
+bool XFoil::lefind(double &sle, Matrix2Xd points, Matrix2Xd dpoints_ds, VectorXd s, int n) {
   int i;
   double dseps;
   //---- convergence tolerance
   dseps = (s[n] - s[1]) * 0.00001;
 
   //---- set trailing edge point coordinates
-  point_te.x() = 0.5 * (points.row(1).x() + points.row(n).x());
-  point_te.y() = 0.5 * (points.row(1).y() + points.row(n).y());
+  point_te.x() = 0.5 * (points.col(1).x() + points.col(n).x());
+  point_te.y() = 0.5 * (points.col(1).y() + points.col(n).y());
 
   //---- get first guess for sle
   for (i = 3; i <= n - 2; i++) {
-    const double dxte = points.row(i).x() - point_te.x();
-    const double dyte = points.row(i).y() - point_te.y();
-    const double dx = points.row(i + 1).x() - points.row(i).x();
-    const double dy = points.row(i + 1).y() - points.row(i).y();
+    const double dxte = points.col(i).x() - point_te.x();
+    const double dyte = points.col(i).y() - point_te.y();
+    const double dx = points.col(i + 1).x() - points.col(i).x();
+    const double dy = points.col(i + 1).y() - points.col(i).y();
     const double dotp = dxte * dx + dyte * dy;
     if (dotp < 0.0) break;
   }
@@ -2629,12 +2629,12 @@ bool XFoil::lefind(double &sle, MatrixX2d points, MatrixX2d dpoints_ds, VectorXd
 
   //---- newton iteration to get exact sle value
   for (int iter = 1; iter <= 50; iter++) {
-    point_le.x() = spline::seval(sle, points.col(0), dpoints_ds.col(0), s, n);
-    point_le.y() = spline::seval(sle, points.col(1), dpoints_ds.col(1), s, n);
-    const double dxds = spline::deval(sle, points.col(0), dpoints_ds.col(0), s, n);
-    const double dyds = spline::deval(sle, points.col(1), dpoints_ds.col(1), s, n);
-    const double dxdd = spline::d2val(sle, points.col(0), dpoints_ds.col(0), s, n);
-    const double dydd = spline::d2val(sle, points.col(1), dpoints_ds.col(1), s, n);
+    point_le.x() = spline::seval(sle, points.row(0), dpoints_ds.row(0), s, n);
+    point_le.y() = spline::seval(sle, points.row(1), dpoints_ds.row(1), s, n);
+    const double dxds = spline::deval(sle, points.row(0), dpoints_ds.row(0), s, n);
+    const double dyds = spline::deval(sle, points.row(1), dpoints_ds.row(1), s, n);
+    const double dxdd = spline::d2val(sle, points.row(0), dpoints_ds.row(0), s, n);
+    const double dydd = spline::d2val(sle, points.row(1), dpoints_ds.row(1), s, n);
 
     Vector2d point_chord = point_le - point_te;
 
@@ -3416,12 +3416,12 @@ bool XFoil::mrcl(double cls, double &m_cls, double &r_cls) {
   return true;
 }
 
-bool XFoil::ncalc(MatrixX2d points, VectorXd spline_length, int n, double xn[], double yn[]) {
+bool XFoil::ncalc(Matrix2Xd points, VectorXd spline_length, int n, double xn[], double yn[]) {
   double sx, sy, smod;
 
   if (n <= 1) return false;
-  xn = spline::splind(points.col(0), spline_length, n).data();
-  yn = spline::splind(points.col(1), spline_length, n).data();
+  xn = spline::splind(points.row(0), spline_length, n).data();
+  yn = spline::splind(points.row(1), spline_length, n).data();
   for (int i = 1; i <= n; i++) {
     sx = yn[i];
     sy = -xn[i];
@@ -3530,16 +3530,16 @@ bool XFoil::psilin(int iNode, double xi, double yi, double nxi, double nyi,
       else {
         if (jo == n) {
           jp = 1;
-          if ((points.row(jo).x() - points.row(jp).x()) * (points.row(jo).x() - points.row(jp).x()) +
-                  (points.row(jo).y() - points.row(jp).y()) * (points.row(jo).y() - points.row(jp).y()) <
+          if ((points.col(jo).x() - points.col(jp).x()) * (points.col(jo).x() - points.col(jp).x()) +
+                  (points.col(jo).y() - points.col(jp).y()) * (points.col(jo).y() - points.col(jp).y()) <
               seps * seps)
             goto stop12;
         }
       }
     }
 
-    dso = sqrt((points.row(jo).x() - points.row(jp).x()) * (points.row(jo).x() - points.row(jp).x()) +
-               (points.row(jo).y() - points.row(jp).y()) * (points.row(jo).y() - points.row(jp).y()));
+    dso = sqrt((points.col(jo).x() - points.col(jp).x()) * (points.col(jo).x() - points.col(jp).x()) +
+               (points.col(jo).y() - points.col(jp).y()) * (points.col(jo).y() - points.col(jp).y()));
 
     //------ skip null panel
     if (fabs(dso) < 1.0e-7) goto stop10;
@@ -3548,13 +3548,13 @@ bool XFoil::psilin(int iNode, double xi, double yi, double nxi, double nyi,
 
     apan = apanel[jo];
 
-    rx1 = xi - points.row(jo).x();
-    ry1 = yi - points.row(jo).y();
-    rx2 = xi - points.row(jp).x();
-    ry2 = yi - points.row(jp).y();
+    rx1 = xi - points.col(jo).x();
+    ry1 = yi - points.col(jo).y();
+    rx2 = xi - points.col(jp).x();
+    ry2 = yi - points.col(jp).y();
 
-    sx = (points.row(jp).x() - points.row(jo).x()) / dso;
-    sy = (points.row(jp).y() - points.row(jo).y()) / dso;
+    sx = (points.col(jp).x() - points.col(jo).x()) / dso;
+    sy = (points.col(jp).y() - points.col(jo).y()) / dso;
 
     blData1.xz = sx * rx1 + sy * ry1;
     blData2.xz = sx * rx2 + sy * ry2;
@@ -3638,8 +3638,8 @@ bool XFoil::psilin(int iNode, double xi, double yi, double nxi, double nyi,
       pdyy =
           ((blData1.xz + x0) * psyy + 2.0 * (x0 - blData1.xz + yy * (blData1.tz - theta0))) * dxinv;
 
-      dsm = sqrt((points.row(jp).x() - points.row(jm).x()) * (points.row(jp).x() - points.row(jm).x()) +
-                 (points.row(jp).y() - points.row(jm).y()) * (points.row(jp).y() - points.row(jm).y()));
+      dsm = sqrt((points.col(jp).x() - points.col(jm).x()) * (points.col(jp).x() - points.col(jm).x()) +
+                 (points.col(jp).y() - points.col(jm).y()) * (points.col(jp).y() - points.col(jm).y()));
       dsim = 1.0 / dsm;
 
       ssum = (sig[jp] - sig[jo]) / dso + (sig[jp] - sig[jm]) * dsim;
@@ -3682,8 +3682,8 @@ bool XFoil::psilin(int iNode, double xi, double yi, double nxi, double nyi,
       pdyy =
           ((x0 + blData2.xz) * psyy + 2.0 * (blData2.xz - x0 + yy * (theta0 - blData2.tz))) * dxinv;
 
-      dsp = sqrt((points.row(jq).x() - points.row(jo).x()) * (points.row(jq).x() - points.row(jo).x()) +
-                 (points.row(jq).y() - points.row(jo).y()) * (points.row(jq).y() - points.row(jo).y()));
+      dsp = sqrt((points.col(jq).x() - points.col(jo).x()) * (points.col(jq).x() - points.col(jo).x()) +
+                 (points.col(jq).y() - points.col(jo).y()) * (points.col(jq).y() - points.col(jo).y()));
       dsip = 1.0 / dsp;
 
       ssum = (sig[jq] - sig[jo]) * dsip + (sig[jp] - sig[jo]) / dso;
@@ -3864,19 +3864,19 @@ bool XFoil::pswlin(int i, double xi, double yi, double nxi, double nyi,
     } else {
       if (jo == n + nw - 1) jq = jp;
     }
-    const double dso = sqrt((points.row(jo).x() - points.row(jp).x()) * (points.row(jo).x() - points.row(jp).x()) +
-               (points.row(jo).y() - points.row(jp).y()) * (points.row(jo).y() - points.row(jp).y()));
+    const double dso = sqrt((points.col(jo).x() - points.col(jp).x()) * (points.col(jo).x() - points.col(jp).x()) +
+               (points.col(jo).y() - points.col(jp).y()) * (points.col(jo).y() - points.col(jp).y()));
     const double dsio = 1.0 / dso;
 
     const double apan = apanel[jo];
 
-    const double rx1 = xi - points.row(jo).x();
-    const double ry1 = yi - points.row(jo).y();
-    const double rx2 = xi - points.row(jp).x();
-    const double ry2 = yi - points.row(jp).y();
+    const double rx1 = xi - points.col(jo).x();
+    const double ry1 = yi - points.col(jo).y();
+    const double rx2 = xi - points.col(jp).x();
+    const double ry2 = yi - points.col(jp).y();
 
-    const double sx = (points.row(jp).x() - points.row(jo).x()) * dsio;
-    const double sy = (points.row(jp).y() - points.row(jo).y()) * dsio;
+    const double sx = (points.col(jp).x() - points.col(jo).x()) * dsio;
+    const double sy = (points.col(jp).y() - points.col(jo).y()) * dsio;
 
     blData1.xz = sx * rx1 + sy * ry1;
     blData2.xz = sx * rx2 + sy * ry2;
@@ -3931,8 +3931,8 @@ bool XFoil::pswlin(int i, double xi, double yi, double nxi, double nyi,
     double pdx0 = ((blData1.xz + x0) * psx0 + psum - 2.0 * x0 * (t0 - apan) + pdif) * dxinv;
     double pdyy = ((blData1.xz + x0) * psyy + 2.0 * (x0 - blData1.xz + yy * (t1 - t0))) * dxinv;
 
-    const double dsm = sqrt((points.row(jp).x() - points.row(jm).x()) * (points.row(jp).x() - points.row(jm).x()) +
-               (points.row(jp).y() - points.row(jm).y()) * (points.row(jp).y() - points.row(jm).y()));
+    const double dsm = sqrt((points.col(jp).x() - points.col(jm).x()) * (points.col(jp).x() - points.col(jm).x()) +
+               (points.col(jp).y() - points.col(jm).y()) * (points.col(jp).y() - points.col(jm).y()));
     const double dsim = 1.0 / dsm;
 
     double ssum = (sig[jp] - sig[jo]) / dso + (sig[jp] - sig[jm]) * dsim;
@@ -3969,8 +3969,8 @@ bool XFoil::pswlin(int i, double xi, double yi, double nxi, double nyi,
     const double pdx2 = ((x0 + blData2.xz) * psx2 + psum - 2.0 * blData2.xz * (t2 - apan) + pdif) * dxinv;
     pdyy = ((x0 + blData2.xz) * psyy + 2.0 * (blData2.xz - x0 + yy * (t0 - t2))) * dxinv;
 
-    const double dsp = sqrt((points.row(jq).x() - points.row(jo).x()) * (points.row(jq).x() - points.row(jo).x()) +
-               (points.row(jq).y() - points.row(jo).y()) * (points.row(jq).y() - points.row(jo).y()));
+    const double dsp = sqrt((points.col(jq).x() - points.col(jo).x()) * (points.col(jq).x() - points.col(jo).x()) +
+               (points.col(jq).y() - points.col(jo).y()) * (points.col(jq).y() - points.col(jo).y()));
     const double dsip = 1.0 / dsp;
 
     ssum = (sig[jq] - sig[jo]) * dsip + (sig[jp] - sig[jo]) / dso;
@@ -4029,7 +4029,7 @@ bool XFoil::qdcalc() {
 
   //---- set up coefficient matrix of dpsi/dm on airfoil surface
   for (i = 1; i <= n; i++) {
-    pswlin(i, points.row(i).x(), points.row(i).y(), nx[i], ny[i], psi, psi_n);
+    pswlin(i, points.col(i).x(), points.col(i).y(), nx[i], ny[i], psi, psi_n);
     for (j = n + 1; j <= n + nw; j++) {
       bij[i][j] = -dzdm[j];
     }
@@ -4067,7 +4067,7 @@ bool XFoil::qdcalc() {
   for (i = n + 1; i <= n + nw; i++) {
     int iw = i - n;
     //------ airfoil contribution at wake panel node
-    psilin(i, points.row(i).x(), points.row(i).y(), nx[i], ny[i], psi, psi_n, false, true);
+    psilin(i, points.col(i).x(), points.col(i).y(), nx[i], ny[i], psi, psi_n, false, true);
     for (j = 1; j <= n; j++) {
       cij[iw][j] = dqdg[j];
     }
@@ -4075,7 +4075,7 @@ bool XFoil::qdcalc() {
       dij[i][j] = dqdm[j];
     }
     //------ wake contribution
-    pswlin(i, points.row(i).x(), points.row(i).y(), nx[i], ny[i], psi, psi_n);
+    pswlin(i, points.col(i).x(), points.col(i).y(), nx[i], ny[i], psi, psi_n);
     for (j = n + 1; j <= n + nw; j++) {
       dij[i][j] = dqdm[j];
     }
@@ -4155,7 +4155,7 @@ bool XFoil::qwcalc() {
 
   //---- rest of wake
   for (i = n + 2; i <= n + nw; i++) {
-    psilin(i, points.row(i).x(), points.row(i).y(), nx[i], ny[i], psi, psi_ni, false, false);
+    psilin(i, points.col(i).x(), points.col(i).y(), nx[i], ny[i], psi, psi_ni, false, false);
     qinvu[i][1] = qtan1;
     qinvu[i][2] = qtan2;
   }
@@ -4589,8 +4589,8 @@ bool XFoil::setbl() {
         chx = point_te.x() - point_le.x();
         chy = point_te.y() - point_le.y();
         chsq = chx * chx + chy * chy;
-        xtr = spline::seval(str, points.col(0), dpoints_ds.col(0), spline_length, n);
-        ytr = spline::seval(str, points.col(1), dpoints_ds.col(1), spline_length, n);
+        xtr = spline::seval(str, points.row(0), dpoints_ds.row(0), spline_length, n);
+        ytr = spline::seval(str, points.row(1), dpoints_ds.row(1), spline_length, n);
         xoctr[is] = ((xtr - point_le.x()) * chx + (ytr - point_le.y()) * chy) / chsq;
         yoctr[is] = ((ytr - point_le.y()) * chx - (xtr - point_le.x()) * chy) / chsq;
       }
@@ -5059,10 +5059,10 @@ bool XFoil::tecalc() {
 
   double scs, sds;
   //---- set te base vector and te bisector components
-  double dxte = points.row(1).x() - points.row(n).x();
-  double dyte = points.row(1).y() - points.row(n).y();
-  double dxs = 0.5 * (-dpoints_ds.row(1).x() + dpoints_ds.row(n).x());
-  double dys = 0.5 * (-dpoints_ds.row(1).y() + dpoints_ds.row(n).y());
+  double dxte = points.col(1).x() - points.col(n).x();
+  double dyte = points.col(1).y() - points.col(n).y();
+  double dxs = 0.5 * (-dpoints_ds.col(1).x() + dpoints_ds.col(n).x());
+  double dys = 0.5 * (-dpoints_ds.col(1).y() + dpoints_ds.col(n).y());
 
   //---- normal and streamwise projected TE gap areas
   ante = dxs * dyte - dys * dxte;
@@ -5893,8 +5893,8 @@ bool XFoil::update() {
     cpc_cpi = (1.0 - bfac * cpg2) / (beta + bfac * cginc);
     const double cpg2_ac = cpc_cpi * cpi_q * q_ac[ip];
 
-    const double dx = (points.row(ip).x() - points.row(i).x()) * ca + (points.row(ip).y() - points.row(i).y()) * sa;
-    const double dx_a = -(points.row(ip).x() - points.row(i).x()) * sa + (points.row(ip).y() - points.row(i).y()) * ca;
+    const double dx = (points.col(ip).x() - points.col(i).x()) * ca + (points.col(ip).y() - points.col(i).y()) * sa;
+    const double dx_a = -(points.col(ip).x() - points.col(i).x()) * sa + (points.col(ip).y() - points.col(i).y()) * ca;
 
     const double ag = 0.5 * (cpg2 + cpg1);
     const double ag_ms = 0.5 * (cpg2_ms + cpg1_ms);
@@ -6218,8 +6218,8 @@ bool XFoil::xicalc() {
   for (ibl = iblte[is] + 2; ibl <= nbl[is]; ibl++) {
     int i = ipan[ibl][is];
     xssi[ibl][is] =
-        xssi[ibl - 1][is] + sqrt((points.row(i).x() - points.row(i - 1).x()) * (points.row(i).x() - points.row(i - 1).x()) +
-                                 (points.row(i).y() - points.row(i - 1).y()) * (points.row(i).y() - points.row(i - 1).y()));
+        xssi[ibl - 1][is] + sqrt((points.col(i).x() - points.col(i - 1).x()) * (points.col(i).x() - points.col(i - 1).x()) +
+                                 (points.col(i).y() - points.col(i - 1).y()) * (points.col(i).y() - points.col(i - 1).y()));
   }
 
   //---- trailing edge flap length to te gap ratio
@@ -6228,8 +6228,8 @@ bool XFoil::xicalc() {
   //---- set up parameters for te flap cubics
 
   crosp =
-      (dpoints_ds.row(1).x() * dpoints_ds.row(n).y() - dpoints_ds.row(1).y() * dpoints_ds.row(n).x()) /
-      sqrt((dpoints_ds.row(1).x() * dpoints_ds.row(1).x() + dpoints_ds.row(1).y() * dpoints_ds.row(1).y()) * (dpoints_ds.row(n).x() * dpoints_ds.row(n).x() + dpoints_ds.row(n).y() * dpoints_ds.row(n).y()));
+      (dpoints_ds.col(1).x() * dpoints_ds.col(n).y() - dpoints_ds.col(1).y() * dpoints_ds.col(n).x()) /
+      sqrt((dpoints_ds.col(1).x() * dpoints_ds.col(1).x() + dpoints_ds.col(1).y() * dpoints_ds.col(1).y()) * (dpoints_ds.col(n).x() * dpoints_ds.col(n).x() + dpoints_ds.col(n).y() * dpoints_ds.col(n).y()));
   dwdxte = crosp / sqrt(1.0 - crosp * crosp);
 
   //---- limit cubic to avoid absurd te gap widths
@@ -6275,8 +6275,8 @@ double XFoil::xifset(int is) {
 
   //---- calculate chord-based x/c, y/c
   for (int i = 1; i <= n; i++) {
-    w1[i] = (points.row(i).transpose() - point_le).dot(point_chord.normalized());
-    w2[i] = cross2(points.row(i).transpose() - point_le, point_chord.normalized());
+    w1[i] = (points.col(i) - point_le).dot(point_chord.normalized());
+    w2[i] = cross2(points.col(i) - point_le, point_chord.normalized());
   }
 
   w3 = spline::splind(w1, spline_length, n);
@@ -6332,23 +6332,23 @@ bool XFoil::xyWake() {
   ds1 = 0.5 * (spline_length[2] - spline_length[1] + spline_length[n] - spline_length[n - 1]);
   setexp(snew.data() + n, ds1, waklen * chord, nw);
 
-  point_te.x() = 0.5 * (points.row(1).x() + points.row(n).x());
-  point_te.y() = 0.5 * (points.row(1).y() + points.row(n).y());
+  point_te.x() = 0.5 * (points.col(1).x() + points.col(n).x());
+  point_te.y() = 0.5 * (points.col(1).y() + points.col(n).y());
 
   //-- set first wake point a tiny distance behind te
   int i = n + 1;
-  sx = 0.5 * (dpoints_ds.row(n).y() - dpoints_ds.row(1).y());
-  sy = 0.5 * (dpoints_ds.row(1).x() - dpoints_ds.row(n).x());
+  sx = 0.5 * (dpoints_ds.col(n).y() - dpoints_ds.col(1).y());
+  sy = 0.5 * (dpoints_ds.col(1).x() - dpoints_ds.col(n).x());
   smod = sqrt(sx * sx + sy * sy);
   nx[i] = sx / smod;
   ny[i] = sy / smod;
-  points.row(i).x() = point_te.x() - 0.0001 * ny[i];
-  points.row(i).y() = point_te.y() + 0.0001 * nx[i];
+  points.col(i).x() = point_te.x() - 0.0001 * ny[i];
+  points.col(i).y() = point_te.y() + 0.0001 * nx[i];
   spline_length[i] = spline_length[n];
 
   //---- calculate streamfunction gradient components at first point
-  psilin(i, points.row(i).x(), points.row(i).y(), 1.0, 0.0, psi, psi_x, false, false);
-  psilin(i, points.row(i).x(), points.row(i).y(), 0.0, 1.0, psi, psi_y, false, false);
+  psilin(i, points.col(i).x(), points.col(i).y(), 1.0, 0.0, psi, psi_x, false, false);
+  psilin(i, points.col(i).x(), points.col(i).y(), 0.0, 1.0, psi, psi_y, false, false);
 
   //---- set unit vector normal to wake at first point
   nx[i + 1] = -psi_x / sqrt(psi_x * psi_x + psi_y * psi_y);
@@ -6362,14 +6362,14 @@ bool XFoil::xyWake() {
     const double ds = snew[i] - snew[i - 1];
 
     //------ set new point ds downstream of last point
-    points.row(i).x() = points.row(i - 1).x() - ds * ny[i];
-    points.row(i).y() = points.row(i - 1).y() + ds * nx[i];
+    points.col(i).x() = points.col(i - 1).x() - ds * ny[i];
+    points.col(i).y() = points.col(i - 1).y() + ds * nx[i];
     spline_length[i] = spline_length[i - 1] + ds;
 
     if (i != n + nw) {
       //------- calculate normal vector for next point
-      psilin(i, points.row(i).x(), points.row(i).y(), 1.0, 0.0, psi, psi_x, false, false);
-      psilin(i, points.row(i).x(), points.row(i).y(), 0.0, 1.0, psi, psi_y, false, false);
+      psilin(i, points.col(i).x(), points.col(i).y(), 1.0, 0.0, psi, psi_x, false, false);
+      psilin(i, points.col(i).x(), points.col(i).y(), 0.0, 1.0, psi, psi_y, false, false);
 
       nx[i + 1] = -psi_x / sqrt(psi_x * psi_x + psi_y * psi_y);
       ny[i + 1] = -psi_y / sqrt(psi_x * psi_x + psi_y * psi_y);
@@ -6389,12 +6389,12 @@ bool XFoil::xyWake() {
   return true;
 }
 
-bool XFoil::isValidFoilAngles(MatrixX2d points) {
+bool XFoil::isValidFoilAngles(Matrix2Xd points) {
   
-  double max_angle = cang(points.middleRows(INDEX_START_WITH, points.rows() - INDEX_START_WITH));
+  double max_angle = cang(points.middleCols(INDEX_START_WITH, points.cols() - INDEX_START_WITH));
   return max_angle <= angtol;
 }
 
-bool XFoil::isValidFoilPointSize(MatrixX2d points) {
-  return points.rows() >= 3 + INDEX_START_WITH;
+bool XFoil::isValidFoilPointSize(Matrix2Xd points) {
+  return points.cols() >= 3 + INDEX_START_WITH;
 }

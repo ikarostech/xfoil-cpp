@@ -80,8 +80,8 @@ class XFoil {
 
  public:
 
-  bool isValidFoilAngles(MatrixX2d points);
-  bool isValidFoilPointSize(MatrixX2d points);
+  bool isValidFoilAngles(Matrix2Xd points);
+  bool isValidFoilPointSize(Matrix2Xd points);
   
   bool initialize();
   bool initXFoilGeometry(int fn, const double *fx, const double *fy, double *fnx,
@@ -114,7 +114,7 @@ class XFoil {
   bool ViscousIter();
   bool fcpmin();
   
-  bool abcopy(MatrixX2d copyFrom);
+  bool abcopy(Matrix2Xd copyFrom);
 
   bool isBLInitialized() const { return lblini; }
   void setBLInitialized(bool bInitialized) { lblini = bInitialized; }
@@ -156,7 +156,7 @@ class XFoil {
   bool blsolve();
   bool blsys();
   bool blvar(int ityp);
-  double cang(MatrixX2d points);
+  double cang(Matrix2Xd points);
   bool cdcalc();
 
   /**
@@ -182,7 +182,7 @@ class XFoil {
 
   bool gamqv();
   bool Gauss(int nn, double z[][6], double r[5]);
-  bool getxyf(MatrixX2d points, MatrixX2d dpoints_ds, VectorXd s,
+  bool getxyf(Matrix2Xd points, Matrix2Xd dpoints_ds, VectorXd s,
               int n, double &tops, double &bots, double xf, double &yf);
   bool ggcalc();
   bool hct(double hk, double msq, double &hc, double &hc_hk, double &hc_msq);
@@ -192,13 +192,13 @@ class XFoil {
            double &hs_rt, double &hs_msq);
   bool iblpan();
   bool iblsys();
-  bool lefind(double &sle, MatrixX2d points, MatrixX2d dpoints_ds, VectorXd s, int n);
+  bool lefind(double &sle, Matrix2Xd points, Matrix2Xd dpoints_ds, VectorXd s, int n);
 
   bool ludcmp(int n, double a[IQX][IQX], int indx[IQX]);
   
   bool mrchdu();
   bool mrchue();
-  bool ncalc(MatrixX2d point, VectorXd s, int n, double xn[], double yn[]);
+  bool ncalc(Matrix2Xd point, VectorXd s, int n, double xn[], double yn[]);
   bool psilin(int i, double xi, double yi, double nxi, double nyi, double &psi,
               double &psi_ni, bool geolin, bool siglin);
   bool pswlin(int i, double xi, double yi, double nxi, double nyi, double &psi,
@@ -259,13 +259,13 @@ class XFoil {
   
   int n, iblte[ISX], ipan[IVX][ISX], nbl[ISX];
   
-  MatrixX2d points; //formerly x,y
+  Matrix2Xd points; //formerly x,y
   double xstrip[ISX], xoctr[ISX], yoctr[ISX];
   double qvis[IZX];
   
   double adeg, xcmref, ycmref;
   double tklam;
-  MatrixX2d dpoints_ds; //formerly xp, yp
+  Matrix2Xd dpoints_ds; //formerly xp, yp
   VectorXd spline_length;
   double dtor;
 
