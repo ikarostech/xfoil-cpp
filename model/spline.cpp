@@ -56,6 +56,35 @@ double spline::d2val(double ss, Eigen::VectorXd x, Eigen::VectorXd xs, Eigen::Ve
     return ((6.0 * t - 4.0) * cx1 + (6.0 * t - 2.0) * cx2) / pow(ds, 2.0);
 }
 
+/**
+ * 	   Calculates the "inverse" spline function s(x).
+ * 	   Since s(x) can be multi-valued or not defined,
+ * 	   this is not a "black-box" routine.  The calling
+ * 	   program must pass via si a sufficiently good
+ * 	   initial guess for s(xi).
+ *
+ * 	   xi	   specified x value	   (input)
+ * 	   si	   calculated s(xi) value  (input,output)
+ * 	   x,xs,s  usual spline arrays	   (input)
+ */
+bool spline::sinvrt(double &si, double xi, Eigen::VectorXd x, Eigen::VectorXd xs, Eigen::VectorXd spline_length, int n) {
+  int iter;
+  double sisav;
+  sisav = si;
+
+  for (iter = 1; iter <= 10; iter++) {
+    const double res = spline::seval(si, x, xs, spline_length, n) - xi;
+    const double resp = spline::deval(si, x, xs, spline_length, n);
+    const double ds = -res / resp;
+    si = si + ds;
+    if (fabs(ds / (spline_length[n] - spline_length[1])) < 1.0e-5) return true;
+  }
+  
+  si = sisav;
+
+  return false;
+}
+
 /** -------------------------------------------------------
  *      Calculates spline coefficients for x(s).          |
  *      Specified 1st derivative and/or usual zero 2nd    |
