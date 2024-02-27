@@ -119,8 +119,7 @@ bool XFoil::initialize() {
   memset(itran, 0, sizeof(itran));
   memset(mass, 0, sizeof(mass));
   memset(nbl, 0, sizeof(nbl));
-  nx = VectorXd::Zero(IZX);
-  ny = VectorXd::Zero(IZX);
+  normal_vector = Matrix2Xd::Zero(2, IZX);
   memset(gamu, 0, sizeof(gamu));
   memset(gam, 0, sizeof(gam));
   memset(gam_a, 0, sizeof(gam_a));
@@ -141,12 +140,9 @@ bool XFoil::initialize() {
   memset(uinv, 0, sizeof(uinv));
   memset(vti, 0, sizeof(vti));
   points.resize(2, IZX);
-  xbp.resize(IBX, 0);
   dpoints_ds.resize(2, IZX);
   
   memset(xssi, 0, sizeof(xssi));
-  
-  ybp.resize(IBX, 0);
   
   memset(wgap, 0, sizeof(wgap));
   memset(va, 0, sizeof(va));
@@ -370,7 +366,7 @@ bool XFoil::abcopy(Matrix2Xd copyFrom) {
   spline_length.segment(1, spline_length.size() - 1) = spline::scalc(points.middleCols(1, points.cols() - 1), n, spline_length.size() - 1);
   dpoints_ds.row(0) = spline::splind(points.row(0), spline_length, n);
   dpoints_ds.row(1) = spline::splind(points.row(1), spline_length, n);
-  ncalc(points, spline_length, n, nx.data(), ny.data());
+  normal_vector = ncalc(points, spline_length, n);
   lefind(sle, points, dpoints_ds, spline_length, n);
   point_le.x() = spline::seval(sle, points.row(0), dpoints_ds.row(0), spline_length, n);
   point_le.y() = spline::seval(sle, points.row(1), dpoints_ds.row(1), spline_length, n);
@@ -406,7 +402,7 @@ bool XFoil::apcalc() {
     sx = points.col(i + 1).x() - points.col(i).x();
     sy = points.col(i + 1).y() - points.col(i).y();
     if (sx == 0.0 && sy == 0.0)
-      apanel[i] = atan2(-ny[i], -nx[i]);
+      apanel[i] = atan2(-normal_vector.col(i).y(), -normal_vector.col(i).x());
     else
       apanel[i] = atan2(sx, -sy);
   }
@@ -2208,7 +2204,7 @@ bool XFoil::ggcalc() {
   //-    the unknowns are (dgamma)i and dpsio.
   for (int i = 1; i <= n; i++) {
     //------ calculate psi and dpsi/dgamma array for current node
-    psilin(i, points.col(i).x(), points.col(i).y(), nx[i], ny[i], psi, psi_n, false, true);
+    psilin(i, points.col(i).x(), points.col(i).y(), normal_vector.col(i).x(), normal_vector.col(i).y(), psi, psi_n, false, true);
 
     const double res1 = qinf * points.col(i).y();
     const double res2 = -qinf * points.col(i).x();
@@ -3416,34 +3412,18 @@ bool XFoil::mrcl(double cls, double &m_cls, double &r_cls) {
   return true;
 }
 
-bool XFoil::ncalc(Matrix2Xd points, VectorXd spline_length, int n, double xn[], double yn[]) {
-  double sx, sy, smod;
+Matrix2Xd XFoil::ncalc(Matrix2Xd points, VectorXd spline_length, int n) {
 
-  if (n <= 1) return false;
-  xn = spline::splind(points.row(0), spline_length, n).data();
-  yn = spline::splind(points.row(1), spline_length, n).data();
+  Matrix2Xd normal_vector = Matrix2Xd::Zero(2, IZX);
+  normal_vector.row(0) = spline::splind(points.row(0), spline_length, n);
+  normal_vector.row(1) = spline::splind(points.row(0), spline_length, n);
   for (int i = 1; i <= n; i++) {
-    sx = yn[i];
-    sy = -xn[i];
-    smod = sqrt(sx * sx + sy * sy);
-    xn[i] = sx / smod;
-    yn[i] = sy / smod;
+    Vector2d temp = normal_vector.col(i);
+    normal_vector.col(i).x() = temp.normalized().y();
+    normal_vector.col(i).y() = temp.normalized().x();
   }
 
-  //---- average normal vectors at corner points
-  for (int i = 1; i <= n - 1; i++) {
-    if (spline_length[i] == spline_length[i + 1]) {
-      sx = 0.5 * (xn[i] + xn[i + 1]);
-      sy = 0.5 * (yn[i] + yn[i + 1]);
-      smod = sqrt(sx * sx + sy * sy);
-      xn[i] = sx / smod;
-      yn[i] = sy / smod;
-      xn[i + 1] = sx / smod;
-      yn[i + 1] = sy / smod;
-    }
-  }
-
-  return true;
+  return normal_vector;
 }
 
 /** -----------------------------------------------------------------------
@@ -3594,10 +3574,10 @@ bool XFoil::psilin(int iNode, double xi, double yi, double nxi, double nyi,
     yyi = sx * nyi - sy * nxi;
 
     if (geolin) {
-      nxo = nx[jo];
-      nyo = ny[jo];
-      nxp = nx[jp];
-      nyp = ny[jp];
+      nxo = normal_vector.col(jo).x();
+      nyo = normal_vector.col(jo).y();
+      nxp = normal_vector.col(jp).x();
+      nyp = normal_vector.col(jp).y();
 
       x1o = -((rx1 - blData1.xz * sx) * nxo + (ry1 - blData1.xz * sy) * nyo) / dso -
             (sx * nxo + sy * nyo);
@@ -4029,7 +4009,7 @@ bool XFoil::qdcalc() {
 
   //---- set up coefficient matrix of dpsi/dm on airfoil surface
   for (i = 1; i <= n; i++) {
-    pswlin(i, points.col(i).x(), points.col(i).y(), nx[i], ny[i], psi, psi_n);
+    pswlin(i, points.col(i).x(), points.col(i).y(), normal_vector.col(i).x(), normal_vector.col(i).y(), psi, psi_n);
     for (j = n + 1; j <= n + nw; j++) {
       bij[i][j] = -dzdm[j];
     }
@@ -4067,7 +4047,7 @@ bool XFoil::qdcalc() {
   for (i = n + 1; i <= n + nw; i++) {
     int iw = i - n;
     //------ airfoil contribution at wake panel node
-    psilin(i, points.col(i).x(), points.col(i).y(), nx[i], ny[i], psi, psi_n, false, true);
+    psilin(i, points.col(i).x(), points.col(i).y(), normal_vector.col(i).x(), normal_vector.col(i).y(), psi, psi_n, false, true);
     for (j = 1; j <= n; j++) {
       cij[iw][j] = dqdg[j];
     }
@@ -4075,7 +4055,7 @@ bool XFoil::qdcalc() {
       dij[i][j] = dqdm[j];
     }
     //------ wake contribution
-    pswlin(i, points.col(i).x(), points.col(i).y(), nx[i], ny[i], psi, psi_n);
+    pswlin(i, points.col(i).x(), points.col(i).y(), normal_vector.col(i).x(), normal_vector.col(i).y(), psi, psi_n);
     for (j = n + 1; j <= n + nw; j++) {
       dij[i][j] = dqdm[j];
     }
@@ -4155,7 +4135,7 @@ bool XFoil::qwcalc() {
 
   //---- rest of wake
   for (i = n + 2; i <= n + nw; i++) {
-    psilin(i, points.col(i).x(), points.col(i).y(), nx[i], ny[i], psi, psi_ni, false, false);
+    psilin(i, points.col(i).x(), points.col(i).y(), normal_vector.col(i).x(), normal_vector.col(i).y(), psi, psi_ni, false, false);
     qinvu[i][1] = qtan1;
     qinvu[i][2] = qtan2;
   }
@@ -6340,10 +6320,10 @@ bool XFoil::xyWake() {
   sx = 0.5 * (dpoints_ds.col(n).y() - dpoints_ds.col(1).y());
   sy = 0.5 * (dpoints_ds.col(1).x() - dpoints_ds.col(n).x());
   smod = sqrt(sx * sx + sy * sy);
-  nx[i] = sx / smod;
-  ny[i] = sy / smod;
-  points.col(i).x() = point_te.x() - 0.0001 * ny[i];
-  points.col(i).y() = point_te.y() + 0.0001 * nx[i];
+  normal_vector.col(i).x() = sx / smod;
+  normal_vector.col(i).y() = sy / smod;
+  points.col(i).x() = point_te.x() - 0.0001 * normal_vector.col(i).y();
+  points.col(i).y() = point_te.y() + 0.0001 * normal_vector.col(i).x();
   spline_length[i] = spline_length[n];
 
   //---- calculate streamfunction gradient components at first point
@@ -6351,8 +6331,8 @@ bool XFoil::xyWake() {
   psilin(i, points.col(i).x(), points.col(i).y(), 0.0, 1.0, psi, psi_y, false, false);
 
   //---- set unit vector normal to wake at first point
-  nx[i + 1] = -psi_x / sqrt(psi_x * psi_x + psi_y * psi_y);
-  ny[i + 1] = -psi_y / sqrt(psi_x * psi_x + psi_y * psi_y);
+  normal_vector.col(i + 1).x() = -psi_x / sqrt(psi_x * psi_x + psi_y * psi_y);
+  normal_vector.col(i + 1).y() = -psi_y / sqrt(psi_x * psi_x + psi_y * psi_y);
 
   //---- set angle of wake panel normal
   apanel[i] = atan2(psi_y, psi_x);
@@ -6362,8 +6342,8 @@ bool XFoil::xyWake() {
     const double ds = snew[i] - snew[i - 1];
 
     //------ set new point ds downstream of last point
-    points.col(i).x() = points.col(i - 1).x() - ds * ny[i];
-    points.col(i).y() = points.col(i - 1).y() + ds * nx[i];
+    points.col(i).x() = points.col(i - 1).x() - ds * normal_vector.col(i).y();
+    points.col(i).y() = points.col(i - 1).y() + ds * normal_vector.col(i).x();
     spline_length[i] = spline_length[i - 1] + ds;
 
     if (i != n + nw) {
@@ -6371,8 +6351,8 @@ bool XFoil::xyWake() {
       psilin(i, points.col(i).x(), points.col(i).y(), 1.0, 0.0, psi, psi_x, false, false);
       psilin(i, points.col(i).x(), points.col(i).y(), 0.0, 1.0, psi, psi_y, false, false);
 
-      nx[i + 1] = -psi_x / sqrt(psi_x * psi_x + psi_y * psi_y);
-      ny[i + 1] = -psi_y / sqrt(psi_x * psi_x + psi_y * psi_y);
+      normal_vector.col(i + 1).x() = -psi_x / sqrt(psi_x * psi_x + psi_y * psi_y);
+      normal_vector.col(i + 1).y() = -psi_y / sqrt(psi_x * psi_x + psi_y * psi_y);
 
       //------- set angle of wake panel normal
       apanel[i] = atan2(psi_y, psi_x);
