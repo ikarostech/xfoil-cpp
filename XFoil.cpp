@@ -160,10 +160,7 @@ bool XFoil::initialize() {
   memset(vsm, 0, sizeof(vsm));
   memset(vsx, 0, sizeof(vsx));
   memset(vz, 0, sizeof(vz));
-  w1 = VectorXd::Zero(6 * IQX);
-  w2 = VectorXd::Zero(6 * IQX);
-  w3 = VectorXd::Zero(6 * IQX);
-  w4 = VectorXd::Zero(6 * IQX);
+
 
   memset(ctau, 0, sizeof(ctau));
   memset(ctq, 0, sizeof(ctq));
@@ -2173,8 +2170,8 @@ bool XFoil::getxyf(MatrixX2d points, MatrixX2d dpoints_ds, VectorXd s,
 
   tops = s[1] + (points.row(1).x() - xf);
   bots = s[n] - (points.row(n).x() - xf);
-  sinvrt(tops, xf, points.col(0), dpoints_ds.col(0), s, n);
-  sinvrt(bots, xf, points.col(0), dpoints_ds.col(0), s, n);
+  spline::sinvrt(tops, xf, points.col(0), dpoints_ds.col(0), s, n);
+  spline::sinvrt(bots, xf, points.col(0), dpoints_ds.col(0), s, n);
   topy = spline::seval(tops, points.col(1), dpoints_ds.col(1), s, n);
   boty = spline::seval(bots, points.col(1), dpoints_ds.col(1), s, n);
 
@@ -2763,7 +2760,7 @@ bool XFoil::mrchdu() {
   for (is = 1; is <= 2; is++) {  // 2000
 
     //---- set forced transition arc length position
-    xifset(is);
+    xiforc = xifset(is);
 
     //---- set leading edge pressure gradient parameter  x/u du/dx
     ibl = 2;
@@ -3063,7 +3060,7 @@ bool XFoil::mrchue() {
     writeString(ss.str());
 
     //---- set forced transition arc length position
-    xifset(is);
+    xiforc = xifset(is);
 
     //---- initialize similarity station with thwaites' formula
     //	ibl = 2;
@@ -4347,7 +4344,7 @@ bool XFoil::setbl() {
     bule = 1.0;
 
     //---- set forced transition arc length position
-    xifset(is);
+    xiforc = xifset(is);
 
     tran = false;
     turb = false;
@@ -4735,36 +4732,6 @@ double XFoil::sign(double a, double b) {
     return fabs(a);
   else
     return -fabs(a);
-}
-
-/**
- * 	   Calculates the "inverse" spline function s(x).
- * 	   Since s(x) can be multi-valued or not defined,
- * 	   this is not a "black-box" routine.  The calling
- * 	   program must pass via si a sufficiently good
- * 	   initial guess for s(xi).
- *
- * 	   xi	   specified x value	   (input)
- * 	   si	   calculated s(xi) value  (input,output)
- * 	   x,xs,s  usual spline arrays	   (input)
- */
-bool XFoil::sinvrt(double &si, double xi, VectorXd x, VectorXd xs, VectorXd spline_length, int n) {
-  int iter;
-  double sisav;
-  sisav = si;
-
-  for (iter = 1; iter <= 10; iter++) {
-    const double res = spline::seval(si, x, xs, spline_length, n) - xi;
-    const double resp = spline::deval(si, x, xs, spline_length, n);
-    const double ds = -res / resp;
-    si = si + ds;
-    if (fabs(ds / (spline_length[n] - spline_length[1])) < 1.0e-5) return true;
-  }
-
-  writeString("Sinvrt: spline inversion failed, input value returned\n", true);
-  si = sisav;
-
-  return false;
 }
 
 /**
@@ -6292,23 +6259,24 @@ bool XFoil::xicalc() {
 /** -----------------------------------------------------
  * 	   sets forced-transition bl coordinate locations.
  * ----------------------------------------------------- */
-bool XFoil::xifset(int is) {
+double XFoil::xifset(int is) {
   std::stringstream ss;
+  VectorXd w1 = VectorXd::Zero(6 * IQX);
+  VectorXd w2 = VectorXd::Zero(6 * IQX);
+  VectorXd w3 = VectorXd::Zero(6 * IQX);
+  VectorXd w4 = VectorXd::Zero(6 * IQX);
   double chx, chy, chsq, str;
 
   if (xstrip[is] >= 1.0) {
-    xiforc = xssi[iblte[is]][is];
-    return false;
+    return xssi[iblte[is]][is];
   }
 
-  chx = point_te.x() - point_le.x();
-  chy = point_te.y() - point_le.y();
-  chsq = chx * chx + chy * chy;
+  Vector2d point_chord = point_te - point_le;
 
   //---- calculate chord-based x/c, y/c
   for (int i = 1; i <= n; i++) {
-    w1[i] = ((points.row(i).x() - point_le.x()) * chx + (points.row(i).y() - point_le.y()) * chy) / chsq;
-    w2[i] = ((points.row(i).y() - point_le.y()) * chx - (points.row(i).x() - point_le.x()) * chy) / chsq;
+    w1[i] = (points.row(i).transpose() - point_le).dot(point_chord.normalized());
+    w2[i] = cross2(points.row(i).transpose() - point_le, point_chord.normalized());
   }
 
   w3 = spline::splind(w1, spline_length, n);
@@ -6319,7 +6287,7 @@ bool XFoil::xifset(int is) {
     str = sle + (spline_length[1] - sle) * xstrip[is];
 
     //----- calculate actual arc length
-    sinvrt(str, xstrip[is], w1, w3, spline_length, n);
+    str = spline::sinvrt(str, xstrip[is], w1, w3, spline_length, n);
 
     //----- set bl coordinate value
     xiforc = std::min((sst - str), xssi[iblte[is]][is]);
@@ -6327,7 +6295,7 @@ bool XFoil::xifset(int is) {
     //----- same for bottom side
 
     str = sle + (spline_length[n] - sle) * xstrip[is];
-    sinvrt(str, xstrip[is], w1, w3, spline_length, n);
+    str = spline::sinvrt(str, xstrip[is], w1, w3, spline_length, n);
     xiforc = std::min((str - sst), xssi[iblte[is]][is]);
   }
 
@@ -6338,7 +6306,7 @@ bool XFoil::xifset(int is) {
     xiforc = xssi[iblte[is]][is];
   }
 
-  return true;
+  return xiforc;
 }
 
 bool XFoil::xyWake() {

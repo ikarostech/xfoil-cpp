@@ -71,11 +71,10 @@ TEST(sinvrt, test_value) {
         
 
     //when
-    double si;
-    spline::sinvrt(si, 0.5, x, xs, s, x.size() - 1);
+    double si = spline::sinvrt(1, 0.5, x, xs, s, x.size() - 1);
 
     //then
-    ASSERT_EQ(88.931575080506789, si);
+    ASSERT_EQ(0.50772624418032852, si);
 }
 
 TEST(splind, test_case) {

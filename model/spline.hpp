@@ -30,7 +30,7 @@ class spline {
      * --------------------------------------------------- */
     static double d2val(double ss, Eigen::VectorXd x, Eigen::VectorXd xs, Eigen::VectorXd s, int n);
 
-    static bool sinvrt(double &si, double xi, Eigen::VectorXd x, Eigen::VectorXd xs, Eigen::VectorXd s, int n);
+    static double sinvrt(double si, double xi, Eigen::VectorXd x, Eigen::VectorXd xs, Eigen::VectorXd s, int n);
 
     /** -------------------------------------------------------
      *      Calculates spline coefficients for x(s).          |

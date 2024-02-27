@@ -210,8 +210,6 @@ class XFoil {
   
   bool setbl();
   bool setexp(double s[], double ds1, double smax, int nn);
-  bool sinvrt(double &si, double xi, VectorXd x, VectorXd xs, VectorXd s,
-              int n);
 
   bool stepbl();
   bool stfind();
@@ -224,7 +222,7 @@ class XFoil {
   bool uicalc();
   bool update();
   bool xicalc();
-  bool xifset(int is);
+  double xifset(int is);
   bool xyWake();
   double aint(double number);
   double atanc(double y, double x, double thold);
@@ -290,9 +288,6 @@ class XFoil {
   bool lgamu, sharp, lqaij, ladij, lwdij;
 
   double sccon, gacon, gbcon, gbc0, gbc1, gccon, dlcon, ctcon;
-
-  //---- dimension temporary work and storage arrays [equivalenced below]
-  VectorXd w1, w2, w3, w4;
 
   int nsys;
   double isys[IVX][ISX];

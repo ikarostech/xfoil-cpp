@@ -67,7 +67,7 @@ double spline::d2val(double ss, Eigen::VectorXd x, Eigen::VectorXd xs, Eigen::Ve
  * 	   si	   calculated s(xi) value  (input,output)
  * 	   x,xs,s  usual spline arrays	   (input)
  */
-bool spline::sinvrt(double &si, double xi, Eigen::VectorXd x, Eigen::VectorXd xs, Eigen::VectorXd spline_length, int n) {
+double spline::sinvrt(double si, double xi, Eigen::VectorXd x, Eigen::VectorXd xs, Eigen::VectorXd spline_length, int n) {
   int iter;
   double sisav;
   sisav = si;
@@ -77,12 +77,12 @@ bool spline::sinvrt(double &si, double xi, Eigen::VectorXd x, Eigen::VectorXd xs
     const double resp = spline::deval(si, x, xs, spline_length, n);
     const double ds = -res / resp;
     si = si + ds;
-    if (fabs(ds / (spline_length[n] - spline_length[1])) < 1.0e-5) return true;
+    if (fabs(ds / (spline_length[n] - spline_length[1])) < 1.0e-5) return si;
   }
-  
+
   si = sisav;
 
-  return false;
+  return si;
 }
 
 /** -------------------------------------------------------
