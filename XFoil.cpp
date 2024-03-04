@@ -67,8 +67,8 @@ XFoil::XFoil() {
 
   // initialize transition parameters until user changes them
   acrit = 9.0;
-  xstrip[1] = 1.0;
-  xstrip[2] = 1.0;
+  xstrip.top = 1.0;
+  xstrip.bottom = 1.0;
 
   //---- initialize freestream mach number to zero
   mach_type = MachType::CONSTANT;
@@ -234,10 +234,6 @@ bool XFoil::initialize() {
   xcmref = 0.25;
   ycmref = 0.0;
 
-  xoctr[1] = 1.0;
-  xoctr[2] = 1.0;
-  yoctr[1] = 0.0;
-  yoctr[2] = 0.0;
   waklen = 1.0;
 
   // added techwinder : no wake yet
@@ -2573,8 +2569,8 @@ bool XFoil::initXFoilAnalysis(double Re, double alpha, double Mach,
   lvisc = bViscous;
 
   acrit = NCrit;
-  xstrip[1] = XtrTop;
-  xstrip[2] = XtrBot;
+  xstrip.top = XtrTop;
+  xstrip.bottom = XtrBot;
 
   if (Mach > 0.000001) {
     if (!setMach()) {
@@ -4571,8 +4567,6 @@ bool XFoil::setbl() {
         chsq = chx * chx + chy * chy;
         xtr = spline::seval(str, points.row(0), dpoints_ds.row(0), spline_length, n);
         ytr = spline::seval(str, points.row(1), dpoints_ds.row(1), spline_length, n);
-        xoctr[is] = ((xtr - point_le.x()) * chx + (ytr - point_le.y()) * chy) / chsq;
-        yoctr[is] = ((ytr - point_le.y()) * chx - (xtr - point_le.x()) * chy) / chsq;
       }
 
       tran = false;
@@ -4606,18 +4600,6 @@ bool XFoil::setbl() {
       stepbl();
 
       //---- next streamwise station
-    }
-
-    if (tforce[is]) {
-      ss << "     Side " << is << ", forced transition at x/c = " << std::fixed
-         << std::setprecision(4) << xoctr[is] << " " << itran[is] << "\n";
-      writeString(ss.str());
-      ss.str("");
-    } else {
-      ss << "     Side " << is << ",  free  transition at x/c = " << std::fixed
-         << std::setprecision(4) << xoctr[is] << " " << itran[is] << "\n";
-      writeString(ss.str());
-      ss.str("");
     }
 
     //---- next airfoil side
@@ -6247,7 +6229,7 @@ double XFoil::xifset(int is) {
   VectorXd w4 = VectorXd::Zero(6 * IQX);
   double chx, chy, chsq, str;
 
-  if (xstrip[is] >= 1.0) {
+  if (xstrip.get(is) >= 1.0) {
     return xssi[iblte[is]][is];
   }
 
@@ -6264,18 +6246,18 @@ double XFoil::xifset(int is) {
 
   if (is == 1) {
     //----- set approximate arc length of forced transition point for sinvrt
-    str = sle + (spline_length[1] - sle) * xstrip[is];
+    str = sle + (spline_length[1] - sle) * xstrip.top;
 
     //----- calculate actual arc length
-    str = spline::sinvrt(str, xstrip[is], w1, w3, spline_length, n);
+    str = spline::sinvrt(str, xstrip.top, w1, w3, spline_length, n);
 
     //----- set bl coordinate value
     xiforc = std::min((sst - str), xssi[iblte[is]][is]);
   } else {
     //----- same for bottom side
 
-    str = sle + (spline_length[n] - sle) * xstrip[is];
-    str = spline::sinvrt(str, xstrip[is], w1, w3, spline_length, n);
+    str = sle + (spline_length[n] - sle) * xstrip.bottom;
+    str = spline::sinvrt(str, xstrip.bottom, w1, w3, spline_length, n);
     xiforc = std::min((str - sst), xssi[iblte[is]][is]);
   }
 

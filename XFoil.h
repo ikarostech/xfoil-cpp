@@ -173,6 +173,26 @@ class XFoil {
   };
   C_f cfl(double hk, double rt);
   C_f cft(double hk, double rt, double msq);
+  enum class SideType {
+    TOP = 1,
+    BOTTOM = 2
+  };
+  template <class T>
+  class side_pair {
+    public:
+    T top;
+    T bottom;
+    //FIXME deprecated
+    T get(int side) {
+      if (side == 1) {
+        return top;
+      }
+      else if (side == 2) {
+        return bottom;
+      }
+      throw invalid_argument("invalid side type");
+    }
+  };
   bool cpcalc(int n, const double q[], double qinf, double minf, double cp[]);
   bool dampl(double hk, double th, double rt, double &ax, double &ax_hk,
              double &ax_th, double &ax_rt);
@@ -260,7 +280,8 @@ class XFoil {
   int n, iblte[ISX], ipan[IVX][ISX], nbl[ISX];
   
   Matrix2Xd points; //formerly x,y
-  double xstrip[ISX], xoctr[ISX], yoctr[ISX];
+  side_pair<double> xstrip;
+  
   double qvis[IZX];
   
   double adeg, xcmref, ycmref;
