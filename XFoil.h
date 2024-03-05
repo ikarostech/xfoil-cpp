@@ -219,8 +219,8 @@ class XFoil {
   bool mrchdu();
   bool mrchue();
   Matrix2Xd ncalc(Matrix2Xd point, VectorXd spline_length, int n);
-  bool psilin(int i, double xi, double yi, double nxi, double nyi, double &psi,
-              double &psi_ni, bool geolin, bool siglin);
+  bool psilin(int i, Vector2d point, Vector2d normal_vector, double &psi,
+              double &psi_ni, bool siglin);
   bool pswlin(int i, double xi, double yi, double nxi, double nyi, double &psi,
               double &psi_ni);
   bool qdcalc();
@@ -259,7 +259,7 @@ class XFoil {
 
   int nc1;
 
-  Matrix2Xd normal_vector;
+  Matrix2Xd normal_vectors;
 
   double cl, cm, cd, cpi[IZX], cpv[IZX], acrit;
   double xcp;
