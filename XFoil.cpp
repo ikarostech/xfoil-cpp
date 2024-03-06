@@ -3435,9 +3435,6 @@ Matrix2Xd XFoil::ncalc(Matrix2Xd points, VectorXd spline_length, int n) {
  *	   source distribution sig and the sensitivity vector dpsi/dsig
  *	   (dzdm) is calculated.
  *
- *	   If geolin=true, then the geometric sensitivity vector dpsi/dn
- *	   is calculated, where n is the normal motion of the jth node.
- *
  *			airfoil:  1   < i < n
  *			wake:	  n+1 < i < n+nw
  * ----------------------------------------------------------------------- */
@@ -3445,19 +3442,18 @@ bool XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector,
                    double &psi, double &psi_ni, bool siglin) {
   int io, jo, jm, jq, jp;
 
-  double dxinv, psum, qtanm, scs, sds, rx1, rx2, sx, sy, dsio, dsm, dsim;
+  double dxinv, psum, qtanm, scs, sds, dsio, dsm, dsim;
   double sgn, x0, logr0, theta0, rs0, rs1, rs2, nxo, nyo,
-      nxp, nyp, ry1, ry2;
+      nxp, nyp;
   double ssum, sdif, psni, pdni, psx0, psx1, psx2, pdx0, pdx1, pdx2, psyy, pdyy,
       psis, psig, psid;
   double psigx1, psigx2, psigyy, pgamx1, pgamx2, pgamyy, psigni, pgamni;
   double gsum, gdif, gsum1, gsum2, gdif1, gdif2, pdif, dsp, dsip;
   double sigte1, sigte2, gamte1, gamte2, pgam;
   double apan, yy, logr12, logr22, x1i, x2i, yyi, x1o, x1p, x2o, x2p, yyo, yyp;
-  double seps;
-
+  
   //---- distance tolerance for determining if two points are the same
-  seps = (spline_length[n] - spline_length[1]) * 0.00001;
+  const double seps = (spline_length[n] - spline_length[1]) * 0.00001;
 
   apan = yy = logr12 = logr22 = x1i = x2i = yyi = x1o = x1p = x2o = x2p = yyo =
       yyp = 0.0;
@@ -3519,21 +3515,18 @@ bool XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector,
     dsio = 1.0 / dso;
 
     apan = apanel[jo];
-    
-    rx1 = point.x() - points.col(jo).x();
-    ry1 = point.y() - points.col(jo).y();
-    rx2 = point.x() - points.col(jp).x();
-    ry2 = point.y() - points.col(jp).y();
 
-    sx = (points.col(jp).x() - points.col(jo).x()) / dso;
-    sy = (points.col(jp).y() - points.col(jo).y()) / dso;
+    Vector2d r1 = point - points.col(jo);
+    Vector2d r2 = point - points.col(jp);
+    Vector2d s = (points.col(jp)- points.col(jo)).normalized();
 
-    blData1.xz = sx * rx1 + sy * ry1;
-    blData2.xz = sx * rx2 + sy * ry2;
-    yy = sx * ry1 - sy * rx1;
+    blData1.xz = s.dot(r1);
+    blData2.xz = s.dot(r2);
+    yy = cross2(s, r1);
 
-    rs1 = rx1 * rx1 + ry1 * ry1;
-    rs2 = rx2 * rx2 + ry2 * ry2;
+    //FIXME normを使うと正しく計算されない。計算精度の問題？
+    rs1 = r1.dot(r1);
+    rs2 = r2.dot(r2);
 
     //------ set reflection flag sgn to avoid branch problems with arctan
     if (io >= 1 && io <= n) {
@@ -3561,106 +3554,12 @@ bool XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector,
       blData2.tz = 0.0;
     }
 
-    x1i = sx * normal_vector.x() + sy * normal_vector.y();
-    x2i = sx * normal_vector.x() + sy * normal_vector.y();
-    yyi = sx * normal_vector.y() - sy * normal_vector.x();
-
+    x1i = s.dot(normal_vector);
+    x2i = s.dot(normal_vector);
+    yyi = cross2(s, normal_vector);
     if (jo == n) break;
-
     if (siglin) {
-      //------- set up midpoint quantities
-      x0 = 0.5 * (blData1.xz + blData2.xz);
-      rs0 = x0 * x0 + yy * yy;
-      logr0 = log(rs0);
-      theta0 = atan2(sgn * x0, sgn * yy) + (0.5 - 0.5 * sgn) * PI;
-
-      //------- calculate source contribution to psi	for  1-0  half-panel
-      dxinv = 1.0 / (blData1.xz - x0);
-      psum = x0 * (theta0 - apan) - blData1.xz * (blData1.tz - apan) +
-             0.5 * yy * (logr12 - logr0);
-      pdif = ((blData1.xz + x0) * psum + rs1 * (blData1.tz - apan) - rs0 * (theta0 - apan) +
-              (x0 - blData1.xz) * yy) *
-             dxinv;
-
-      psx1 = -(blData1.tz - apan);
-      psx0 = theta0 - apan;
-      psyy = 0.5 * (logr12 - logr0);
-
-      pdx1 =
-          ((blData1.xz + x0) * psx1 + psum + 2.0 * blData1.xz * (blData1.tz - apan) - pdif) * dxinv;
-      pdx0 =
-          ((blData1.xz + x0) * psx0 + psum - 2.0 * x0 * (theta0 - apan) + pdif) * dxinv;
-      pdyy =
-          ((blData1.xz + x0) * psyy + 2.0 * (x0 - blData1.xz + yy * (blData1.tz - theta0))) * dxinv;
-
-      dsm = sqrt((points.col(jp).x() - points.col(jm).x()) * (points.col(jp).x() - points.col(jm).x()) +
-                 (points.col(jp).y() - points.col(jm).y()) * (points.col(jp).y() - points.col(jm).y()));
-      dsim = 1.0 / dsm;
-
-      ssum = (sig[jp] - sig[jo]) / dso + (sig[jp] - sig[jm]) * dsim;
-      sdif = (sig[jp] - sig[jo]) / dso - (sig[jp] - sig[jm]) * dsim;
-
-      psi += qopi * (psum * ssum + pdif * sdif);
-
-      //------- dpsi/dm
-      dzdm[jm] += qopi * (-psum * dsim + pdif * dsim);
-      dzdm[jo] += qopi * (-psum / dso - pdif / dso);
-      dzdm[jp] += qopi * (psum * (dsio + dsim) + pdif * (dsio - dsim));
-
-      //------- dpsi/dni
-      psni = psx1 * x1i + psx0 * (x1i + x2i) * 0.5 + psyy * yyi;
-      pdni = pdx1 * x1i + pdx0 * (x1i + x2i) * 0.5 + pdyy * yyi;
-      psi_ni = psi_ni + qopi * (psni * ssum + pdni * sdif);
-
-      qtanm = qtanm + qopi * (psni * ssum + pdni * sdif);
-
-      dqdm[jm] += qopi * (-psni * dsim + pdni * dsim);
-      dqdm[jo] += qopi * (-psni / dso - pdni / dso);
-      dqdm[jp] += qopi * (psni * (dsio + dsim) + pdni * (dsio - dsim));
-
-      //------- calculate source contribution to psi	for  0-2  half-panel
-      dxinv = 1.0 / (x0 - blData2.xz);
-      psum = blData2.xz * (blData2.tz - apan) - x0 * (theta0 - apan) +
-             0.5 * yy * (logr0 - logr22);
-      pdif = ((x0 + blData2.xz) * psum + rs0 * (theta0 - apan) - rs2 * (blData2.tz - apan) +
-              (blData2.xz - x0) * yy) *
-             dxinv;
-
-      psx0 = -(theta0 - apan);
-      psx2 = blData2.tz - apan;
-      psyy = 0.5 * (logr0 - logr22);
-
-      pdx0 =
-          ((x0 + blData2.xz) * psx0 + psum + 2.0 * x0 * (theta0 - apan) - pdif) * dxinv;
-      pdx2 =
-          ((x0 + blData2.xz) * psx2 + psum - 2.0 * blData2.xz * (blData2.tz - apan) + pdif) * dxinv;
-      pdyy =
-          ((x0 + blData2.xz) * psyy + 2.0 * (blData2.xz - x0 + yy * (theta0 - blData2.tz))) * dxinv;
-
-      dsp = sqrt((points.col(jq).x() - points.col(jo).x()) * (points.col(jq).x() - points.col(jo).x()) +
-                 (points.col(jq).y() - points.col(jo).y()) * (points.col(jq).y() - points.col(jo).y()));
-      dsip = 1.0 / dsp;
-
-      ssum = (sig[jq] - sig[jo]) * dsip + (sig[jp] - sig[jo]) / dso;
-      sdif = (sig[jq] - sig[jo]) * dsip - (sig[jp] - sig[jo]) / dso;
-
-      psi = psi + qopi * (psum * ssum + pdif * sdif);
-
-      //------- dpsi/dm
-      dzdm[jo] += qopi * (-psum * (dsip + dsio) - pdif * (dsip - dsio));
-      dzdm[jp] += qopi * (psum / dso - pdif / dso);
-      dzdm[jq] += qopi * (psum * dsip + pdif * dsip);
-
-      //------- dpsi/dni
-      psni = psx0 * (x1i + x2i) * 0.5 + psx2 * x2i + psyy * yyi;
-      pdni = pdx0 * (x1i + x2i) * 0.5 + pdx2 * x2i + pdyy * yyi;
-      psi_ni = psi_ni + qopi * (psni * ssum + pdni * sdif);
-
-      qtanm = qtanm + qopi * (psni * ssum + pdni * sdif);
-
-      dqdm[jo] += qopi * (-psni * (dsip + dsio) - pdni * (dsip - dsio));
-      dqdm[jp] += qopi * (psni / dso - pdni / dso);
-      dqdm[jq] += qopi * (psni * dsip + pdni * dsip);
+      psisig(io, jo, point, normal_vector, psi, psi_ni);
     }
 
     //------ calculate vortex panel contribution to psi
@@ -3706,6 +3605,9 @@ bool XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector,
 
   }
 
+  blData1.xz = (points.col(1)- points.col(n)).normalized().dot(point - points.col(n));
+  blData2.xz = (points.col(1)- points.col(n)).normalized().dot(point - points.col(1));
+
   psig = 0.5 * yy * (logr12 - logr22) + blData2.xz * (blData2.tz - apan) -
          blData1.xz * (blData1.tz - apan);
   pgam =
@@ -3722,13 +3624,13 @@ bool XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector,
   pgamni = pgamx1 * x1i + pgamx2 * x2i + pgamyy * yyi;
 
   //---- TE panel source and vortex strengths
-  sigte1 = 0.5 * scs * (gamu[jp][1] - gamu[jo][1]);
-  sigte2 = 0.5 * scs * (gamu[jp][2] - gamu[jo][2]);
-  gamte1 = -0.5 * sds * (gamu[jp][1] - gamu[jo][1]);
-  gamte2 = -0.5 * sds * (gamu[jp][2] - gamu[jo][2]);
+  sigte1 = 0.5 * scs * (gamu[1][1] - gamu[n][1]);
+  sigte2 = 0.5 * scs * (gamu[1][2] - gamu[n][2]);
+  gamte1 = -0.5 * sds * (gamu[1][1] - gamu[n][1]);
+  gamte2 = -0.5 * sds * (gamu[1][2] - gamu[n][2]);
 
-  sigte = 0.5 * scs * (gam[jp] - gam[jo]);
-  gamte = -0.5 * sds * (gam[jp] - gam[jo]);
+  sigte = 0.5 * scs * (gam[1] - gam[n]);
+  gamte = -0.5 * sds * (gam[1] - gam[n]);
 
   //---- TE panel contribution to psi
   psi += hopi * (psig * sigte + pgam * gamte);
@@ -3764,6 +3666,173 @@ stop12:
   return false;
 }
 
+bool XFoil::psisig(int iNode, int jNode, Vector2d point, Vector2d normal_vector, double &psi, double &psi_ni) {
+  double scs, sds;
+  if (sharp) {
+    scs = 1.0;
+    sds = 0.0;
+  } else {
+    scs = ante / dste;
+    sds = aste / dste;
+  }
+  int io = iNode;
+  int jo = jNode;
+
+  int jp = jo + 1;
+  int jm = max(1, jo - 1);
+  int jq = jp + 1;
+
+  if (jo == n - 1)
+    jq = jp;
+  else {
+    if (jo == n) {
+      jp = 1;
+    }
+  }
+  double dso = (points.col(jo) - points.col(jp)).norm();
+
+
+  double dsio = 1.0 / dso;
+
+  double apan = apanel[jo];
+
+  Vector2d r1 = point - points.col(jo);
+  Vector2d r2 = point - points.col(jp);
+  Vector2d s = (points.col(jp)- points.col(jo)).normalized();
+
+  blData1.xz = s.dot(r1);
+  blData2.xz = s.dot(r2);
+  double yy = cross2(s, r1);
+
+  //FIXME normを使うと正しく計算されない。計算精度の問題？
+  double rs1 = r1.dot(r1);
+  double rs2 = r2.dot(r2);
+
+  //------ set reflection flag sgn to avoid branch problems with arctan
+  double sgn;
+  if (io >= 1 && io <= n) {
+    //------- no problem on airfoil surface
+    sgn = 1.0;
+  } else {
+    //------- make sure arctan falls between  -/+  pi/2
+    sgn = sign(1.0, yy);
+  }
+  double logr12;
+  //------ set log(r^2) and arctan(x/y), correcting for reflection if any
+  if (io != jo && rs1 > 0.0) {
+    logr12 = log(rs1);
+    blData1.tz = atan2(sgn * blData1.xz, sgn * yy) + (0.5 - 0.5 * sgn) * PI;
+  } else {
+    logr12 = 0.0;
+    blData1.tz = 0.0;
+  }
+  double logr22;
+  if (io != jp && rs2 > 0.0) {
+    logr22 = log(rs2);
+    blData2.tz = atan2(sgn * blData2.xz, sgn * yy) + (0.5 - 0.5 * sgn) * PI;
+  } else {
+    logr22 = 0.0;
+    blData2.tz = 0.0;
+  }
+
+  double x1i = s.dot(normal_vector);
+  double x2i = s.dot(normal_vector);
+  double yyi = cross2(s, normal_vector);
+
+  //------- set up midpoint quantities
+  double x0 = 0.5 * (blData1.xz + blData2.xz);
+  double rs0 = x0 * x0 + yy * yy;
+  double logr0 = log(rs0);
+  double theta0 = atan2(sgn * x0, sgn * yy) + (0.5 - 0.5 * sgn) * PI;
+
+  //------- calculate source contribution to psi	for  1-0  half-panel
+  double dxinv = 1.0 / (blData1.xz - x0);
+  double psum = x0 * (theta0 - apan) - blData1.xz * (blData1.tz - apan) +
+          0.5 * yy * (logr12 - logr0);
+  double pdif = ((blData1.xz + x0) * psum + rs1 * (blData1.tz - apan) - rs0 * (theta0 - apan) +
+          (x0 - blData1.xz) * yy) *
+          dxinv;
+
+  double psx1 = -(blData1.tz - apan);
+  double psx0 = theta0 - apan;
+  double psyy = 0.5 * (logr12 - logr0);
+
+  double pdx1 =
+      ((blData1.xz + x0) * psx1 + psum + 2.0 * blData1.xz * (blData1.tz - apan) - pdif) * dxinv;
+  double pdx0 =
+      ((blData1.xz + x0) * psx0 + psum - 2.0 * x0 * (theta0 - apan) + pdif) * dxinv;
+  double pdyy =
+      ((blData1.xz + x0) * psyy + 2.0 * (x0 - blData1.xz + yy * (blData1.tz - theta0))) * dxinv;
+
+  const double dsm = (points.col(jp) - points.col(jm)).norm();
+  double dsim = 1.0 / dsm;
+
+  double ssum = (sig[jp] - sig[jo]) / dso + (sig[jp] - sig[jm]) * dsim;
+  double sdif = (sig[jp] - sig[jo]) / dso - (sig[jp] - sig[jm]) * dsim;
+
+  psi += qopi * (psum * ssum + pdif * sdif);
+
+  //------- dpsi/dm
+  dzdm[jm] += qopi * (-psum * dsim + pdif * dsim);
+  dzdm[jo] += qopi * (-psum / dso - pdif / dso);
+  dzdm[jp] += qopi * (psum * (dsio + dsim) + pdif * (dsio - dsim));
+
+  //------- dpsi/dni
+  double psni = psx1 * x1i + psx0 * (x1i + x2i) * 0.5 + psyy * yyi;
+  double pdni = pdx1 * x1i + pdx0 * (x1i + x2i) * 0.5 + pdyy * yyi;
+  psi_ni = psi_ni + qopi * (psni * ssum + pdni * sdif);
+
+  double qtanm = qtanm + qopi * (psni * ssum + pdni * sdif);
+
+  dqdm[jm] += qopi * (-psni * dsim + pdni * dsim);
+  dqdm[jo] += qopi * (-psni / dso - pdni / dso);
+  dqdm[jp] += qopi * (psni * (dsio + dsim) + pdni * (dsio - dsim));
+
+  //------- calculate source contribution to psi	for  0-2  half-panel
+  dxinv = 1.0 / (x0 - blData2.xz);
+  psum = blData2.xz * (blData2.tz - apan) - x0 * (theta0 - apan) +
+          0.5 * yy * (logr0 - logr22);
+  pdif = ((x0 + blData2.xz) * psum + rs0 * (theta0 - apan) - rs2 * (blData2.tz - apan) +
+          (blData2.xz - x0) * yy) *
+          dxinv;
+
+  psx0 = -(theta0 - apan);
+  double psx2 = blData2.tz - apan;
+  psyy = 0.5 * (logr0 - logr22);
+
+  pdx0 =
+      ((x0 + blData2.xz) * psx0 + psum + 2.0 * x0 * (theta0 - apan) - pdif) * dxinv;
+  double pdx2 =
+      ((x0 + blData2.xz) * psx2 + psum - 2.0 * blData2.xz * (blData2.tz - apan) + pdif) * dxinv;
+  pdyy =
+      ((x0 + blData2.xz) * psyy + 2.0 * (blData2.xz - x0 + yy * (theta0 - blData2.tz))) * dxinv;
+
+  double dsp = (points.col(jq) - points.col(jo)).norm();
+  double dsip = 1.0 / dsp;
+
+  ssum = (sig[jq] - sig[jo]) * dsip + (sig[jp] - sig[jo]) / dso;
+  sdif = (sig[jq] - sig[jo]) * dsip - (sig[jp] - sig[jo]) / dso;
+
+  psi = psi + qopi * (psum * ssum + pdif * sdif);
+
+  //------- dpsi/dm
+  dzdm[jo] += qopi * (-psum * (dsip + dsio) - pdif * (dsip - dsio));
+  dzdm[jp] += qopi * (psum / dso - pdif / dso);
+  dzdm[jq] += qopi * (psum * dsip + pdif * dsip);
+
+  //------- dpsi/dni
+  psni = psx0 * (x1i + x2i) * 0.5 + psx2 * x2i + psyy * yyi;
+  pdni = pdx0 * (x1i + x2i) * 0.5 + pdx2 * x2i + pdyy * yyi;
+  psi_ni = psi_ni + qopi * (psni * ssum + pdni * sdif);
+
+  qtanm = qtanm + qopi * (psni * ssum + pdni * sdif);
+
+  dqdm[jo] += qopi * (-psni * (dsip + dsio) - pdni * (dsip - dsio));
+  dqdm[jp] += qopi * (psni / dso - pdni / dso);
+  dqdm[jq] += qopi * (psni * dsip + pdni * dsip);
+
+  return true;
+}
 /** --------------------------------------------------------------------
  *	   Calculates current streamfunction psi and tangential velocity
  *	   qtan at panel node or wake node i due to freestream and wake
