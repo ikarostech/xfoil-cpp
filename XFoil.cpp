@@ -1668,10 +1668,6 @@ double XFoil::cang(Matrix2Xd points) {
 }
 
 bool XFoil::cdcalc() {
-  double dx;
-
-  double sa = sin(alfa);
-  double ca = cos(alfa);
 
   if (lvisc && lblini) {
     //---- set variables at the end of the wake
@@ -1715,7 +1711,6 @@ XFoil::C_f XFoil::cfl(double hk, double rt) {
 
 XFoil::C_f XFoil::cft(double hk, double rt, double msq) {
   C_f c_f = C_f();
-  double gam = 1.4;
 
   //---- turbulent skin friction function  ( cf )    (coles)
   double gm1 = 1.4 - 1.0;
@@ -3442,14 +3437,10 @@ bool XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector,
                    double &psi, double &psi_ni, bool siglin) {
   int io, jo, jp;
 
-  double dxinv, psum, qtanm, scs, sds, dsio, dsm, dsim;
-  double sgn, x0, logr0, theta0, rs0, rs1, rs2, nxo, nyo,
-      nxp, nyp;
-  double ssum, sdif, psni, pdni, psx0, psx1, psx2, pdx0, pdx1, pdx2, psyy, pdyy,
-      psis, psig, psid;
-  double psigx1, psigx2, psigyy, pgamx1, pgamx2, pgamyy, psigni, pgamni;
-  double gsum, gdif, gsum1, gsum2, gdif1, gdif2, pdif, dsp, dsip;
-  double sigte1, sigte2, gamte1, gamte2, pgam;
+  double dxinv, qtanm, scs, sds, dsio;
+  double sgn, rs1, rs2;
+  double psni, pdni, psx1, psx2, pdx1, pdx2, psyy, pdyy, psis, psid;
+  double gsum, gdif, gsum1, gsum2, gdif1, gdif2;
   double apan, yy, logr12, logr22, x1i, x2i, yyi, x1o, x1p, x2o, x2p, yyo, yyp;
   
   //---- distance tolerance for determining if two points are the same
@@ -3781,7 +3772,6 @@ bool XFoil::psi_te(int iNode, Vector2d point, Vector2d normal_vector, double &ps
   double dso = (points.col(n) - points.col(1)).norm();
 
   //------ skip null panel
-  double dsio = 1.0 / dso;
 
   double apan = apanel[n];
 
@@ -6306,7 +6296,7 @@ double XFoil::xifset(int is) {
   VectorXd w2 = VectorXd::Zero(6 * IQX);
   VectorXd w3 = VectorXd::Zero(6 * IQX);
   VectorXd w4 = VectorXd::Zero(6 * IQX);
-  double chx, chy, chsq, str;
+  double str;
 
   if (xstrip.get(is) >= 1.0) {
     return xssi[iblte[is]][is];
