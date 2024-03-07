@@ -3497,10 +3497,6 @@ bool XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector,
       jp = 1;
     }
     double dso = (points.col(jo) - points.col(jp)).norm();
-    if (jo == n) {
-      if (dso < seps)
-        goto stop12;
-    }
 
     //------ skip null panel
     if (fabs(dso) < 1.0e-7) continue;
@@ -3597,21 +3593,19 @@ bool XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector,
     dqdg[jp] += qopi * (psni + pdni);
   
   }
+  if ((points.col(n) - points.col(1)).norm() > seps) {
+    psi_te(iNode, point, normal_vector, psi, psi_ni);
+  }
 
-  psi_te(iNode, point, normal_vector, psi, psi_ni);
+  //**** freestream terms
+  psi += qinf * (cosa * point.y() - sina * point.x());
 
-  stop12:
+  //---- dpsi/dn
+  psi_ni = psi_ni + qinf * (cosa * normal_vector.y() - sina * normal_vector.x());
 
-    //**** freestream terms
-    psi += qinf * (cosa * point.y() - sina * point.x());
+  qtan1 += qinf * normal_vector.y();
+  qtan2 += -qinf * normal_vector.x();
 
-    //---- dpsi/dn
-    psi_ni = psi_ni + qinf * (cosa * normal_vector.y() - sina * normal_vector.x());
-
-    qtan1 += qinf * normal_vector.y();
-    qtan2 += -qinf * normal_vector.x();
-
-  // techwinder: removed image calculattion
   return false;
 }
 
