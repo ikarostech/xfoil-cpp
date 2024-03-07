@@ -3440,7 +3440,7 @@ Matrix2Xd XFoil::ncalc(Matrix2Xd points, VectorXd spline_length, int n) {
  * ----------------------------------------------------------------------- */
 bool XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector,
                    double &psi, double &psi_ni, bool siglin) {
-  int io, jo, jm, jq, jp;
+  int io, jo, jp;
 
   double dxinv, psum, qtanm, scs, sds, dsio, dsm, dsim;
   double sgn, x0, logr0, theta0, rs0, rs1, rs2, nxo, nyo,
@@ -3493,15 +3493,8 @@ bool XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector,
   for (jo = 1; jo <= n; jo++) {
     // stop10
     jp = jo + 1;
-    jm = max(1, jo - 1);
-    jq = jp + 1;
-
-    if (jo == n - 1)
-      jq = jp;
-    else {
-      if (jo == n) {
-        jp = 1;
-      }
+    if (jo == n) {
+      jp = 1;
     }
     double dso = (points.col(jo) - points.col(jp)).norm();
     if (jo == n) {
@@ -3518,7 +3511,7 @@ bool XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector,
 
     Vector2d r1 = point - points.col(jo);
     Vector2d r2 = point - points.col(jp);
-    Vector2d s = (points.col(jp)- points.col(jo)).normalized();
+    Vector2d s = (points.col(jp) - points.col(jo)).normalized();
 
     blData1.xz = s.dot(r1);
     blData2.xz = s.dot(r2);
@@ -3602,65 +3595,21 @@ bool XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector,
 
     dqdg[jo] += qopi * (psni - pdni);
     dqdg[jp] += qopi * (psni + pdni);
-
+  
   }
 
-  blData1.xz = (points.col(1)- points.col(n)).normalized().dot(point - points.col(n));
-  blData2.xz = (points.col(1)- points.col(n)).normalized().dot(point - points.col(1));
+  psi_te(iNode, point, normal_vector, psi, psi_ni);
 
-  psig = 0.5 * yy * (logr12 - logr22) + blData2.xz * (blData2.tz - apan) -
-         blData1.xz * (blData1.tz - apan);
-  pgam =
-      0.5 * blData1.xz * logr12 - 0.5 * blData2.xz * logr22 + blData2.xz - blData1.xz + yy * (blData1.tz - blData2.tz);
+  stop12:
 
-  psigx1 = -(blData1.tz - apan);
-  psigx2 = blData2.tz - apan;
-  psigyy = 0.5 * (logr12 - logr22);
-  pgamx1 = 0.5 * logr12;
-  pgamx2 = -0.5 * logr22;
-  pgamyy = blData1.tz - blData2.tz;
+    //**** freestream terms
+    psi += qinf * (cosa * point.y() - sina * point.x());
 
-  psigni = psigx1 * x1i + psigx2 * x2i + psigyy * yyi;
-  pgamni = pgamx1 * x1i + pgamx2 * x2i + pgamyy * yyi;
+    //---- dpsi/dn
+    psi_ni = psi_ni + qinf * (cosa * normal_vector.y() - sina * normal_vector.x());
 
-  //---- TE panel source and vortex strengths
-  sigte1 = 0.5 * scs * (gamu[1][1] - gamu[n][1]);
-  sigte2 = 0.5 * scs * (gamu[1][2] - gamu[n][2]);
-  gamte1 = -0.5 * sds * (gamu[1][1] - gamu[n][1]);
-  gamte2 = -0.5 * sds * (gamu[1][2] - gamu[n][2]);
-
-  sigte = 0.5 * scs * (gam[1] - gam[n]);
-  gamte = -0.5 * sds * (gam[1] - gam[n]);
-
-  //---- TE panel contribution to psi
-  psi += hopi * (psig * sigte + pgam * gamte);
-
-  //---- dpsi/dgam
-  dzdg[jo] += -hopi * psig * scs * 0.5;
-  dzdg[jp] += +hopi * psig * scs * 0.5;
-
-  dzdg[jo] += +hopi * pgam * sds * 0.5;
-  dzdg[jp] += -hopi * pgam * sds * 0.5;
-
-  //---- dpsi/dni
-  psi_ni += hopi * (psigni * sigte + pgamni * gamte);
-
-  qtan1 += hopi * (psigni * sigte1 + pgamni * gamte1);
-  qtan2 += hopi * (psigni * sigte2 + pgamni * gamte2);
-
-  dqdg[jo] += -hopi * (psigni * 0.5 * scs - pgamni * 0.5 * sds);
-  dqdg[jp] += +hopi * (psigni * 0.5 * scs - pgamni * 0.5 * sds);
-
-stop12:
-
-  //**** freestream terms
-  psi += qinf * (cosa * point.y() - sina * point.x());
-
-  //---- dpsi/dn
-  psi_ni = psi_ni + qinf * (cosa * normal_vector.y() - sina * normal_vector.x());
-
-  qtan1 += qinf * normal_vector.y();
-  qtan2 += -qinf * normal_vector.x();
+    qtan1 += qinf * normal_vector.y();
+    qtan2 += -qinf * normal_vector.x();
 
   // techwinder: removed image calculattion
   return false;
@@ -3700,8 +3649,8 @@ bool XFoil::psisig(int iNode, int jNode, Vector2d point, Vector2d normal_vector,
   Vector2d r2 = point - points.col(jp);
   Vector2d s = (points.col(jp)- points.col(jo)).normalized();
 
-  blData1.xz = s.dot(r1);
-  blData2.xz = s.dot(r2);
+  double x1 = s.dot(r1);
+  double x2 = s.dot(r2);
   double yy = cross2(s, r1);
 
   //FIXME normを使うと正しく計算されない。計算精度の問題？
@@ -3717,22 +3666,22 @@ bool XFoil::psisig(int iNode, int jNode, Vector2d point, Vector2d normal_vector,
     //------- make sure arctan falls between  -/+  pi/2
     sgn = sign(1.0, yy);
   }
-  double logr12;
+  double logr12, t1;
   //------ set log(r^2) and arctan(x/y), correcting for reflection if any
   if (io != jo && rs1 > 0.0) {
     logr12 = log(rs1);
-    blData1.tz = atan2(sgn * blData1.xz, sgn * yy) + (0.5 - 0.5 * sgn) * PI;
+    t1 = atan2(sgn * x1, sgn * yy) + (0.5 - 0.5 * sgn) * PI;
   } else {
     logr12 = 0.0;
-    blData1.tz = 0.0;
+    t1 = 0.0;
   }
-  double logr22;
+  double logr22, t2;
   if (io != jp && rs2 > 0.0) {
     logr22 = log(rs2);
-    blData2.tz = atan2(sgn * blData2.xz, sgn * yy) + (0.5 - 0.5 * sgn) * PI;
+    t2 = atan2(sgn * x2, sgn * yy) + (0.5 - 0.5 * sgn) * PI;
   } else {
     logr22 = 0.0;
-    blData2.tz = 0.0;
+    t2 = 0.0;
   }
 
   double x1i = s.dot(normal_vector);
@@ -3740,29 +3689,29 @@ bool XFoil::psisig(int iNode, int jNode, Vector2d point, Vector2d normal_vector,
   double yyi = cross2(s, normal_vector);
 
   //------- set up midpoint quantities
-  double x0 = 0.5 * (blData1.xz + blData2.xz);
+  double x0 = 0.5 * (x1 + x2);
   double rs0 = x0 * x0 + yy * yy;
   double logr0 = log(rs0);
   double theta0 = atan2(sgn * x0, sgn * yy) + (0.5 - 0.5 * sgn) * PI;
 
   //------- calculate source contribution to psi	for  1-0  half-panel
-  double dxinv = 1.0 / (blData1.xz - x0);
-  double psum = x0 * (theta0 - apan) - blData1.xz * (blData1.tz - apan) +
+  double dxinv = 1.0 / (x1 - x0);
+  double psum = x0 * (theta0 - apan) - x1 * (t1 - apan) +
           0.5 * yy * (logr12 - logr0);
-  double pdif = ((blData1.xz + x0) * psum + rs1 * (blData1.tz - apan) - rs0 * (theta0 - apan) +
-          (x0 - blData1.xz) * yy) *
+  double pdif = ((x1 + x0) * psum + rs1 * (t1 - apan) - rs0 * (theta0 - apan) +
+          (x0 - x1) * yy) *
           dxinv;
 
-  double psx1 = -(blData1.tz - apan);
+  double psx1 = -(t1- apan);
   double psx0 = theta0 - apan;
   double psyy = 0.5 * (logr12 - logr0);
 
   double pdx1 =
-      ((blData1.xz + x0) * psx1 + psum + 2.0 * blData1.xz * (blData1.tz - apan) - pdif) * dxinv;
+      ((x1 + x0) * psx1 + psum + 2.0 * x1 * (t1 - apan) - pdif) * dxinv;
   double pdx0 =
-      ((blData1.xz + x0) * psx0 + psum - 2.0 * x0 * (theta0 - apan) + pdif) * dxinv;
+      ((x1 + x0) * psx0 + psum - 2.0 * x0 * (theta0 - apan) + pdif) * dxinv;
   double pdyy =
-      ((blData1.xz + x0) * psyy + 2.0 * (x0 - blData1.xz + yy * (blData1.tz - theta0))) * dxinv;
+      ((x1 + x0) * psyy + 2.0 * (x0 - x1 + yy * (t1 - theta0))) * dxinv;
 
   const double dsm = (points.col(jp) - points.col(jm)).norm();
   double dsim = 1.0 / dsm;
@@ -3789,23 +3738,23 @@ bool XFoil::psisig(int iNode, int jNode, Vector2d point, Vector2d normal_vector,
   dqdm[jp] += qopi * (psni * (dsio + dsim) + pdni * (dsio - dsim));
 
   //------- calculate source contribution to psi	for  0-2  half-panel
-  dxinv = 1.0 / (x0 - blData2.xz);
-  psum = blData2.xz * (blData2.tz - apan) - x0 * (theta0 - apan) +
+  dxinv = 1.0 / (x0 - x2);
+  psum = x2 * (t2 - apan) - x0 * (theta0 - apan) +
           0.5 * yy * (logr0 - logr22);
-  pdif = ((x0 + blData2.xz) * psum + rs0 * (theta0 - apan) - rs2 * (blData2.tz - apan) +
-          (blData2.xz - x0) * yy) *
+  pdif = ((x0 + x2) * psum + rs0 * (theta0 - apan) - rs2 * (t2 - apan) +
+          (x2 - x0) * yy) *
           dxinv;
 
   psx0 = -(theta0 - apan);
-  double psx2 = blData2.tz - apan;
+  double psx2 = t2 - apan;
   psyy = 0.5 * (logr0 - logr22);
 
   pdx0 =
-      ((x0 + blData2.xz) * psx0 + psum + 2.0 * x0 * (theta0 - apan) - pdif) * dxinv;
+      ((x0 + x2) * psx0 + psum + 2.0 * x0 * (theta0 - apan) - pdif) * dxinv;
   double pdx2 =
-      ((x0 + blData2.xz) * psx2 + psum - 2.0 * blData2.xz * (blData2.tz - apan) + pdif) * dxinv;
+      ((x0 + x2) * psx2 + psum - 2.0 * x2 * (t2 - apan) + pdif) * dxinv;
   pdyy =
-      ((x0 + blData2.xz) * psyy + 2.0 * (blData2.xz - x0 + yy * (theta0 - blData2.tz))) * dxinv;
+      ((x0 + x2) * psyy + 2.0 * (x2 - x0 + yy * (theta0 - t2))) * dxinv;
 
   double dsp = (points.col(jq) - points.col(jo)).norm();
   double dsip = 1.0 / dsp;
@@ -3832,6 +3781,113 @@ bool XFoil::psisig(int iNode, int jNode, Vector2d point, Vector2d normal_vector,
   dqdm[jq] += qopi * (psni * dsip + pdni * dsip);
 
   return true;
+}
+
+bool XFoil::psi_te(int iNode, Vector2d point, Vector2d normal_vector, double &psi, double &psi_ni) {
+  double dso = (points.col(n) - points.col(1)).norm();
+
+  //------ skip null panel
+  double dsio = 1.0 / dso;
+
+  double apan = apanel[n];
+
+  Vector2d r1 = point - points.col(n);
+  Vector2d r2 = point - points.col(1);
+  Vector2d s = (points.col(1) - points.col(n)).normalized();
+
+  blData1.xz = s.dot(r1);
+  blData2.xz = s.dot(r2);
+  double yy = cross2(s, r1);
+
+  //FIXME normを使うと正しく計算されない。計算精度の問題？
+  const double rs1 = r1.dot(r1);
+  const double rs2 = r2.dot(r2);
+
+  //------ set reflection flag sgn to avoid branch problems with arctan
+  double sgn;
+  if (iNode >= 1 && iNode <= n) {
+    //------- no problem on airfoil surface
+    sgn = 1.0;
+  } else {
+    //------- make sure arctan falls between  -/+  pi/2
+    sgn = sign(1.0, yy);
+  }
+
+  //------ set log(r^2) and arctan(x/y), correcting for reflection if any
+  double logr12, logr22;
+  if (iNode != n && rs1 > 0.0) {
+    logr12 = log(rs1);
+    blData1.tz = atan2(sgn * blData1.xz, sgn * yy) + (0.5 - 0.5 * sgn) * PI;
+  } else {
+    logr12 = 0.0;
+    blData1.tz = 0.0;
+  }
+  
+  if (iNode != 1 && rs2 > 0.0) {
+    logr22 = log(rs2);
+    blData2.tz = atan2(sgn * blData2.xz, sgn * yy) + (0.5 - 0.5 * sgn) * PI;
+  } else {
+    logr22 = 0.0;
+    blData2.tz = 0.0;
+  }
+
+  double scs, sds;
+  if (sharp) {
+    scs = 1.0;
+    sds = 0.0;
+  } else {
+    scs = ante / dste;
+    sds = aste / dste;
+  }
+
+  double x1i = s.dot(normal_vector);
+  double x2i = s.dot(normal_vector);
+  double yyi = cross2(s, normal_vector);
+
+  double psig = 0.5 * yy * (logr12 - logr22) + blData2.xz * (blData2.tz - apan) -
+         blData1.xz * (blData1.tz - apan);
+  double pgam =
+      0.5 * blData1.xz * logr12 - 0.5 * blData2.xz * logr22 + blData2.xz - blData1.xz + yy * (blData1.tz - blData2.tz);
+
+  double psigx1 = -(blData1.tz - apan);
+  double psigx2 = blData2.tz - apan;
+  double psigyy = 0.5 * (logr12 - logr22);
+  double pgamx1 = 0.5 * logr12;
+  double pgamx2 = -0.5 * logr22;
+  double pgamyy = blData1.tz - blData2.tz;
+
+  double psigni = psigx1 * x1i + psigx2 * x2i + psigyy * yyi;
+  double pgamni = pgamx1 * x1i + pgamx2 * x2i + pgamyy * yyi;
+
+  //---- TE panel source and vortex strengths
+  double sigte1 = 0.5 * scs * (gamu[1][1] - gamu[n][1]);
+  double sigte2 = 0.5 * scs * (gamu[1][2] - gamu[n][2]);
+  double gamte1 = -0.5 * sds * (gamu[1][1] - gamu[n][1]);
+  double gamte2 = -0.5 * sds * (gamu[1][2] - gamu[n][2]);
+
+  sigte = 0.5 * scs * (gam[1] - gam[n]);
+  gamte = -0.5 * sds * (gam[1] - gam[n]);
+
+  //---- TE panel contribution to psi
+  psi += hopi * (psig * sigte + pgam * gamte);
+
+  //---- dpsi/dgam
+  dzdg[n] += -hopi * psig * scs * 0.5;
+  dzdg[1] += +hopi * psig * scs * 0.5;
+
+  dzdg[n] += +hopi * pgam * sds * 0.5;
+  dzdg[1] += -hopi * pgam * sds * 0.5;
+
+  //---- dpsi/dni
+  psi_ni += hopi * (psigni * sigte + pgamni * gamte);
+
+  qtan1 += hopi * (psigni * sigte1 + pgamni * gamte1);
+  qtan2 += hopi * (psigni * sigte2 + pgamni * gamte2);
+
+  dqdg[n] += -hopi * (psigni * 0.5 * scs - pgamni * 0.5 * sds);
+  dqdg[1] += +hopi * (psigni * 0.5 * scs - pgamni * 0.5 * sds);
+
+  return false;
 }
 /** --------------------------------------------------------------------
  *	   Calculates current streamfunction psi and tangential velocity
