@@ -112,7 +112,6 @@ bool XFoil::initialize() {
   memset(dstr, 0, sizeof(dstr));
   memset(dzdg, 0, sizeof(dzdg));
   memset(dzdm, 0, sizeof(dzdm));
-  memset(dzdn, 0, sizeof(dzdn));
   memset(iblte, 0, sizeof(iblte));
   memset(ipan, 0, sizeof(ipan));
   memset(isys, 0, sizeof(isys));
@@ -3436,18 +3435,9 @@ Matrix2Xd XFoil::ncalc(Matrix2Xd points, VectorXd spline_length, int n) {
 bool XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector,
                    double &psi, double &psi_ni, bool siglin) {
   int io, jo, jp;
-
-  double dxinv, qtanm, scs, sds, dsio;
-  double sgn, rs1, rs2;
-  double psni, pdni, psx1, psx2, pdx1, pdx2, psyy, pdyy, psis, psid;
-  double gsum, gdif, gsum1, gsum2, gdif1, gdif2;
-  double apan, yy, logr12, logr22, x1i, x2i, yyi, x1o, x1p, x2o, x2p, yyo, yyp;
   
   //---- distance tolerance for determining if two points are the same
   const double seps = (spline_length[n] - spline_length[1]) * 0.00001;
-
-  apan = yy = logr12 = logr22 = x1i = x2i = yyi = x1o = x1p = x2o = x2p = yyo =
-      yyp = 0.0;
 
   io = iNode;
 
@@ -3458,11 +3448,7 @@ bool XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector,
 
   for (jo = 1; jo <= n; jo++) {
     dzdg[jo] = 0.0;
-    dzdn[jo] = 0.0;
     dqdg[jo] = 0.0;
-  }
-
-  for (jo = 1; jo <= n; jo++) {
     dzdm[jo] = 0.0;
     dqdm[jo] = 0.0;
   }
@@ -3472,8 +3458,9 @@ bool XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector,
 
   qtan1 = 0.0;
   qtan2 = 0.0;
-  qtanm = 0.0;
+  double qtanm = 0.0;
 
+  double scs, sds;
   if (sharp) {
     scs = 1.0;
     sds = 0.0;
@@ -3492,9 +3479,9 @@ bool XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector,
     //------ skip null panel
     if (fabs(dso) < 1.0e-7) continue;
 
-    dsio = 1.0 / dso;
+    double dsio = 1.0 / dso;
 
-    apan = apanel[jo];
+    double apan = apanel[jo];
 
     Vector2d r1 = point - points.col(jo);
     Vector2d r2 = point - points.col(jp);
@@ -3502,13 +3489,14 @@ bool XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector,
 
     blData1.xz = s.dot(r1);
     blData2.xz = s.dot(r2);
-    yy = cross2(s, r1);
+    double yy = cross2(s, r1);
 
     //FIXME normを使うと正しく計算されない。計算精度の問題？
-    rs1 = r1.dot(r1);
-    rs2 = r2.dot(r2);
+    double rs1 = r1.dot(r1);
+    double rs2 = r2.dot(r2);
 
     //------ set reflection flag sgn to avoid branch problems with arctan
+    double sgn;
     if (io >= 1 && io <= n) {
       //------- no problem on airfoil surface
       sgn = 1.0;
@@ -3518,6 +3506,7 @@ bool XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector,
     }
 
     //------ set log(r^2) and arctan(x/y), correcting for reflection if any
+    double logr12;
     if (io != jo && rs1 > 0.0) {
       logr12 = log(rs1);
       blData1.tz = atan2(sgn * blData1.xz, sgn * yy) + (0.5 - 0.5 * sgn) * PI;
@@ -3525,7 +3514,7 @@ bool XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector,
       logr12 = 0.0;
       blData1.tz = 0.0;
     }
-
+    double logr22;
     if (io != jp && rs2 > 0.0) {
       logr22 = log(rs2);
       blData2.tz = atan2(sgn * blData2.xz, sgn * yy) + (0.5 - 0.5 * sgn) * PI;
@@ -3534,37 +3523,37 @@ bool XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector,
       blData2.tz = 0.0;
     }
 
-    x1i = s.dot(normal_vector);
-    x2i = s.dot(normal_vector);
-    yyi = cross2(s, normal_vector);
+    double x1i = s.dot(normal_vector);
+    double x2i = s.dot(normal_vector);
+    double yyi = cross2(s, normal_vector);
     if (jo == n) break;
     if (siglin) {
       psisig(io, jo, point, normal_vector, psi, psi_ni);
     }
 
     //------ calculate vortex panel contribution to psi
-    dxinv = 1.0 / (blData1.xz - blData2.xz);
-    psis = 0.5 * blData1.xz * logr12 - 0.5 * blData2.xz * logr22 + blData2.xz - blData1.xz +
+    double dxinv = 1.0 / (blData1.xz - blData2.xz);
+    double psis = 0.5 * blData1.xz * logr12 - 0.5 * blData2.xz * logr22 + blData2.xz - blData1.xz +
            yy * (blData1.tz - blData2.tz);
-    psid = ((blData1.xz + blData2.xz) * psis +
+    double psid = ((blData1.xz + blData2.xz) * psis +
             0.5 * (rs2 * logr22 - rs1 * logr12 + blData1.xz * blData1.xz - blData2.xz * blData2.xz)) *
            dxinv;
 
-    psx1 = 0.5 * logr12;
-    psx2 = -.5 * logr22;
-    psyy = blData1.tz - blData2.tz;
+    double psx1 = 0.5 * logr12;
+    double psx2 = -.5 * logr22;
+    double psyy = blData1.tz - blData2.tz;
 
-    pdx1 = ((blData1.xz + blData2.xz) * psx1 + psis - blData1.xz * logr12 - psid) * dxinv;
-    pdx2 = ((blData1.xz + blData2.xz) * psx2 + psis + blData2.xz * logr22 + psid) * dxinv;
-    pdyy = ((blData1.xz + blData2.xz) * psyy - yy * (logr12 - logr22)) * dxinv;
+    double pdx1 = ((blData1.xz + blData2.xz) * psx1 + psis - blData1.xz * logr12 - psid) * dxinv;
+    double pdx2 = ((blData1.xz + blData2.xz) * psx2 + psis + blData2.xz * logr22 + psid) * dxinv;
+    double pdyy = ((blData1.xz + blData2.xz) * psyy - yy * (logr12 - logr22)) * dxinv;
 
-    gsum1 = gamu[jp][1] + gamu[jo][1];
-    gsum2 = gamu[jp][2] + gamu[jo][2];
-    gdif1 = gamu[jp][1] - gamu[jo][1];
-    gdif2 = gamu[jp][2] - gamu[jo][2];
+    double gsum1 = gamu[jp][1] + gamu[jo][1];
+    double gsum2 = gamu[jp][2] + gamu[jo][2];
+    double gdif1 = gamu[jp][1] - gamu[jo][1];
+    double gdif2 = gamu[jp][2] - gamu[jo][2];
 
-    gsum = gam[jp] + gam[jo];
-    gdif = gam[jp] - gam[jo];
+    double gsum = gam[jp] + gam[jo];
+    double gdif = gam[jp] - gam[jo];
 
     psi += qopi * (psis * gsum + psid * gdif);
 
@@ -3573,8 +3562,8 @@ bool XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector,
     dzdg[jp] += qopi * (psis + psid);
 
     //------ dpsi/dni
-    psni = psx1 * x1i + psx2 * x2i + psyy * yyi;
-    pdni = pdx1 * x1i + pdx2 * x2i + pdyy * yyi;
+    double psni = psx1 * x1i + psx2 * x2i + psyy * yyi;
+    double pdni = pdx1 * x1i + pdx2 * x2i + pdyy * yyi;
     psi_ni += qopi * (gsum * psni + gdif * pdni);
 
     qtan1 += qopi * (gsum1 * psni + gdif1 * pdni);

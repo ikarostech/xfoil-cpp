@@ -337,8 +337,7 @@ class XFoil {
   double apanel[IZX], sst, sst_go, sst_gp, gamte, sigte;
   double dste, aste;
   double qinv[IZX], qinvu[IZX][3], qinv_a[IZX];
-  double dzdg[IQX], dzdn[IQX], dzdm[IZX], dqdg[IQX];
-  double dqdm[IZX];
+  double dzdg[IQX], dzdm[IZX], dqdg[IQX], dqdm[IZX];
   double aij[IQX][IQX];
   double bij[IQX][IZX], dij[IZX][IZX];
   double cij[IWX][IQX];
