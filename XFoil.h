@@ -219,10 +219,20 @@ class XFoil {
   bool mrchdu();
   bool mrchue();
   Matrix2Xd ncalc(Matrix2Xd point, VectorXd spline_length, int n);
-  bool psilin(int i, Vector2d point, Vector2d normal_vector, double &psi,
-              double &psi_ni, bool siglin);
-  bool psisig(int iNode, int jNode, Vector2d point, Vector2d normal_vector, double &psi, double &psi_ni);
-  bool psi_te(int i, Vector2d point, Vector2d normal_vector, double &psi, double &psi_ni);
+  class PsiResult {
+    public:
+    double psi;
+    double psi_ni;
+    static PsiResult sum(PsiResult a, PsiResult b) {
+      PsiResult result;
+      result.psi = a.psi + b.psi;
+      result.psi_ni = a.psi_ni + b.psi_ni;
+      return result;
+    }
+  };
+  PsiResult psilin(int i, Vector2d point, Vector2d normal_vector, bool siglin);
+  PsiResult psisig(int iNode, int jNode, Vector2d point, Vector2d normal_vector);
+  PsiResult psi_te(int i, Vector2d point, Vector2d normal_vector);
   
   bool pswlin(int i, double xi, double yi, double nxi, double nyi, double &psi,
               double &psi_ni);

@@ -2174,7 +2174,7 @@ bool XFoil::getxyf(Matrix2Xd points, Matrix2Xd dpoints_ds, VectorXd s,
  *-------------------------------------------------------------- */
 bool XFoil::ggcalc() {
 
-  double psi, psi_n, res;
+  double res;
   double bbb[IQX];
   //	double psiinf;
 
@@ -2194,7 +2194,7 @@ bool XFoil::ggcalc() {
   //-    the unknowns are (dgamma)i and dpsio.
   for (int i = 1; i <= n; i++) {
     //------ calculate psi and dpsi/dgamma array for current node
-    psilin(i, points.col(i), normal_vectors.col(i), psi, psi_n, true);
+    psilin(i, points.col(i), normal_vectors.col(i), true);
 
     const double res1 = qinf * points.col(i).y();
     const double res2 = -qinf * points.col(i).x();
@@ -2258,8 +2258,7 @@ bool XFoil::ggcalc() {
     const Vector2d normal_bis {-sbis, cbis};
 
     //----- set velocity component along bisector line
-    double qbis;
-    psilin(0, bis, normal_bis, psi, qbis, true);
+    psilin(0, bis, normal_bis, true);
 
     //----- dres/dgamma
     for (int j = 1; j <= n; j++) aij[n][j] = dqdg[j];
@@ -3432,8 +3431,8 @@ Matrix2Xd XFoil::ncalc(Matrix2Xd points, VectorXd spline_length, int n) {
  *			airfoil:  1   < i < n
  *			wake:	  n+1 < i < n+nw
  * ----------------------------------------------------------------------- */
-bool XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector,
-                   double &psi, double &psi_ni, bool siglin) {
+XFoil::PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector, bool siglin) {
+  PsiResult psi_result;
   int io, jo, jp;
   
   //---- distance tolerance for determining if two points are the same
@@ -3453,8 +3452,8 @@ bool XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector,
     dqdm[jo] = 0.0;
   }
 
-  psi = 0.0;
-  psi_ni = 0.0;
+  psi_result.psi = 0.0;
+  psi_result.psi_ni = 0.0;
 
   qtan1 = 0.0;
   qtan2 = 0.0;
@@ -3528,7 +3527,8 @@ bool XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector,
     double yyi = cross2(s, normal_vector);
     if (jo == n) break;
     if (siglin) {
-      psisig(io, jo, point, normal_vector, psi, psi_ni);
+      PsiResult sig_result = psisig(io, jo, point, normal_vector);
+      psi_result = PsiResult::sum(psi_result, sig_result);
     }
 
     //------ calculate vortex panel contribution to psi
@@ -3555,7 +3555,7 @@ bool XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector,
     double gsum = gam[jp] + gam[jo];
     double gdif = gam[jp] - gam[jo];
 
-    psi += qopi * (psis * gsum + psid * gdif);
+    psi_result.psi += qopi * (psis * gsum + psid * gdif);
 
     //------ dpsi/dgam
     dzdg[jo] += qopi * (psis - psid);
@@ -3564,7 +3564,7 @@ bool XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector,
     //------ dpsi/dni
     double psni = psx1 * x1i + psx2 * x2i + psyy * yyi;
     double pdni = pdx1 * x1i + pdx2 * x2i + pdyy * yyi;
-    psi_ni += qopi * (gsum * psni + gdif * pdni);
+    psi_result.psi_ni += qopi * (gsum * psni + gdif * pdni);
 
     qtan1 += qopi * (gsum1 * psni + gdif1 * pdni);
     qtan2 += qopi * (gsum2 * psni + gdif2 * pdni);
@@ -3574,22 +3574,26 @@ bool XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector,
   
   }
   if ((points.col(n) - points.col(1)).norm() > seps) {
-    psi_te(iNode, point, normal_vector, psi, psi_ni);
+    PsiResult te_result = psi_te(iNode, point, normal_vector);
+    psi_result = PsiResult::sum(psi_result, te_result);
   }
 
   //**** freestream terms
-  psi += qinf * (cosa * point.y() - sina * point.x());
+  psi_result.psi += qinf * (cosa * point.y() - sina * point.x());
 
   //---- dpsi/dn
-  psi_ni = psi_ni + qinf * (cosa * normal_vector.y() - sina * normal_vector.x());
+  psi_result.psi_ni += qinf * (cosa * normal_vector.y() - sina * normal_vector.x());
 
   qtan1 += qinf * normal_vector.y();
   qtan2 += -qinf * normal_vector.x();
 
-  return false;
+  return psi_result;
 }
 
-bool XFoil::psisig(int iNode, int jNode, Vector2d point, Vector2d normal_vector, double &psi, double &psi_ni) {
+XFoil::PsiResult XFoil::psisig(int iNode, int jNode, Vector2d point, Vector2d normal_vector) {
+  PsiResult psi_result;
+  psi_result.psi = 0;
+  psi_result.psi_ni = 0;
   double scs, sds;
   if (sharp) {
     scs = 1.0;
@@ -3693,7 +3697,7 @@ bool XFoil::psisig(int iNode, int jNode, Vector2d point, Vector2d normal_vector,
   double ssum = (sig[jp] - sig[jo]) / dso + (sig[jp] - sig[jm]) * dsim;
   double sdif = (sig[jp] - sig[jo]) / dso - (sig[jp] - sig[jm]) * dsim;
 
-  psi += qopi * (psum * ssum + pdif * sdif);
+  psi_result.psi += qopi * (psum * ssum + pdif * sdif);
 
   //------- dpsi/dm
   dzdm[jm] += qopi * (-psum * dsim + pdif * dsim);
@@ -3703,7 +3707,7 @@ bool XFoil::psisig(int iNode, int jNode, Vector2d point, Vector2d normal_vector,
   //------- dpsi/dni
   double psni = psx1 * x1i + psx0 * (x1i + x2i) * 0.5 + psyy * yyi;
   double pdni = pdx1 * x1i + pdx0 * (x1i + x2i) * 0.5 + pdyy * yyi;
-  psi_ni = psi_ni + qopi * (psni * ssum + pdni * sdif);
+  psi_result.psi_ni += qopi * (psni * ssum + pdni * sdif);
 
   double qtanm = qtanm + qopi * (psni * ssum + pdni * sdif);
 
@@ -3736,7 +3740,7 @@ bool XFoil::psisig(int iNode, int jNode, Vector2d point, Vector2d normal_vector,
   ssum = (sig[jq] - sig[jo]) * dsip + (sig[jp] - sig[jo]) / dso;
   sdif = (sig[jq] - sig[jo]) * dsip - (sig[jp] - sig[jo]) / dso;
 
-  psi = psi + qopi * (psum * ssum + pdif * sdif);
+  psi_result.psi += qopi * (psum * ssum + pdif * sdif);
 
   //------- dpsi/dm
   dzdm[jo] += qopi * (-psum * (dsip + dsio) - pdif * (dsip - dsio));
@@ -3746,7 +3750,7 @@ bool XFoil::psisig(int iNode, int jNode, Vector2d point, Vector2d normal_vector,
   //------- dpsi/dni
   psni = psx0 * (x1i + x2i) * 0.5 + psx2 * x2i + psyy * yyi;
   pdni = pdx0 * (x1i + x2i) * 0.5 + pdx2 * x2i + pdyy * yyi;
-  psi_ni = psi_ni + qopi * (psni * ssum + pdni * sdif);
+  psi_result.psi_ni = qopi * (psni * ssum + pdni * sdif);
 
   qtanm = qtanm + qopi * (psni * ssum + pdni * sdif);
 
@@ -3754,10 +3758,13 @@ bool XFoil::psisig(int iNode, int jNode, Vector2d point, Vector2d normal_vector,
   dqdm[jp] += qopi * (psni / dso - pdni / dso);
   dqdm[jq] += qopi * (psni * dsip + pdni * dsip);
 
-  return true;
+  return psi_result;
 }
 
-bool XFoil::psi_te(int iNode, Vector2d point, Vector2d normal_vector, double &psi, double &psi_ni) {
+XFoil::PsiResult XFoil::psi_te(int iNode, Vector2d point, Vector2d normal_vector) {
+  PsiResult psi_result;
+  psi_result.psi = 0;
+  psi_result.psi_ni = 0;
   double dso = (points.col(n) - points.col(1)).norm();
 
   //------ skip null panel
@@ -3842,7 +3849,7 @@ bool XFoil::psi_te(int iNode, Vector2d point, Vector2d normal_vector, double &ps
   gamte = -0.5 * sds * (gam[1] - gam[n]);
 
   //---- TE panel contribution to psi
-  psi += hopi * (psig * sigte + pgam * gamte);
+  psi_result.psi += hopi * (psig * sigte + pgam * gamte);
 
   //---- dpsi/dgam
   dzdg[n] += -hopi * psig * scs * 0.5;
@@ -3852,7 +3859,7 @@ bool XFoil::psi_te(int iNode, Vector2d point, Vector2d normal_vector, double &ps
   dzdg[1] += -hopi * pgam * sds * 0.5;
 
   //---- dpsi/dni
-  psi_ni += hopi * (psigni * sigte + pgamni * gamte);
+  psi_result.psi_ni += hopi * (psigni * sigte + pgamni * gamte);
 
   qtan1 += hopi * (psigni * sigte1 + pgamni * gamte1);
   qtan2 += hopi * (psigni * sigte2 + pgamni * gamte2);
@@ -3860,7 +3867,7 @@ bool XFoil::psi_te(int iNode, Vector2d point, Vector2d normal_vector, double &ps
   dqdg[n] += -hopi * (psigni * 0.5 * scs - pgamni * 0.5 * sds);
   dqdg[1] += +hopi * (psigni * 0.5 * scs - pgamni * 0.5 * sds);
 
-  return false;
+  return psi_result;
 }
 /** --------------------------------------------------------------------
  *	   Calculates current streamfunction psi and tangential velocity
@@ -4101,7 +4108,7 @@ bool XFoil::qdcalc() {
   for (i = n + 1; i <= n + nw; i++) {
     int iw = i - n;
     //------ airfoil contribution at wake panel node
-    psilin(i, points.col(i), normal_vectors.col(i), psi, psi_n, true);
+    psilin(i, points.col(i), normal_vectors.col(i), true);
     for (j = 1; j <= n; j++) {
       cij[iw][j] = dqdg[j];
     }
@@ -4180,7 +4187,6 @@ bool XFoil::qvfue() {
  *      on wake due to freestream and airfoil surface vorticity.
  * --------------------------------------------------------------- */
 bool XFoil::qwcalc() {
-  double psi, psi_ni;
   int i;
 
   //---- first wake point (same as te)
@@ -4189,7 +4195,7 @@ bool XFoil::qwcalc() {
 
   //---- rest of wake
   for (i = n + 2; i <= n + nw; i++) {
-    psilin(i, points.col(i), normal_vectors.col(i), psi, psi_ni, false);
+    psilin(i, points.col(i), normal_vectors.col(i), false);
     qinvu[i][1] = qtan1;
     qinvu[i][2] = qtan2;
   }
@@ -6335,7 +6341,6 @@ bool XFoil::xyWake() {
   //     vorticity and/or mass source distributions.
   //-----------------------------------------------------
   double ds1, sx, sy, smod;
-  double psi, psi_x, psi_y;
   //
   writeString("   Calculating wake trajectory ...\n", true);
   //
@@ -6367,8 +6372,8 @@ bool XFoil::xyWake() {
   spline_length[i] = spline_length[n];
 
   //---- calculate streamfunction gradient components at first point
-  psilin(i, points.col(i), {1.0, 0.0}, psi, psi_x, false);
-  psilin(i, points.col(i), {0.0, 1.0}, psi, psi_y, false);
+  double psi_x = psilin(i, points.col(i), {1.0, 0.0}, false).psi_ni;
+  double psi_y = psilin(i, points.col(i), {0.0, 1.0}, false).psi_ni;
 
   //---- set unit vector normal to wake at first point
   normal_vectors.col(i + 1).x() = -psi_x / sqrt(psi_x * psi_x + psi_y * psi_y);
@@ -6388,8 +6393,8 @@ bool XFoil::xyWake() {
 
     if (i != n + nw) {
       //------- calculate normal vector for next point
-      psilin(i, points.col(i), {1.0, 0.0}, psi, psi_x, false);
-      psilin(i, points.col(i), {0.0, 1.0}, psi, psi_y, false);
+      double psi_x = psilin(i, points.col(i), {1.0, 0.0}, false).psi_ni;
+      double psi_y = psilin(i, points.col(i), {0.0, 1.0}, false).psi_ni;
 
       normal_vectors.col(i + 1).x() = -psi_x / sqrt(psi_x * psi_x + psi_y * psi_y);
       normal_vectors.col(i + 1).y() = -psi_y / sqrt(psi_x * psi_x + psi_y * psi_y);
