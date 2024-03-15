@@ -48,16 +48,13 @@ bool iterate(XFoil *foil) {
       foil->setBLInitialized(false);
       foil->lipan = false;
     }
-    foil->fcpmin();  // Is it of any use ?
     return true;
   }
   if (!foil->lvconv) {
     m_bErrors = true;
-    foil->fcpmin();  // Is it of any use ?
     return false;
   } else {
     // converged at last
-    foil->fcpmin();  // Is it of any use ?
     return true;
   }
   return false;

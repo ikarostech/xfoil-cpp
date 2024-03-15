@@ -289,10 +289,6 @@ bool XFoil::initialize() {
   tkl_msq = 0.0;
   cpstar = 0.0;
   qstar = 0.0;
-  cpmni = 0.0;
-  cpmnv = 0.0;
-  xcpmni = 0.0;
-  xcpmnv = 0.0;
   sst = 0.0;
   sst_go = 0.0;
   sst_gp = 0.0;
@@ -2040,37 +2036,6 @@ bool XFoil::dslim(double &dstr, double thet, double msq, double hklim) {
 
   dh = std::max(0.0, hklim - hk) / hk_h;
   dstr = (dstr) + dh * thet;
-
-  return true;
-}
-
-/** ------------------------------------------------
- *     finds minimum cp on dist for cavitation work
- * ------------------------------------------------ */
-bool XFoil::fcpmin() {
-  xcpmni = points.col(1).x();
-  xcpmnv = points.col(1).x();
-  cpmni = cpi[1];
-  cpmnv = cpv[1];
-
-  for (int i = 2; i <= n + nw; i++) {
-    if (cpi[i] < cpmni) {
-      xcpmni = points.col(i).x();
-      cpmni = cpi[i];
-    }
-    if (cpv[i] < cpmnv) {
-      xcpmnv = points.col(i).x();
-      cpmnv = cpv[i];
-    }
-  }
-
-  if (lvisc)
-    cpmn = cpmnv;
-  else {
-    cpmn = cpmni;
-    cpmnv = cpmni;
-    xcpmnv = xcpmni;
-  }
 
   return true;
 }

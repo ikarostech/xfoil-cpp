@@ -112,7 +112,6 @@ class XFoil {
   bool viscal();
   bool ViscalEnd();
   bool ViscousIter();
-  bool fcpmin();
   
   bool abcopy(Matrix2Xd copyFrom);
 
@@ -338,7 +337,6 @@ class XFoil {
   double cl_alf, cl_msq;
   double psio, cosa, sina, gamma, gamm1;
   double tkl_msq, cpstar, qstar;
-  double cpmni, cpmnv, xcpmni, xcpmnv;
   double xssi[IVX][ISX], uinv[IVX][ISX], mass[IVX][ISX];
 
   double vti[IVX][ISX];
