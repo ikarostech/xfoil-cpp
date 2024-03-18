@@ -2144,8 +2144,6 @@ bool XFoil::getxyf(Matrix2Xd points, Matrix2Xd dpoints_ds, VectorXd s,
 bool XFoil::ggcalc() {
 
   double res;
-  double bbb[IQX];
-  //	double psiinf;
 
   cosa = cos(alfa);
   sina = sin(alfa);
@@ -2259,34 +2257,25 @@ bool XFoil::ggcalc() {
   }
 
   //---- lu-factor coefficient matrix aij
-  ludcmp(n + 1, aij, aijpiv);
-  FullPivLU<MatrixXd> lu(dpsi_dgam);
+  psi_gamma_lu = FullPivLU<MatrixXd>(dpsi_dgam);
   lqaij = true;
   VectorXd gamu_temp(n + 1);
   //---- solve system for the two vorticity distributions
-  for (int iu = 0; iu < IQX; iu++) {
-    bbb[iu] = gamu[iu][1];  // techwinder : create a dummy array
-  }
+
   for (int iu = 1; iu <= n + 1; iu++) {
-    bbb[iu] = gamu[iu][1];
     gamu_temp[iu - 1] = gamu[iu][1];
   }
-  baksub(n + 1, aij, aijpiv, bbb);
-  gamu_temp = lu.solve(gamu_temp);
+  gamu_temp = psi_gamma_lu.solve(gamu_temp);
   
   for (int iu = 1; iu <= n + 1; iu++) {
-    gamu[iu][1] = bbb[iu];
     gamu[iu][1] = gamu_temp[iu - 1];
   }
 
   for (int iu = 1; iu <= n + 1; iu++) {
-    bbb[iu] = gamu[iu][2];  // techwinder : create a dummy array
     gamu_temp[iu - 1] = gamu[iu][2];
   }
-  baksub(n + 1, aij, aijpiv, bbb);
-  gamu_temp = lu.solve(gamu_temp);
+  gamu_temp = psi_gamma_lu.solve(gamu_temp);
   for (int iu = 1; iu <= n + 1; iu++) {
-    gamu[iu][2] = bbb[iu];
     gamu[iu][2] = gamu_temp[iu - 1];
   }
 
@@ -2298,33 +2287,6 @@ bool XFoil::ggcalc() {
 
   lgamu = true;
 
-  return true;
-}
-
-bool XFoil::baksub(int n, double a[IQX][IQX], const int indx[], double b[]) {
-  double sum;
-  int ii;
-  ii = 0;
-  for (int i = 1; i <= n; i++) {
-    int ll = indx[i];
-    sum = b[ll];
-    b[ll] = b[i];
-    if (ii != 0)
-      for (int j = ii; j <= i - 1; j++) sum = sum - a[i][j] * b[j];
-    else if (sum != 0.0)
-      ii = i;
-
-    b[i] = sum;
-  }
-  //
-  for (int i = n; i >= 1; i--) {
-    sum = b[i];
-    if (i < n)
-      for (int j = i + 1; j <= n; j++) sum = sum - a[i][j] * b[j];
-
-    b[i] = sum / a[i][i];
-  }
-  //
   return true;
 }
 
@@ -2641,75 +2603,6 @@ bool XFoil::lefind(double &sle, Matrix2Xd points, Matrix2Xd dpoints_ds, VectorXd
   }
 
   sle = s[i];
-  return true;
-}
-
-/**    *******************************************************
- *    *                                                     *
- *    *   factors a full nxn matrix into an lu form.        *
- *    *   subr. baksub can back-substitute it with some rhs.*
- *    *   assumes matrix is non-singular...                 *
- *    *    ...if it isn"t, a divide by zero will result.    *
- *    *                                                     *
- *    *   a is the matrix...                                *
- *    *     ...replaced with its lu factors.                *
- *    *                                                     *
- *    *                              mark drela  1988       *
- *    *******************************************************
- */
-
-bool XFoil::ludcmp(int n, double a[IQX][IQX], int indx[IQX]) {
-  int imax = 0;  // added techwinder
-  int nvx = IQX;
-
-  double vv[IQX];
-  double dum, sum, aamax;
-  if (n > nvx) {
-    writeString("Stop ludcmp: array overflow. Increase nvx", true);
-    return false;
-  }
-
-  for (int i = 1; i <= n; i++) {
-    aamax = 0.0;
-    for (int j = 1; j <= n; j++) aamax = std::max(fabs(a[i][j]), aamax);
-    vv[i] = 1.0 / aamax;
-  }
-
-  for (int j = 1; j <= n; j++) {
-    for (int i = 1; i <= j - 1; i++) {
-      sum = a[i][j];
-      for (int k = 1; k <= i - 1; k++) sum = sum - a[i][k] * a[k][j];
-      a[i][j] = sum;
-    }
-
-    aamax = 0.0;
-
-    for (int i = j; i <= n; i++) {
-      sum = a[i][j];
-      for (int k = 1; k <= j - 1; k++) sum = sum - a[i][k] * a[k][j];
-      a[i][j] = sum;
-      dum = (vv[i] * fabs(sum));
-      if (dum >= aamax) {
-        imax = i;
-        aamax = dum;
-      }
-    }
-    //		ASSERT(bimaxok);// to check imax has been initialized
-    if (j != imax) {
-      for (int k = 1; k <= n; k++) {
-        dum = a[imax][k];
-        a[imax][k] = a[j][k];
-        a[j][k] = dum;
-      }
-      vv[imax] = vv[j];
-    }
-
-    indx[j] = imax;
-    if (j != n) {
-      dum = 1.0 / a[j][j];
-      for (int i = j + 1; i <= n; i++) a[i][j] = a[i][j] * dum;
-    }
-  }
   return true;
 }
 
@@ -4043,7 +3936,7 @@ bool XFoil::pswlin(int i, double xi, double yi, double nxi, double nyi,
 bool XFoil::qdcalc() {
   int i, j, k, iu;
   double psi, psi_n, sum;
-  double bbb[IQX];
+  VectorXd gamu_temp(n + 1);
 
   // TRACE("calculating source influence matrix ...\n");
   writeString("   Calculating source influence matrix ...\n");
@@ -4054,10 +3947,13 @@ bool XFoil::qdcalc() {
     for (j = 1; j <= n; j++) {
       //------- multiply each dpsi/sig vector by inverse of factored dpsi/dgam
       // matrix
-      for (iu = 0; iu < IQX; iu++)
-        bbb[iu] = bij[iu][j];  // techwinder : create a dummy array
-      baksub(n + 1, aij, aijpiv, bbb);
-      for (iu = 0; iu < IQX; iu++) bij[iu][j] = bbb[iu];
+      for (iu = 1; iu <= n + 1; iu++) {
+        gamu_temp[iu - 1] = bij[iu][j];
+      }
+      gamu_temp = psi_gamma_lu.solve(gamu_temp);
+      for (iu = 1; iu <= n + 1; iu++) {
+        bij[iu][j] = gamu_temp[iu - 1];
+      }
 
       //------- store resulting dgam/dsig = dqtan/dsig vector
       for (i = 1; i <= n; i++) {
@@ -4085,12 +3981,14 @@ bool XFoil::qdcalc() {
 
   //---- multiply by inverse of factored dpsi/dgam matrix
   for (j = n + 1; j <= n + nw; j++) {
-    //		baksub(iqx,n+1,aijpiv,j);
-    for (iu = 0; iu < IQX; iu++)
-      bbb[iu] = bij[iu][j];  // techwinder : create a dummy array
+    for (iu = 1; iu <= n + 1; iu++) {
+      gamu_temp[iu - 1] = bij[iu][j];
+    }
+    gamu_temp = psi_gamma_lu.solve(gamu_temp);
 
-    baksub(n + 1, aij, aijpiv, bbb);
-    for (iu = 0; iu < IQX; iu++) bij[iu][j] = bbb[iu];
+    for (iu = 1; iu <= n + 1; iu++) {
+      bij[iu][j] = gamu_temp[iu - 1];
+    }
   }
   //---- set the source influence matrix for the wake sources
   for (i = 1; i <= n; i++) {

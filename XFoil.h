@@ -146,7 +146,6 @@ class XFoil {
              double thet2, double rt2, double a2, double acrit, double &ax,
              double &ax_hk1, double &ax_t1, double &ax_rt1, double &ax_a1,
              double &ax_hk2, double &ax_t2, double &ax_rt2, double &ax_a2);
-  bool baksub(int n, double a[IQX][IQX], const int indx[], double b[]);
   bool bldif(int ityp);
   bool blkin();
   bool blmid(int ityp);
@@ -212,8 +211,6 @@ class XFoil {
   bool iblpan();
   bool iblsys();
   bool lefind(double &sle, Matrix2Xd points, Matrix2Xd dpoints_ds, VectorXd s, int n);
-
-  bool ludcmp(int n, double a[IQX][IQX], int indx[IQX]);
   
   bool mrchdu();
   bool mrchue();
@@ -347,7 +344,8 @@ class XFoil {
   double qinv[IZX], qinvu[IZX][3], qinv_a[IZX];
   double dzdg[IQX], dzdm[IZX], dqdg[IQX], dqdm[IZX];
   double aij[IQX][IQX];
-  MatrixXd dpsi_dgam;
+  FullPivLU<MatrixXd> psi_gamma_lu;
+  
   double bij[IQX][IZX], dij[IZX][IZX];
   double cij[IWX][IQX];
   double hopi, qopi;
