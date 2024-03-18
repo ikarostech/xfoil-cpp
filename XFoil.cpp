@@ -96,11 +96,8 @@ bool XFoil::initialize() {
 
   n = 0;  // so that current airfoil is not initialized
 
-  memset(aijpiv, 0, sizeof(aijpiv));
   memset(apanel, 0, sizeof(apanel));
   memset(blsav, 0, sizeof(blsav));
-  memset(aij, 0, sizeof(aij));
-  
   memset(bij, 0, sizeof(bij));
   memset(cij, 0, sizeof(cij));
   memset(cpi, 0, sizeof(cpi));
@@ -2158,6 +2155,10 @@ bool XFoil::ggcalc() {
   psio = 0.0;
   MatrixXd dpsi_dgam = MatrixXd::Zero(n + 1, n + 1);
 
+  //TODO Matrix化
+  VectorXd psi1 = VectorXd::Zero(n+1);
+  VectorXd psi2 = VectorXd::Zero(n+1);
+
   //---- set up matrix system for  psi = psio  on airfoil surface.
   //-    the unknowns are (dgamma)i and dpsio.
   for (int i = 1; i <= n; i++) {
@@ -2168,9 +2169,8 @@ bool XFoil::ggcalc() {
     const double res2 = -qinf * points.col(i).x();
 
     //------ dres/dgamma
-    for (int j = 1; j <= n; j++) {
-      aij[i][j] = dzdg[j];
-      dpsi_dgam(i - 1, j - 1) = dzdg[j];
+    for (int j = 0; j < n; j++) {
+      dpsi_dgam(i - 1, j) = dzdg[j + INDEX_START_WITH];
     }
 
     for (int j = 1; j <= n; j++) {
@@ -2178,29 +2178,25 @@ bool XFoil::ggcalc() {
     }
 
     //------ dres/dpsio
-    aij[i][n + 1] = -1.0;
     dpsi_dgam(i - 1, n) = -1.0;
 
-    gamu[i][1] = -res1;
-    gamu[i][2] = -res2;
+    psi1[i - 1] = -res1;
+    psi2[i - 1] = -res2;
   }
 
   //---- set Kutta condition
   //-    res = gam(1) + gam[n]
   res = 0.0;
 
-  for (int j = 1; j <= n + 1; j++) {
-    aij[n + 1][j] = 0.0;
-    dpsi_dgam(n, j - 1) = 0;
+  for (int j = 0; j < n + 1; j++) {
+    dpsi_dgam(n, j) = 0;
   }
 
-  aij[n + 1][1] = 1.0;
-  aij[n + 1][n] = 1.0;
   dpsi_dgam(n, 0) = 1;
   dpsi_dgam(n, n - 1) = 1;
 
-  gamu[n + 1][1] = -res;
-  gamu[n + 1][2] = -res;
+  psi1[n] = -res;
+  psi2[n] = -res;
 
   //---- set up Kutta condition (no direct source influence)
   for (int j = 1; j <= n; j++) bij[n + 1][j] = 0.0;
@@ -2237,23 +2233,21 @@ bool XFoil::ggcalc() {
 
     
     //----- dres/dgamma
-    for (int j = 1; j <= n; j++) {
-      aij[n][j] = dqdg[j];
-      dpsi_dgam(n - 1, j - 1) = dqdg[j];
+    for (int j = 0; j < n; j++) {
+      dpsi_dgam(n - 1, j) = dqdg[j + INDEX_START_WITH];
     }
 
     //----- -dres/dmass
     for (int j = 1; j <= n; j++) bij[n][j] = -dqdm[j];
 
     //----- dres/dpsio
-    aij[n][n + 1] = 0.0;
     dpsi_dgam(n - 1, n);
 
     //----- -dres/duinf
-    gamu[n][1] = -cbis;
+    psi1[n - 1] = -cbis;
 
     //----- -dres/dvinf
-    gamu[n][2] = -sbis;
+    psi2[n - 1] = -sbis;
   }
 
   //---- lu-factor coefficient matrix aij
@@ -2262,19 +2256,13 @@ bool XFoil::ggcalc() {
   VectorXd gamu_temp(n + 1);
   //---- solve system for the two vorticity distributions
 
-  for (int iu = 1; iu <= n + 1; iu++) {
-    gamu_temp[iu - 1] = gamu[iu][1];
-  }
-  gamu_temp = psi_gamma_lu.solve(gamu_temp);
+  gamu_temp = psi_gamma_lu.solve(psi1);
   
   for (int iu = 1; iu <= n + 1; iu++) {
     gamu[iu][1] = gamu_temp[iu - 1];
   }
 
-  for (int iu = 1; iu <= n + 1; iu++) {
-    gamu_temp[iu - 1] = gamu[iu][2];
-  }
-  gamu_temp = psi_gamma_lu.solve(gamu_temp);
+  gamu_temp = psi_gamma_lu.solve(psi2);
   for (int iu = 1; iu <= n + 1; iu++) {
     gamu[iu][2] = gamu_temp[iu - 1];
   }

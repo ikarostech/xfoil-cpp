@@ -329,7 +329,6 @@ class XFoil {
   double chord, wgap[IWX], waklen;
   int nw, ist;
 
-  int aijpiv[IQX];
 
   double cl_alf, cl_msq;
   double psio, cosa, sina, gamma, gamm1;
@@ -343,7 +342,6 @@ class XFoil {
   double dste, aste;
   double qinv[IZX], qinvu[IZX][3], qinv_a[IZX];
   double dzdg[IQX], dzdm[IZX], dqdg[IQX], dqdm[IZX];
-  double aij[IQX][IQX];
   FullPivLU<MatrixXd> psi_gamma_lu;
   
   double bij[IQX][IZX], dij[IZX][IZX];
