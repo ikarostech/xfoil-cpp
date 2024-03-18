@@ -2156,8 +2156,7 @@ bool XFoil::ggcalc() {
   MatrixXd dpsi_dgam = MatrixXd::Zero(n + 1, n + 1);
 
   //TODO Matrix化
-  VectorXd psi1 = VectorXd::Zero(n+1);
-  VectorXd psi2 = VectorXd::Zero(n+1);
+  Matrix2Xd psi = Matrix2Xd::Zero(2, n + 1);
 
   //---- set up matrix system for  psi = psio  on airfoil surface.
   //-    the unknowns are (dgamma)i and dpsio.
@@ -2180,8 +2179,8 @@ bool XFoil::ggcalc() {
     //------ dres/dpsio
     dpsi_dgam(i - 1, n) = -1.0;
 
-    psi1[i - 1] = -res1;
-    psi2[i - 1] = -res2;
+    psi.col(i - 1).x() = -res1;
+    psi.col(i - 1).y() = -res2;
   }
 
   //---- set Kutta condition
@@ -2195,8 +2194,8 @@ bool XFoil::ggcalc() {
   dpsi_dgam(n, 0) = 1;
   dpsi_dgam(n, n - 1) = 1;
 
-  psi1[n] = -res;
-  psi2[n] = -res;
+  psi.col(n).x() = -res;
+  psi.col(n).y() = -res;
 
   //---- set up Kutta condition (no direct source influence)
   for (int j = 1; j <= n; j++) bij[n + 1][j] = 0.0;
@@ -2244,10 +2243,10 @@ bool XFoil::ggcalc() {
     dpsi_dgam(n - 1, n);
 
     //----- -dres/duinf
-    psi1[n - 1] = -cbis;
+    psi.col(n - 1).x() = -cbis;
 
     //----- -dres/dvinf
-    psi2[n - 1] = -sbis;
+    psi.col(n - 1).y() = -sbis;
   }
 
   //---- lu-factor coefficient matrix aij
@@ -2256,13 +2255,13 @@ bool XFoil::ggcalc() {
   VectorXd gamu_temp(n + 1);
   //---- solve system for the two vorticity distributions
 
-  gamu_temp = psi_gamma_lu.solve(psi1);
+  gamu_temp = psi_gamma_lu.solve(psi.row(0).transpose());
   
   for (int iu = 1; iu <= n + 1; iu++) {
     gamu[iu][1] = gamu_temp[iu - 1];
   }
 
-  gamu_temp = psi_gamma_lu.solve(psi2);
+  gamu_temp = psi_gamma_lu.solve(psi.row(1).transpose());
   for (int iu = 1; iu <= n + 1; iu++) {
     gamu[iu][2] = gamu_temp[iu - 1];
   }
