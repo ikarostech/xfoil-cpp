@@ -100,6 +100,7 @@ bool XFoil::initialize() {
   memset(apanel, 0, sizeof(apanel));
   memset(blsav, 0, sizeof(blsav));
   memset(aij, 0, sizeof(aij));
+  
   memset(bij, 0, sizeof(bij));
   memset(cij, 0, sizeof(cij));
   memset(cpi, 0, sizeof(cpi));
@@ -345,6 +346,7 @@ bool XFoil::abcopy(Matrix2Xd copyFrom) {
 
   while (r < n) {
     r++;
+    //FIXME double型の==比較
     if (points.col(r - 1).x() == points.col(r).x() && points.col(r - 1).y() == points.col(r).y()) {
       for (int j = r; j <= n - 1; j++) {
         points.col(j).x() = points.col(j + 1).x();
@@ -392,6 +394,7 @@ bool XFoil::apcalc() {
   for (int i = 1; i <= n - 1; i++) {
     sx = points.col(i + 1).x() - points.col(i).x();
     sy = points.col(i + 1).y() - points.col(i).y();
+    //FIXME double型の==比較
     if (sx == 0.0 && sy == 0.0)
       apanel[i] = atan2(-normal_vectors.col(i).y(), -normal_vectors.col(i).x());
     else
@@ -1833,6 +1836,7 @@ bool XFoil::comset() {
       1.0 / (1.0 + beta) / (1.0 + beta) - 2.0 * tklam / (1.0 + beta) * beta_msq;
 
   //---- set sonic pressure coefficient and speed
+  //FIXME double型の==比較
   if (minf == 0.0) {
     cpstar = -999.0;
     qstar = 999.0;
@@ -2154,6 +2158,7 @@ bool XFoil::ggcalc() {
     gamu[i][2] = 0.0;
   }
   psio = 0.0;
+  MatrixXd dpsi_dgam = MatrixXd::Zero(n + 1, n + 1);
 
   //---- set up matrix system for  psi = psio  on airfoil surface.
   //-    the unknowns are (dgamma)i and dpsio.
@@ -2167,6 +2172,7 @@ bool XFoil::ggcalc() {
     //------ dres/dgamma
     for (int j = 1; j <= n; j++) {
       aij[i][j] = dzdg[j];
+      dpsi_dgam(i - 1, j - 1) = dzdg[j];
     }
 
     for (int j = 1; j <= n; j++) {
@@ -2175,6 +2181,7 @@ bool XFoil::ggcalc() {
 
     //------ dres/dpsio
     aij[i][n + 1] = -1.0;
+    dpsi_dgam(i - 1, n) = -1.0;
 
     gamu[i][1] = -res1;
     gamu[i][2] = -res2;
@@ -2184,10 +2191,15 @@ bool XFoil::ggcalc() {
   //-    res = gam(1) + gam[n]
   res = 0.0;
 
-  for (int j = 1; j <= n + 1; j++) aij[n + 1][j] = 0.0;
+  for (int j = 1; j <= n + 1; j++) {
+    aij[n + 1][j] = 0.0;
+    dpsi_dgam(n, j - 1) = 0;
+  }
 
   aij[n + 1][1] = 1.0;
   aij[n + 1][n] = 1.0;
+  dpsi_dgam(n, 0) = 1;
+  dpsi_dgam(n, n - 1) = 1;
 
   gamu[n + 1][1] = -res;
   gamu[n + 1][2] = -res;
@@ -2225,14 +2237,19 @@ bool XFoil::ggcalc() {
     //----- set velocity component along bisector line
     psilin(0, bis, normal_bis, true);
 
+    
     //----- dres/dgamma
-    for (int j = 1; j <= n; j++) aij[n][j] = dqdg[j];
+    for (int j = 1; j <= n; j++) {
+      aij[n][j] = dqdg[j];
+      dpsi_dgam(n - 1, j - 1) = dqdg[j];
+    }
 
     //----- -dres/dmass
     for (int j = 1; j <= n; j++) bij[n][j] = -dqdm[j];
 
     //----- dres/dpsio
     aij[n][n + 1] = 0.0;
+    dpsi_dgam(n - 1, n);
 
     //----- -dres/duinf
     gamu[n][1] = -cbis;
@@ -2243,18 +2260,35 @@ bool XFoil::ggcalc() {
 
   //---- lu-factor coefficient matrix aij
   ludcmp(n + 1, aij, aijpiv);
+  FullPivLU<MatrixXd> lu(dpsi_dgam);
   lqaij = true;
-
+  VectorXd gamu_temp(n + 1);
   //---- solve system for the two vorticity distributions
-  for (int iu = 0; iu < IQX; iu++)
+  for (int iu = 0; iu < IQX; iu++) {
     bbb[iu] = gamu[iu][1];  // techwinder : create a dummy array
+  }
+  for (int iu = 1; iu <= n + 1; iu++) {
+    bbb[iu] = gamu[iu][1];
+    gamu_temp[iu - 1] = gamu[iu][1];
+  }
   baksub(n + 1, aij, aijpiv, bbb);
-  for (int iu = 0; iu < IQX; iu++) gamu[iu][1] = bbb[iu];
+  gamu_temp = lu.solve(gamu_temp);
+  
+  for (int iu = 1; iu <= n + 1; iu++) {
+    gamu[iu][1] = bbb[iu];
+    gamu[iu][1] = gamu_temp[iu - 1];
+  }
 
-  for (int iu = 0; iu < IQX; iu++)
+  for (int iu = 1; iu <= n + 1; iu++) {
     bbb[iu] = gamu[iu][2];  // techwinder : create a dummy array
+    gamu_temp[iu - 1] = gamu[iu][2];
+  }
   baksub(n + 1, aij, aijpiv, bbb);
-  for (int iu = 0; iu < IQX; iu++) gamu[iu][2] = bbb[iu];
+  gamu_temp = lu.solve(gamu_temp);
+  for (int iu = 1; iu <= n + 1; iu++) {
+    gamu[iu][2] = bbb[iu];
+    gamu[iu][2] = gamu_temp[iu - 1];
+  }
 
   //---- set inviscid alpha=0,90 surface speeds for this geometry
   for (int i = 1; i <= n + 1; i++) {
@@ -4675,6 +4709,7 @@ bool XFoil::setexp(double spline_length[], double ds1, double smax, int nn) {
     else
       ratio = (-bbb + sqrt(disc)) / (2.0 * aaa) + 1.0;
   }
+  //FIXME double型の==比較
   if (ratio == 1.0) goto stop11;
 
   //-- newton iteration for actual geometric ratio
@@ -4775,6 +4810,7 @@ bool XFoil::specal() {
       mrcl(clm, minf_clm, reinf_clm);
 
       //-------- if mach is ok, go do next newton iteration
+      //FIXME double型の==比較
       if (mach_type == MachType::CONSTANT || minf == 0.0 || minf_clm != 0.0) break;  // goto 91
 
       rlx = 0.5 * rlx;

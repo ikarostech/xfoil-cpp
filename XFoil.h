@@ -347,6 +347,7 @@ class XFoil {
   double qinv[IZX], qinvu[IZX][3], qinv_a[IZX];
   double dzdg[IQX], dzdm[IZX], dqdg[IQX], dqdm[IZX];
   double aij[IQX][IQX];
+  MatrixXd dpsi_dgam;
   double bij[IQX][IZX], dij[IZX][IZX];
   double cij[IWX][IQX];
   double hopi, qopi;
