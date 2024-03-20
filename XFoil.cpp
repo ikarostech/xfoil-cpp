@@ -255,7 +255,6 @@ bool XFoil::initialize() {
   reybl = 0.0;
   reybl_ms = 0.0;
   reybl_re = 0.0;
-  gambl = 0.0;
   gm1bl = 0.0;
   hvrat = 0.0;
   bule = 0.0;
@@ -2155,7 +2154,6 @@ bool XFoil::ggcalc() {
   psio = 0.0;
   MatrixXd dpsi_dgam = MatrixXd::Zero(n + 1, n + 1);
 
-  //TODO Matrix化
   Matrix2Xd psi = Matrix2Xd::Zero(2, n + 1);
 
   //---- set up matrix system for  psi = psio  on airfoil surface.
@@ -2208,28 +2206,21 @@ bool XFoil::ggcalc() {
     const double ag2 = atanc(dpoints_ds.col(n).y(), dpoints_ds.col(n).x(), ag1);
     const double abis = 0.5 * (ag1 + ag2);
 
-    const double cbis = cos(abis);
-    const double sbis = sin(abis);
+    Vector2d bis_vector {cos(abis), sin(abis)};
 
     //----- minimum panel length adjacent to TE
-    const double ds1 = sqrt((points.col(1).x() - points.col(2).x()) * (points.col(1).x() - points.col(2).x()) + (points.col(1).y() - points.col(2).y()) * (points.col(1).y() - points.col(2).y()));
-    const double ds2 = sqrt((points.col(n).x() - points.col(n - 1).x()) * (points.col(n).x() - points.col(n - 1).x()) +
-               (points.col(n).y() - points.col(n - 1).y()) * (points.col(n).y() - points.col(n - 1).y()));
-    const double dsmin = std::min(ds1, ds2);
+    const double dsmin = std::min((points.col(1) - points.col(2)).norm(), (points.col(n) - points.col(n - 1)).norm());
 
     //---- distance of internal control point ahead of sharp TE
     //-    (fraction of smaller panel length adjacent to TE)
     const double bwt = 0.1;
 
     //----- control point on bisector just ahead of TE point
-    const double xbis = point_te.x() - bwt * dsmin * cbis;
-    const double ybis = point_te.y() - bwt * dsmin * sbis;
-    const Vector2d bis {xbis, ybis};
-    const Vector2d normal_bis {-sbis, cbis};
+    const Vector2d bis = point_te - bwt * dsmin * bis_vector;
+    const Vector2d normal_bis {-bis_vector.y(), bis_vector.x()};
 
     //----- set velocity component along bisector line
     psilin(0, bis, normal_bis, true);
-
     
     //----- dres/dgamma
     for (int j = 0; j < n; j++) {
@@ -2242,11 +2233,8 @@ bool XFoil::ggcalc() {
     //----- dres/dpsio
     dpsi_dgam(n - 1, n);
 
-    //----- -dres/duinf
-    psi.col(n - 1).x() = -cbis;
-
-    //----- -dres/dvinf
-    psi.col(n - 1).y() = -sbis;
+    //----- -dres/duinf -dres/dvinf
+    psi.col(n - 1) = -bis_vector;
   }
 
   //---- lu-factor coefficient matrix aij
@@ -3784,8 +3772,7 @@ bool XFoil::pswlin(int i, double xi, double yi, double nxi, double nyi,
     } else {
       if (jo == n + nw - 1) jq = jp;
     }
-    const double dso = sqrt((points.col(jo).x() - points.col(jp).x()) * (points.col(jo).x() - points.col(jp).x()) +
-               (points.col(jo).y() - points.col(jp).y()) * (points.col(jo).y() - points.col(jp).y()));
+    const double dso = (points.col(jo) - points.col(jp)).norm() ;
     const double dsio = 1.0 / dso;
 
     const double apan = apanel[jo];
@@ -3851,8 +3838,7 @@ bool XFoil::pswlin(int i, double xi, double yi, double nxi, double nyi,
     double pdx0 = ((blData1.xz + x0) * psx0 + psum - 2.0 * x0 * (t0 - apan) + pdif) * dxinv;
     double pdyy = ((blData1.xz + x0) * psyy + 2.0 * (x0 - blData1.xz + yy * (t1 - t0))) * dxinv;
 
-    const double dsm = sqrt((points.col(jp).x() - points.col(jm).x()) * (points.col(jp).x() - points.col(jm).x()) +
-               (points.col(jp).y() - points.col(jm).y()) * (points.col(jp).y() - points.col(jm).y()));
+    const double dsm = (points.col(jp) - points.col(jm)).norm();
     const double dsim = 1.0 / dsm;
 
     double ssum = (sig[jp] - sig[jo]) / dso + (sig[jp] - sig[jm]) * dsim;
@@ -3889,8 +3875,7 @@ bool XFoil::pswlin(int i, double xi, double yi, double nxi, double nyi,
     const double pdx2 = ((x0 + blData2.xz) * psx2 + psum - 2.0 * blData2.xz * (t2 - apan) + pdif) * dxinv;
     pdyy = ((x0 + blData2.xz) * psyy + 2.0 * (blData2.xz - x0 + yy * (t0 - t2))) * dxinv;
 
-    const double dsp = sqrt((points.col(jq).x() - points.col(jo).x()) * (points.col(jq).x() - points.col(jo).x()) +
-               (points.col(jq).y() - points.col(jo).y()) * (points.col(jq).y() - points.col(jo).y()));
+    const double dsp = (points.col(jq) - points.col(jo)).norm();
     const double dsip = 1.0 / dsp;
 
     ssum = (sig[jq] - sig[jo]) * dsip + (sig[jp] - sig[jo]) / dso;
@@ -4161,7 +4146,6 @@ bool XFoil::setbl() {
   comset();
 
   //---- set gas constant (= cp/cv)
-  gambl = gamma;
   gm1bl = gamm1;
 
   //---- set parameters for compressibility correction
@@ -6130,8 +6114,7 @@ bool XFoil::xicalc() {
   for (ibl = iblte[is] + 2; ibl <= nbl[is]; ibl++) {
     int i = ipan[ibl][is];
     xssi[ibl][is] =
-        xssi[ibl - 1][is] + sqrt((points.col(i).x() - points.col(i - 1).x()) * (points.col(i).x() - points.col(i - 1).x()) +
-                                 (points.col(i).y() - points.col(i - 1).y()) * (points.col(i).y() - points.col(i - 1).y()));
+        xssi[ibl - 1][is] + (points.col(i) - points.col(i - 1)).norm();
   }
 
   //---- trailing edge flap length to te gap ratio

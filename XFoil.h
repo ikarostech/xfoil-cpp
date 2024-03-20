@@ -354,7 +354,7 @@ class XFoil {
   bool trforc, simi, tran, turb, wake, trfree;
 
   double dwte, qinfbl, tkbl, tkbl_ms, rstbl, rstbl_ms, hstinv, hstinv_ms;
-  double reybl, reybl_ms, reybl_re, gambl, gm1bl, hvrat, bule, xiforc, amcrit;
+  double reybl, reybl_ms, reybl_re, gm1bl, hvrat, bule, xiforc, amcrit;
 
   blData blData1, blData2;
 
