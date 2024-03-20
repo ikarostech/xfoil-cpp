@@ -530,9 +530,8 @@ bool XFoil::bldif(int ityp) {
   double upw, upw_hl, upw_hd, upw_hk1, upw_hk2, upw_u1, upw_t1, upw_d1;
   double upw_u2, upw_t2, upw_d2, upw_ms;
   double dxi, slog, scc, scc_usa;
-double ax, ax_t1, ax_rt1, ax_a1, ax_hk2, ax_t2, ax_rt2, ax_a2;
   double rezc, z_ax, hr, hr_hka;
-  double hl_hk1, hl_hk2, ax_hk1, sa, cqa, cfa, hka, usa, rta, dea, da, ald;
+  double hl_hk1, hl_hk2, sa, cqa, cfa, hka, usa, rta, dea, da, ald;
   double gcc, hkc, hkc_hka, rezt, rezh;
   double btmp, hwa, ha, ma, xa, ta, xlog, ulog, tlog, hlog, ddlog;
   double z_cfx, z_ha, z_hwa, z_ma, z_xl, z_tl, z_cfm, z_t1, z_t2;
@@ -622,25 +621,27 @@ double ax, ax_t1, ax_rt1, ax_a1, ax_hk2, ax_t2, ax_rt2, ax_a2;
       //***** laminar part -->  set amplification equation
       //----- set average amplification ax over interval x1..x2
 
-      axset(blData1.hkz, blData1.tz, blData1.rtz, blData1.amplz, blData2.hkz, blData2.tz, blData2.rtz, blData2.amplz, amcrit, ax,
-            ax_hk1, ax_t1, ax_rt1, ax_a1, ax_hk2, ax_t2, ax_rt2, ax_a2);
+      AxResult ax_result;
 
-      rezc = blData2.amplz - blData1.amplz - ax * (blData2.xz - blData1.xz);
+      axset(blData1.hkz, blData1.tz, blData1.rtz, blData1.amplz, blData2.hkz, blData2.tz, blData2.rtz, blData2.amplz, amcrit, ax_result.ax,
+            ax_result.ax_hk1, ax_result.ax_t1, ax_result.ax_rt1, ax_result.ax_a1, ax_result.ax_hk2, ax_result.ax_t2, ax_result.ax_rt2, ax_result.ax_a2);
+
+      rezc = blData2.amplz - blData1.amplz - ax_result.ax * (blData2.xz - blData1.xz);
       z_ax = -(blData2.xz - blData1.xz);
 
-      vs1[1][1] = z_ax * ax_a1 - 1.0;
-      vs1[1][2] = z_ax * (ax_hk1 * blData1.hkz_tz + ax_t1 + ax_rt1 * blData1.rtz_tz);
-      vs1[1][3] = z_ax * (ax_hk1 * blData1.hkz_dz);
-      vs1[1][4] = z_ax * (ax_hk1 * blData1.hkz_uz + ax_rt1 * blData1.rtz_uz);
-      vs1[1][5] = ax;
-      vs2[1][1] = z_ax * ax_a2 + 1.0;
-      vs2[1][2] = z_ax * (ax_hk2 * blData2.hkz_tz + ax_t2 + ax_rt2 * blData2.rtz_tz);
-      vs2[1][3] = z_ax * (ax_hk2 * blData2.hkz_dz);
-      vs2[1][4] = z_ax * (ax_hk2 * blData2.hkz_uz + ax_rt2 * blData2.rtz_uz);
-      vs2[1][5] = -ax;
-      vsm[1] = z_ax * (ax_hk1 * blData1.hkz_ms + ax_rt1 * blData1.rtz_ms + ax_hk2 * blData2.hkz_ms +
-                       ax_rt2 * blData2.rtz_ms);
-      vsr[1] = z_ax * (ax_rt1 * blData1.rtz_re + ax_rt2 * blData2.rtz_re);
+      vs1[1][1] = z_ax * ax_result.ax_a1 - 1.0;
+      vs1[1][2] = z_ax * (ax_result.ax_hk1 * blData1.hkz_tz + ax_result.ax_t1 + ax_result.ax_rt1 * blData1.rtz_tz);
+      vs1[1][3] = z_ax * (ax_result.ax_hk1 * blData1.hkz_dz);
+      vs1[1][4] = z_ax * (ax_result.ax_hk1 * blData1.hkz_uz + ax_result.ax_rt1 * blData1.rtz_uz);
+      vs1[1][5] = ax_result.ax;
+      vs2[1][1] = z_ax * ax_result.ax_a2 + 1.0;
+      vs2[1][2] = z_ax * (ax_result.ax_hk2 * blData2.hkz_tz + ax_result.ax_t2 + ax_result.ax_rt2 * blData2.rtz_tz);
+      vs2[1][3] = z_ax * (ax_result.ax_hk2 * blData2.hkz_dz);
+      vs2[1][4] = z_ax * (ax_result.ax_hk2 * blData2.hkz_uz + ax_result.ax_rt2 * blData2.rtz_uz);
+      vs2[1][5] = -ax_result.ax;
+      vsm[1] = z_ax * (ax_result.ax_hk1 * blData1.hkz_ms + ax_result.ax_rt1 * blData1.rtz_ms + ax_result.ax_hk2 * blData2.hkz_ms +
+                       ax_result.ax_rt2 * blData2.rtz_ms);
+      vsr[1] = z_ax * (ax_result.ax_rt1 * blData1.rtz_re + ax_result.ax_rt2 * blData2.rtz_re);
       vsx[1] = 0.0;
       vsrez[1] = -rezc;
     } else {
@@ -5027,29 +5028,25 @@ bool XFoil::trchek() {
   //
   //----------------------------------------------------------------
   int itam = 0;
-double ax_hk1 = 0.0, ax_t1 = 0.0, ax_a1 = 0.0, ax_hk2 = 0.0, ax_t2 = 0.0,
-         ax_rt2 = 0.0, ax_a2 = 0.0;
   double amplt, sfa, sfa_a1, sfa_a2, sfx;
   double sfx_x1, sfx_x2, sfx_xf;
   double tt, dt, ut, amsave;
-  double ax = 0.0, ax_rt1 = 0.0, res = 0.0, res_a2 = 0.0;
+  double res = 0.0, res_a2 = 0.0;
   double da2 = 0.0, dxt = 0.0, tt_t1 = 0.0, dt_d1 = 0.0, ut_u1 = 0.0;
   double tt_t2 = 0.0, dt_d2 = 0.0, ut_u2 = 0.0, tt_a1 = 0.0, dt_a1 = 0.0;
   double ut_a1 = 0.0, tt_x1 = 0.0, dt_x1 = 0.0, ut_x1 = 0.0, tt_x2 = 0.0,
          dt_x2 = 0.0, ut_x2 = 0.0;
-  double ax_d1 = 0.0, ax_u1 = 0.0, ax_x1 = 0.0, ax_d2 = 0.0, ax_u2 = 0.0,
-         ax_x2 = 0.0, ax_ms = 0.0, ax_re = 0.0;
   double z_ax = 0.0, z_a1 = 0.0, z_t1 = 0.0, z_d1 = 0.0, z_u1 = 0.0, z_x1 = 0.0,
          z_a2 = 0.0, z_t2 = 0.0, z_d2 = 0.0, z_u2 = 0.0, z_x2 = 0.0, z_ms = 0.0,
          z_re = 0.0;
-  double ax_at, ax_rtt, ax_tt, ax_hkt, amplt_a2, wf1, wf1_a1, wf1_a2, wf1_xf,
+  double amplt_a2, wf1, wf1_a1, wf1_a2, wf1_xf,
       wf1_x1, wf1_x2;
   double wf2, wf2_a1, wf2_a2, wf2_xf, wf2_x1, wf2_x2, xt_a2, dt_a2, tt_a2;
   double ut_a2, hkt, hkt_tt, hkt_dt, hkt_ut, hkt_ms, rtt_tt, rtt_ut, rtt_ms,
       rtt, rtt_re;
   double daeps = 0.00005;
 
-  ax_at = ax_rtt = ax_tt = ax_hkt = amplt_a2 = wf1 = wf1_a1 = wf1_xf = wf1_x1 = wf1_x2 = 0.0;
+  amplt_a2 = wf1 = wf1_a1 = wf1_xf = wf1_x1 = wf1_x2 = 0.0;
   wf2 = wf2_a1 = wf2_xf = wf2_x1 = wf2_x2 = xt_a2 = dt_a2 = tt_a2 = 0.0;
   ut_a2 = hkt_tt = hkt_dt = hkt_ut = hkt_ms = rtt_tt = rtt_ut = rtt_ms = rtt_re = 0.0;
 
@@ -5057,13 +5054,16 @@ double ax_hk1 = 0.0, ax_t1 = 0.0, ax_a1 = 0.0, ax_hk2 = 0.0, ax_t2 = 0.0,
   saveblData(2);
 
   //---- calculate average amplification rate ax over x1..x2 interval
-  axset(blData1.hkz, blData1.tz, blData1.rtz, blData1.amplz, blData2.hkz, blData2.tz, blData2.rtz, blData2.amplz, amcrit, ax, ax_hk1,
-        ax_t1, ax_rt1, ax_a1, ax_hk2, ax_t2, ax_rt2, ax_a2);
+  AxResult ax_result;
+  axset(blData1.hkz, blData1.tz, blData1.rtz, blData1.amplz, blData2.hkz, blData2.tz, blData2.rtz, blData2.amplz, amcrit, 
+        ax_result.ax, ax_result.ax_hk1, ax_result.ax_t1, ax_result.ax_rt1, ax_result.ax_a1, 
+        ax_result.ax_hk2,  ax_result.ax_t2,  ax_result.ax_rt2,  ax_result.ax_a2);
 
   //---- set initial guess for iterate n2 (ampl2) at x2
-  blData2.amplz = blData1.amplz + ax * (blData2.xz - blData1.xz);
+  blData2.amplz = blData1.amplz + ax_result.ax * (blData2.xz - blData1.xz);
 
   //---- solve implicit system for amplification ampl2
+  AxResult interval_ax_result;
   for (itam = 1; itam <= 30; itam++) {
     //---- define weighting factors wf1,wf2 for defining "t" quantities from 1,2
     if (blData2.amplz <= amcrit) {
@@ -5158,20 +5158,21 @@ double ax_hk1 = 0.0, ax_t1 = 0.0, ax_a1 = 0.0, ax_hk2 = 0.0, ax_t2 = 0.0,
     blData2.amplz = amsave;
 
     //---- calculate amplification rate ax over current x1-xt interval
-    axset(blData1.hkz, blData1.tz, blData1.rtz, blData1.amplz, hkt, tt, rtt, amplt, amcrit, ax, ax_hk1,
-          ax_t1, ax_rt1, ax_a1, ax_hkt, ax_tt, ax_rtt, ax_at);
+    axset(blData1.hkz, blData1.tz, blData1.rtz, blData1.amplz, hkt, tt, rtt, amplt, amcrit, 
+    interval_ax_result.ax, interval_ax_result.ax_hk1, interval_ax_result.ax_t1, interval_ax_result.ax_rt1, interval_ax_result.ax_a1, 
+    interval_ax_result.ax_hk2, interval_ax_result.ax_t2, interval_ax_result.ax_rt2, interval_ax_result.ax_a2);
 
     //---- punch out early if there is no amplification here
-    if (ax <= 0.0) goto stop101;
+    if (interval_ax_result.ax <= 0.0) goto stop101;
 
     //---- set sensitivity of ax(a2)
-    ax_a2 = (ax_hkt * hkt_tt + ax_tt + ax_rtt * rtt_tt) * tt_a2 +
-            (ax_hkt * hkt_dt) * dt_a2 +
-            (ax_hkt * hkt_ut + ax_rtt * rtt_ut) * ut_a2 + ax_at * amplt_a2;
+    interval_ax_result.ax_a2 = (interval_ax_result.ax_hk2 * hkt_tt + interval_ax_result.ax_t2 + interval_ax_result.ax_rt2 * rtt_tt) * tt_a2 +
+            (interval_ax_result.ax_hk2 * hkt_dt) * dt_a2 +
+            (interval_ax_result.ax_hk2 * hkt_ut + interval_ax_result.ax_rt2 * rtt_ut) * ut_a2 + interval_ax_result.ax_a2 * amplt_a2;
 
     //---- residual for implicit ampl2 definition (amplification equation)
-    res = blData2.amplz - blData1.amplz - ax * (blData2.xz - blData1.xz);
-    res_a2 = 1.0 - ax_a2 * (blData2.xz - blData1.xz);
+    res = blData2.amplz - blData1.amplz - interval_ax_result.ax * (blData2.xz - blData1.xz);
+    res_a2 = 1.0 -  interval_ax_result.ax_a2 * (blData2.xz - blData1.xz);
 
     da2 = -res / res_a2;
 
@@ -5266,34 +5267,34 @@ stop101:
   //---- at this point, ax = ax( hk1, t1, rt1, a1, hkt, tt, rtt, at )
 
   //---- set sensitivities of ax( t1 d1 u1 a1 t2 d2 u2 a2 ms re )
-  ax_t1 = ax_hk1 * blData1.hkz_tz + ax_t1 + ax_rt1 * blData1.rtz_tz +
-          (ax_hkt * hkt_tt + ax_tt + ax_rtt * rtt_tt) * tt_t1;
-  ax_d1 = ax_hk1 * blData1.hkz_dz + (ax_hkt * hkt_dt) * dt_d1;
-  ax_u1 = ax_hk1 * blData1.hkz_uz + ax_rt1 * blData1.rtz_uz +
-          (ax_hkt * hkt_ut + ax_rtt * rtt_ut) * ut_u1;
-  ax_a1 = ax_a1 +
-          (ax_hkt * hkt_tt + ax_tt + ax_rtt * rtt_tt) *
+  double ax_t1 = interval_ax_result.ax_hk1 * blData1.hkz_tz + interval_ax_result.ax_t1 + interval_ax_result.ax_rt1 * blData1.rtz_tz +
+          (interval_ax_result.ax_hk2 * hkt_tt + interval_ax_result.ax_t2 + interval_ax_result.ax_rt2 * rtt_tt) * tt_t1;
+  double ax_d1 = interval_ax_result.ax_hk1 * blData1.hkz_dz + (interval_ax_result.ax_hk2 * hkt_dt) * dt_d1;
+  double ax_u1 = interval_ax_result.ax_hk1 * blData1.hkz_uz + interval_ax_result.ax_rt1 * blData1.rtz_uz +
+          (interval_ax_result.ax_hk2 * hkt_ut + interval_ax_result.ax_rt2 * rtt_ut) * ut_u1;
+  double ax_a1 = interval_ax_result.ax_a1 +
+          (interval_ax_result.ax_hk2 * hkt_tt + interval_ax_result.ax_t2 + interval_ax_result.ax_rt2 * rtt_tt) *
               tt_a1
-          + (ax_hkt * hkt_dt) * dt_a1 +
-          (ax_hkt * hkt_ut + ax_rtt * rtt_ut) * ut_a1;
-  ax_x1 = (ax_hkt * hkt_tt + ax_tt + ax_rtt * rtt_tt) * tt_x1 +
-          (ax_hkt * hkt_dt) * dt_x1 +
-          (ax_hkt * hkt_ut + ax_rtt * rtt_ut) * ut_x1;
+          + (interval_ax_result.ax_hk2 * hkt_dt) * dt_a1 +
+          (interval_ax_result.ax_hk2 * hkt_ut + interval_ax_result.ax_rt2 * rtt_ut) * ut_a1;
+  double ax_x1 = (interval_ax_result.ax_hk2 * hkt_tt + interval_ax_result.ax_t2 + interval_ax_result.ax_rt2 * rtt_tt) * tt_x1 +
+          (interval_ax_result.ax_hk2 * hkt_dt) * dt_x1 +
+          (interval_ax_result.ax_hk2 * hkt_ut + interval_ax_result.ax_rt2 * rtt_ut) * ut_x1;
 
-  ax_t2 = (ax_hkt * hkt_tt + ax_tt + ax_rtt * rtt_tt) * tt_t2;
-  ax_d2 = (ax_hkt * hkt_dt) * dt_d2;
-  ax_u2 = (ax_hkt * hkt_ut + ax_rtt * rtt_ut) * ut_u2;
-  ax_a2 = ax_at * amplt_a2 +
-          (ax_hkt * hkt_tt + ax_tt + ax_rtt * rtt_tt) *
+  double ax_t2 = (interval_ax_result.ax_hk2 * hkt_tt + interval_ax_result.ax_t2 + interval_ax_result.ax_rt2 * rtt_tt) * tt_t2;
+  double ax_d2 = (interval_ax_result.ax_hk2 * hkt_dt) * dt_d2;
+  double ax_u2 = (interval_ax_result.ax_hk2 * hkt_ut + interval_ax_result.ax_rt2 * rtt_ut) * ut_u2;
+  double ax_a2 = interval_ax_result.ax_a2 * amplt_a2 +
+          (interval_ax_result.ax_hk2 * hkt_tt + interval_ax_result.ax_t2 + interval_ax_result.ax_rt2 * rtt_tt) *
               tt_a2 
-          + (ax_hkt * hkt_dt) * dt_a2 +
-          (ax_hkt * hkt_ut + ax_rtt * rtt_ut) * ut_a2;
-  ax_x2 = (ax_hkt * hkt_tt + ax_tt + ax_rtt * rtt_tt) * tt_x2 +
-          (ax_hkt * hkt_dt) * dt_x2 +
-          (ax_hkt * hkt_ut + ax_rtt * rtt_ut) * ut_x2;
+          + (interval_ax_result.ax_hk2 * hkt_dt) * dt_a2 +
+          (interval_ax_result.ax_hk2 * hkt_ut + interval_ax_result.ax_rt2 * rtt_ut) * ut_a2;
+  double ax_x2 = (interval_ax_result.ax_hk2 * hkt_tt + interval_ax_result.ax_t2 + interval_ax_result.ax_rt2 * rtt_tt) * tt_x2 +
+          (interval_ax_result.ax_hk2 * hkt_dt) * dt_x2 +
+          (interval_ax_result.ax_hk2 * hkt_ut + interval_ax_result.ax_rt2 * rtt_ut) * ut_x2;
 
-  ax_ms = ax_hkt * hkt_ms + ax_rtt * rtt_ms + ax_hk1 * blData1.hkz_ms + ax_rt1 * blData1.rtz_ms;
-  ax_re = ax_rtt * rtt_re + ax_rt1 * blData1.rtz_re;
+  double ax_ms = interval_ax_result.ax_hk2 * hkt_ms + interval_ax_result.ax_rt2 * rtt_ms + interval_ax_result.ax_hk1 * blData1.hkz_ms + interval_ax_result.ax_rt1 * blData1.rtz_ms;
+  double ax_re = interval_ax_result.ax_rt2 * rtt_re + interval_ax_result.ax_rt1 * blData1.rtz_re;
 
   //---- set sensitivities of residual res
   z_ax = -(blData2.xz - blData1.xz);
@@ -5302,13 +5303,13 @@ stop101:
   z_t1 = z_ax * ax_t1;
   z_d1 = z_ax * ax_d1;
   z_u1 = z_ax * ax_u1;
-  z_x1 = z_ax * ax_x1 + ax;
+  z_x1 = z_ax * ax_x1 + interval_ax_result.ax;
 
   z_a2 = z_ax * ax_a2 + 1.0;
   z_t2 = z_ax * ax_t2;
   z_d2 = z_ax * ax_d2;
   z_u2 = z_ax * ax_u2;
-  z_x2 = z_ax * ax_x2 - ax;
+  z_x2 = z_ax * ax_x2 - interval_ax_result.ax;
 
   z_ms = z_ax * ax_ms;
   z_re = z_ax * ax_re;

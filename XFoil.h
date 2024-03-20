@@ -142,6 +142,18 @@ class XFoil {
   bool saveblData(int icom);
 
   bool apcalc();
+  class AxResult {
+    public:
+    double ax;
+    double ax_hk1;
+    double ax_hk2;
+    double ax_t1;
+    double ax_t2;
+    double ax_rt1;
+    double ax_rt2;
+    double ax_a1;
+    double ax_a2;
+  };
   bool axset(double hk1, double thet1, double rt1, double a1, double hk2,
     double thet2, double rt2, double a2, double acrit, double &ax,
     double &ax_hk1, double &ax_t1, double &ax_rt1, double &ax_a1,
