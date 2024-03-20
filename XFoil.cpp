@@ -89,9 +89,6 @@ XFoil::~XFoil() {}
  *      variable initialization/default routine.
  * --------------------------------------------------- */
 bool XFoil::initialize() {
-
-  hopi = 0.50 / PI;
-  qopi = 0.25 / PI;
   dtor = PI / 180.0;
 
   n = 0;  // so that current airfoil is not initialized
@@ -203,9 +200,6 @@ bool XFoil::initialize() {
   turb = false;
   wake = false;
   trfree = false;
-  tforce[0] = false;
-  tforce[1] = false;
-  tforce[2] = false;
 
   //---- circle plane array size (largest 2  + 1 that will fit array size)
   double ann = log(double((2 * IQX) - 1)) / log(2.0);
@@ -244,7 +238,6 @@ bool XFoil::initialize() {
   ismxbl = 0;
   ist = 0;
 
-  dwte = 0.0;
   qinfbl = 0.0;
   tkbl = 0.0;
   tkbl_ms = 0.0;
@@ -537,7 +530,7 @@ bool XFoil::bldif(int ityp) {
   double upw, upw_hl, upw_hd, upw_hk1, upw_hk2, upw_u1, upw_t1, upw_d1;
   double upw_u2, upw_t2, upw_d2, upw_ms;
   double dxi, slog, scc, scc_usa;
-  double ax, ax_t1, ax_rt1, ax_a1, ax_hk2, ax_t2, ax_rt2, ax_a2;
+double ax, ax_t1, ax_rt1, ax_a1, ax_hk2, ax_t2, ax_rt2, ax_a2;
   double rezc, z_ax, hr, hr_hka;
   double hl_hk1, hl_hk2, ax_hk1, sa, cqa, cfa, hka, usa, rta, dea, da, ald;
   double gcc, hkc, hkc_hka, rezt, rezh;
@@ -2873,9 +2866,6 @@ bool XFoil::mrchdu() {
       //------ turbulent intervals will follow transition interval or te
       if (tran || ibl == iblte[is]) {
         turb = true;
-
-        //------- save transition location
-        tforce[is] = trforc;
       }
 
       tran = false;
@@ -3184,9 +3174,6 @@ bool XFoil::mrchue() {
       //------ turbulent intervals will follow transition interval or te
       if (tran || ibl == iblte[is]) {
         turb = true;
-
-        //------- save transition location
-        tforce[is] = trforc;
       }
 
       tran = false;
@@ -3422,22 +3409,22 @@ XFoil::PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector
     double gsum = gam[jp] + gam[jo];
     double gdif = gam[jp] - gam[jo];
 
-    psi_result.psi += qopi * (psis * gsum + psid * gdif);
+    psi_result.psi += (1 / (4 * PI)) * (psis * gsum + psid * gdif);
 
     //------ dpsi/dgam
-    dzdg[jo] += qopi * (psis - psid);
-    dzdg[jp] += qopi * (psis + psid);
+    dzdg[jo] += (1 / (4 * PI)) * (psis - psid);
+    dzdg[jp] += (1 / (4 * PI)) * (psis + psid);
 
     //------ dpsi/dni
     double psni = psx1 * x1i + psx2 * x2i + psyy * yyi;
     double pdni = pdx1 * x1i + pdx2 * x2i + pdyy * yyi;
-    psi_result.psi_ni += qopi * (gsum * psni + gdif * pdni);
+    psi_result.psi_ni += (1 / (4 * PI)) * (gsum * psni + gdif * pdni);
 
-    qtan1 += qopi * (gsum1 * psni + gdif1 * pdni);
-    qtan2 += qopi * (gsum2 * psni + gdif2 * pdni);
+    qtan1 += (1 / (4 * PI)) * (gsum1 * psni + gdif1 * pdni);
+    qtan2 += (1 / (4 * PI)) * (gsum2 * psni + gdif2 * pdni);
 
-    dqdg[jo] += qopi * (psni - pdni);
-    dqdg[jp] += qopi * (psni + pdni);
+    dqdg[jo] += (1 / (4 * PI)) * (psni - pdni);
+    dqdg[jp] += (1 / (4 * PI)) * (psni + pdni);
   
   }
   if ((points.col(n) - points.col(1)).norm() > seps) {
@@ -3564,23 +3551,23 @@ XFoil::PsiResult XFoil::psisig(int iNode, int jNode, Vector2d point, Vector2d no
   double ssum = (sig[jp] - sig[jo]) / dso + (sig[jp] - sig[jm]) * dsim;
   double sdif = (sig[jp] - sig[jo]) / dso - (sig[jp] - sig[jm]) * dsim;
 
-  psi_result.psi += qopi * (psum * ssum + pdif * sdif);
+  psi_result.psi += (1 / (4 * PI)) * (psum * ssum + pdif * sdif);
 
   //------- dpsi/dm
-  dzdm[jm] += qopi * (-psum * dsim + pdif * dsim);
-  dzdm[jo] += qopi * (-psum / dso - pdif / dso);
-  dzdm[jp] += qopi * (psum * (dsio + dsim) + pdif * (dsio - dsim));
+  dzdm[jm] += (1 / (4 * PI)) * (-psum * dsim + pdif * dsim);
+  dzdm[jo] += (1 / (4 * PI)) * (-psum / dso - pdif / dso);
+  dzdm[jp] += (1 / (4 * PI)) * (psum * (dsio + dsim) + pdif * (dsio - dsim));
 
   //------- dpsi/dni
   double psni = psx1 * x1i + psx0 * (x1i + x2i) * 0.5 + psyy * yyi;
   double pdni = pdx1 * x1i + pdx0 * (x1i + x2i) * 0.5 + pdyy * yyi;
-  psi_result.psi_ni += qopi * (psni * ssum + pdni * sdif);
+  psi_result.psi_ni += (1 / (4 * PI)) * (psni * ssum + pdni * sdif);
 
-  double qtanm = qtanm + qopi * (psni * ssum + pdni * sdif);
+  double qtanm = qtanm + (1 / (4 * PI)) * (psni * ssum + pdni * sdif);
 
-  dqdm[jm] += qopi * (-psni * dsim + pdni * dsim);
-  dqdm[jo] += qopi * (-psni / dso - pdni / dso);
-  dqdm[jp] += qopi * (psni * (dsio + dsim) + pdni * (dsio - dsim));
+  dqdm[jm] += (1 / (4 * PI)) * (-psni * dsim + pdni * dsim);
+  dqdm[jo] += (1 / (4 * PI)) * (-psni / dso - pdni / dso);
+  dqdm[jp] += (1 / (4 * PI)) * (psni * (dsio + dsim) + pdni * (dsio - dsim));
 
   //------- calculate source contribution to psi	for  0-2  half-panel
   dxinv = 1.0 / (x0 - x2);
@@ -3607,23 +3594,23 @@ XFoil::PsiResult XFoil::psisig(int iNode, int jNode, Vector2d point, Vector2d no
   ssum = (sig[jq] - sig[jo]) * dsip + (sig[jp] - sig[jo]) / dso;
   sdif = (sig[jq] - sig[jo]) * dsip - (sig[jp] - sig[jo]) / dso;
 
-  psi_result.psi += qopi * (psum * ssum + pdif * sdif);
+  psi_result.psi += (1 / (4 * PI)) * (psum * ssum + pdif * sdif);
 
   //------- dpsi/dm
-  dzdm[jo] += qopi * (-psum * (dsip + dsio) - pdif * (dsip - dsio));
-  dzdm[jp] += qopi * (psum / dso - pdif / dso);
-  dzdm[jq] += qopi * (psum * dsip + pdif * dsip);
+  dzdm[jo] += (1 / (4 * PI)) * (-psum * (dsip + dsio) - pdif * (dsip - dsio));
+  dzdm[jp] += (1 / (4 * PI)) * (psum / dso - pdif / dso);
+  dzdm[jq] += (1 / (4 * PI)) * (psum * dsip + pdif * dsip);
 
   //------- dpsi/dni
   psni = psx0 * (x1i + x2i) * 0.5 + psx2 * x2i + psyy * yyi;
   pdni = pdx0 * (x1i + x2i) * 0.5 + pdx2 * x2i + pdyy * yyi;
-  psi_result.psi_ni = qopi * (psni * ssum + pdni * sdif);
+  psi_result.psi_ni = (1 / (4 * PI)) * (psni * ssum + pdni * sdif);
 
-  qtanm = qtanm + qopi * (psni * ssum + pdni * sdif);
+  qtanm = qtanm + (1 / (4 * PI)) * (psni * ssum + pdni * sdif);
 
-  dqdm[jo] += qopi * (-psni * (dsip + dsio) - pdni * (dsip - dsio));
-  dqdm[jp] += qopi * (psni / dso - pdni / dso);
-  dqdm[jq] += qopi * (psni * dsip + pdni * dsip);
+  dqdm[jo] += (1 / (4 * PI)) * (-psni * (dsip + dsio) - pdni * (dsip - dsio));
+  dqdm[jp] += (1 / (4 * PI)) * (psni / dso - pdni / dso);
+  dqdm[jq] += (1 / (4 * PI)) * (psni * dsip + pdni * dsip);
 
   return psi_result;
 }
@@ -3716,23 +3703,23 @@ XFoil::PsiResult XFoil::psi_te(int iNode, Vector2d point, Vector2d normal_vector
   gamte = -0.5 * sds * (gam[1] - gam[n]);
 
   //---- TE panel contribution to psi
-  psi_result.psi += hopi * (psig * sigte + pgam * gamte);
+  psi_result.psi += (1 / (2 * PI)) * (psig * sigte + pgam * gamte);
 
   //---- dpsi/dgam
-  dzdg[n] += -hopi * psig * scs * 0.5;
-  dzdg[1] += +hopi * psig * scs * 0.5;
+  dzdg[n] += -(1 / (2 * PI)) * psig * scs * 0.5;
+  dzdg[1] += +(1 / (2 * PI)) * psig * scs * 0.5;
 
-  dzdg[n] += +hopi * pgam * sds * 0.5;
-  dzdg[1] += -hopi * pgam * sds * 0.5;
+  dzdg[n] += +(1 / (2 * PI)) * pgam * sds * 0.5;
+  dzdg[1] += -(1 / (2 * PI)) * pgam * sds * 0.5;
 
   //---- dpsi/dni
-  psi_result.psi_ni += hopi * (psigni * sigte + pgamni * gamte);
+  psi_result.psi_ni += (1 / (2 * PI)) * (psigni * sigte + pgamni * gamte);
 
-  qtan1 += hopi * (psigni * sigte1 + pgamni * gamte1);
-  qtan2 += hopi * (psigni * sigte2 + pgamni * gamte2);
+  qtan1 += (1 / (2 * PI)) * (psigni * sigte1 + pgamni * gamte1);
+  qtan2 += (1 / (2 * PI)) * (psigni * sigte2 + pgamni * gamte2);
 
-  dqdg[n] += -hopi * (psigni * 0.5 * scs - pgamni * 0.5 * sds);
-  dqdg[1] += +hopi * (psigni * 0.5 * scs - pgamni * 0.5 * sds);
+  dqdg[n] += -(1 / (2 * PI)) * (psigni * 0.5 * scs - pgamni * 0.5 * sds);
+  dqdg[1] += +(1 / (2 * PI)) * (psigni * 0.5 * scs - pgamni * 0.5 * sds);
 
   return psi_result;
 }
@@ -3844,21 +3831,21 @@ bool XFoil::pswlin(int i, double xi, double yi, double nxi, double nyi,
     double ssum = (sig[jp] - sig[jo]) / dso + (sig[jp] - sig[jm]) * dsim;
     double sdif = (sig[jp] - sig[jo]) / dso - (sig[jp] - sig[jm]) * dsim;
 
-    psi = psi + qopi * (psum * ssum + pdif * sdif);
+    psi = psi + (1 / (4 * PI)) * (psum * ssum + pdif * sdif);
 
     //------- dpsi/dm
-    dzdm[jm] = dzdm[jm] + qopi * (-psum * dsim + pdif * dsim);
-    dzdm[jo] = dzdm[jo] + qopi * (-psum / dso - pdif / dso);
-    dzdm[jp] = dzdm[jp] + qopi * (psum * (dsio + dsim) + pdif * (dsio - dsim));
+    dzdm[jm] = dzdm[jm] + (1 / (4 * PI)) * (-psum * dsim + pdif * dsim);
+    dzdm[jo] = dzdm[jo] + (1 / (4 * PI)) * (-psum / dso - pdif / dso);
+    dzdm[jp] = dzdm[jp] + (1 / (4 * PI)) * (psum * (dsio + dsim) + pdif * (dsio - dsim));
 
     //------- dpsi/dni
     double psni = psx1 * x1i + psx0 * (x1i + x2i) * 0.5 + psyy * yyi;
     double pdni = pdx1 * x1i + pdx0 * (x1i + x2i) * 0.5 + pdyy * yyi;
-    psi_ni = psi_ni + qopi * (psni * ssum + pdni * sdif);
+    psi_ni = psi_ni + (1 / (4 * PI)) * (psni * ssum + pdni * sdif);
 
-    dqdm[jm] = dqdm[jm] + qopi * (-psni * dsim + pdni * dsim);
-    dqdm[jo] = dqdm[jo] + qopi * (-psni / dso - pdni / dso);
-    dqdm[jp] = dqdm[jp] + qopi * (psni * (dsio + dsim) + pdni * (dsio - dsim));
+    dqdm[jm] = dqdm[jm] + (1 / (4 * PI)) * (-psni * dsim + pdni * dsim);
+    dqdm[jo] = dqdm[jo] + (1 / (4 * PI)) * (-psni / dso - pdni / dso);
+    dqdm[jp] = dqdm[jp] + (1 / (4 * PI)) * (psni * (dsio + dsim) + pdni * (dsio - dsim));
 
     //------- calculate source contribution to psi	for  0-2  half-panel
     dxinv = 1.0 / (x0 - blData2.xz);
@@ -3881,21 +3868,21 @@ bool XFoil::pswlin(int i, double xi, double yi, double nxi, double nyi,
     ssum = (sig[jq] - sig[jo]) * dsip + (sig[jp] - sig[jo]) / dso;
     sdif = (sig[jq] - sig[jo]) * dsip - (sig[jp] - sig[jo]) / dso;
 
-    psi = psi + qopi * (psum * ssum + pdif * sdif);
+    psi = psi + (1 / (4 * PI)) * (psum * ssum + pdif * sdif);
 
     //------- dpsi/dm
-    dzdm[jo] = dzdm[jo] + qopi * (-psum * (dsip + dsio) - pdif * (dsip - dsio));
-    dzdm[jp] = dzdm[jp] + qopi * (psum / dso - pdif / dso);
-    dzdm[jq] = dzdm[jq] + qopi * (psum * dsip + pdif * dsip);
+    dzdm[jo] = dzdm[jo] + (1 / (4 * PI)) * (-psum * (dsip + dsio) - pdif * (dsip - dsio));
+    dzdm[jp] = dzdm[jp] + (1 / (4 * PI)) * (psum / dso - pdif / dso);
+    dzdm[jq] = dzdm[jq] + (1 / (4 * PI)) * (psum * dsip + pdif * dsip);
 
     //------- dpsi/dni
     psni = psx0 * (x1i + x2i) * 0.5 + psx2 * x2i + psyy * yyi;
     pdni = pdx0 * (x1i + x2i) * 0.5 + pdx2 * x2i + pdyy * yyi;
-    psi_ni = psi_ni + qopi * (psni * ssum + pdni * sdif);
+    psi_ni = psi_ni + (1 / (4 * PI)) * (psni * ssum + pdni * sdif);
 
-    dqdm[jo] = dqdm[jo] + qopi * (-psni * (dsip + dsio) - pdni * (dsip - dsio));
-    dqdm[jp] = dqdm[jp] + qopi * (psni / dso - pdni / dso);
-    dqdm[jq] = dqdm[jq] + qopi * (psni * dsip + pdni * dsip);
+    dqdm[jo] = dqdm[jo] + (1 / (4 * PI)) * (-psni * (dsip + dsio) - pdni * (dsip - dsio));
+    dqdm[jp] = dqdm[jp] + (1 / (4 * PI)) * (psni / dso - pdni / dso);
+    dqdm[jq] = dqdm[jq] + (1 / (4 * PI)) * (psni * dsip + pdni * dsip);
   }
 
   return true;
@@ -4174,9 +4161,6 @@ bool XFoil::setbl() {
   reybl_ms = reybl * (1.5 / herat - 1.0 / (herat + hvrat)) * herat_ms;
 
   amcrit = acrit;
-
-  //---- save te thickness
-  dwte = wgap[1];
 
   if (!lblini) {
     //----- initialize bl by marching with ue (fudge at separation)
@@ -4485,7 +4469,6 @@ bool XFoil::setbl() {
 
         //------ save transition location
         itran[is] = ibl;
-        tforce[is] = trforc;
 
         //------ interpolate airfoil geometry to find transition x/c
         //		(for user output)
@@ -5044,7 +5027,7 @@ bool XFoil::trchek() {
   //
   //----------------------------------------------------------------
   int itam = 0;
-  double ax_hk1 = 0.0, ax_t1 = 0.0, ax_a1 = 0.0, ax_hk2 = 0.0, ax_t2 = 0.0,
+double ax_hk1 = 0.0, ax_t1 = 0.0, ax_a1 = 0.0, ax_hk2 = 0.0, ax_t2 = 0.0,
          ax_rt2 = 0.0, ax_a2 = 0.0;
   double amplt, sfa, sfa_a1, sfa_a2, sfx;
   double sfx_x1, sfx_x2, sfx_xf;

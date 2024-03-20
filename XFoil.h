@@ -143,8 +143,8 @@ class XFoil {
 
   bool apcalc();
   bool axset(double hk1, double thet1, double rt1, double a1, double hk2,
-             double thet2, double rt2, double a2, double acrit, double &ax,
-             double &ax_hk1, double &ax_t1, double &ax_rt1, double &ax_a1,
+    double thet2, double rt2, double a2, double acrit, double &ax,
+    double &ax_hk1, double &ax_t1, double &ax_rt1, double &ax_a1,
              double &ax_hk2, double &ax_t2, double &ax_rt2, double &ax_a2);
   bool bldif(int ityp);
   bool blkin();
@@ -346,14 +346,12 @@ class XFoil {
   
   double bij[IQX][IZX], dij[IZX][IZX];
   double cij[IWX][IQX];
-  double hopi, qopi;
 
   double vs1[5][6], vs2[5][6], vsrez[5], vsr[5], vsm[5], vsx[5];
-  bool tforce[ISX];
 
   bool trforc, simi, tran, turb, wake, trfree;
 
-  double dwte, qinfbl, tkbl, tkbl_ms, rstbl, rstbl_ms, hstinv, hstinv_ms;
+  double qinfbl, tkbl, tkbl_ms, rstbl, rstbl_ms, hstinv, hstinv_ms;
   double reybl, reybl_ms, reybl_re, gm1bl, hvrat, bule, xiforc, amcrit;
 
   blData blData1, blData2;
@@ -529,7 +527,6 @@ class XFoil {
   c   nameref[.]  name label of reference polar
   c
   c   pi          3.1415926...
-  c   hopi,qopi   1/[2 pi] ,  1/[4 pi]
   c   dtor        pi / 180    [degrees to radians conversion factor]
   c
   c   cvpar       curvature attraction parameter for airfoil paneling
