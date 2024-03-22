@@ -112,7 +112,7 @@ bool XFoil::initialize() {
   memset(itran, 0, sizeof(itran));
   memset(mass, 0, sizeof(mass));
   normal_vectors = Matrix2Xd::Zero(2, IZX);
-  memset(gamu, 0, sizeof(gamu));
+  gamu = Matrix2Xd::Zero(2, IQX);
   memset(gam, 0, sizeof(gam));
   memset(gam_a, 0, sizeof(gam_a));
   memset(qf0, 0, sizeof(qf0));
@@ -2135,8 +2135,8 @@ bool XFoil::ggcalc() {
 
   for (int i = 1; i <= n; i++) {
     gam[i] = 0.0;
-    gamu[i][1] = 0.0;
-    gamu[i][2] = 0.0;
+    gamu.col(i).x() = 0.0;
+    gamu.col(i).y() = 0.0;
   }
   psio = 0.0;
   MatrixXd dpsi_dgam = MatrixXd::Zero(n + 1, n + 1);
@@ -2233,18 +2233,18 @@ bool XFoil::ggcalc() {
   gamu_temp = psi_gamma_lu.solve(psi.row(0).transpose());
   
   for (int iu = 1; iu <= n + 1; iu++) {
-    gamu[iu][1] = gamu_temp[iu - 1];
+    gamu.col(iu).x() = gamu_temp[iu - 1];
   }
 
   gamu_temp = psi_gamma_lu.solve(psi.row(1).transpose());
   for (int iu = 1; iu <= n + 1; iu++) {
-    gamu[iu][2] = gamu_temp[iu - 1];
+    gamu.col(iu).y() = gamu_temp[iu - 1];
   }
 
   //---- set inviscid alpha=0,90 surface speeds for this geometry
   for (int i = 1; i <= n + 1; i++) {
-    qinvu[i][1] = gamu[i][1];
-    qinvu[i][2] = gamu[i][2];
+    qinvu[i][1] = gamu.col(i).x();
+    qinvu[i][2] = gamu.col(i).y();
   }
 
   lgamu = true;
@@ -3395,10 +3395,10 @@ XFoil::PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector
     double pdx2 = ((blData1.xz + blData2.xz) * psx2 + psis + blData2.xz * logr22 + psid) * dxinv;
     double pdyy = ((blData1.xz + blData2.xz) * psyy - yy * (logr12 - logr22)) * dxinv;
 
-    double gsum1 = gamu[jp][1] + gamu[jo][1];
-    double gsum2 = gamu[jp][2] + gamu[jo][2];
-    double gdif1 = gamu[jp][1] - gamu[jo][1];
-    double gdif2 = gamu[jp][2] - gamu[jo][2];
+    double gsum1 = gamu.col(jp).x() + gamu.col(jo).x();
+    double gsum2 = gamu.col(jp).y() + gamu.col(jo).y();
+    double gdif1 = gamu.col(jp).x() - gamu.col(jo).x();
+    double gdif2 = gamu.col(jp).y() - gamu.col(jo).y();
 
     double gsum = gam[jp] + gam[jo];
     double gdif = gam[jp] - gam[jo];
@@ -3688,10 +3688,10 @@ XFoil::PsiResult XFoil::psi_te(int iNode, Vector2d point, Vector2d normal_vector
   double pgamni = pgamx1 * x1i + pgamx2 * x2i + pgamyy * yyi;
 
   //---- TE panel source and vortex strengths
-  double sigte1 = 0.5 * scs * (gamu[1][1] - gamu[n][1]);
-  double sigte2 = 0.5 * scs * (gamu[1][2] - gamu[n][2]);
-  double gamte1 = -0.5 * sds * (gamu[1][1] - gamu[n][1]);
-  double gamte2 = -0.5 * sds * (gamu[1][2] - gamu[n][2]);
+  double sigte1 = 0.5 * scs * (gamu.col(1).x() - gamu.col(n).x());
+  double sigte2 = 0.5 * scs * (gamu.col(1).y() - gamu.col(n).y());
+  double gamte1 = -0.5 * sds * (gamu.col(1).x() - gamu.col(n).x());
+  double gamte2 = -0.5 * sds * (gamu.col(1).y() - gamu.col(n).y());
 
   sigte = 0.5 * scs * (gam[1] - gam[n]);
   gamte = -0.5 * sds * (gam[1] - gam[n]);
@@ -4622,10 +4622,10 @@ bool XFoil::specal() {
 
   //---- superimpose suitably weighted  alpha = 0, 90  distributions
   for (i = 1; i <= n; i++) {
-    gam[i] = cosa * gamu[i][1] + sina * gamu[i][2];
-    gam_a[i] = -sina * gamu[i][1] + cosa * gamu[i][2];
+    gam[i] = cosa * gamu.col(i).x() + sina * gamu.col(i).y();
+    gam_a[i] = -sina * gamu.col(i).x() + cosa * gamu.col(i).y();
   }
-  psio = cosa * gamu[n + 1][1] + sina * gamu[n + 1][2];
+  psio = cosa * gamu.col(n + 1).x() + sina * gamu.col(n + 1).y();
 
   tecalc();
   qiset();
@@ -4724,10 +4724,10 @@ bool XFoil::speccl() {
   sina = sin(alfa);
 
   for (i = 1; i <= n; i++) {
-    gam[i] = cosa * gamu[i][1] + sina * gamu[i][2];
-    gam_a[i] = -sina * gamu[i][1] + cosa * gamu[i][2];
+    gam[i] = cosa * gamu.col(i).x() + sina * gamu.col(i).y();
+    gam_a[i] = -sina * gamu.col(i).x() + cosa * gamu.col(i).y();
   }
-  psio = cosa * gamu[n + 1][1] + sina * gamu[n + 1][2];
+  psio = cosa * gamu.col(n + 1).x() + sina * gamu.col(n + 1).y();
 
   //---- get corresponding cl, cl_alpha, cl_mach
   clcalc(xcmref, ycmref);
@@ -4744,10 +4744,10 @@ bool XFoil::speccl() {
     cosa = cos(alfa);
     sina = sin(alfa);
     for (i = 1; i <= n; i++) {
-      gam[i] = cosa * gamu[i][1] + sina * gamu[i][2];
-      gam_a[i] = -sina * gamu[i][1] + cosa * gamu[i][2];
+      gam[i] = cosa * gamu.col(i).x() + sina * gamu.col(i).y();
+      gam_a[i] = -sina * gamu.col(i).x() + cosa * gamu.col(i).y();
     }
-    psio = cosa * gamu[n + 1][1] + sina * gamu[n + 1][2];
+    psio = cosa * gamu.col(n + 1).x() + sina * gamu.col(n + 1).y();
 
     //------ set new cl(alpha)
     clcalc(xcmref, ycmref);
