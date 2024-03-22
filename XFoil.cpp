@@ -167,8 +167,6 @@ bool XFoil::initialize() {
   //---- set unity freestream speed
   qinf = 1.0;
 
-  psio = 0.0;
-
   cl = 0.0;
   cm = 0.0;
   cd = 0.0;
@@ -275,8 +273,6 @@ bool XFoil::initialize() {
   sina = 0.0;
   tklam = 0.0;
   tkl_msq = 0.0;
-  cpstar = 0.0;
-  qstar = 0.0;
   sst = 0.0;
   sst_go = 0.0;
   sst_gp = 0.0;
@@ -1817,21 +1813,6 @@ bool XFoil::comset() {
   tklam = minf * minf / (1.0 + beta) / (1.0 + beta);
   tkl_msq =
       1.0 / (1.0 + beta) / (1.0 + beta) - 2.0 * tklam / (1.0 + beta) * beta_msq;
-
-  //---- set sonic pressure coefficient and speed
-  //FIXME double型の==比較
-  if (minf == 0.0) {
-    cpstar = -999.0;
-    qstar = 999.0;
-  } else {
-    cpstar = 2.0 / (gamma * minf * minf) *
-             (pow(((1.0 + 0.5 * gamm1 * minf * minf) / (1.0 + 0.5 * gamm1)),
-                  (gamma / gamm1)) -
-              1.0);
-    qstar = qinf / minf *
-            sqrt((1.0 + 0.5 * gamm1 * minf * minf) / (1.0 + 0.5 * gamm1));
-  }
-
   return true;
 }
 
@@ -2133,12 +2114,6 @@ bool XFoil::ggcalc() {
 
   writeString("   Calculating unit vorticity distributions ...\n");
 
-  for (int i = 1; i <= n; i++) {
-    gam[i] = 0.0;
-    gamu.col(i).x() = 0.0;
-    gamu.col(i).y() = 0.0;
-  }
-  psio = 0.0;
   MatrixXd dpsi_dgam = MatrixXd::Zero(n + 1, n + 1);
 
   Matrix2Xd psi = Matrix2Xd::Zero(2, n + 1);
@@ -4625,7 +4600,6 @@ bool XFoil::specal() {
     gam[i] = cosa * gamu.col(i).x() + sina * gamu.col(i).y();
     gam_a[i] = -sina * gamu.col(i).x() + cosa * gamu.col(i).y();
   }
-  psio = cosa * gamu.col(n + 1).x() + sina * gamu.col(n + 1).y();
 
   tecalc();
   qiset();
@@ -4727,7 +4701,6 @@ bool XFoil::speccl() {
     gam[i] = cosa * gamu.col(i).x() + sina * gamu.col(i).y();
     gam_a[i] = -sina * gamu.col(i).x() + cosa * gamu.col(i).y();
   }
-  psio = cosa * gamu.col(n + 1).x() + sina * gamu.col(n + 1).y();
 
   //---- get corresponding cl, cl_alpha, cl_mach
   clcalc(xcmref, ycmref);
@@ -4747,7 +4720,6 @@ bool XFoil::speccl() {
       gam[i] = cosa * gamu.col(i).x() + sina * gamu.col(i).y();
       gam_a[i] = -sina * gamu.col(i).x() + cosa * gamu.col(i).y();
     }
-    psio = cosa * gamu.col(n + 1).x() + sina * gamu.col(n + 1).y();
 
     //------ set new cl(alpha)
     clcalc(xcmref, ycmref);
