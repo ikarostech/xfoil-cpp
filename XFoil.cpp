@@ -112,7 +112,6 @@ bool XFoil::initialize() {
   memset(isys, 0, sizeof(isys));
   memset(itran, 0, sizeof(itran));
   memset(mass, 0, sizeof(mass));
-  memset(nbl, 0, sizeof(nbl));
   normal_vectors = Matrix2Xd::Zero(2, IZX);
   memset(gamu, 0, sizeof(gamu));
   memset(gam, 0, sizeof(gam));
@@ -1654,10 +1653,10 @@ bool XFoil::cdcalc() {
 
   if (lvisc && lblini) {
     //---- set variables at the end of the wake
-    double thwake = thet[nbl[2]][2];
-    double urat = uedg[nbl[2]][2] / qinf;
-    double uewake = uedg[nbl[2]][2] * (1.0 - tklam) / (1.0 - tklam * urat * urat);
-    double shwake = dstr[nbl[2]][2] / thet[nbl[2]][2];
+    double thwake = thet[nbl.bottom][2];
+    double urat = uedg[nbl.bottom][2] / qinf;
+    double uewake = uedg[nbl.bottom][2] * (1.0 - tklam) / (1.0 - tklam * urat * urat);
+    double shwake = dstr[nbl.bottom][2] / thet[nbl.bottom][2];
 
     //---- extrapolate wake to downstream infinity using squire-young relation
     //      (reduces errors of the wake not being long enough)
@@ -2385,7 +2384,7 @@ bool XFoil::iblpan() {
   }
 
   iblte[is] = ibl;
-  nbl[is] = ibl;
+  nbl.top = ibl;
 
   //-- bottom surface next
   is = 2;
@@ -2406,7 +2405,7 @@ bool XFoil::iblpan() {
     vti[ibl][is] = -1.0;
   }
 
-  nbl[is] = iblte[is] + nw;
+  nbl.bottom = iblte[is] + nw;
 
   //-- upper wake pointers (for plotting only)
   for (int iw = 1; iw <= nw; iw++) {
@@ -2432,7 +2431,7 @@ bool XFoil::iblpan() {
 bool XFoil::iblsys() {
   int iv = 0;
   for (int is = 1; is <= 2; is++) {
-    for (int ibl = 2; ibl <= nbl[is]; ibl++) {
+    for (int ibl = 2; ibl <= nbl.get(is); ibl++) {
       iv++;
       isys[ibl][is] = iv;
     }
@@ -2616,7 +2615,7 @@ bool XFoil::mrchdu() {
     turb = false;
     itran[is] = iblte[is];
     //---- march downstream
-    for (ibl = 2; ibl <= nbl[is]; ibl++) {
+    for (ibl = 2; ibl <= nbl.get(is); ibl++) {
       ibm = ibl - 1;
 
       simi = ibl == 2;
@@ -2924,7 +2923,7 @@ bool XFoil::mrchue() {
     itran[is] = iblte[is];
 
     //---- march downstream
-    for (ibl = 2; ibl <= nbl[is]; ibl++) {  // 1000
+    for (ibl = 2; ibl <= nbl.get(is); ibl++) {  // 1000
       ibm = ibl - 1;
       iw = ibl - iblte[is];
       simi = (ibl == 2);
@@ -3129,7 +3128,7 @@ bool XFoil::mrchue() {
 
           uei = uedg[ibl][is];
 
-          if (ibl < nbl[is])
+          if (ibl < nbl.get(is))
             uei = 0.5 * (uedg[ibl - 1][is] + uedg[ibl + 1][is]);
         }
       }
@@ -4025,7 +4024,7 @@ bool XFoil::qiset() {
 bool XFoil::qvfue() {
   int is, ibl;
   for (is = 1; is <= 2; is++) {
-    for (ibl = 2; ibl <= nbl[is]; ibl++) {
+    for (ibl = 2; ibl <= nbl.get(is); ibl++) {
       int i = ipan[ibl][is];
       qvis[i] = vti[ibl][is] * uedg[ibl][is];
     }
@@ -4171,13 +4170,13 @@ bool XFoil::setbl() {
   mrchdu();
 
   for (is = 1; is <= 2; is++) {
-    for (ibl = 2; ibl <= nbl[is]; ibl++) usav[ibl][is] = uedg[ibl][is];
+    for (ibl = 2; ibl <= nbl.get(is); ibl++) usav[ibl][is] = uedg[ibl][is];
   }
 
   ueset();
 
   for (is = 1; is <= 2; is++) {
-    for (ibl = 2; ibl <= nbl[is]; ibl++) {
+    for (ibl = 2; ibl <= nbl.get(is); ibl++) {
       double temp = usav[ibl][is];
       usav[ibl][is] = uedg[ibl][is];
       uedg[ibl][is] = temp;
@@ -4196,7 +4195,7 @@ bool XFoil::setbl() {
 
   //---- set le and te ue sensitivities wrt all m values
   for (js = 1; js <= 2; js++) {
-    for (jbl = 2; jbl <= nbl[js]; jbl++) {
+    for (jbl = 2; jbl <= nbl.get(js); jbl++) {
       j = ipan[jbl][js];
       jv = isys[jbl][js];
       ule1_m[jv] = -vti[2][1] * vti[jbl][js] * dij[ile1][j];
@@ -4215,7 +4214,7 @@ bool XFoil::setbl() {
   for (is = 1; is <= 2; is++) {
     //---- there is no station "1" at similarity, so zero everything out
     for (js = 1; js <= 2; js++) {
-      for (jbl = 2; jbl <= nbl[js]; jbl++) {
+      for (jbl = 2; jbl <= nbl.get(js); jbl++) {
         jv = isys[jbl][js];
         u1_m[jv] = 0.0;
         d1_m[jv] = 0.0;
@@ -4238,7 +4237,7 @@ bool XFoil::setbl() {
     turb = false;
 
     //**** sweep downstream setting up bl equation linearizations
-    for (ibl = 2; ibl <= nbl[is]; ibl++) {
+    for (ibl = 2; ibl <= nbl.get(is); ibl++) {
       iv = isys[ibl][is];
 
       simi = (ibl == 2);
@@ -4271,7 +4270,7 @@ bool XFoil::setbl() {
       d2_u2 = -dsi / uei;
 
       for (js = 1; js <= 2; js++) {
-        for (jbl = 2; jbl <= nbl[js]; jbl++) {
+        for (jbl = 2; jbl <= nbl.get(js); jbl++) {
           j = ipan[jbl][js];
           jv = isys[jbl][js];
           u2_m[jv] = -vti[ibl][is] * vti[jbl][js] * dij[i][j];
@@ -4332,7 +4331,7 @@ bool XFoil::setbl() {
         //----- re-define d1 sensitivities wrt m since d1 depends on both te ds
         // values
         for (js = 1; js <= 2; js++) {
-          for (jbl = 2; jbl <= nbl[js]; jbl++) {            
+          for (jbl = 2; jbl <= nbl.get(js); jbl++) {            
             jv = isys[jbl][js];
             d1_m[jv] = dte_ute1 * ute1_m[jv] + dte_ute2 * ute2_m[jv];
           }
@@ -4492,7 +4491,7 @@ bool XFoil::setbl() {
       }
 
       for (js = 1; js <= 2; js++) {
-        for (jbl = 2; jbl <= nbl[js]; jbl++) {
+        for (jbl = 2; jbl <= nbl.get(js); jbl++) {
           jv = isys[jbl][js];
           u1_m[jv] = u2_m[jv];
           d1_m[jv] = d2_m[jv];
@@ -4860,7 +4859,7 @@ bool XFoil::stmove() {
       itran[2] = itran[2] - idif;
 
       //---- move top side bl variables downstream
-      for (ibl = nbl[1]; ibl >= idif + 2; ibl--) {
+      for (ibl = nbl.top; ibl >= idif + 2; ibl--) {
         ctau[ibl][1] = ctau[ibl - idif][1];
         thet[ibl][1] = thet[ibl - idif][1];
         dstr[ibl][1] = dstr[ibl - idif][1];
@@ -4877,7 +4876,7 @@ bool XFoil::stmove() {
       }
 
       //---- move bottom side bl variables upstream
-      for (ibl = 2; ibl <= nbl[2]; ibl++) {
+      for (ibl = 2; ibl <= nbl.bottom; ibl++) {
         ctau[ibl][2] = ctau[ibl + idif][2];
         thet[ibl][2] = thet[ibl + idif][2];
         dstr[ibl][2] = dstr[ibl + idif][2];
@@ -4891,7 +4890,7 @@ bool XFoil::stmove() {
       itran[2] = itran[2] + idif;
 
       //---- move bottom side bl variables downstream
-      for (ibl = nbl[2]; ibl >= idif + 2; ibl--) {
+      for (ibl = nbl.bottom; ibl >= idif + 2; ibl--) {
         ctau[ibl][2] = ctau[ibl - idif][2];
         thet[ibl][2] = thet[ibl - idif][2];
         dstr[ibl][2] = dstr[ibl - idif][2];
@@ -4908,7 +4907,7 @@ bool XFoil::stmove() {
       }
 
       //---- move top side bl variables upstream
-      for (ibl = 2; ibl <= nbl[1]; ibl++) {
+      for (ibl = 2; ibl <= nbl.top; ibl++) {
         ctau[ibl][1] = ctau[ibl + idif][1];
         thet[ibl][1] = thet[ibl + idif][1];
         dstr[ibl][1] = dstr[ibl + idif][1];
@@ -4919,7 +4918,7 @@ bool XFoil::stmove() {
 
   //-- set new mass array since ue has been tweaked
   for (is = 1; is <= 2; is++) {
-    for (ibl = 2; ibl <= nbl[is]; ibl++)
+    for (ibl = 2; ibl <= nbl.get(is); ibl++)
       mass[ibl][is] = dstr[ibl][is] * uedg[ibl][is];
   }
 
@@ -5614,12 +5613,12 @@ bool XFoil::ueset() {
   int i, is, ibl, j, js, jbl;
   double dui, ue_m;
   for (is = 1; is <= 2; is++) {
-    for (ibl = 2; ibl <= nbl[is]; ibl++) {
+    for (ibl = 2; ibl <= nbl.get(is); ibl++) {
       i = ipan[ibl][is];
 
       dui = 0.0;
       for (js = 1; js <= 2; js++) {
-        for (jbl = 2; jbl <= nbl[js]; jbl++) {
+        for (jbl = 2; jbl <= nbl.get(js); jbl++) {
           j = ipan[jbl][js];
           ue_m = -vti[ibl][is] * vti[jbl][js] * dij[i][j];
           dui = dui + ue_m * mass[jbl][js];
@@ -5641,7 +5640,7 @@ bool XFoil::uicalc() {
   for (is = 1; is <= 2; is++) {
     uinv[1][is] = 0.0;
     uinv_a[1][is] = 0.0;
-    for (ibl = 2; ibl <= nbl[is]; ibl++) {
+    for (ibl = 2; ibl <= nbl.get(is); ibl++) {
       i = ipan[ibl][is];
       uinv[ibl][is] = vti[ibl][is] * qinv[i];
       uinv_a[ibl][is] = vti[ibl][is] * qinv_a[i];
@@ -5691,12 +5690,12 @@ bool XFoil::update() {
   //--- calculate new ue distribution assuming no under-relaxation
   //--- also set the sensitivity of ue wrt to alpha or re
   for (is = 1; is <= 2; is++) {
-    for (ibl = 2; ibl <= nbl[is]; ibl++) {
+    for (ibl = 2; ibl <= nbl.get(is); ibl++) {
       i = ipan[ibl][is];
       dui = 0.0;
       dui_ac = 0.0;
       for (js = 1; js <= 2; js++) {
-        for (jbl = 2; jbl <= nbl[js]; jbl++) {
+        for (jbl = 2; jbl <= nbl.get(js); jbl++) {
           j = ipan[jbl][js];
           jv = isys[jbl][js];
           ue_m = -vti[ibl][is] * vti[jbl][js] * dij[i][j];
@@ -5808,7 +5807,7 @@ bool XFoil::update() {
   //--- calculate changes in bl variables and under-relaxation if needed
 
   for (is = 1; is <= 2; is++) {
-    for (ibl = 2; ibl <= nbl[is]; ibl++) {
+    for (ibl = 2; ibl <= nbl.get(is); ibl++) {
       iv = isys[ibl][is];
       //------- set changes without underrelaxation
       dctau = vdel[1][1][iv] - dac * vdel[1][2][iv];
@@ -5872,7 +5871,7 @@ bool XFoil::update() {
   }
 
   //--- set true rms change
-  rmsbl = sqrt(rmsbl / (4.0 * double(nbl[1] + nbl[2])));
+  rmsbl = sqrt(rmsbl / (4.0 * double(nbl.top + nbl.bottom)));
 
   if (lalfa) {
     //---- set underrelaxed change in reynolds number from change in lift
@@ -5885,7 +5884,7 @@ bool XFoil::update() {
 
   //--- update bl variables with underrelaxed changes
   for (is = 1; is <= 2; is++) {
-    for (ibl = 2; ibl <= nbl[is]; ibl++) {
+    for (ibl = 2; ibl <= nbl.get(is); ibl++) {
       iv = isys[ibl][is];
 
       dctau = vdel[1][1][iv] - dac * vdel[1][2][iv];
@@ -5924,7 +5923,7 @@ bool XFoil::update() {
   }
 
   //--- equate upper wake arrays to lower wake arrays
-  for (kbl = 1; kbl <= nbl[2] - iblte[2]; kbl++) {
+  for (kbl = 1; kbl <= nbl.bottom - iblte[2]; kbl++) {
     ctau[iblte[1] + kbl][1] = ctau[iblte[2] + kbl][2];
     thet[iblte[1] + kbl][1] = thet[iblte[2] + kbl][2];
     dstr[iblte[1] + kbl][1] = dstr[iblte[2] + kbl][2];
@@ -5971,10 +5970,10 @@ bool XFoil::viscal() {
 
   if (!lblini) {
     //	----- set initial ue from inviscid ue
-    for (int ibl = 1; ibl <= nbl[1]; ibl++) {
+    for (int ibl = 1; ibl <= nbl.top; ibl++) {
       uedg[ibl][1] = uinv[ibl][1];
     }
-    for (int ibl = 1; ibl <= nbl[2]; ibl++) {
+    for (int ibl = 1; ibl <= nbl.bottom; ibl++) {
       uedg[ibl][2] = uinv[ibl][2];
     }
   }
@@ -6084,7 +6083,7 @@ bool XFoil::xicalc() {
   ibl = iblte[is] + 1;
   xssi[ibl][is] = xssi[ibl - 1][is];
 
-  for (ibl = iblte[is] + 2; ibl <= nbl[is]; ibl++) {
+  for (ibl = iblte[is] + 2; ibl <= nbl.get(is); ibl++) {
     int i = ipan[ibl][is];
     xssi[ibl][is] =
         xssi[ibl - 1][is] + (points.col(i) - points.col(i - 1)).norm();

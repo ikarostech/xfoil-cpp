@@ -186,7 +186,7 @@ class XFoil {
     BOTTOM = 2
   };
   template <class T>
-  class side_pair {
+  class SidePair {
     public:
     T top;
     T bottom;
@@ -296,10 +296,11 @@ class XFoil {
   double minf1;
   bool lblini, lipan;
   
-  int n, iblte[ISX], ipan[IVX][ISX], nbl[ISX];
+  int n, iblte[ISX], ipan[IVX][ISX];
+  SidePair<int> nbl;
   
   Matrix2Xd points; //formerly x,y
-  side_pair<double> xstrip;
+  SidePair<double> xstrip;
   
   double qvis[IZX];
   
