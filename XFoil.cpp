@@ -4995,15 +4995,14 @@ bool XFoil::trchek() {
   double z_ax = 0.0, z_a1 = 0.0, z_t1 = 0.0, z_d1 = 0.0, z_u1 = 0.0, z_x1 = 0.0,
          z_a2 = 0.0, z_t2 = 0.0, z_d2 = 0.0, z_u2 = 0.0, z_x2 = 0.0, z_ms = 0.0,
          z_re = 0.0;
-  double amplt_a2, wf1, wf1_a1, wf1_a2, wf1_xf,
-      wf1_x1, wf1_x2;
-  double wf2, wf2_a1, wf2_a2, wf2_xf, wf2_x1, wf2_x2, xt_a2, dt_a2, tt_a2;
+  double amplt_a2, wf, wf_a1, wf_a2, wf_xf, wf_x1, wf_x2;
+  double xt_a2, dt_a2, tt_a2;
   double ut_a2, hkt, hkt_tt, hkt_dt, hkt_ut, hkt_ms, rtt_tt, rtt_ut, rtt_ms,
       rtt, rtt_re;
   double daeps = 0.00005;
 
-  amplt_a2 = wf1 = wf1_a1 = wf1_xf = wf1_x1 = wf1_x2 = 0.0;
-  wf2 = wf2_a1 = wf2_xf = wf2_x1 = wf2_x2 = xt_a2 = dt_a2 = tt_a2 = 0.0;
+  amplt_a2 = 0.0;
+  xt_a2 = dt_a2 = tt_a2 = 0.0;
   ut_a2 = hkt_tt = hkt_dt = hkt_ut = hkt_ms = rtt_tt = rtt_ut = rtt_ms = rtt_re = 0.0;
 
   //---- save variables and sensitivities at ibl ("2") for future restoration
@@ -5048,38 +5047,31 @@ bool XFoil::trchek() {
 
     //---- set weighting factor from free or forced transition
     if (sfa < sfx) {
-      wf2 = sfa;
-      wf2_a1 = sfa_a1;
-      wf2_a2 = sfa_a2;
-      wf2_x1 = 0.0;
-      wf2_x2 = 0.0;
-      wf2_xf = 0.0;
+      wf = sfa;
+      wf_a1 = sfa_a1;
+      wf_a2 = sfa_a2;
+      wf_x1 = 0.0;
+      wf_x2 = 0.0;
+      wf_xf = 0.0;
     } else {
-      wf2 = sfx;
-      wf2_a1 = 0.0;
-      wf2_a2 = 0.0;
-      wf2_x1 = sfx_x1;
-      wf2_x2 = sfx_x2;
-      wf2_xf = sfx_xf;
+      wf = sfx;
+      wf_a1 = 0.0;
+      wf_a2 = 0.0;
+      wf_x1 = sfx_x1;
+      wf_x2 = sfx_x2;
+      wf_xf = sfx_xf;
     }
 
-    wf1 = 1.0 - wf2;
-    wf1_a1 = -wf2_a1;
-    wf1_a2 = -wf2_a2;
-    wf1_x1 = -wf2_x1;
-    wf1_x2 = -wf2_x2;
-    wf1_xf = -wf2_xf;
-
     //---- interpolate bl variables to xt
-    xt = blData1.xz * wf1 + blData2.xz * wf2;
-    tt = blData1.tz * wf1 + blData2.tz * wf2;
-    dt = blData1.dz * wf1 + blData2.dz * wf2;
-    ut = blData1.uz * wf1 + blData2.uz * wf2;
+    xt = blData1.xz * (1 - wf) + blData2.xz * wf;
+    tt = blData1.tz * (1 - wf) + blData2.tz * wf;
+    dt = blData1.dz * (1 - wf) + blData2.dz * wf;
+    ut = blData1.uz * (1 - wf) + blData2.uz * wf;
 
-    xt_a2 = blData1.xz * wf1_a2 + blData2.xz * wf2_a2;
-    tt_a2 = blData1.tz * wf1_a2 + blData2.tz * wf2_a2;
-    dt_a2 = blData1.dz * wf1_a2 + blData2.dz * wf2_a2;
-    ut_a2 = blData1.uz * wf1_a2 + blData2.uz * wf2_a2;
+    xt_a2 = (blData2.xz - blData1.xz) * wf_a2;
+    tt_a2 = (blData2.tz - blData1.tz) * wf_a2;
+    dt_a2 = (blData2.dz - blData1.dz) * wf_a2;
+    ut_a2 = (blData2.uz - blData1.uz) * wf_a2;
 
     //---- temporarily set "2" variables from "t" for blkin
     blData2.xz = xt;
@@ -5187,32 +5179,32 @@ stop101:
 
   //---- free transition ... set sensitivities of xt
 
-  xt_x1 = wf1;
-  tt_t1 = wf1;
-  dt_d1 = wf1;
-  ut_u1 = wf1;
+  xt_x1 = (1 - wf);
+  tt_t1 = (1 - wf);
+  dt_d1 = (1 - wf);
+  ut_u1 = (1 - wf);
 
-  xt_x2 = wf2;
-  tt_t2 = wf2;
-  dt_d2 = wf2;
-  ut_u2 = wf2;
+  xt_x2 = wf;
+  tt_t2 = wf;
+  dt_d2 = wf;
+  ut_u2 = wf;
 
-  xt_a1 = blData1.xz * wf1_a1 + blData2.xz * wf2_a1;
-  tt_a1 = blData1.tz * wf1_a1 + blData2.tz * wf2_a1;
-  dt_a1 = blData1.dz * wf1_a1 + blData2.dz * wf2_a1;
-  ut_a1 = blData1.uz * wf1_a1 + blData2.uz * wf2_a1;
+  xt_a1 = (blData2.xz - blData1.xz) * wf_a1;
+  tt_a1 = (blData2.tz - blData1.tz) * wf_a1;
+  dt_a1 = (blData2.dz - blData1.dz) * wf_a1;
+  ut_a1 = (blData2.uz - blData1.uz) * wf_a1;
 
-  xt_x1 = blData1.xz * wf1_x1 + blData2.xz * wf2_x1 + xt_x1;
-  tt_x1 = blData1.tz * wf1_x1 + blData2.tz * wf2_x1;
-  dt_x1 = blData1.dz * wf1_x1 + blData2.dz * wf2_x1;
-  ut_x1 = blData1.uz * wf1_x1 + blData2.uz * wf2_x1;
+  xt_x1 += (blData2.xz - blData1.xz) * wf_x1;
+  tt_x1 = (blData2.tz - blData1.tz) * wf_x1;
+  dt_x1 = (blData2.dz - blData1.dz) * wf_x1;
+  ut_x1 = (blData2.uz - blData1.uz) * wf_x1;
 
-  xt_x2 = blData1.xz * wf1_x2 + blData2.xz * wf2_x2 + xt_x2;
-  tt_x2 = blData1.tz * wf1_x2 + blData2.tz * wf2_x2;
-  dt_x2 = blData1.dz * wf1_x2 + blData2.dz * wf2_x2;
-  ut_x2 = blData1.uz * wf1_x2 + blData2.uz * wf2_x2;
+  xt_x2 += (blData2.xz - blData1.xz) * wf_x2;
+  tt_x2 = (blData2.tz - blData1.tz) * wf_x2;
+  dt_x2 = (blData2.dz - blData1.dz) * wf_x2;
+  ut_x2 = (blData2.uz - blData1.uz) * wf_x2;
 
-  xt_xf = blData1.xz * wf1_xf + blData2.xz * wf2_xf;
+  xt_xf = (blData2.xz - blData1.xz) * wf_xf;
 
   //---- at this point, ax = ax( hk1, t1, rt1, a1, hkt, tt, rtt, at )
 
