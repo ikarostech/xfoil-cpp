@@ -55,13 +55,12 @@ using namespace std;
 using namespace Eigen;
 //------ derived dimensioning limit parameters
 
-struct blData {
+class blData {
  public:
   double xz, uz, tz, dz, sz, amplz, uz_uei, uz_ms, dwz, 
       hz, hz_tz, hz_dz, 
       mz, mz_uz, mz_ms, 
-      rz, rz_uz, rz_ms, 
-      vz, vz_uz, vz_ms, vz_re,
+      rz, rz_uz, rz_ms,
       hkz, hkz_uz, hkz_tz, hkz_dz, hkz_ms, 
       hsz, hsz_uz, hsz_tz, hsz_dz, hsz_ms, hsz_re, 
       hcz, hcz_uz, hcz_tz, hcz_dz, hcz_ms, 
@@ -364,7 +363,9 @@ class XFoil {
   bool trforc, simi, tran, turb, wake, trfree;
 
   double qinfbl, tkbl, tkbl_ms, rstbl, rstbl_ms, hstinv, hstinv_ms;
-  double reybl, reybl_ms, reybl_re, gm1bl, hvrat, bule, xiforc, amcrit;
+  double reybl, reybl_ms, reybl_re, gm1bl, bule, xiforc, amcrit;
+  //---- sutherland's const./to	(assumes stagnation conditions are at stp)
+  const double hvrat = 0.35;
 
   blData blData1, blData2;
 

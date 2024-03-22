@@ -245,7 +245,6 @@ bool XFoil::initialize() {
   reybl_ms = 0.0;
   reybl_re = 0.0;
   gm1bl = 0.0;
-  hvrat = 0.0;
   bule = 0.0;
   xiforc = 0.0;
   amcrit = 0.0;
@@ -913,12 +912,7 @@ bool XFoil::blkin() {
   he_u2 = -blData2.uz * hstinv;
   he_ms = -0.5 * blData2.uz * blData2.uz * hstinv_ms;
   //---- set molecular viscosity
-  blData2.vz = sqrt(herat * herat * herat) * (1.0 + hvrat) / (herat + hvrat) / reybl;
-  v2_he = blData2.vz * (1.5 / herat - 1.0 / (herat + hvrat));
-
-  blData2.vz_uz = v2_he * he_u2;
-  blData2.vz_ms = -blData2.vz / reybl * reybl_ms + v2_he * he_ms;
-  blData2.vz_re = -blData2.vz / reybl * reybl_re;
+  v2_he = (1.5 / herat - 1.0 / (herat + hvrat));
 
   //---- set kinematic shape parameter
   hkin(blData2.hz, blData2.mz, blData2.hkz, hk2_h2, hk2_m2);
@@ -929,11 +923,11 @@ bool XFoil::blkin() {
   blData2.hkz_ms = hk2_m2 * blData2.mz_ms;
 
   //---- set momentum thickness reynolds number
-  blData2.rtz = blData2.rz * blData2.uz * blData2.tz / blData2.vz;
-  blData2.rtz_uz = blData2.rtz * (1.0 / blData2.uz + blData2.rz_uz / blData2.rz - blData2.vz_uz / blData2.vz);
+  blData2.rtz = blData2.rz * blData2.uz * blData2.tz / (sqrt(herat * herat * herat) * (1.0 + hvrat) / (herat + hvrat) / reybl);
+  blData2.rtz_uz = blData2.rtz * (1.0 / blData2.uz + blData2.rz_uz / blData2.rz - v2_he * he_u2);
   blData2.rtz_tz = blData2.rtz / blData2.tz;
-  blData2.rtz_ms = blData2.rtz * (blData2.rz_ms / blData2.rz - blData2.vz_ms / blData2.vz);
-  blData2.rtz_re = blData2.rtz * (-blData2.vz_re / blData2.vz);
+  blData2.rtz_ms = blData2.rtz * (blData2.rz_ms / blData2.rz + (1 / reybl * reybl_ms - v2_he * he_ms));
+  blData2.rtz_re = blData2.rtz * (reybl_re / reybl);
 
   return true;
 }
@@ -4117,9 +4111,6 @@ bool XFoil::setbl() {
   hstinv_ms = gm1bl * (1.0 / qinfbl) * (1.0 / qinfbl) /
                   (1.0 + 0.5 * gm1bl * minf * minf) -
               0.5 * gm1bl * hstinv / (1.0 + 0.5 * gm1bl * minf * minf);
-
-  //---- sutherland's const./to	(assumes stagnation conditions are at stp)
-  hvrat = 0.35;
 
   //---- set reynolds number based on freestream density, velocity, viscosity
   herat = 1.0 - 0.5 * qinfbl * qinfbl * hstinv;
