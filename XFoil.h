@@ -296,8 +296,8 @@ class XFoil {
   double minf1;
   bool lblini, lipan;
   
-  int n, iblte[ISX], ipan[IVX][ISX];
-  SidePair<int> nbl;
+  int n, ipan[IVX][ISX];
+  SidePair<int> iblte, nbl;
   
   Matrix2Xd points; //formerly x,y
   SidePair<double> xstrip;
