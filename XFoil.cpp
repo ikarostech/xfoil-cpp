@@ -1886,21 +1886,18 @@ XFoil::EnvEnResult XFoil::dampl(double hk, double th, double rt) {
   EnvEnResult result;
   double dgr = 0.08;
 
-  double hmi = 0.0, hmi_hk = 0.0, aa = 0.0, aa_hk = 0.0, bb = 0.0, bb_hk = 0.0,
-         grcrit = 0.0, grc_hk = 0.0, gr = 0.0, gr_rt = 0.0;
-
-  hmi = 1.0 / (hk - 1.0);
-  hmi_hk = -hmi * hmi;
+  const double hmi = 1.0 / (hk - 1.0);
+  const double hmi_hk = -hmi * hmi;
 
   //---- log10(critical rth) - h   correlation for falkner-skan profiles
-  aa = 2.492 * pow(hmi, 0.43);
-  aa_hk = (aa / hmi) * 0.43 * hmi_hk;
-  bb = tanh(14.0 * hmi - 9.24);
-  bb_hk = (1.0 - bb * bb) * 14.0 * hmi_hk;
-  grcrit = aa + 0.7 * (bb + 1.0);
-  grc_hk = aa_hk + 0.7 * bb_hk;
-  gr = log10(rt);
-  gr_rt = 1.0 / (2.3025851 * rt);
+  const double aa = 2.492 * pow(hmi, 0.43);
+  const double aa_hk = (aa / hmi) * 0.43 * hmi_hk;
+  const double bb = tanh(14.0 * hmi - 9.24);
+  const double bb_hk = (1.0 - bb * bb) * 14.0 * hmi_hk;
+  const double grcrit = aa + 0.7 * (bb + 1.0);
+  const double grc_hk = aa_hk + 0.7 * bb_hk;
+  const double gr = log10(rt);
+  const double gr_rt = 1.0 / (2.3025851 * rt);
   if (gr < grcrit - dgr) {
     //----- no amplification for rtheta < rcrit
     result.ax = 0.0;
