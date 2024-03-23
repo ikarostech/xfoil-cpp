@@ -448,26 +448,25 @@ XFoil::AxResult XFoil::axset(double hk1, double t1, double rt1, double a1, doubl
   //
   //==========================
   //---- 2nd-order
-  double ax1 = 0.0, ax2 = 0.0, ax1_hk1 = 0.0, ax1_t1 = 0.0, ax1_rt1 = 0.0;
-  double ax2_hk2 = 0.0, ax2_t2 = 0.0, ax2_rt2 = 0.0, axsq = 0.0;
+  double axsq = 0.0;
   double axa = 0.0, axa_ax1 = 0.0, axa_ax2 = 0.0;
   double exn = 0.0, exn_a1 = 0.0, exn_a2 = 0.0, dax = 0.0, dax_a1 = 0.0,
          dax_a2 = 0.0, dax_t1 = 0.0, dax_t2 = 0.0;
   double f_arg = 0.0;  // ex arg
 
-  dampl(hk1, t1, rt1, ax1, ax1_hk1, ax1_t1, ax1_rt1);
-  dampl(hk2, t2, rt2, ax2, ax2_hk2, ax2_t2, ax2_rt2);
+  EnvEnResult envEnResult1 = dampl(hk1, t1, rt1);
+  EnvEnResult envEnResult2 = dampl(hk2, t2, rt2);
 
   //---- rms-average version (seems a little better on coarse grids)
-  axsq = 0.5 * (ax1 * ax1 + ax2 * ax2);
+  axsq = 0.5 * (envEnResult1.ax * envEnResult1.ax + envEnResult2.ax * envEnResult2.ax);
   if (axsq <= 0.0) {
     axa = 0.0;
     axa_ax1 = 0.0;
     axa_ax2 = 0.0;
   } else {
     axa = sqrt(axsq);
-    axa_ax1 = 0.5 * ax1 / axa;
-    axa_ax2 = 0.5 * ax2 / axa;
+    axa_ax1 = 0.5 * envEnResult1.ax / axa;
+    axa_ax2 = 0.5 * envEnResult2.ax / axa;
   }
 
   //----- small additional term to ensure  dn/dx > 0  near  n = ncrit
@@ -491,14 +490,14 @@ XFoil::AxResult XFoil::axset(double hk1, double t1, double rt1, double a1, doubl
   //==========================
 
   result.ax = axa + dax;
-  result.ax_hk1 = axa_ax1 * ax1_hk1;
-  result.ax_t1 = axa_ax1 * ax1_t1 + dax_t1;
-  result.ax_rt1 = axa_ax1 * ax1_rt1;
+  result.ax_hk1 = axa_ax1 * envEnResult1.ax_hk;
+  result.ax_t1 = axa_ax1 * envEnResult1.ax_th + dax_t1;
+  result.ax_rt1 = axa_ax1 * envEnResult1.ax_rt;
   result.ax_a1 = dax_a1;
 
-  result.ax_hk2 = axa_ax2 * ax2_hk2;
-  result.ax_t2 = axa_ax2 * ax2_t2 + dax_t2;
-  result.ax_rt2 = axa_ax2 * ax2_rt2;
+  result.ax_hk2 = axa_ax2 * envEnResult2.ax_hk;
+  result.ax_t2 = axa_ax2 * envEnResult2.ax_th + dax_t2;
+  result.ax_rt2 = axa_ax2 * envEnResult2.ax_rt;
   result.ax_a2 = dax_a2;
 
   return result;
@@ -1883,8 +1882,8 @@ void XFoil::writeString(std::string str, bool bFullReport) {
  *             is below the critical rtheta.  transition occurs
  *             when n(x) reaches ncrit (ncrit= 9 is "standard").
  * ============================================================== */
-bool XFoil::dampl(double hk, double th, double rt, double &ax, double &ax_hk,
-                  double &ax_th, double &ax_rt) {
+XFoil::EnvEnResult XFoil::dampl(double hk, double th, double rt) {
+  EnvEnResult result;
   double dgr = 0.08;
 
   double hmi = 0.0, hmi_hk = 0.0, aa = 0.0, aa_hk = 0.0, bb = 0.0, bb_hk = 0.0,
@@ -1904,10 +1903,10 @@ bool XFoil::dampl(double hk, double th, double rt, double &ax, double &ax_hk,
   gr_rt = 1.0 / (2.3025851 * rt);
   if (gr < grcrit - dgr) {
     //----- no amplification for rtheta < rcrit
-    ax = 0.0;
-    ax_hk = 0.0;
-    ax_th = 0.0;
-    ax_rt = 0.0;
+    result.ax = 0.0;
+    result.ax_hk = 0.0;
+    result.ax_th = 0.0;
+    result.ax_rt = 0.0;
   } else {
     //----- set steep cubic ramp used to turn on ax smoothly as rtheta
     //-     exceeds rcrit (previously, this was done discontinuously).
@@ -1945,14 +1944,14 @@ bool XFoil::dampl(double hk, double th, double rt, double &ax, double &ax_hk,
     const double af_hmi = 2.7 - 11.0 * hmi + 9.0 * hmi * hmi;
     const double af_hk = af_hmi * hmi_hk;
 
-    ax = (af * dadr / th) * rfac;
-    ax_hk = (af_hk * dadr / th + af * dadr_hk / th) * rfac +
+    result.ax = (af * dadr / th) * rfac;
+    result.ax_hk = (af_hk * dadr / th + af * dadr_hk / th) * rfac +
             (af * dadr / th) * rfac_hk;
-    ax_th = -(ax) / th;
-    ax_rt = (af * dadr / th) * rfac_rt;
+    result.ax_th = -(result.ax) / th;
+    result.ax_rt = (af * dadr / th) * rfac_rt;
   }
 
-  return true;
+  return result;
 }
 
 /** Laminar dissipation function  ( 2 cd/h* )     (from Falkner-Skan)*/

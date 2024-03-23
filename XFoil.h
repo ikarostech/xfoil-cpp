@@ -201,8 +201,14 @@ class XFoil {
     }
   };
   bool cpcalc(int n, const double q[], double qinf, double minf, double cp[]);
-  bool dampl(double hk, double th, double rt, double &ax, double &ax_hk,
-             double &ax_th, double &ax_rt);
+  class EnvEnResult {
+    public:
+    double ax;
+    double ax_hk;
+    double ax_th;
+    double ax_rt;
+  };
+  EnvEnResult dampl(double hk, double th, double rt);
   bool dil(double hk, double rt, double &di, double &di_hk, double &di_rt);
   bool dilw(double hk, double rt, double &di, double &di_hk, double &di_rt);
   bool dslim(double &dstr, double thet, double msq, double hklim);
