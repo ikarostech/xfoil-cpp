@@ -214,7 +214,7 @@ class XFoil {
   bool dslim(double &dstr, double thet, double msq, double hklim);
 
   bool gamqv();
-  bool Gauss(int nn, double z[][6], double r[5]);
+  VectorXd Gauss(int nn, MatrixXd z, VectorXd r);
   bool getxyf(Matrix2Xd points, Matrix2Xd dpoints_ds, VectorXd s,
               int n, double &tops, double &bots, double xf, double &yf);
   bool ggcalc();
@@ -364,7 +364,8 @@ class XFoil {
   double bij[IQX][IZX], dij[IZX][IZX];
   double cij[IWX][IQX];
 
-  double vs1[5][6], vs2[5][6], vsrez[5], vsr[5], vsm[5], vsx[5];
+  MatrixXd vs1, vs2;
+  VectorXd vsrez, vsr, vsm, vsx;
 
   bool trforc, simi, tran, turb, wake, trfree;
 
