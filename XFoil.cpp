@@ -2003,72 +2003,6 @@ bool XFoil::gamqv() {
   return true;
 }
 
-/**
- *   Solves general nxn system in nn unknowns
- *   with arbitrary number (nrhs) of righthand sides.
- *   assumes system is invertible...
- *    ...if it isn't, a divide by zero will result.
- *
- *   z is the coefficient matrix...
- *     ...destroyed during solution process.
- *   r is the righthand side(s)...
- *     ...replaced by the solution vector(s).
- *
- *                              mark drela  1984
- */
-VectorXd XFoil::Gauss(int nn, MatrixXd z, VectorXd r) {
-  // dimension z(nsiz,nsiz), r(nsiz,nrhs)
-
-  int loc;
-  int np, nnpp, nt, k;
-
-  double temp, ztmp;
-
-  for (np = 1; np <= nn - 1; np++) {
-    nnpp = np + 1;
-    //------ find max pivot index nx
-    int nx = np;
-    for (nt = nnpp; nt <= nn; nt++) {
-      if (fabs(z(nt, np)) > fabs(z(nx, np))) nx = nt;
-    }
-
-    double pivot = 1.0 / z(nx, np);
-
-    //------ switch pivots
-    z(nx, np) = z(np, np);
-
-    //------ switch rows & normalize pivot row
-    for (loc = nnpp; loc <= nn; loc++) {
-      temp = z(nx, loc) * pivot;
-      z(nx, loc) = z(np, loc);
-      z(np, loc) = temp;
-    }
-
-    temp = r[nx] * pivot;
-    r[nx] = r[np];
-    r[np] = temp;
-
-    //------ forward eliminate everything
-    for (k = nnpp; k <= nn; k++) {
-      ztmp = z(k, np);
-      for (loc = nnpp; loc <= nn; loc++)
-        z(k, loc) -= ztmp * z(np, loc);
-      r[k] -= ztmp * r[np];
-    }
-  }
-
-  //---- solve for last row
-  r[nn] = r[nn] / z(nn, nn);
-
-  //---- back substitute everything
-  for (np = nn - 1; np >= 1; np--) {
-    nnpp = np + 1;
-    for (k = nnpp; k <= nn; k++) r[np] = r[np] - z(np, k) * r[k];
-  }
-
-  return r;
-}
-
 bool XFoil::getxyf(Matrix2Xd points, Matrix2Xd dpoints_ds, VectorXd s,
                    int n, double &tops, double &bots, double xf, double &yf) {
   double topy, boty, yrel;
@@ -2687,7 +2621,7 @@ bool XFoil::mrchdu() {
           vztmp[4] = 1.0;
 
           //--------- calculate due response
-          vztmp = Gauss(4, vtmp, vztmp);
+          vztmp.segment(1, 4) = vtmp.block(1, 1, 4, 4).fullPivLu().solve(vztmp.segment(1, 4));
 
           //--------- set  senswt * (normalized due/dhk)
           sennew = senswt * vztmp[4] * hkref / ueref;
@@ -2706,7 +2640,7 @@ bool XFoil::mrchdu() {
         }
 
         //-------- solve newton system for current "2" station
-        vsrez = Gauss(4, vs2, vsrez);
+        vsrez.segment(1, 4) = vs2.block(1, 1, 4, 4).fullPivLu().solve(vsrez.segment(1, 4));
 
         //-------- determine max changes and underrelax if necessary
         dmax = std::max(fabs(vsrez[2] / thi), fabs(vsrez[3] / dsi));
@@ -2945,7 +2879,7 @@ bool XFoil::mrchue() {
           vs2(4, 4) = 1.0;
           vsrez[4] = 0.0;
           //--------- solve newton system for current "2" station
-          vsrez = Gauss(4, vs2, vsrez);
+          vsrez.segment(1, 4) = vs2.block(1, 1, 4, 4).fullPivLu().solve(vsrez.segment(1, 4));
           //--------- determine max changes and underrelax if necessary
           dmax = std::max(fabs(vsrez[2] / thi), fabs(vsrez[3] / dsi));
           if (ibl < itran[is]) dmax = std::max(dmax, fabs(vsrez[1] / 10.0));
@@ -3028,7 +2962,7 @@ bool XFoil::mrchue() {
           vs2(4, 3) = blData2.hkz_dz;
           vs2(4, 4) = blData2.hkz_uz;
           vsrez[4] = htarg - blData2.hkz;
-          vsrez = Gauss(4, vs2, vsrez);
+          vsrez.segment(1, 4) = vs2.block(1, 1, 4, 4).fullPivLu().solve(vsrez.segment(1, 4));
 
           dmax = std::max(fabs(vsrez[2] / thi), fabs(vsrez[3] / dsi));
           if (ibl >= itran[is]) dmax = std::max(dmax, fabs(vsrez[1] / cti));
