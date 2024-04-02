@@ -2,6 +2,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <chrono>
 
 #include "XFoil.h"
 
@@ -93,6 +94,7 @@ int main() {
   int n = 0;
 
   std::stringstream ss;
+  auto start = std::chrono::steady_clock::now();
 
   // auto naca = new XFoil();
   // naca->naca4(4412, 100 / 2);
@@ -149,6 +151,12 @@ int main() {
       std::cout << "  unconverged" << std::endl;
     }
   }
+
+  auto end = std::chrono::steady_clock::now();
+  // 経過時間を計算
+  auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+
+  std::cout << "Elapsed time: " << duration.count() << " milliseconds." << std::endl;
 
   return 0;
 }

@@ -141,12 +141,12 @@ bool XFoil::initialize() {
   memset(vb, 0, sizeof(vb));
   memset(vdel, 0, sizeof(vdel));
   memset(vm, 0, sizeof(vm));
-  vs1 = MatrixXd::Zero(5, 6);
-  vs2 = MatrixXd::Zero(5, 6);
-  vsrez  = VectorXd::Zero(5);
-  vsr = VectorXd::Zero(5);
-  vsm = VectorXd::Zero(5);
-  vsx = VectorXd::Zero(5);
+  vs1 = Matrix<double, 5, 6>::Zero();
+  vs2 = Matrix<double, 5, 6>::Zero();
+  vsrez  = Vector<double, 5>::Zero();
+  vsr = Vector<double, 5>::Zero();
+  vsm = Vector<double, 5>::Zero();
+  vsx = Vector<double, 5>::Zero();
   memset(vz, 0, sizeof(vz));
 
 
@@ -552,12 +552,12 @@ bool XFoil::bldif(int ityp) {
     ddlog = 1.0;
   }
 
-  vsrez = VectorXd::Zero(5);
-  vsm = VectorXd::Zero(5);
-  vsr = VectorXd::Zero(5);
-  vsx = VectorXd::Zero(5);
-  vs1 = MatrixXd::Zero(5, 6);
-  vs2 = MatrixXd::Zero(5, 6);
+  vsrez = Vector<double, 5>::Zero();
+  vsm = Vector<double, 5>::Zero();
+  vsr = Vector<double, 5>::Zero();
+  vsx = Vector<double, 5>::Zero();
+  vs1 = Matrix<double, 5, 6>::Zero();
+  vs2 = Matrix<double, 5, 6>::Zero();
 
   //---- set triggering constant for local upwinding
   hupwt = 1.0;
