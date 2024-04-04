@@ -142,7 +142,7 @@ bool XFoil::initialize() {
   memset(vdel, 0, sizeof(vdel));
   memset(vm, 0, sizeof(vm));
   vs1 = Matrix<double, 5, 6>::Zero();
-  vs2 = Matrix<double, 5, 6>::Zero();
+  vs2 = Matrix<double, 4, 5>::Zero();
   vsrez  = Vector<double, 4>::Zero();
   vsr = Vector<double, 4>::Zero();
   vsm = Vector<double, 4>::Zero();
@@ -557,7 +557,7 @@ bool XFoil::bldif(int ityp) {
   vsr = Vector<double, 4>::Zero();
   vsx = Vector<double, 4>::Zero();
   vs1 = Matrix<double, 5, 6>::Zero();
-  vs2 = Matrix<double, 5, 6>::Zero();
+  vs2 = Matrix<double, 4, 5>::Zero();
 
   //---- set triggering constant for local upwinding
   hupwt = 1.0;
@@ -599,7 +599,7 @@ bool XFoil::bldif(int ityp) {
 
   if (ityp == 0) {
     //***** le point -->  set zero amplification factor
-    vs2(1, 1) = 1.0;
+    vs2(0, 0) = 1.0;
     vsr[0] = 0.0;
     vsrez[0] = -blData2.amplz;
   } else {
@@ -617,11 +617,11 @@ bool XFoil::bldif(int ityp) {
       vs1(1, 3) = z_ax * (ax_result.ax_hk1 * blData1.hkz_dz);
       vs1(1, 4) = z_ax * (ax_result.ax_hk1 * blData1.hkz_uz + ax_result.ax_rt1 * blData1.rtz_uz);
       vs1(1, 5) = ax_result.ax;
-      vs2(1, 1) = z_ax * ax_result.ax_a2 + 1.0;
-      vs2(1, 2) = z_ax * (ax_result.ax_hk2 * blData2.hkz_tz + ax_result.ax_t2 + ax_result.ax_rt2 * blData2.rtz_tz);
-      vs2(1, 3) = z_ax * (ax_result.ax_hk2 * blData2.hkz_dz);
-      vs2(1, 4) = z_ax * (ax_result.ax_hk2 * blData2.hkz_uz + ax_result.ax_rt2 * blData2.rtz_uz);
-      vs2(1, 5) = -ax_result.ax;
+      vs2(0, 0) = z_ax * ax_result.ax_a2 + 1.0;
+      vs2(0, 1) = z_ax * (ax_result.ax_hk2 * blData2.hkz_tz + ax_result.ax_t2 + ax_result.ax_rt2 * blData2.rtz_tz);
+      vs2(0, 2) = z_ax * (ax_result.ax_hk2 * blData2.hkz_dz);
+      vs2(0, 3) = z_ax * (ax_result.ax_hk2 * blData2.hkz_uz + ax_result.ax_rt2 * blData2.rtz_uz);
+      vs2(0, 4) = -ax_result.ax;
       vsm[0] = z_ax * (ax_result.ax_hk1 * blData1.hkz_ms + ax_result.ax_rt1 * blData1.rtz_ms + ax_result.ax_hk2 * blData2.hkz_ms +
                        ax_result.ax_rt2 * blData2.rtz_ms);
       vsr[0] = z_ax * (ax_result.ax_rt1 * blData1.rtz_re + ax_result.ax_rt2 * blData2.rtz_re);
@@ -714,11 +714,11 @@ bool XFoil::bldif(int ityp) {
       vs1(1, 3) = z_d1 + z_upw * upw_d1 + z_de1 * blData1.dez_dz + z_us1 * blData1.usz_dz;
       vs1(1, 4) = z_u1 + z_upw * upw_u1 + z_de1 * blData1.dez_uz + z_us1 * blData1.usz_uz;
       vs1(1, 5) = z_x1;
-      vs2(1, 1) = z_s2;
-      vs2(1, 2) = z_upw * upw_t2 + z_de2 * blData2.dez_tz + z_us2 * blData2.usz_tz;
-      vs2(1, 3) = z_d2 + z_upw * upw_d2 + z_de2 * blData2.dez_dz + z_us2 * blData2.usz_dz;
-      vs2(1, 4) = z_u2 + z_upw * upw_u2 + z_de2 * blData2.dez_uz + z_us2 * blData2.usz_uz;
-      vs2(1, 5) = z_x2;
+      vs2(0, 0) = z_s2;
+      vs2(0, 1) = z_upw * upw_t2 + z_de2 * blData2.dez_tz + z_us2 * blData2.usz_tz;
+      vs2(0, 2) = z_d2 + z_upw * upw_d2 + z_de2 * blData2.dez_dz + z_us2 * blData2.usz_dz;
+      vs2(0, 3) = z_u2 + z_upw * upw_u2 + z_de2 * blData2.dez_uz + z_us2 * blData2.usz_uz;
+      vs2(0, 4) = z_x2;
       vsm[0] = z_upw * upw_ms + z_de1 * blData1.dez_ms + z_us1 * blData1.usz_ms +
                z_de2 * blData2.dez_ms + z_us2 * blData2.usz_ms;
 
@@ -726,9 +726,9 @@ bool XFoil::bldif(int ityp) {
       vs1(1, 3) += z_cq1 * blData1.cqz_dz + z_cf1 * blData1.cfz_dz + z_hk1 * blData1.hkz_dz;
       vs1(1, 4) += z_cq1 * blData1.cqz_uz + z_cf1 * blData1.cfz_uz + z_hk1 * blData1.hkz_uz;
 
-      vs2(1, 2) += z_cq2 * blData2.cqz_tz + z_cf2 * blData2.cfz_tz + z_hk2 * blData2.hkz_tz;
-      vs2(1, 3) += z_cq2 * blData2.cqz_dz + z_cf2 * blData2.cfz_dz + z_hk2 * blData2.hkz_dz;
-      vs2(1, 4) += z_cq2 * blData2.cqz_uz + z_cf2 * blData2.cfz_uz + z_hk2 * blData2.hkz_uz;
+      vs2(0, 1) += z_cq2 * blData2.cqz_tz + z_cf2 * blData2.cfz_tz + z_hk2 * blData2.hkz_tz;
+      vs2(0, 2) += z_cq2 * blData2.cqz_dz + z_cf2 * blData2.cfz_dz + z_hk2 * blData2.hkz_dz;
+      vs2(0, 3) += z_cq2 * blData2.cqz_uz + z_cf2 * blData2.cfz_uz + z_hk2 * blData2.hkz_uz;
 
       vsm[0] += z_cq1 * blData1.cqz_ms + z_cf1 * blData1.cfz_ms + z_hk1 * blData1.hkz_ms +
                z_cq2 * blData2.cqz_ms + z_cf2 * blData2.cfz_ms + z_hk2 * blData2.hkz_ms;
@@ -787,10 +787,10 @@ bool XFoil::bldif(int ityp) {
   vs1(2, 3) = 0.5 * z_ha * blData1.hz_dz + z_cfm * cfm_d1 + z_cf1 * blData1.cfz_dz;
   vs1(2, 4) = 0.5 * z_ma * blData1.mz_uz + z_cfm * cfm_u1 + z_cf1 * blData1.cfz_uz + z_u1;
   vs1(2, 5) = z_x1;
-  vs2(2, 2) = 0.5 * z_ha * blData2.hz_tz + z_cfm * cfm_t2 + z_cf2 * blData2.cfz_tz + z_t2;
-  vs2(2, 3) = 0.5 * z_ha * blData2.hz_dz + z_cfm * cfm_d2 + z_cf2 * blData2.cfz_dz;
-  vs2(2, 4) = 0.5 * z_ma * blData2.mz_uz + z_cfm * cfm_u2 + z_cf2 * blData2.cfz_uz + z_u2;
-  vs2(2, 5) = z_x2;
+  vs2(1, 1) = 0.5 * z_ha * blData2.hz_tz + z_cfm * cfm_t2 + z_cf2 * blData2.cfz_tz + z_t2;
+  vs2(1, 2) = 0.5 * z_ha * blData2.hz_dz + z_cfm * cfm_d2 + z_cf2 * blData2.cfz_dz;
+  vs2(1, 3) = 0.5 * z_ma * blData2.mz_uz + z_cfm * cfm_u2 + z_cf2 * blData2.cfz_uz + z_u2;
+  vs2(1, 4) = z_x2;
 
   vsm[1] = 0.5 * z_ma * blData1.mz_ms + z_cfm * cfm_ms + z_cf1 * blData1.cfz_ms +
            0.5 * z_ma * blData2.mz_ms + z_cf2 * blData2.cfz_ms;
@@ -850,11 +850,11 @@ bool XFoil::bldif(int ityp) {
   vs1(3, 3) = z_hs1 * blData1.hsz_dz + z_cf1 * blData1.cfz_dz + z_di1 * blData1.diz_dz;
   vs1(3, 4) = z_hs1 * blData1.hsz_uz + z_cf1 * blData1.cfz_uz + z_di1 * blData1.diz_uz + z_u1;
   vs1(3, 5) = z_x1;
-  vs2(3, 1) = z_di2 * blData2.diz_sz;
-  vs2(3, 2) = z_hs2 * blData2.hsz_tz + z_cf2 * blData2.cfz_tz + z_di2 * blData2.diz_tz + z_t2;
-  vs2(3, 3) = z_hs2 * blData2.hsz_dz + z_cf2 * blData2.cfz_dz + z_di2 * blData2.diz_dz;
-  vs2(3, 4) = z_hs2 * blData2.hsz_uz + z_cf2 * blData2.cfz_uz + z_di2 * blData2.diz_uz + z_u2;
-  vs2(3, 5) = z_x2;
+  vs2(2, 0) = z_di2 * blData2.diz_sz;
+  vs2(2, 1) = z_hs2 * blData2.hsz_tz + z_cf2 * blData2.cfz_tz + z_di2 * blData2.diz_tz + z_t2;
+  vs2(2, 2) = z_hs2 * blData2.hsz_dz + z_cf2 * blData2.cfz_dz + z_di2 * blData2.diz_dz;
+  vs2(2, 3) = z_hs2 * blData2.hsz_uz + z_cf2 * blData2.cfz_uz + z_di2 * blData2.diz_uz + z_u2;
+  vs2(2, 4) = z_x2;
   vsm[2] = z_hs1 * blData1.hsz_ms + z_cf1 * blData1.cfz_ms + z_di1 * blData1.diz_ms + z_hs2 * blData2.hsz_ms +
            z_cf2 * blData2.cfz_ms + z_di2 * blData2.diz_ms;
   vsr[2] = z_hs1 * blData1.hsz_re + z_cf1 * blData1.cfz_re + z_di1 * blData1.diz_re + z_hs2 * blData2.hsz_re +
@@ -863,9 +863,9 @@ bool XFoil::bldif(int ityp) {
   vs1(3, 2) += 0.5 * (z_hca * blData1.hcz_tz + z_ha * blData1.hz_tz) + z_upw * upw_t1;
   vs1(3, 3) += 0.5 * (z_hca * blData1.hcz_dz + z_ha * blData1.hz_dz) + z_upw * upw_d1;
   vs1(3, 4) += 0.5 * (z_hca * blData1.hcz_uz) + z_upw * upw_u1;
-  vs2(3, 2) += 0.5 * (z_hca * blData2.hcz_tz + z_ha * blData2.hz_tz) + z_upw * upw_t2;
-  vs2(3, 3) += 0.5 * (z_hca * blData2.hcz_dz + z_ha * blData2.hz_dz) + z_upw * upw_d2;
-  vs2(3, 4) += 0.5 * (z_hca * blData2.hcz_uz) + z_upw * upw_u2;
+  vs2(2, 1) += 0.5 * (z_hca * blData2.hcz_tz + z_ha * blData2.hz_tz) + z_upw * upw_t2;
+  vs2(2, 2) += 0.5 * (z_hca * blData2.hcz_dz + z_ha * blData2.hz_dz) + z_upw * upw_d2;
+  vs2(2, 3) += 0.5 * (z_hca * blData2.hcz_uz) + z_upw * upw_u2;
 
   vsm[2] = 0.5 * (z_hca * blData1.hcz_ms) + z_upw * upw_ms + 0.5 * (z_hca * blData2.hcz_ms);
 
@@ -1246,7 +1246,7 @@ bool XFoil::blsys() {
 
   if (simi) {
     //----- at similarity station, "1" variables are really "2" variables
-    vs2 += vs1;
+    vs2 += vs1.block(1, 1, 4, 5);
     vs1 = Matrix<double, 5, 6>::Zero();
   }
 
@@ -1254,12 +1254,12 @@ bool XFoil::blsys() {
   for (int k = 1; k <= 4; k++) {
     //------ residual derivatives wrt compressible uec
     double res_u1 = vs1(k, 4);
-    double res_u2 = vs2(k, 4);
+    double res_u2 = vs2(k - 1, 3);
     double res_ms = vsm[k - 1];
 
     //------ combine with derivatives of compressible  u1,u2 = uec(uei m)
     vs1(k, 4) *= blData1.uz_uei;
-    vs2(k, 4) *= blData2.uz_uei;
+    vs2(k - 1, 3) *= blData2.uz_uei;
     vsm[k - 1] = res_u1 * blData1.uz_ms + res_u2 * blData2.uz_ms + res_ms;
   }
   return true;
@@ -2590,23 +2590,23 @@ bool XFoil::mrchdu() {
 
         if (simi || ibl == iblte.get(is) + 1) {
           //--------- for similarity station or first wake point, prescribe ue
-          vs2(4, 1) = 0.0;
-          vs2(4, 2) = 0.0;
-          vs2(4, 3) = 0.0;
-          vs2(4, 4) = blData2.uz_uei;
+          vs2(3, 0) = 0.0;
+          vs2(3, 1) = 0.0;
+          vs2(3, 2) = 0.0;
+          vs2(3, 3) = blData2.uz_uei;
           vsrez[3] = ueref - blData2.uz;
         } else {
           //******** calculate ue-hk characteristic slope
           
           //--------- set unit dhk
-          vs2(4, 1) = 0.0;
-          vs2(4, 2) = blData2.hkz_tz;
-          vs2(4, 3) = blData2.hkz_dz;
-          vs2(4, 4) = blData2.hkz_uz * blData2.uz_uei;
+          vs2(3, 0) = 0.0;
+          vs2(3, 1) = blData2.hkz_tz;
+          vs2(3, 2) = blData2.hkz_dz;
+          vs2(3, 3) = blData2.hkz_uz * blData2.uz_uei;
           vsrez[3] = 1.0;
 
           //--------- calculate due response
-          double delta_sen = vs2.block(1, 1, 4, 4).fullPivLu().solve(vsrez)[3];
+          double delta_sen = vs2.block(0, 0, 4, 4).fullPivLu().solve(vsrez)[3];
 
           //--------- set  senswt * (normalized due/dhk)
           sennew = senswt * delta_sen * hkref / ueref;
@@ -2616,16 +2616,16 @@ bool XFoil::mrchdu() {
             sens = 0.5 * (sens + sennew);
 
           //--------- set prescribed ue-hk combination
-          vs2(4, 1) = 0.0;
-          vs2(4, 2) = blData2.hkz_tz * hkref;
-          vs2(4, 3) = blData2.hkz_dz * hkref;
-          vs2(4, 4) = (blData2.hkz_uz * hkref + sens / ueref) * blData2.uz_uei;
+          vs2(3, 0) = 0.0;
+          vs2(3, 1) = blData2.hkz_tz * hkref;
+          vs2(3, 2) = blData2.hkz_dz * hkref;
+          vs2(3, 3) = (blData2.hkz_uz * hkref + sens / ueref) * blData2.uz_uei;
           vsrez[3] = -(hkref * hkref) * (blData2.hkz / hkref - 1.0) -
                      sens * (blData2.uz / ueref - 1.0);
         }
 
         //-------- solve newton system for current "2" station
-        vsrez = vs2.block(1, 1, 4, 4).fullPivLu().solve(vsrez);
+        vsrez = vs2.block(0, 0, 4, 4).fullPivLu().solve(vsrez);
 
         //-------- determine max changes and underrelax if necessary
         dmax = std::max(fabs(vsrez[1] / thi), fabs(vsrez[2] / dsi));
@@ -2858,13 +2858,13 @@ bool XFoil::mrchue() {
 
         if (direct) {
           //--------- try direct mode (set due = 0 in currently empty 4th line)
-          vs2(4, 1) = 0.0;
-          vs2(4, 2) = 0.0;
-          vs2(4, 3) = 0.0;
-          vs2(4, 4) = 1.0;
+          vs2(3, 0) = 0.0;
+          vs2(3, 1) = 0.0;
+          vs2(3, 2) = 0.0;
+          vs2(3, 3) = 1.0;
           vsrez[3] = 0.0;
           //--------- solve newton system for current "2" station
-          vsrez = vs2.block(1, 1, 4, 4).fullPivLu().solve(vsrez);
+          vsrez = vs2.block(0, 0, 4, 4).fullPivLu().solve(vsrez);
           //--------- determine max changes and underrelax if necessary
           dmax = std::max(fabs(vsrez[1] / thi), fabs(vsrez[2] / dsi));
           if (ibl < itran[is]) dmax = std::max(dmax, fabs(vsrez[0] / 10.0));
@@ -2942,12 +2942,12 @@ bool XFoil::mrchue() {
           }
         } else {
           //-------- inverse mode (force hk to prescribed value htarg)
-          vs2(4, 1) = 0.0;
-          vs2(4, 2) = blData2.hkz_tz;
-          vs2(4, 3) = blData2.hkz_dz;
-          vs2(4, 4) = blData2.hkz_uz;
+          vs2(3, 0) = 0.0;
+          vs2(3, 1) = blData2.hkz_tz;
+          vs2(3, 2) = blData2.hkz_dz;
+          vs2(3, 3) = blData2.hkz_uz;
           vsrez[3] = htarg - blData2.hkz;
-          vsrez = vs2.block(1, 1, 4, 4).fullPivLu().solve(vsrez);
+          vsrez = vs2.block(0, 0, 4, 4).fullPivLu().solve(vsrez);
 
           dmax = std::max(fabs(vsrez[1] / thi), fabs(vsrez[2] / dsi));
           if (ibl >= itran[is]) dmax = std::max(dmax, fabs(vsrez[0] / cti));
@@ -4240,80 +4240,80 @@ bool XFoil::setbl() {
 
       for (jv = 1; jv <= nsys; jv++) {
         vm[1][jv][iv] = vs1(1, 3) * d1_m[jv] + vs1(1, 4) * u1_m[jv] +
-                        vs2(1, 3) * d2_m[jv] + vs2(1, 4) * u2_m[jv] +
-                        (vs1(1, 5) + vs2(1, 5) + vsx[0]) *
+                        vs2(0, 2) * d2_m[jv] + vs2(0, 3) * u2_m[jv] +
+                        (vs1(1, 5) + vs2(0, 4) + vsx[0]) *
                             (xi_ule1 * ule1_m[jv] + xi_ule2 * ule2_m[jv]);
       }
 
       vb[1][1][iv] = vs1(1, 1);
       vb[1][2][iv] = vs1(1, 2);
 
-      va[1][1][iv] = vs2(1, 1);
-      va[1][2][iv] = vs2(1, 2);
+      va[1][1][iv] = vs2(0, 0);
+      va[1][2][iv] = vs2(0, 1);
 
       if (lalfa)
         vdel[1][2][iv] = vsr[0] * re_clmr + vsm[0] * msq_clmr;
       else
         vdel[1][2][iv] = (vs1(1, 4) * u1_a + vs1(1, 3) * d1_a) +
-                         (vs2(1, 4) * u2_a + vs2(1, 3) * d2_a) +
-                         (vs1(1, 5) + vs2(1, 5) + vsx[0]) *
+                         (vs2(0, 3) * u2_a + vs2(0, 2) * d2_a) +
+                         (vs1(1, 5) + vs2(0, 4) + vsx[0]) *
                              (xi_ule1 * ule1_a + xi_ule2 * ule2_a);
 
       vdel[1][1][iv] = vsrez[0] + (vs1(1, 4) * due1 + vs1(1, 3) * dds1) +
-                       (vs2(1, 4) * due2 + vs2(1, 3) * dds2) +
-                       (vs1(1, 5) + vs2(1, 5) + vsx[0]) *
+                       (vs2(0, 3) * due2 + vs2(0, 2) * dds2) +
+                       (vs1(1, 5) + vs2(0, 4) + vsx[0]) *
                            (xi_ule1 * dule1 + xi_ule2 * dule2);
 
       for (jv = 1; jv <= nsys; jv++) {
         vm[2][jv][iv] = vs1(2, 3) * d1_m[jv] + vs1(2, 4) * u1_m[jv] +
-                        vs2(2, 3) * d2_m[jv] + vs2(2, 4) * u2_m[jv] +
-                        (vs1(2, 5) + vs2(2, 5) + vsx[1]) *
+                        vs2(1, 2) * d2_m[jv] + vs2(1, 3) * u2_m[jv] +
+                        (vs1(2, 5) + vs2(1, 4) + vsx[1]) *
                             (xi_ule1 * ule1_m[jv] + xi_ule2 * ule2_m[jv]);
       }
       vb[2][1][iv] = vs1(2, 1);
       vb[2][2][iv] = vs1(2, 2);
 
-      va[2][1][iv] = vs2(2, 1);
-      va[2][2][iv] = vs2(2, 2);
+      va[2][1][iv] = vs2(1, 0);
+      va[2][2][iv] = vs2(1, 1);
 
       if (lalfa)
         vdel[2][2][iv] = vsr[1] * re_clmr + vsm[1] * msq_clmr;
       else
         vdel[2][2][iv] = (vs1(2, 4) * u1_a + vs1(2, 3) * d1_a) +
-                         (vs2(2, 4) * u2_a + vs2(2, 3) * d2_a) +
-                         (vs1(2, 5) + vs2(2, 5) + vsx[1]) *
+                         (vs2(1, 3) * u2_a + vs2(1, 2) * d2_a) +
+                         (vs1(2, 5) + vs2(1, 4) + vsx[1]) *
                              (xi_ule1 * ule1_a + xi_ule2 * ule2_a);
 
       vdel[2][1][iv] = vsrez[1] + (vs1(2, 4) * due1 + vs1(2, 3) * dds1) +
-                       (vs2(2, 4) * due2 + vs2(2, 3) * dds2) +
-                       (vs1(2, 5) + vs2(2, 5) + vsx[1]) *
+                       (vs2(1, 3) * due2 + vs2(1, 2) * dds2) +
+                       (vs1(2, 5) + vs2(1, 4) + vsx[1]) *
                            (xi_ule1 * dule1 + xi_ule2 * dule2);
 
       // memory overlap problem
       for (jv = 1; jv <= nsys; jv++) {
         vm[3][jv][iv] = vs1(3, 3) * d1_m[jv] + vs1(3, 4) * u1_m[jv] +
-                        vs2(3, 3) * d2_m[jv] + vs2(3, 4) * u2_m[jv] +
-                        (vs1(3, 5) + vs2(3, 5) + vsx[2]) *
+                        vs2(2, 2) * d2_m[jv] + vs2(2, 3) * u2_m[jv] +
+                        (vs1(3, 5) + vs2(2, 4) + vsx[2]) *
                             (xi_ule1 * ule1_m[jv] + xi_ule2 * ule2_m[jv]);
       }
 
       vb[3][1][iv] = vs1(3, 1);
       vb[3][2][iv] = vs1(3, 2);
 
-      va[3][1][iv] = vs2(3, 1);
-      va[3][2][iv] = vs2(3, 2);
+      va[3][1][iv] = vs2(2, 0);
+      va[3][2][iv] = vs2(2, 1);
 
       if (lalfa)
         vdel[3][2][iv] = vsr[2] * re_clmr + vsm[2] * msq_clmr;
       else
         vdel[3][2][iv] = (vs1(3, 4) * u1_a + vs1(3, 3) * d1_a) +
-                         (vs2(3, 4) * u2_a + vs2(3, 3) * d2_a) +
-                         (vs1(3, 5) + vs2(3, 5) + vsx[2]) *
+                         (vs2(2, 3) * u2_a + vs2(2, 2) * d2_a) +
+                         (vs1(3, 5) + vs2(2, 4) + vsx[2]) *
                              (xi_ule1 * ule1_a + xi_ule2 * ule2_a);
 
       vdel[3][1][iv] = vsrez[2] + (vs1(3, 4) * due1 + vs1(3, 3) * dds1) +
-                       (vs2(3, 4) * due2 + vs2(3, 3) * dds2) +
-                       (vs1(3, 5) + vs2(3, 5) + vsx[2]) *
+                       (vs2(2, 3) * due2 + vs2(2, 2) * dds2) +
+                       (vs1(3, 5) + vs2(2, 4) + vsx[2]) *
                            (xi_ule1 * dule1 + xi_ule2 * dule2);
 
       if (ibl == iblte.get(is) + 1) {
@@ -4846,20 +4846,20 @@ bool XFoil::tesys(double cte, double tte, double dte) {
   vsr = Vector<double, 4>::Zero();
   vsx = Vector<double, 4>::Zero();
   vs1 = Matrix<double, 5, 6>::Zero();
-  vs2 = Matrix<double, 5, 6>::Zero();
+  vs2 = Matrix<double, 4, 5>::Zero();
 
   blvar(3);
 
   vs1(1, 1) = -1.0;
-  vs2(1, 1) = 1.0;
+  vs2(0, 0) = 1.0;
   vsrez[0] = cte - blData2.sz;
 
   vs1(2, 2) = -1.0;
-  vs2(2, 2) = 1.0;
+  vs2(1, 1) = 1.0;
   vsrez[1] = tte - blData2.tz;
 
   vs1(3, 3) = -1.0;
-  vs2(3, 3) = 1.0;
+  vs2(2, 2) = 1.0;
   vsrez[2] = dte - blData2.dz - blData2.dwz;
 
   return true;
@@ -5295,33 +5295,33 @@ bool XFoil::trdif() {
   //-    equation is unnecessary here, so the k=1 row is left empty.
   for (k = 2; k <= 3; k++) {
     blrez[k] = vsrez[k - 1];
-    blm[k] = vsm[k - 1] + vs2(k, 2) * tt_ms + vs2(k, 3) * dt_ms +
-             vs2(k, 4) * ut_ms + vs2(k, 5) * xt_ms;
-    blr[k] = vsr[k - 1] + vs2(k, 2) * tt_re + vs2(k, 3) * dt_re +
-             vs2(k, 4) * ut_re + vs2(k, 5) * xt_re;
-    blx[k] = vsx[k - 1] + vs2(k, 2) * tt_xf + vs2(k, 3) * dt_xf +
-             vs2(k, 4) * ut_xf + vs2(k, 5) * xt_xf;
+    blm[k] = vsm[k - 1] + vs2(k - 1, 1) * tt_ms + vs2(k - 1, 2) * dt_ms +
+             vs2(k - 1, 3) * ut_ms + vs2(k - 1, 4) * xt_ms;
+    blr[k] = vsr[k - 1] + vs2(k - 1, 1) * tt_re + vs2(k - 1, 2) * dt_re +
+             vs2(k - 1, 3) * ut_re + vs2(k - 1, 4) * xt_re;
+    blx[k] = vsx[k - 1] + vs2(k - 1, 1) * tt_xf + vs2(k - 1, 2) * dt_xf +
+             vs2(k - 1, 3) * ut_xf + vs2(k - 1, 4) * xt_xf;
 
-    bl1(k, 1) = vs1(k, 1) + vs2(k, 2) * tt_a1 + vs2(k, 3) * dt_a1 +
-                vs2(k, 4) * ut_a1 + vs2(k, 5) * xt_a1;
-    bl1(k, 2) = vs1(k, 2) + vs2(k, 2) * tt_t1 + vs2(k, 3) * dt_t1 +
-                vs2(k, 4) * ut_t1 + vs2(k, 5) * xt_t1;
-    bl1(k, 3) = vs1(k, 3) + vs2(k, 2) * tt_d1 + vs2(k, 3) * dt_d1 +
-                vs2(k, 4) * ut_d1 + vs2(k, 5) * xt_d1;
-    bl1(k, 4) = vs1(k, 4) + vs2(k, 2) * tt_u1 + vs2(k, 3) * dt_u1 +
-                vs2(k, 4) * ut_u1 + vs2(k, 5) * xt_u1;
-    bl1(k, 5) = vs1(k, 5) + vs2(k, 2) * tt_x1 + vs2(k, 3) * dt_x1 +
-                vs2(k, 4) * ut_x1 + vs2(k, 5) * xt_x1;
+    bl1(k, 1) = vs1(k, 1) + vs2(k - 1, 1) * tt_a1 + vs2(k - 1, 2) * dt_a1 +
+                vs2(k - 1, 3) * ut_a1 + vs2(k - 1, 4) * xt_a1;
+    bl1(k, 2) = vs1(k, 2) + vs2(k - 1, 1) * tt_t1 + vs2(k - 1, 2) * dt_t1 +
+                vs2(k - 1, 3) * ut_t1 + vs2(k - 1, 4) * xt_t1;
+    bl1(k, 3) = vs1(k, 3) + vs2(k - 1, 1) * tt_d1 + vs2(k - 1, 2) * dt_d1 +
+                vs2(k - 1, 3) * ut_d1 + vs2(k - 1, 4) * xt_d1;
+    bl1(k, 4) = vs1(k, 4) + vs2(k - 1, 1) * tt_u1 + vs2(k - 1, 2) * dt_u1 +
+                vs2(k - 1, 3) * ut_u1 + vs2(k - 1, 4) * xt_u1;
+    bl1(k, 5) = vs1(k, 5) + vs2(k - 1, 1) * tt_x1 + vs2(k - 1, 2) * dt_x1 +
+                vs2(k - 1, 3) * ut_x1 + vs2(k - 1, 4) * xt_x1;
 
     bl2(k, 1) = 0.0;
-    bl2(k, 2) = vs2(k, 2) * tt_t2 + vs2(k, 3) * dt_t2 + vs2(k, 4) * ut_t2 +
-                vs2(k, 5) * xt_t2;
-    bl2(k, 3) = vs2(k, 2) * tt_d2 + vs2(k, 3) * dt_d2 + vs2(k, 4) * ut_d2 +
-                vs2(k, 5) * xt_d2;
-    bl2(k, 4) = vs2(k, 2) * tt_u2 + vs2(k, 3) * dt_u2 + vs2(k, 4) * ut_u2 +
-                vs2(k, 5) * xt_u2;
-    bl2(k, 5) = vs2(k, 2) * tt_x2 + vs2(k, 3) * dt_x2 + vs2(k, 4) * ut_x2 +
-                vs2(k, 5) * xt_x2;
+    bl2(k, 2) = vs2(k - 1, 1) * tt_t2 + vs2(k - 1, 2) * dt_t2 + vs2(k - 1, 3) * ut_t2 +
+                vs2(k - 1, 4) * xt_t2;
+    bl2(k, 3) = vs2(k - 1, 1) * tt_d2 + vs2(k - 1, 2) * dt_d2 + vs2(k - 1, 3) * ut_d2 +
+                vs2(k - 1, 4) * xt_d2;
+    bl2(k, 4) = vs2(k - 1, 1) * tt_u2 + vs2(k - 1, 2) * dt_u2 + vs2(k - 1, 3) * ut_u2 +
+                vs2(k - 1, 4) * xt_u2;
+    bl2(k, 5) = vs2(k - 1, 1) * tt_x2 + vs2(k - 1, 2) * dt_x2 + vs2(k - 1, 3) * ut_x2 +
+                vs2(k - 1, 4) * xt_x2;
   }
 
   //**** second, set up turbulent part between xt and x2  ****
@@ -5390,7 +5390,7 @@ bool XFoil::trdif() {
   };
   bt1.block(1, 1, 3, 5) = vs1.block(1, 1, 3, 5) * bt1_right;
   bt2.block(1, 1, 3, 5) = vs1.block(1, 1, 3, 5) * bt2_right;
-  bt2 += vs2;
+  bt2.block(1, 1, 4, 5) += vs2;
   for (k = 1; k <= 3; k++) {
     btrez[k] = vsrez[k - 1];
     btm[k] = vsm[k - 1] + vs1(k, 1) * st_ms + vs1(k, 2) * tt_ms +
@@ -5418,11 +5418,11 @@ bool XFoil::trdif() {
   vsx[2] = blx[3] + btx[3];
   for (int l = 1; l <= 5; l++) {
     vs1(1, l) = bt1(1, l);
-    vs2(1, l) = bt2(1, l);
+    vs2(0, l - 1) = bt2(1, l);
     vs1(2, l) = bl1(2, l) + bt1(2, l);
-    vs2(2, l) = bl2(2, l) + bt2(2, l);
+    vs2(1, l - 1) = bl2(2, l) + bt2(2, l);
     vs1(3, l) = bl1(3, l) + bt1(3, l);
-    vs2(3, l) = bl2(3, l) + bt2(3, l);
+    vs2(2, l - 1) = bl2(3, l) + bt2(3, l);
   }
 
   //---- to be sanitary, restore "1" quantities which got clobbered

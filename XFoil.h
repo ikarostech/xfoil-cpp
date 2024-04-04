@@ -363,7 +363,8 @@ class XFoil {
   double bij[IQX][IZX], dij[IZX][IZX];
   double cij[IWX][IQX];
 
-  Matrix<double, 5, 6> vs1, vs2;
+  Matrix<double, 5, 6> vs1;
+  Matrix<double, 4, 5> vs2;
   Vector<double, 4> vsrez, vsr, vsm, vsx;
 
   bool trforc, simi, tran, turb, wake, trfree;
