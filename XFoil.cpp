@@ -143,7 +143,7 @@ bool XFoil::initialize() {
   memset(vm, 0, sizeof(vm));
   vs1 = Matrix<double, 5, 6>::Zero();
   vs2 = Matrix<double, 5, 6>::Zero();
-  vsrez  = Vector<double, 5>::Zero();
+  vsrez  = Vector<double, 4>::Zero();
   vsr = Vector<double, 5>::Zero();
   vsm = Vector<double, 5>::Zero();
   vsx = Vector<double, 5>::Zero();
@@ -552,7 +552,7 @@ bool XFoil::bldif(int ityp) {
     ddlog = 1.0;
   }
 
-  vsrez = Vector<double, 5>::Zero();
+  vsrez = Vector<double, 4>::Zero();
   vsm = Vector<double, 5>::Zero();
   vsr = Vector<double, 5>::Zero();
   vsx = Vector<double, 5>::Zero();
@@ -601,7 +601,7 @@ bool XFoil::bldif(int ityp) {
     //***** le point -->  set zero amplification factor
     vs2(1, 1) = 1.0;
     vsr[1] = 0.0;
-    vsrez[1] = -blData2.amplz;
+    vsrez[0] = -blData2.amplz;
   } else {
     if (ityp == 1) {
       //***** laminar part -->  set amplification equation
@@ -626,7 +626,7 @@ bool XFoil::bldif(int ityp) {
                        ax_result.ax_rt2 * blData2.rtz_ms);
       vsr[1] = z_ax * (ax_result.ax_rt1 * blData1.rtz_re + ax_result.ax_rt2 * blData2.rtz_re);
       vsx[1] = 0.0;
-      vsrez[1] = -rezc;
+      vsrez[0] = -rezc;
     } else {
       //***** turbulent part -->  set shear lag equation
 
@@ -735,7 +735,7 @@ bool XFoil::bldif(int ityp) {
       vsr[1] =
           z_cq1 * blData1.cqz_re + z_cf1 * blData1.cfz_re + z_cq2 * blData2.cqz_re + z_cf2 * blData2.cfz_re;
       vsx[1] = 0.0;
-      vsrez[1] = -rezc;
+      vsrez[0] = -rezc;
     }
   }  // endif
 
@@ -796,7 +796,7 @@ bool XFoil::bldif(int ityp) {
            0.5 * z_ma * blData2.mz_ms + z_cf2 * blData2.cfz_ms;
   vsr[2] = z_cfm * cfm_re + z_cf1 * blData1.cfz_re + z_cf2 * blData2.cfz_re;
   vsx[2] = 0.0;
-  vsrez[2] = -rezt;
+  vsrez[1] = -rezt;
 
   //**** set up shape parameter equation
 
@@ -870,7 +870,7 @@ bool XFoil::bldif(int ityp) {
   vsm[3] = 0.5 * (z_hca * blData1.hcz_ms) + z_upw * upw_ms + 0.5 * (z_hca * blData2.hcz_ms);
 
   vsx[3] = 0.0;
-  vsrez[3] = -rezh;
+  vsrez[2] = -rezh;
 
   return true;
 }
@@ -2594,7 +2594,7 @@ bool XFoil::mrchdu() {
           vs2(4, 2) = 0.0;
           vs2(4, 3) = 0.0;
           vs2(4, 4) = blData2.uz_uei;
-          vsrez[4] = ueref - blData2.uz;
+          vsrez[3] = ueref - blData2.uz;
         } else {
           //******** calculate ue-hk characteristic slope
           
@@ -2603,10 +2603,10 @@ bool XFoil::mrchdu() {
           vs2(4, 2) = blData2.hkz_tz;
           vs2(4, 3) = blData2.hkz_dz;
           vs2(4, 4) = blData2.hkz_uz * blData2.uz_uei;
-          vsrez[4] = 1.0;
+          vsrez[3] = 1.0;
 
           //--------- calculate due response
-          double delta_sen = vs2.block(1, 1, 4, 4).fullPivLu().solve(vsrez.segment(1, 4))[3];
+          double delta_sen = vs2.block(1, 1, 4, 4).fullPivLu().solve(vsrez)[3];
 
           //--------- set  senswt * (normalized due/dhk)
           sennew = senswt * delta_sen * hkref / ueref;
@@ -2620,27 +2620,27 @@ bool XFoil::mrchdu() {
           vs2(4, 2) = blData2.hkz_tz * hkref;
           vs2(4, 3) = blData2.hkz_dz * hkref;
           vs2(4, 4) = (blData2.hkz_uz * hkref + sens / ueref) * blData2.uz_uei;
-          vsrez[4] = -(hkref * hkref) * (blData2.hkz / hkref - 1.0) -
+          vsrez[3] = -(hkref * hkref) * (blData2.hkz / hkref - 1.0) -
                      sens * (blData2.uz / ueref - 1.0);
         }
 
         //-------- solve newton system for current "2" station
-        vsrez.segment(1, 4) = vs2.block(1, 1, 4, 4).fullPivLu().solve(vsrez.segment(1, 4));
+        vsrez = vs2.block(1, 1, 4, 4).fullPivLu().solve(vsrez);
 
         //-------- determine max changes and underrelax if necessary
-        dmax = std::max(fabs(vsrez[2] / thi), fabs(vsrez[3] / dsi));
+        dmax = std::max(fabs(vsrez[1] / thi), fabs(vsrez[2] / dsi));
         if (ibl >= itran[is])
-          dmax = std::max(dmax, fabs(vsrez[1] / (10.0 * cti)));
+          dmax = std::max(dmax, fabs(vsrez[0] / (10.0 * cti)));
 
         rlx = 1.0;
         if (dmax > 0.3) rlx = 0.3 / dmax;
 
         //-------- update as usual
-        if (ibl < itran[is]) ami = ami + rlx * vsrez[1];
-        if (ibl >= itran[is]) cti = cti + rlx * vsrez[1];
-        thi = thi + rlx * vsrez[2];
-        dsi = dsi + rlx * vsrez[3];
-        uei = uei + rlx * vsrez[4];
+        if (ibl < itran[is]) ami = ami + rlx * vsrez[0];
+        if (ibl >= itran[is]) cti = cti + rlx * vsrez[0];
+        thi = thi + rlx * vsrez[1];
+        dsi = dsi + rlx * vsrez[2];
+        uei = uei + rlx * vsrez[3];
 
         //-------- eliminate absurd transients
         if (ibl >= itran[is]) {
@@ -2862,13 +2862,13 @@ bool XFoil::mrchue() {
           vs2(4, 2) = 0.0;
           vs2(4, 3) = 0.0;
           vs2(4, 4) = 1.0;
-          vsrez[4] = 0.0;
+          vsrez[3] = 0.0;
           //--------- solve newton system for current "2" station
-          vsrez.segment(1, 4) = vs2.block(1, 1, 4, 4).fullPivLu().solve(vsrez.segment(1, 4));
+          vsrez = vs2.block(1, 1, 4, 4).fullPivLu().solve(vsrez);
           //--------- determine max changes and underrelax if necessary
-          dmax = std::max(fabs(vsrez[2] / thi), fabs(vsrez[3] / dsi));
-          if (ibl < itran[is]) dmax = std::max(dmax, fabs(vsrez[1] / 10.0));
-          if (ibl >= itran[is]) dmax = std::max(dmax, fabs(vsrez[1] / cti));
+          dmax = std::max(fabs(vsrez[1] / thi), fabs(vsrez[2] / dsi));
+          if (ibl < itran[is]) dmax = std::max(dmax, fabs(vsrez[0] / 10.0));
+          if (ibl >= itran[is]) dmax = std::max(dmax, fabs(vsrez[0] / cti));
 
           rlx = 1.0;
           if (dmax > 0.3) rlx = 0.3 / dmax;
@@ -2877,7 +2877,7 @@ bool XFoil::mrchue() {
             //---------- calculate resulting kinematic shape parameter hk
             msq =
                 uei * uei * hstinv / (gm1bl * (1.0 - 0.5 * uei * uei * hstinv));
-            htest = (dsi + rlx * vsrez[3]) / (thi + rlx * vsrez[2]);
+            htest = (dsi + rlx * vsrez[2]) / (thi + rlx * vsrez[1]);
             hkin(htest, msq, hktest, dummy, dummy);
 
             //---------- decide whether to do direct or inverse problem based on
@@ -2888,9 +2888,9 @@ bool XFoil::mrchue() {
           }
           if (direct) {
             //---------- update as usual
-            if (ibl >= itran[is]) cti = cti + rlx * vsrez[1];
-            thi = thi + rlx * vsrez[2];
-            dsi = dsi + rlx * vsrez[3];
+            if (ibl >= itran[is]) cti = cti + rlx * vsrez[0];
+            thi = thi + rlx * vsrez[1];
+            dsi = dsi + rlx * vsrez[2];
           } else {
             //---------- set prescribed hk for inverse calculation at the
             // current station
@@ -2946,18 +2946,18 @@ bool XFoil::mrchue() {
           vs2(4, 2) = blData2.hkz_tz;
           vs2(4, 3) = blData2.hkz_dz;
           vs2(4, 4) = blData2.hkz_uz;
-          vsrez[4] = htarg - blData2.hkz;
-          vsrez.segment(1, 4) = vs2.block(1, 1, 4, 4).fullPivLu().solve(vsrez.segment(1, 4));
+          vsrez[3] = htarg - blData2.hkz;
+          vsrez = vs2.block(1, 1, 4, 4).fullPivLu().solve(vsrez);
 
-          dmax = std::max(fabs(vsrez[2] / thi), fabs(vsrez[3] / dsi));
-          if (ibl >= itran[is]) dmax = std::max(dmax, fabs(vsrez[1] / cti));
+          dmax = std::max(fabs(vsrez[1] / thi), fabs(vsrez[2] / dsi));
+          if (ibl >= itran[is]) dmax = std::max(dmax, fabs(vsrez[0] / cti));
           rlx = 1.0;
           if (dmax > 0.3) rlx = 0.3 / dmax;
           //--------- update variables
-          if (ibl >= itran[is]) cti = cti + rlx * vsrez[1];
-          thi = thi + rlx * vsrez[2];
-          dsi = dsi + rlx * vsrez[3];
-          uei = uei + rlx * vsrez[4];
+          if (ibl >= itran[is]) cti = cti + rlx * vsrez[0];
+          thi = thi + rlx * vsrez[1];
+          dsi = dsi + rlx * vsrez[2];
+          uei = uei + rlx * vsrez[3];
         }
         //-------- eliminate absurd transients
 
@@ -4259,7 +4259,7 @@ bool XFoil::setbl() {
                          (vs1(1, 5) + vs2(1, 5) + vsx[1]) *
                              (xi_ule1 * ule1_a + xi_ule2 * ule2_a);
 
-      vdel[1][1][iv] = vsrez[1] + (vs1(1, 4) * due1 + vs1(1, 3) * dds1) +
+      vdel[1][1][iv] = vsrez[0] + (vs1(1, 4) * due1 + vs1(1, 3) * dds1) +
                        (vs2(1, 4) * due2 + vs2(1, 3) * dds2) +
                        (vs1(1, 5) + vs2(1, 5) + vsx[1]) *
                            (xi_ule1 * dule1 + xi_ule2 * dule2);
@@ -4284,7 +4284,7 @@ bool XFoil::setbl() {
                          (vs1(2, 5) + vs2(2, 5) + vsx[2]) *
                              (xi_ule1 * ule1_a + xi_ule2 * ule2_a);
 
-      vdel[2][1][iv] = vsrez[2] + (vs1(2, 4) * due1 + vs1(2, 3) * dds1) +
+      vdel[2][1][iv] = vsrez[1] + (vs1(2, 4) * due1 + vs1(2, 3) * dds1) +
                        (vs2(2, 4) * due2 + vs2(2, 3) * dds2) +
                        (vs1(2, 5) + vs2(2, 5) + vsx[2]) *
                            (xi_ule1 * dule1 + xi_ule2 * dule2);
@@ -4311,7 +4311,7 @@ bool XFoil::setbl() {
                          (vs1(3, 5) + vs2(3, 5) + vsx[3]) *
                              (xi_ule1 * ule1_a + xi_ule2 * ule2_a);
 
-      vdel[3][1][iv] = vsrez[3] + (vs1(3, 4) * due1 + vs1(3, 3) * dds1) +
+      vdel[3][1][iv] = vsrez[2] + (vs1(3, 4) * due1 + vs1(3, 3) * dds1) +
                        (vs2(3, 4) * due2 + vs2(3, 3) * dds2) +
                        (vs1(3, 5) + vs2(3, 5) + vsx[3]) *
                            (xi_ule1 * dule1 + xi_ule2 * dule2);
@@ -4841,7 +4841,7 @@ bool XFoil::tesys(double cte, double tte, double dte) {
   //	   and first wake point infinitesimally behind te.
   //--------------------------------------------------------
 
-  vsrez = Vector<double, 5>::Zero();
+  vsrez = Vector<double, 4>::Zero();
   vsm = Vector<double, 5>::Zero();
   vsr = Vector<double, 5>::Zero();
   vsx = Vector<double, 5>::Zero();
@@ -4852,15 +4852,15 @@ bool XFoil::tesys(double cte, double tte, double dte) {
 
   vs1(1, 1) = -1.0;
   vs2(1, 1) = 1.0;
-  vsrez[1] = cte - blData2.sz;
+  vsrez[0] = cte - blData2.sz;
 
   vs1(2, 2) = -1.0;
   vs2(2, 2) = 1.0;
-  vsrez[2] = tte - blData2.tz;
+  vsrez[1] = tte - blData2.tz;
 
   vs1(3, 3) = -1.0;
   vs2(3, 3) = 1.0;
-  vsrez[3] = dte - blData2.dz - blData2.dwz;
+  vsrez[2] = dte - blData2.dz - blData2.dwz;
 
   return true;
 }
@@ -5294,7 +5294,7 @@ bool XFoil::trdif() {
   //-    into sensitivities wrt "1" and "2" variables.  the amplification
   //-    equation is unnecessary here, so the k=1 row is left empty.
   for (k = 2; k <= 3; k++) {
-    blrez[k] = vsrez[k];
+    blrez[k] = vsrez[k - 1];
     blm[k] = vsm[k] + vs2(k, 2) * tt_ms + vs2(k, 3) * dt_ms +
              vs2(k, 4) * ut_ms + vs2(k, 5) * xt_ms;
     blr[k] = vsr[k] + vs2(k, 2) * tt_re + vs2(k, 3) * dt_re +
@@ -5392,7 +5392,7 @@ bool XFoil::trdif() {
   bt2.block(1, 1, 3, 5) = vs1.block(1, 1, 3, 5) * bt2_right;
   bt2 += vs2;
   for (k = 1; k <= 3; k++) {
-    btrez[k] = vsrez[k];
+    btrez[k] = vsrez[k - 1];
     btm[k] = vsm[k] + vs1(k, 1) * st_ms + vs1(k, 2) * tt_ms +
              vs1(k, 3) * dt_ms + vs1(k, 4) * ut_ms + vs1(k, 5) * xt_ms;
     btr[k] = vsr[k] + vs1(k, 1) * st_re + vs1(k, 2) * tt_re +
@@ -5404,9 +5404,9 @@ bool XFoil::trdif() {
 
   //---- add up laminar and turbulent parts to get final system
   //-    in terms of honest-to-god "1" and "2" variables.
-  vsrez[1] = btrez[1];
-  vsrez[2] = blrez[2] + btrez[2];
-  vsrez[3] = blrez[3] + btrez[3];
+  vsrez[0] = btrez[1];
+  vsrez[1] = blrez[2] + btrez[2];
+  vsrez[2] = blrez[3] + btrez[3];
   vsm[1] = btm[1];
   vsm[2] = blm[2] + btm[2];
   vsm[3] = blm[3] + btm[3];
