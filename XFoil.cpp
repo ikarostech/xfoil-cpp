@@ -5188,8 +5188,8 @@ bool XFoil::trdif() {
   //     the turbulent part  xt < xi < x2
   //     are simply summed.
   //-----------------------------------------------
-  Matrix<double, 5, 6> bl1, bl2, bt1, bt2;
-  Vector<double, 5> blrez, blm, blr, blx, btrez, btm, btr, btx;
+  Matrix<double, 4, 5> bl1, bl2, bt1, bt2;
+  Vector<double, 4> blrez, blm, blr, blx, btrez, btm, btr, btx;
 
   double tt, tt_a1, tt_x1, tt_x2, tt_t1, tt_t2, tt_d1, tt_d2, tt_u1, tt_u2;
   double tt_ms, tt_re, tt_xf, dt, dt_a1, dt_x1, dt_x2, dt_t1, dt_t2;
@@ -5210,7 +5210,7 @@ bool XFoil::trdif() {
   double wf_xt = 1.0 / (blData2.xz - blData1.xz);
 
   double wf_a1 = wf_xt * xt_a1;
-  double  wf_x1 = wf_xt * xt_x1 + (wf - 1.0) / (blData2.xz - blData1.xz);
+  double wf_x1 = wf_xt * xt_x1 + (wf - 1.0) / (blData2.xz - blData1.xz);
   double wf_x2 = wf_xt * xt_x2 - wf / (blData2.xz - blData1.xz);
   double wf_t1 = wf_xt * xt_t1;
   double wf_t2 = wf_xt * xt_t2;
@@ -5294,33 +5294,33 @@ bool XFoil::trdif() {
   //-    into sensitivities wrt "1" and "2" variables.  the amplification
   //-    equation is unnecessary here, so the k=1 row is left empty.
   for (k = 1; k < 3; k++) {
-    blrez[k + 1] = vsrez[k];
-    blm[k + 1] = vsm[k] + vs2(k, 1) * tt_ms + vs2(k, 2) * dt_ms +
+    blrez[k] = vsrez[k];
+    blm[k] = vsm[k] + vs2(k, 1) * tt_ms + vs2(k, 2) * dt_ms +
              vs2(k, 3) * ut_ms + vs2(k, 4) * xt_ms;
-    blr[k + 1] = vsr[k] + vs2(k, 1) * tt_re + vs2(k, 2) * dt_re +
+    blr[k] = vsr[k] + vs2(k, 1) * tt_re + vs2(k, 2) * dt_re +
              vs2(k, 3) * ut_re + vs2(k, 4) * xt_re;
-    blx[k + 1] = vsx[k] + vs2(k, 1) * tt_xf + vs2(k, 2) * dt_xf +
+    blx[k] = vsx[k] + vs2(k, 1) * tt_xf + vs2(k, 2) * dt_xf +
              vs2(k, 3) * ut_xf + vs2(k, 4) * xt_xf;
 
-    bl1(k + 1, 1) = vs1(k, 0) + vs2(k, 1) * tt_a1 + vs2(k, 2) * dt_a1 +
+    bl1(k, 0) = vs1(k, 0) + vs2(k, 1) * tt_a1 + vs2(k, 2) * dt_a1 +
                 vs2(k, 3) * ut_a1 + vs2(k, 4) * xt_a1;
-    bl1(k + 1, 2) = vs1(k, 1) + vs2(k, 1) * tt_t1 + vs2(k, 2) * dt_t1 +
+    bl1(k, 1) = vs1(k, 1) + vs2(k, 1) * tt_t1 + vs2(k, 2) * dt_t1 +
                 vs2(k, 3) * ut_t1 + vs2(k, 4) * xt_t1;
-    bl1(k + 1, 3) = vs1(k, 2) + vs2(k, 1) * tt_d1 + vs2(k, 2) * dt_d1 +
+    bl1(k, 2) = vs1(k, 2) + vs2(k, 1) * tt_d1 + vs2(k, 2) * dt_d1 +
                 vs2(k, 3) * ut_d1 + vs2(k, 4) * xt_d1;
-    bl1(k + 1, 4) = vs1(k, 3) + vs2(k, 1) * tt_u1 + vs2(k, 2) * dt_u1 +
+    bl1(k, 3) = vs1(k, 3) + vs2(k, 1) * tt_u1 + vs2(k, 2) * dt_u1 +
                 vs2(k, 3) * ut_u1 + vs2(k, 4) * xt_u1;
-    bl1(k + 1, 5) = vs1(k, 4) + vs2(k, 1) * tt_x1 + vs2(k, 2) * dt_x1 +
+    bl1(k, 4) = vs1(k, 4) + vs2(k, 1) * tt_x1 + vs2(k, 2) * dt_x1 +
                 vs2(k, 3) * ut_x1 + vs2(k, 4) * xt_x1;
 
-    bl2(k + 1, 1) = 0.0;
-    bl2(k + 1, 2) = vs2(k, 1) * tt_t2 + vs2(k, 2) * dt_t2 + vs2(k, 3) * ut_t2 +
+    bl2(k, 0) = 0.0;
+    bl2(k, 1) = vs2(k, 1) * tt_t2 + vs2(k, 2) * dt_t2 + vs2(k, 3) * ut_t2 +
                 vs2(k, 4) * xt_t2;
-    bl2(k + 1, 3) = vs2(k, 1) * tt_d2 + vs2(k, 2) * dt_d2 + vs2(k, 3) * ut_d2 +
+    bl2(k, 2) = vs2(k, 1) * tt_d2 + vs2(k, 2) * dt_d2 + vs2(k, 3) * ut_d2 +
                 vs2(k, 4) * xt_d2;
-    bl2(k + 1, 4) = vs2(k, 1) * tt_u2 + vs2(k, 2) * dt_u2 + vs2(k, 3) * ut_u2 +
+    bl2(k, 3) = vs2(k, 1) * tt_u2 + vs2(k, 2) * dt_u2 + vs2(k, 3) * ut_u2 +
                 vs2(k, 4) * xt_u2;
-    bl2(k + 1, 5) = vs2(k, 1) * tt_x2 + vs2(k, 2) * dt_x2 + vs2(k, 3) * ut_x2 +
+    bl2(k, 4) = vs2(k, 1) * tt_x2 + vs2(k, 2) * dt_x2 + vs2(k, 3) * ut_x2 +
                 vs2(k, 4) * xt_x2;
   }
 
@@ -5388,42 +5388,38 @@ bool XFoil::trdif() {
     {0, ut_t2, ut_d2, ut_u2, ut_x2},
     {0, xt_t2, xt_d2, xt_u2, xt_x2}
   };
-  bt1.block(1, 1, 3, 5) = vs1.block(0, 0, 3, 5) * bt1_right;
-  bt2.block(1, 1, 3, 5) = vs1.block(0, 0, 3, 5) * bt2_right;
-  bt2.block(1, 1, 4, 5) += vs2;
+  bt1.block(0, 0, 3, 5) = vs1.block(0, 0, 3, 5) * bt1_right;
+  bt2.block(0, 0, 3, 5) = vs1.block(0, 0, 3, 5) * bt2_right;
+  bt2 += vs2;
   for (k = 0; k < 3; k++) {
-    btrez[k + 1] = vsrez[k];
-    btm[k + 1] = vsm[k] + vs1(k, 0) * st_ms + vs1(k, 1) * tt_ms +
+    btrez[k] = vsrez[k];
+    btm[k] = vsm[k] + vs1(k, 0) * st_ms + vs1(k, 1) * tt_ms +
              vs1(k, 2) * dt_ms + vs1(k, 3) * ut_ms + vs1(k, 4) * xt_ms;
-    btr[k + 1] = vsr[k] + vs1(k, 0) * st_re + vs1(k, 1) * tt_re +
+    btr[k] = vsr[k] + vs1(k, 0) * st_re + vs1(k, 1) * tt_re +
              vs1(k, 2) * dt_re + vs1(k, 3) * ut_re + vs1(k, 4) * xt_re;
-    btx[k + 1] = vsx[k] + vs1(k, 0) * st_xf + vs1(k, 1) * tt_xf +
+    btx[k] = vsx[k] + vs1(k, 0) * st_xf + vs1(k, 1) * tt_xf +
              vs1(k, 2) * dt_xf + vs1(k, 3) * ut_xf + vs1(k, 4) * xt_xf;
 
   }
 
   //---- add up laminar and turbulent parts to get final system
   //-    in terms of honest-to-god "1" and "2" variables.
-  vsrez[0] = btrez[1];
-  vsrez[1] = blrez[2] + btrez[2];
-  vsrez[2] = blrez[3] + btrez[3];
-  vsm[0] = btm[1];
-  vsm[1] = blm[2] + btm[2];
-  vsm[2] = blm[3] + btm[3];
-  vsr[0] = btr[1];
-  vsr[1] = blr[2] + btr[2];
-  vsr[2] = blr[3] + btr[3];
-  vsx[0] = btx[1];
-  vsx[1] = blx[2] + btx[2];
-  vsx[2] = blx[3] + btx[3];
-  for (int l = 0; l < 5; l++) {
-    vs1(0, l) = bt1(1, l + 1);
-    vs2(0, l) = bt2(1, l + 1);
-    vs1(1, l) = bl1(2, l + 1) + bt1(2, l + 1);
-    vs2(1, l) = bl2(2, l + 1) + bt2(2, l + 1);
-    vs1(2, l) = bl1(3, l + 1) + bt1(3, l + 1);
-    vs2(2, l) = bl2(3, l + 1) + bt2(3, l + 1);
-  }
+  vsrez[0] = btrez[0];
+  vsrez[1] = blrez[1] + btrez[1];
+  vsrez[2] = blrez[2] + btrez[2];
+  vsm[0] = btm[0];
+  vsm[1] = blm[1] + btm[1];
+  vsm[2] = blm[2] + btm[2];
+  vsr[0] = btr[0];
+  vsr[1] = blr[1] + btr[1];
+  vsr[2] = blr[2] + btr[2];
+  vsx[0] = btx[0];
+  vsx[1] = blx[1] + btx[1];
+  vsx[2] = blx[2] + btx[2];
+  vs1.row(0) = bt1.row(0);
+  vs2.row(0) = bt2.row(0);
+  vs1.middleRows(1, 2) = bl1.middleRows(1, 2) + bt1.middleRows(1, 2);
+  vs2.middleRows(1, 2) = bl2.middleRows(1, 2) + bt2.middleRows(1, 2);
 
   //---- to be sanitary, restore "1" quantities which got clobbered
   //-    in all of the numerical gymnastics above.  the "2" variables
