@@ -144,9 +144,9 @@ bool XFoil::initialize() {
   vs1 = Matrix<double, 5, 6>::Zero();
   vs2 = Matrix<double, 5, 6>::Zero();
   vsrez  = Vector<double, 4>::Zero();
-  vsr = Vector<double, 5>::Zero();
-  vsm = Vector<double, 5>::Zero();
-  vsx = Vector<double, 5>::Zero();
+  vsr = Vector<double, 4>::Zero();
+  vsm = Vector<double, 4>::Zero();
+  vsx = Vector<double, 4>::Zero();
   memset(vz, 0, sizeof(vz));
 
 
@@ -553,9 +553,9 @@ bool XFoil::bldif(int ityp) {
   }
 
   vsrez = Vector<double, 4>::Zero();
-  vsm = Vector<double, 5>::Zero();
-  vsr = Vector<double, 5>::Zero();
-  vsx = Vector<double, 5>::Zero();
+  vsm = Vector<double, 4>::Zero();
+  vsr = Vector<double, 4>::Zero();
+  vsx = Vector<double, 4>::Zero();
   vs1 = Matrix<double, 5, 6>::Zero();
   vs2 = Matrix<double, 5, 6>::Zero();
 
@@ -600,7 +600,7 @@ bool XFoil::bldif(int ityp) {
   if (ityp == 0) {
     //***** le point -->  set zero amplification factor
     vs2(1, 1) = 1.0;
-    vsr[1] = 0.0;
+    vsr[0] = 0.0;
     vsrez[0] = -blData2.amplz;
   } else {
     if (ityp == 1) {
@@ -622,10 +622,10 @@ bool XFoil::bldif(int ityp) {
       vs2(1, 3) = z_ax * (ax_result.ax_hk2 * blData2.hkz_dz);
       vs2(1, 4) = z_ax * (ax_result.ax_hk2 * blData2.hkz_uz + ax_result.ax_rt2 * blData2.rtz_uz);
       vs2(1, 5) = -ax_result.ax;
-      vsm[1] = z_ax * (ax_result.ax_hk1 * blData1.hkz_ms + ax_result.ax_rt1 * blData1.rtz_ms + ax_result.ax_hk2 * blData2.hkz_ms +
+      vsm[0] = z_ax * (ax_result.ax_hk1 * blData1.hkz_ms + ax_result.ax_rt1 * blData1.rtz_ms + ax_result.ax_hk2 * blData2.hkz_ms +
                        ax_result.ax_rt2 * blData2.rtz_ms);
-      vsr[1] = z_ax * (ax_result.ax_rt1 * blData1.rtz_re + ax_result.ax_rt2 * blData2.rtz_re);
-      vsx[1] = 0.0;
+      vsr[0] = z_ax * (ax_result.ax_rt1 * blData1.rtz_re + ax_result.ax_rt2 * blData2.rtz_re);
+      vsx[0] = 0.0;
       vsrez[0] = -rezc;
     } else {
       //***** turbulent part -->  set shear lag equation
@@ -719,7 +719,7 @@ bool XFoil::bldif(int ityp) {
       vs2(1, 3) = z_d2 + z_upw * upw_d2 + z_de2 * blData2.dez_dz + z_us2 * blData2.usz_dz;
       vs2(1, 4) = z_u2 + z_upw * upw_u2 + z_de2 * blData2.dez_uz + z_us2 * blData2.usz_uz;
       vs2(1, 5) = z_x2;
-      vsm[1] = z_upw * upw_ms + z_de1 * blData1.dez_ms + z_us1 * blData1.usz_ms +
+      vsm[0] = z_upw * upw_ms + z_de1 * blData1.dez_ms + z_us1 * blData1.usz_ms +
                z_de2 * blData2.dez_ms + z_us2 * blData2.usz_ms;
 
       vs1(1, 2) += z_cq1 * blData1.cqz_tz + z_cf1 * blData1.cfz_tz + z_hk1 * blData1.hkz_tz;
@@ -730,11 +730,11 @@ bool XFoil::bldif(int ityp) {
       vs2(1, 3) += z_cq2 * blData2.cqz_dz + z_cf2 * blData2.cfz_dz + z_hk2 * blData2.hkz_dz;
       vs2(1, 4) += z_cq2 * blData2.cqz_uz + z_cf2 * blData2.cfz_uz + z_hk2 * blData2.hkz_uz;
 
-      vsm[1] += z_cq1 * blData1.cqz_ms + z_cf1 * blData1.cfz_ms + z_hk1 * blData1.hkz_ms +
+      vsm[0] += z_cq1 * blData1.cqz_ms + z_cf1 * blData1.cfz_ms + z_hk1 * blData1.hkz_ms +
                z_cq2 * blData2.cqz_ms + z_cf2 * blData2.cfz_ms + z_hk2 * blData2.hkz_ms;
-      vsr[1] =
+      vsr[0] =
           z_cq1 * blData1.cqz_re + z_cf1 * blData1.cfz_re + z_cq2 * blData2.cqz_re + z_cf2 * blData2.cfz_re;
-      vsx[1] = 0.0;
+      vsx[0] = 0.0;
       vsrez[0] = -rezc;
     }
   }  // endif
@@ -792,10 +792,10 @@ bool XFoil::bldif(int ityp) {
   vs2(2, 4) = 0.5 * z_ma * blData2.mz_uz + z_cfm * cfm_u2 + z_cf2 * blData2.cfz_uz + z_u2;
   vs2(2, 5) = z_x2;
 
-  vsm[2] = 0.5 * z_ma * blData1.mz_ms + z_cfm * cfm_ms + z_cf1 * blData1.cfz_ms +
+  vsm[1] = 0.5 * z_ma * blData1.mz_ms + z_cfm * cfm_ms + z_cf1 * blData1.cfz_ms +
            0.5 * z_ma * blData2.mz_ms + z_cf2 * blData2.cfz_ms;
-  vsr[2] = z_cfm * cfm_re + z_cf1 * blData1.cfz_re + z_cf2 * blData2.cfz_re;
-  vsx[2] = 0.0;
+  vsr[1] = z_cfm * cfm_re + z_cf1 * blData1.cfz_re + z_cf2 * blData2.cfz_re;
+  vsx[1] = 0.0;
   vsrez[1] = -rezt;
 
   //**** set up shape parameter equation
@@ -855,9 +855,9 @@ bool XFoil::bldif(int ityp) {
   vs2(3, 3) = z_hs2 * blData2.hsz_dz + z_cf2 * blData2.cfz_dz + z_di2 * blData2.diz_dz;
   vs2(3, 4) = z_hs2 * blData2.hsz_uz + z_cf2 * blData2.cfz_uz + z_di2 * blData2.diz_uz + z_u2;
   vs2(3, 5) = z_x2;
-  vsm[3] = z_hs1 * blData1.hsz_ms + z_cf1 * blData1.cfz_ms + z_di1 * blData1.diz_ms + z_hs2 * blData2.hsz_ms +
+  vsm[2] = z_hs1 * blData1.hsz_ms + z_cf1 * blData1.cfz_ms + z_di1 * blData1.diz_ms + z_hs2 * blData2.hsz_ms +
            z_cf2 * blData2.cfz_ms + z_di2 * blData2.diz_ms;
-  vsr[3] = z_hs1 * blData1.hsz_re + z_cf1 * blData1.cfz_re + z_di1 * blData1.diz_re + z_hs2 * blData2.hsz_re +
+  vsr[2] = z_hs1 * blData1.hsz_re + z_cf1 * blData1.cfz_re + z_di1 * blData1.diz_re + z_hs2 * blData2.hsz_re +
            z_cf2 * blData2.cfz_re + z_di2 * blData2.diz_re;
 
   vs1(3, 2) += 0.5 * (z_hca * blData1.hcz_tz + z_ha * blData1.hz_tz) + z_upw * upw_t1;
@@ -867,9 +867,9 @@ bool XFoil::bldif(int ityp) {
   vs2(3, 3) += 0.5 * (z_hca * blData2.hcz_dz + z_ha * blData2.hz_dz) + z_upw * upw_d2;
   vs2(3, 4) += 0.5 * (z_hca * blData2.hcz_uz) + z_upw * upw_u2;
 
-  vsm[3] = 0.5 * (z_hca * blData1.hcz_ms) + z_upw * upw_ms + 0.5 * (z_hca * blData2.hcz_ms);
+  vsm[2] = 0.5 * (z_hca * blData1.hcz_ms) + z_upw * upw_ms + 0.5 * (z_hca * blData2.hcz_ms);
 
-  vsx[3] = 0.0;
+  vsx[2] = 0.0;
   vsrez[2] = -rezh;
 
   return true;
@@ -1255,12 +1255,12 @@ bool XFoil::blsys() {
     //------ residual derivatives wrt compressible uec
     double res_u1 = vs1(k, 4);
     double res_u2 = vs2(k, 4);
-    double res_ms = vsm[k];
+    double res_ms = vsm[k - 1];
 
     //------ combine with derivatives of compressible  u1,u2 = uec(uei m)
     vs1(k, 4) *= blData1.uz_uei;
     vs2(k, 4) *= blData2.uz_uei;
-    vsm[k] = res_u1 * blData1.uz_ms + res_u2 * blData2.uz_ms + res_ms;
+    vsm[k - 1] = res_u1 * blData1.uz_ms + res_u2 * blData2.uz_ms + res_ms;
   }
   return true;
 }
@@ -4241,7 +4241,7 @@ bool XFoil::setbl() {
       for (jv = 1; jv <= nsys; jv++) {
         vm[1][jv][iv] = vs1(1, 3) * d1_m[jv] + vs1(1, 4) * u1_m[jv] +
                         vs2(1, 3) * d2_m[jv] + vs2(1, 4) * u2_m[jv] +
-                        (vs1(1, 5) + vs2(1, 5) + vsx[1]) *
+                        (vs1(1, 5) + vs2(1, 5) + vsx[0]) *
                             (xi_ule1 * ule1_m[jv] + xi_ule2 * ule2_m[jv]);
       }
 
@@ -4252,22 +4252,22 @@ bool XFoil::setbl() {
       va[1][2][iv] = vs2(1, 2);
 
       if (lalfa)
-        vdel[1][2][iv] = vsr[1] * re_clmr + vsm[1] * msq_clmr;
+        vdel[1][2][iv] = vsr[0] * re_clmr + vsm[0] * msq_clmr;
       else
         vdel[1][2][iv] = (vs1(1, 4) * u1_a + vs1(1, 3) * d1_a) +
                          (vs2(1, 4) * u2_a + vs2(1, 3) * d2_a) +
-                         (vs1(1, 5) + vs2(1, 5) + vsx[1]) *
+                         (vs1(1, 5) + vs2(1, 5) + vsx[0]) *
                              (xi_ule1 * ule1_a + xi_ule2 * ule2_a);
 
       vdel[1][1][iv] = vsrez[0] + (vs1(1, 4) * due1 + vs1(1, 3) * dds1) +
                        (vs2(1, 4) * due2 + vs2(1, 3) * dds2) +
-                       (vs1(1, 5) + vs2(1, 5) + vsx[1]) *
+                       (vs1(1, 5) + vs2(1, 5) + vsx[0]) *
                            (xi_ule1 * dule1 + xi_ule2 * dule2);
 
       for (jv = 1; jv <= nsys; jv++) {
         vm[2][jv][iv] = vs1(2, 3) * d1_m[jv] + vs1(2, 4) * u1_m[jv] +
                         vs2(2, 3) * d2_m[jv] + vs2(2, 4) * u2_m[jv] +
-                        (vs1(2, 5) + vs2(2, 5) + vsx[2]) *
+                        (vs1(2, 5) + vs2(2, 5) + vsx[1]) *
                             (xi_ule1 * ule1_m[jv] + xi_ule2 * ule2_m[jv]);
       }
       vb[2][1][iv] = vs1(2, 1);
@@ -4277,23 +4277,23 @@ bool XFoil::setbl() {
       va[2][2][iv] = vs2(2, 2);
 
       if (lalfa)
-        vdel[2][2][iv] = vsr[2] * re_clmr + vsm[2] * msq_clmr;
+        vdel[2][2][iv] = vsr[1] * re_clmr + vsm[1] * msq_clmr;
       else
         vdel[2][2][iv] = (vs1(2, 4) * u1_a + vs1(2, 3) * d1_a) +
                          (vs2(2, 4) * u2_a + vs2(2, 3) * d2_a) +
-                         (vs1(2, 5) + vs2(2, 5) + vsx[2]) *
+                         (vs1(2, 5) + vs2(2, 5) + vsx[1]) *
                              (xi_ule1 * ule1_a + xi_ule2 * ule2_a);
 
       vdel[2][1][iv] = vsrez[1] + (vs1(2, 4) * due1 + vs1(2, 3) * dds1) +
                        (vs2(2, 4) * due2 + vs2(2, 3) * dds2) +
-                       (vs1(2, 5) + vs2(2, 5) + vsx[2]) *
+                       (vs1(2, 5) + vs2(2, 5) + vsx[1]) *
                            (xi_ule1 * dule1 + xi_ule2 * dule2);
 
       // memory overlap problem
       for (jv = 1; jv <= nsys; jv++) {
         vm[3][jv][iv] = vs1(3, 3) * d1_m[jv] + vs1(3, 4) * u1_m[jv] +
                         vs2(3, 3) * d2_m[jv] + vs2(3, 4) * u2_m[jv] +
-                        (vs1(3, 5) + vs2(3, 5) + vsx[3]) *
+                        (vs1(3, 5) + vs2(3, 5) + vsx[2]) *
                             (xi_ule1 * ule1_m[jv] + xi_ule2 * ule2_m[jv]);
       }
 
@@ -4304,16 +4304,16 @@ bool XFoil::setbl() {
       va[3][2][iv] = vs2(3, 2);
 
       if (lalfa)
-        vdel[3][2][iv] = vsr[3] * re_clmr + vsm[3] * msq_clmr;
+        vdel[3][2][iv] = vsr[2] * re_clmr + vsm[2] * msq_clmr;
       else
         vdel[3][2][iv] = (vs1(3, 4) * u1_a + vs1(3, 3) * d1_a) +
                          (vs2(3, 4) * u2_a + vs2(3, 3) * d2_a) +
-                         (vs1(3, 5) + vs2(3, 5) + vsx[3]) *
+                         (vs1(3, 5) + vs2(3, 5) + vsx[2]) *
                              (xi_ule1 * ule1_a + xi_ule2 * ule2_a);
 
       vdel[3][1][iv] = vsrez[2] + (vs1(3, 4) * due1 + vs1(3, 3) * dds1) +
                        (vs2(3, 4) * due2 + vs2(3, 3) * dds2) +
-                       (vs1(3, 5) + vs2(3, 5) + vsx[3]) *
+                       (vs1(3, 5) + vs2(3, 5) + vsx[2]) *
                            (xi_ule1 * dule1 + xi_ule2 * dule2);
 
       if (ibl == iblte.get(is) + 1) {
@@ -4842,9 +4842,9 @@ bool XFoil::tesys(double cte, double tte, double dte) {
   //--------------------------------------------------------
 
   vsrez = Vector<double, 4>::Zero();
-  vsm = Vector<double, 5>::Zero();
-  vsr = Vector<double, 5>::Zero();
-  vsx = Vector<double, 5>::Zero();
+  vsm = Vector<double, 4>::Zero();
+  vsr = Vector<double, 4>::Zero();
+  vsx = Vector<double, 4>::Zero();
   vs1 = Matrix<double, 5, 6>::Zero();
   vs2 = Matrix<double, 5, 6>::Zero();
 
@@ -5295,11 +5295,11 @@ bool XFoil::trdif() {
   //-    equation is unnecessary here, so the k=1 row is left empty.
   for (k = 2; k <= 3; k++) {
     blrez[k] = vsrez[k - 1];
-    blm[k] = vsm[k] + vs2(k, 2) * tt_ms + vs2(k, 3) * dt_ms +
+    blm[k] = vsm[k - 1] + vs2(k, 2) * tt_ms + vs2(k, 3) * dt_ms +
              vs2(k, 4) * ut_ms + vs2(k, 5) * xt_ms;
-    blr[k] = vsr[k] + vs2(k, 2) * tt_re + vs2(k, 3) * dt_re +
+    blr[k] = vsr[k - 1] + vs2(k, 2) * tt_re + vs2(k, 3) * dt_re +
              vs2(k, 4) * ut_re + vs2(k, 5) * xt_re;
-    blx[k] = vsx[k] + vs2(k, 2) * tt_xf + vs2(k, 3) * dt_xf +
+    blx[k] = vsx[k - 1] + vs2(k, 2) * tt_xf + vs2(k, 3) * dt_xf +
              vs2(k, 4) * ut_xf + vs2(k, 5) * xt_xf;
 
     bl1(k, 1) = vs1(k, 1) + vs2(k, 2) * tt_a1 + vs2(k, 3) * dt_a1 +
@@ -5393,11 +5393,11 @@ bool XFoil::trdif() {
   bt2 += vs2;
   for (k = 1; k <= 3; k++) {
     btrez[k] = vsrez[k - 1];
-    btm[k] = vsm[k] + vs1(k, 1) * st_ms + vs1(k, 2) * tt_ms +
+    btm[k] = vsm[k - 1] + vs1(k, 1) * st_ms + vs1(k, 2) * tt_ms +
              vs1(k, 3) * dt_ms + vs1(k, 4) * ut_ms + vs1(k, 5) * xt_ms;
-    btr[k] = vsr[k] + vs1(k, 1) * st_re + vs1(k, 2) * tt_re +
+    btr[k] = vsr[k - 1] + vs1(k, 1) * st_re + vs1(k, 2) * tt_re +
              vs1(k, 3) * dt_re + vs1(k, 4) * ut_re + vs1(k, 5) * xt_re;
-    btx[k] = vsx[k] + vs1(k, 1) * st_xf + vs1(k, 2) * tt_xf +
+    btx[k] = vsx[k - 1] + vs1(k, 1) * st_xf + vs1(k, 2) * tt_xf +
              vs1(k, 3) * dt_xf + vs1(k, 4) * ut_xf + vs1(k, 5) * xt_xf;
 
   }
@@ -5407,15 +5407,15 @@ bool XFoil::trdif() {
   vsrez[0] = btrez[1];
   vsrez[1] = blrez[2] + btrez[2];
   vsrez[2] = blrez[3] + btrez[3];
-  vsm[1] = btm[1];
-  vsm[2] = blm[2] + btm[2];
-  vsm[3] = blm[3] + btm[3];
-  vsr[1] = btr[1];
-  vsr[2] = blr[2] + btr[2];
-  vsr[3] = blr[3] + btr[3];
-  vsx[1] = btx[1];
-  vsx[2] = blx[2] + btx[2];
-  vsx[3] = blx[3] + btx[3];
+  vsm[0] = btm[1];
+  vsm[1] = blm[2] + btm[2];
+  vsm[2] = blm[3] + btm[3];
+  vsr[0] = btr[1];
+  vsr[1] = blr[2] + btr[2];
+  vsr[2] = blr[3] + btr[3];
+  vsx[0] = btx[1];
+  vsx[1] = blx[2] + btx[2];
+  vsx[2] = blx[3] + btx[3];
   for (int l = 1; l <= 5; l++) {
     vs1(1, l) = bt1(1, l);
     vs2(1, l) = bt2(1, l);
