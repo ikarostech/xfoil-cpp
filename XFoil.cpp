@@ -5191,10 +5191,6 @@ bool XFoil::trdif() {
   Matrix<double, 5, 6> bl1, bl2, bt1, bt2;
   Vector<double, 5> blrez, blm, blr, blx, btrez, btm, btr, btx;
 
-  double wf2, wf2_xt, wf2_a1, wf2_x1, wf2_x2, wf2_t1, wf2_t2;
-  double wf2_d1, wf2_d2, wf2_u1, wf2_u2, wf2_ms, wf2_re, wf2_xf;
-  double wf1, wf1_a1, wf1_x1, wf1_x2, wf1_t1, wf1_t2, wf1_d1, wf1_d2;
-  double wf1_u1, wf1_u2, wf1_ms, wf1_re, wf1_xf;
   double tt, tt_a1, tt_x1, tt_x2, tt_t1, tt_t2, tt_d1, tt_d2, tt_u1, tt_u2;
   double tt_ms, tt_re, tt_xf, dt, dt_a1, dt_x1, dt_x2, dt_t1, dt_t2;
   double dt_d1, dt_d2, dt_u1, dt_u2, dt_ms, dt_re, dt_xf;
@@ -5205,91 +5201,71 @@ bool XFoil::trdif() {
   double st_d1, st_d2, st_u1, st_u2, st_xf;
   double ctr, ctr_hk2;
   int k;
-  //	double c1sav[74], c2sav[74];
 
-  //---- save variables and sensitivities for future restoration
-  //	for (int icom=1; icom<= ncom;icom++){
-  //		c1sav[icom] = com1[icom];
-  //		c2sav[icom] = com2[icom];
-  //	}
   saveblData(1);
   saveblData(2);
 
   //---- weighting factors for linear interpolation to transition point
-  wf2 = (xt - blData1.xz) / (blData2.xz - blData1.xz);
-  wf2_xt = 1.0 / (blData2.xz - blData1.xz);
+  double wf = (xt - blData1.xz) / (blData2.xz - blData1.xz);
+  double wf_xt = 1.0 / (blData2.xz - blData1.xz);
 
-  wf2_a1 = wf2_xt * xt_a1;
-  wf2_x1 = wf2_xt * xt_x1 + (wf2 - 1.0) / (blData2.xz - blData1.xz);
-  wf2_x2 = wf2_xt * xt_x2 - wf2 / (blData2.xz - blData1.xz);
-  wf2_t1 = wf2_xt * xt_t1;
-  wf2_t2 = wf2_xt * xt_t2;
-  wf2_d1 = wf2_xt * xt_d1;
-  wf2_d2 = wf2_xt * xt_d2;
-  wf2_u1 = wf2_xt * xt_u1;
-  wf2_u2 = wf2_xt * xt_u2;
-  wf2_ms = wf2_xt * xt_ms;
-  wf2_re = wf2_xt * xt_re;
-  wf2_xf = wf2_xt * xt_xf;
-
-  wf1 = 1.0 - wf2;
-  wf1_a1 = -wf2_a1;
-  wf1_x1 = -wf2_x1;
-  wf1_x2 = -wf2_x2;
-  wf1_t1 = -wf2_t1;
-  wf1_t2 = -wf2_t2;
-  wf1_d1 = -wf2_d1;
-  wf1_d2 = -wf2_d2;
-  wf1_u1 = -wf2_u1;
-  wf1_u2 = -wf2_u2;
-  wf1_ms = -wf2_ms;
-  wf1_re = -wf2_re;
-  wf1_xf = -wf2_xf;
+  double wf_a1 = wf_xt * xt_a1;
+  double  wf_x1 = wf_xt * xt_x1 + (wf - 1.0) / (blData2.xz - blData1.xz);
+  double wf_x2 = wf_xt * xt_x2 - wf / (blData2.xz - blData1.xz);
+  double wf_t1 = wf_xt * xt_t1;
+  double wf_t2 = wf_xt * xt_t2;
+  double wf_d1 = wf_xt * xt_d1;
+  double wf_d2 = wf_xt * xt_d2;
+  double wf_u1 = wf_xt * xt_u1;
+  double wf_u2 = wf_xt * xt_u2;
+  double wf_ms = wf_xt * xt_ms;
+  double wf_re = wf_xt * xt_re;
+  double wf_xf = wf_xt * xt_xf;
 
   //**** first,  do laminar part between x1 and xt
 
   //-----interpolate primary variables to transition point
-  tt = blData1.tz * wf1 + blData2.tz * wf2;
-  tt_a1 = blData1.tz * wf1_a1 + blData2.tz * wf2_a1;
-  tt_x1 = blData1.tz * wf1_x1 + blData2.tz * wf2_x1;
-  tt_x2 = blData1.tz * wf1_x2 + blData2.tz * wf2_x2;
-  tt_t1 = blData1.tz * wf1_t1 + blData2.tz * wf2_t1 + wf1;
-  tt_t2 = blData1.tz * wf1_t2 + blData2.tz * wf2_t2 + wf2;
-  tt_d1 = blData1.tz * wf1_d1 + blData2.tz * wf2_d1;
-  tt_d2 = blData1.tz * wf1_d2 + blData2.tz * wf2_d2;
-  tt_u1 = blData1.tz * wf1_u1 + blData2.tz * wf2_u1;
-  tt_u2 = blData1.tz * wf1_u2 + blData2.tz * wf2_u2;
-  tt_ms = blData1.tz * wf1_ms + blData2.tz * wf2_ms;
-  tt_re = blData1.tz * wf1_re + blData2.tz * wf2_re;
-  tt_xf = blData1.tz * wf1_xf + blData2.tz * wf2_xf;
+  tt = blData1.tz * (1 - wf) + blData2.tz * wf;
+  tt_a1 = (blData2.tz - blData1.tz) * wf_a1;
+  tt_x1 = (blData2.tz - blData1.tz) * wf_x1;
+  tt_x2 = (blData2.tz - blData1.tz) * wf_x2;
+  tt_t1 = (blData2.tz - blData1.tz) * wf_t1 + (1 - wf);
+  tt_t2 = (blData2.tz - blData1.tz) * wf_t2 + wf;
+  tt_d1 = (blData2.tz - blData1.tz) * wf_d1;
+  tt_d2 = (blData2.tz - blData1.tz) * wf_d2 ;
+  tt_u1 = (blData2.tz - blData1.tz) * wf_u1;
+  tt_u2 = (blData2.tz - blData1.tz) * wf_u2;
+  tt_ms = (blData2.tz - blData1.tz) * wf_ms;
+  tt_re = (blData2.tz - blData1.tz) * wf_re;
+  tt_xf = (blData2.tz - blData1.tz) * wf_xf;
 
-  dt = blData1.dz * wf1 + blData2.dz * wf2;
-  dt_a1 = blData1.dz * wf1_a1 + blData2.dz * wf2_a1;
-  dt_x1 = blData1.dz * wf1_x1 + blData2.dz * wf2_x1;
-  dt_x2 = blData1.dz * wf1_x2 + blData2.dz * wf2_x2;
-  dt_t1 = blData1.dz * wf1_t1 + blData2.dz * wf2_t1;
-  dt_t2 = blData1.dz * wf1_t2 + blData2.dz * wf2_t2;
-  dt_d1 = blData1.dz * wf1_d1 + blData2.dz * wf2_d1 + wf1;
-  dt_d2 = blData1.dz * wf1_d2 + blData2.dz * wf2_d2 + wf2;
-  dt_u1 = blData1.dz * wf1_u1 + blData2.dz * wf2_u1;
-  dt_u2 = blData1.dz * wf1_u2 + blData2.dz * wf2_u2;
-  dt_ms = blData1.dz * wf1_ms + blData2.dz * wf2_ms;
-  dt_re = blData1.dz * wf1_re + blData2.dz * wf2_re;
-  dt_xf = blData1.dz * wf1_xf + blData2.dz * wf2_xf;
+  dt = blData1.dz * (1 - wf) + blData2.dz * wf;
+  dt_a1 = (blData2.dz - blData1.dz) * wf_a1;
+  dt_x1 = (blData2.dz - blData1.dz) * wf_x1;
+  dt_x2 = (blData2.dz - blData1.dz) * wf_x2;
+  dt_t1 = (blData2.dz - blData1.dz) * wf_t1;
+  dt_t2 = (blData2.dz - blData1.dz) * wf_t2;
+  dt_d1 = (blData2.dz - blData1.dz) * wf_d1 + (1 - wf);
+  dt_d2 = (blData2.dz - blData1.dz) * wf_d2 + wf;
+  dt_u1 = (blData2.dz - blData1.dz) * wf_u1;
+  dt_u2 = (blData2.dz - blData1.dz) * wf_u2;
+  dt_ms = (blData2.dz - blData1.dz) * wf_ms;
+  dt_re = (blData2.dz - blData1.dz) * wf_re;
+  dt_xf = (blData2.dz - blData1.dz) * wf_xf;
 
-  ut = blData1.uz * wf1 + blData2.uz * wf2;
-  ut_a1 = blData1.uz * wf1_a1 + blData2.uz * wf2_a1;
-  ut_x1 = blData1.uz * wf1_x1 + blData2.uz * wf2_x1;
-  ut_x2 = blData1.uz * wf1_x2 + blData2.uz * wf2_x2;
-  ut_t1 = blData1.uz * wf1_t1 + blData2.uz * wf2_t1;
-  ut_t2 = blData1.uz * wf1_t2 + blData2.uz * wf2_t2;
-  ut_d1 = blData1.uz * wf1_d1 + blData2.uz * wf2_d1;
-  ut_d2 = blData1.uz * wf1_d2 + blData2.uz * wf2_d2;
-  ut_u1 = blData1.uz * wf1_u1 + blData2.uz * wf2_u1 + wf1;
-  ut_u2 = blData1.uz * wf1_u2 + blData2.uz * wf2_u2 + wf2;
-  ut_ms = blData1.uz * wf1_ms + blData2.uz * wf2_ms;
-  ut_re = blData1.uz * wf1_re + blData2.uz * wf2_re;
-  ut_xf = blData1.uz * wf1_xf + blData2.uz * wf2_xf;
+  ut = blData1.uz * (1 - wf) + blData2.uz * wf;
+  ut_a1 = (blData2.uz - blData1.uz) * wf_a1;
+  ut_x1 = (blData2.uz - blData1.uz) * wf_x1;
+  ut_x2 = (blData2.uz - blData1.uz) * wf_x2;
+  ut_t1 = (blData2.uz - blData1.uz) * wf_t1;
+  ut_t2 = (blData2.uz - blData1.uz) * wf_t2;
+  ut_d1 = (blData2.uz - blData1.uz) * wf_d1;
+  ut_d2 = (blData2.uz - blData1.uz) * wf_d2;
+  ut_u1 = (blData2.uz - blData1.uz) * wf_u1 + (1 - wf);
+  ut_u2 = (blData2.uz - blData1.uz) * wf_u2 + wf;
+  ut_ms = (blData2.uz - blData1.uz) * wf_ms;
+  ut_re = (blData2.uz - blData1.uz) * wf_re;
+  ut_xf = (blData2.uz - blData1.uz) * wf_xf;
 
   //---- set primary "t" variables at xt  (really placed into "2" variables)
   blData2.xz = xt;
@@ -5386,12 +5362,6 @@ bool XFoil::trdif() {
   //---- recalculate turbulent secondary "t" variables using proper cti
   blvar(2);
 
-  //---- set "1" variables to "t" variables and reset "2" variables
-  //-    to their saved turbulent values
-  //	for (icom=1; icom<= ncom; icom++){
-  //		com1[icom] = com2[icom];
-  //		com2[icom] = c2sav[icom];
-  //	}
   stepbl();
   restoreblData(2);
 
@@ -5403,6 +5373,24 @@ bool XFoil::trdif() {
 
   //---- convert sensitivities wrt "t" variables into sensitivities
   //-    wrt "1" and "2" variables as done before for the laminar part
+  Matrix<double, 5, 5> bt1_right = Matrix<double, 5, 5> {
+    {st_a1, st_t1, st_d1, st_u1, st_x1},
+    {tt_a1, tt_t1, tt_d1, tt_u1, tt_x1},
+    {dt_a1, dt_t1, dt_d1, dt_u1, dt_x1},
+    {ut_a1, ut_t1, ut_d1, ut_u1, ut_x1},
+    {xt_a1, xt_t1, xt_d1, xt_u1, xt_x1}
+  };
+
+    Matrix<double, 5, 5> bt2_right = Matrix<double, 5, 5> {
+    {0, st_t2, st_d2, st_u2, st_x2},
+    {0, tt_t2, tt_d2, tt_u2, tt_x2},
+    {0, dt_t2, dt_d2, dt_u2, dt_x2},
+    {0, ut_t2, ut_d2, ut_u2, ut_x2},
+    {0, xt_t2, xt_d2, xt_u2, xt_x2}
+  };
+  bt1.block(1, 1, 3, 5) = vs1.block(1, 1, 3, 5) * bt1_right;
+  bt2.block(1, 1, 3, 5) = vs1.block(1, 1, 3, 5) * bt2_right;
+  bt2 += vs2;
   for (k = 1; k <= 3; k++) {
     btrez[k] = vsrez[k];
     btm[k] = vsm[k] + vs1(k, 1) * st_ms + vs1(k, 2) * tt_ms +
@@ -5412,26 +5400,6 @@ bool XFoil::trdif() {
     btx[k] = vsx[k] + vs1(k, 1) * st_xf + vs1(k, 2) * tt_xf +
              vs1(k, 3) * dt_xf + vs1(k, 4) * ut_xf + vs1(k, 5) * xt_xf;
 
-    bt1(k, 1) = vs1(k, 1) * st_a1 + vs1(k, 2) * tt_a1 + vs1(k, 3) * dt_a1 +
-                vs1(k, 4) * ut_a1 + vs1(k, 5) * xt_a1;
-    bt1(k, 2) = vs1(k, 1) * st_t1 + vs1(k, 2) * tt_t1 + vs1(k, 3) * dt_t1 +
-                vs1(k, 4) * ut_t1 + vs1(k, 5) * xt_t1;
-    bt1(k, 3) = vs1(k, 1) * st_d1 + vs1(k, 2) * tt_d1 + vs1(k, 3) * dt_d1 +
-                vs1(k, 4) * ut_d1 + vs1(k, 5) * xt_d1;
-    bt1(k, 4) = vs1(k, 1) * st_u1 + vs1(k, 2) * tt_u1 + vs1(k, 3) * dt_u1 +
-                vs1(k, 4) * ut_u1 + vs1(k, 5) * xt_u1;
-    bt1(k, 5) = vs1(k, 1) * st_x1 + vs1(k, 2) * tt_x1 + vs1(k, 3) * dt_x1 +
-                vs1(k, 4) * ut_x1 + vs1(k, 5) * xt_x1;
-
-    bt2(k, 1) = vs2(k, 1);
-    bt2(k, 2) = vs2(k, 2) + vs1(k, 1) * st_t2 + vs1(k, 2) * tt_t2 +
-                vs1(k, 3) * dt_t2 + vs1(k, 4) * ut_t2 + vs1(k, 5) * xt_t2;
-    bt2(k, 3) = vs2(k, 3) + vs1(k, 1) * st_d2 + vs1(k, 2) * tt_d2 +
-                vs1(k, 3) * dt_d2 + vs1(k, 4) * ut_d2 + vs1(k, 5) * xt_d2;
-    bt2(k, 4) = vs2(k, 4) + vs1(k, 1) * st_u2 + vs1(k, 2) * tt_u2 +
-                vs1(k, 3) * dt_u2 + vs1(k, 4) * ut_u2 + vs1(k, 5) * xt_u2;
-    bt2(k, 5) = vs2(k, 5) + vs1(k, 1) * st_x2 + vs1(k, 2) * tt_x2 +
-                vs1(k, 3) * dt_x2 + vs1(k, 4) * ut_x2 + vs1(k, 5) * xt_x2;
   }
 
   //---- add up laminar and turbulent parts to get final system
