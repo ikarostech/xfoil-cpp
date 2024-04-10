@@ -380,7 +380,7 @@ class XFoil {
   double cfm, cfm_ms, cfm_re, cfm_u1, cfm_t1, cfm_d1, cfm_u2, cfm_t2, cfm_d2;
   double xt, xt_a1, xt_ms, xt_re, xt_xf, xt_x1, xt_t1, xt_d1, xt_u1, xt_x2,
       xt_t2, xt_d2, xt_u2;
-  double va[3][2][IZX], vb[3][2][IZX], vdel[4][3][IZX], vm[4][IZX][IZX], vz[4][3];
+  double va[3][2][IZX], vb[3][2][IZX], vdel[4][3][IZX], vm[3][IZX][IZX], vz[3][2];
 
 
   /*
