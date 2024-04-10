@@ -1059,36 +1059,36 @@ bool XFoil::blsolve() {
     double pivot = 1.0 / va[0][0][iv];
     va[0][1][iv] *= pivot;
     for (int l = iv; l <= nsys; l++) vm[0][l][iv] *= pivot;
-    vdel[1][1][iv] *= pivot;
-    vdel[1][2][iv] *= pivot;
+    vdel[0][0][iv] *= pivot;
+    vdel[0][1][iv] *= pivot;
     //
     //------ eliminate lower first column in va block
-    for (int k = 2; k <= 3; k++) {
-      vtmp = va[k - 1][0][iv];
-      va[k - 1][1][iv] -= vtmp * va[0][1][iv];
-      for (int l = iv; l <= nsys; l++) vm[k - 1][l][iv] -= vtmp * vm[0][l][iv];
-      vdel[k][1][iv] -= vtmp * vdel[1][1][iv];
-      vdel[k][2][iv] -= vtmp * vdel[1][2][iv];
+    for (int k = 1; k < 3; k++) {
+      vtmp = va[k][0][iv];
+      va[k][1][iv] -= vtmp * va[0][1][iv];
+      for (int l = iv; l <= nsys; l++) vm[k][l][iv] -= vtmp * vm[0][l][iv];
+      vdel[k][0][iv] -= vtmp * vdel[0][0][iv];
+      vdel[k][1][iv] -= vtmp * vdel[0][1][iv];
     }
     //
     //------ normalize second row
     pivot = 1.0 / va[1][1][iv];
     for (int l = iv; l <= nsys; l++) vm[1][l][iv] *= pivot;
-    vdel[2][1][iv] *= pivot;
-    vdel[2][2][iv] *= pivot;
+    vdel[1][0][iv] *= pivot;
+    vdel[1][1][iv] *= pivot;
     //
     //------ eliminate lower second column in va block
     
     vtmp = va[2][1][iv];
     for (int l = iv; l <= nsys; l++) vm[2][l][iv] -= vtmp * vm[1][l][iv];
-    vdel[3][1][iv] -= vtmp * vdel[2][1][iv];
-    vdel[3][2][iv] -= vtmp * vdel[2][2][iv];
+    vdel[2][0][iv] -= vtmp * vdel[1][0][iv];
+    vdel[2][1][iv] -= vtmp * vdel[1][1][iv];
 
     //------ normalize third row
     pivot = 1.0 / vm[2][iv][iv];
     for (int l = ivp; l <= nsys; l++) vm[2][l][iv] *= pivot;
-    vdel[3][1][iv] *= pivot;
-    vdel[3][2][iv] *= pivot;
+    vdel[2][0][iv] *= pivot;
+    vdel[2][1][iv] *= pivot;
     //
     //
     //------ eliminate upper third column in va block
@@ -1098,47 +1098,47 @@ bool XFoil::blsolve() {
       vm[0][l][iv] -= vtmp1 * vm[2][l][iv];
       vm[1][l][iv] -= vtmp2 * vm[2][l][iv];
     }
-    vdel[1][1][iv] -= vtmp1 * vdel[3][1][iv];
-    vdel[2][1][iv] -= vtmp2 * vdel[3][1][iv];
-    vdel[1][2][iv] -= vtmp1 * vdel[3][2][iv];
-    vdel[2][2][iv] -= vtmp2 * vdel[3][2][iv];
+    vdel[0][0][iv] -= vtmp1 * vdel[2][0][iv];
+    vdel[1][0][iv] -= vtmp2 * vdel[2][0][iv];
+    vdel[0][1][iv] -= vtmp1 * vdel[2][1][iv];
+    vdel[1][1][iv] -= vtmp2 * vdel[2][1][iv];
     //
     //------ eliminate upper second column in va block
     vtmp = va[0][1][iv];
     for (int l = ivp; l <= nsys; l++) vm[0][l][iv] -= vtmp * vm[1][l][iv];
 
-    vdel[1][1][iv] -= vtmp * vdel[2][1][iv];
-    vdel[1][2][iv] -= vtmp * vdel[2][2][iv];
+    vdel[0][0][iv] -= vtmp * vdel[1][0][iv];
+    vdel[0][1][iv] -= vtmp * vdel[1][1][iv];
     //
     //
     if (iv != nsys) {
       //
       //====== eliminate vb(iv+1) block][ rows  1 -> 3
-      for (int k = 1; k <= 3; k++) {
-        vtmp1 = vb[k - 1][0][ivp];
-        vtmp2 = vb[k - 1][1][ivp];
-        vtmp3 = vm[k - 1][iv][ivp];
+      for (int k = 0; k < 3; k++) {
+        vtmp1 = vb[k][0][ivp];
+        vtmp2 = vb[k][1][ivp];
+        vtmp3 = vm[k][iv][ivp];
         for (int l = ivp; l <= nsys; l++)
-          vm[k - 1][l][ivp] -= (vtmp1 * vm[0][l][iv] + vtmp2 * vm[1][l][iv] +
+          vm[k][l][ivp] -= (vtmp1 * vm[0][l][iv] + vtmp2 * vm[1][l][iv] +
                             vtmp3 * vm[2][l][iv]);
-        vdel[k][1][ivp] -= (vtmp1 * vdel[1][1][iv] + vtmp2 * vdel[2][1][iv] +
-                            vtmp3 * vdel[3][1][iv]);
-        vdel[k][2][ivp] -= (vtmp1 * vdel[1][2][iv] + vtmp2 * vdel[2][2][iv] +
-                            vtmp3 * vdel[3][2][iv]);
+        vdel[k][0][ivp] -= (vtmp1 * vdel[0][0][iv] + vtmp2 * vdel[1][0][iv] +
+                            vtmp3 * vdel[2][0][iv]);
+        vdel[k][1][ivp] -= (vtmp1 * vdel[0][1][iv] + vtmp2 * vdel[1][1][iv] +
+                            vtmp3 * vdel[2][1][iv]);
       }
       //
       if (iv == ivte1) {
         //------- eliminate vz block
         int ivz = isys[iblte.bottom + 1][2];
         //
-        for (int k = 1; k <= 3; k++) {
-          vtmp1 = vz[k - 1][0];
-          vtmp2 = vz[k - 1][1];
+        for (int k = 0; k < 3; k++) {
+          vtmp1 = vz[k][0];
+          vtmp2 = vz[k][1];
           for (int l = ivp; l <= nsys; l++) {
-            vm[k - 1][l][ivz] -= (vtmp1 * vm[0][l][iv] + vtmp2 * vm[1][l][iv]);
+            vm[k][l][ivz] -= (vtmp1 * vm[0][l][iv] + vtmp2 * vm[1][l][iv]);
           }
-          vdel[k][1][ivz] -= (vtmp1 * vdel[1][1][iv] + vtmp2 * vdel[2][1][iv]);
-          vdel[k][2][ivz] -= (vtmp1 * vdel[1][2][iv] + vtmp2 * vdel[2][2][iv]);
+          vdel[k][0][ivz] -= (vtmp1 * vdel[0][0][iv] + vtmp2 * vdel[1][0][iv]);
+          vdel[k][1][ivz] -= (vtmp1 * vdel[0][1][iv] + vtmp2 * vdel[1][1][iv]);
         }
       }
       //
@@ -1152,20 +1152,20 @@ bool XFoil::blsolve() {
           //
           if (fabs(vtmp1) > vaccel) {
             for (int l = ivp; l <= nsys; l++) vm[0][l][kv] -= vtmp1 * vm[2][l][iv];
-            vdel[1][1][kv] -= vtmp1 * vdel[3][1][iv];
-            vdel[1][2][kv] -= vtmp1 * vdel[3][2][iv];
+            vdel[0][0][kv] -= vtmp1 * vdel[2][0][iv];
+            vdel[0][1][kv] -= vtmp1 * vdel[2][1][iv];
           }
           //
           if (fabs(vtmp2) > vaccel) {
             for (int l = ivp; l <= nsys; l++) vm[1][l][kv] -= vtmp2 * vm[2][l][iv];
-            vdel[2][1][kv] -= vtmp2 * vdel[3][1][iv];
-            vdel[2][2][kv] -= vtmp2 * vdel[3][2][iv];
+            vdel[1][0][kv] -= vtmp2 * vdel[2][0][iv];
+            vdel[1][1][kv] -= vtmp2 * vdel[2][1][iv];
           }
           //
           if (fabs(vtmp3) > vaccel) {
             for (int l = ivp; l <= nsys; l++) vm[2][l][kv] -= vtmp3 * vm[2][l][iv];
-            vdel[3][1][kv] -= vtmp3 * vdel[3][1][iv];
-            vdel[3][2][kv] -= vtmp3 * vdel[3][2][iv];
+            vdel[2][0][kv] -= vtmp3 * vdel[2][0][iv];
+            vdel[2][1][kv] -= vtmp3 * vdel[2][1][iv];
           }
           //
         }
@@ -1176,17 +1176,17 @@ bool XFoil::blsolve() {
   //
   for (int iv = nsys; iv >= 2; iv--) {
     //------ eliminate upper vm columns
-    vtmp = vdel[3][1][iv];
+    vtmp = vdel[2][0][iv];
     for (int kv = iv - 1; kv >= 1; kv--) {
-      vdel[1][1][kv] -= vm[0][iv][kv] * vtmp;
-      vdel[2][1][kv] -= vm[1][iv][kv] * vtmp;
-      vdel[3][1][kv] -= vm[2][iv][kv] * vtmp;
+      vdel[0][0][kv] -= vm[0][iv][kv] * vtmp;
+      vdel[1][0][kv] -= vm[1][iv][kv] * vtmp;
+      vdel[2][0][kv] -= vm[2][iv][kv] * vtmp;
     }
-    vtmp = vdel[3][2][iv];
+    vtmp = vdel[2][1][iv];
     for (int kv = iv - 1; kv >= 1; kv--) {
-      vdel[1][2][kv] -= vm[0][iv][kv] * vtmp;
-      vdel[2][2][kv] -= vm[1][iv][kv] * vtmp;
-      vdel[3][2][kv] -= vm[2][iv][kv] * vtmp;
+      vdel[0][1][kv] -= vm[0][iv][kv] * vtmp;
+      vdel[1][1][kv] -= vm[1][iv][kv] * vtmp;
+      vdel[2][1][kv] -= vm[2][iv][kv] * vtmp;
     }
     //
   }
@@ -4252,14 +4252,14 @@ bool XFoil::setbl() {
       va[0][1][iv] = vs2(0, 1);
 
       if (lalfa)
-        vdel[1][2][iv] = vsr[0] * re_clmr + vsm[0] * msq_clmr;
+        vdel[0][1][iv] = vsr[0] * re_clmr + vsm[0] * msq_clmr;
       else
-        vdel[1][2][iv] = (vs1(0, 3) * u1_a + vs1(0, 2) * d1_a) +
+        vdel[0][1][iv] = (vs1(0, 3) * u1_a + vs1(0, 2) * d1_a) +
                          (vs2(0, 3) * u2_a + vs2(0, 2) * d2_a) +
                          (vs1(0, 4) + vs2(0, 4) + vsx[0]) *
                              (xi_ule1 * ule1_a + xi_ule2 * ule2_a);
 
-      vdel[1][1][iv] = vsrez[0] + (vs1(0, 3) * due1 + vs1(0, 2) * dds1) +
+      vdel[0][0][iv] = vsrez[0] + (vs1(0, 3) * due1 + vs1(0, 2) * dds1) +
                        (vs2(0, 3) * due2 + vs2(0, 2) * dds2) +
                        (vs1(0, 4) + vs2(0, 4) + vsx[0]) *
                            (xi_ule1 * dule1 + xi_ule2 * dule2);
@@ -4277,14 +4277,14 @@ bool XFoil::setbl() {
       va[1][1][iv] = vs2(1, 1);
 
       if (lalfa)
-        vdel[2][2][iv] = vsr[1] * re_clmr + vsm[1] * msq_clmr;
+        vdel[1][1][iv] = vsr[1] * re_clmr + vsm[1] * msq_clmr;
       else
-        vdel[2][2][iv] = (vs1(1, 3) * u1_a + vs1(1, 2) * d1_a) +
+        vdel[1][1][iv] = (vs1(1, 3) * u1_a + vs1(1, 2) * d1_a) +
                          (vs2(1, 3) * u2_a + vs2(1, 2) * d2_a) +
                          (vs1(1, 4) + vs2(1, 4) + vsx[1]) *
                              (xi_ule1 * ule1_a + xi_ule2 * ule2_a);
 
-      vdel[2][1][iv] = vsrez[1] + (vs1(1, 3) * due1 + vs1(1, 2) * dds1) +
+      vdel[1][0][iv] = vsrez[1] + (vs1(1, 3) * due1 + vs1(1, 2) * dds1) +
                        (vs2(1, 3) * due2 + vs2(1, 2) * dds2) +
                        (vs1(1, 4) + vs2(1, 4) + vsx[1]) *
                            (xi_ule1 * dule1 + xi_ule2 * dule2);
@@ -4304,14 +4304,14 @@ bool XFoil::setbl() {
       va[2][1][iv] = vs2(2, 1);
 
       if (lalfa)
-        vdel[3][2][iv] = vsr[2] * re_clmr + vsm[2] * msq_clmr;
+        vdel[2][1][iv] = vsr[2] * re_clmr + vsm[2] * msq_clmr;
       else
-        vdel[3][2][iv] = (vs1(2, 3) * u1_a + vs1(2, 2) * d1_a) +
+        vdel[2][1][iv] = (vs1(2, 3) * u1_a + vs1(2, 2) * d1_a) +
                          (vs2(2, 3) * u2_a + vs2(2, 2) * d2_a) +
                          (vs1(2, 4) + vs2(2, 4) + vsx[2]) *
                              (xi_ule1 * ule1_a + xi_ule2 * ule2_a);
 
-      vdel[3][1][iv] = vsrez[2] + (vs1(2, 3) * due1 + vs1(2, 2) * dds1) +
+      vdel[2][0][iv] = vsrez[2] + (vs1(2, 3) * due1 + vs1(2, 2) * dds1) +
                        (vs2(2, 3) * due2 + vs2(2, 2) * dds2) +
                        (vs1(2, 4) + vs2(2, 4) + vsx[2]) *
                            (xi_ule1 * dule1 + xi_ule2 * dule2);
@@ -5525,8 +5525,8 @@ bool XFoil::update() {
           j = ipan[jbl][js];
           jv = isys[jbl][js];
           ue_m = -vti[ibl][is] * vti[jbl][js] * dij[i][j];
-          dui = dui + ue_m * (mass[jbl][js] + vdel[3][1][jv]);
-          dui_ac = dui_ac + ue_m * (-vdel[3][2][jv]);
+          dui = dui + ue_m * (mass[jbl][js] + vdel[2][0][jv]);
+          dui_ac = dui_ac + ue_m * (-vdel[2][1][jv]);
         }
       }
 
@@ -5636,9 +5636,9 @@ bool XFoil::update() {
     for (ibl = 2; ibl <= nbl.get(is); ibl++) {
       iv = isys[ibl][is];
       //------- set changes without underrelaxation
-      dctau = vdel[1][1][iv] - dac * vdel[1][2][iv];
-      dthet = vdel[2][1][iv] - dac * vdel[2][2][iv];
-      dmass = vdel[3][1][iv] - dac * vdel[3][2][iv];
+      dctau = vdel[0][0][iv] - dac * vdel[0][1][iv];
+      dthet = vdel[1][0][iv] - dac * vdel[1][1][iv];
+      dmass = vdel[2][0][iv] - dac * vdel[2][1][iv];
       duedg = unew[ibl][is] + dac * u_ac[ibl][is] - uedg[ibl][is];
       ddstr = (dmass - dstr[ibl][is] * duedg) / uedg[ibl][is];
       //------- normalize changes
@@ -5713,9 +5713,9 @@ bool XFoil::update() {
     for (ibl = 2; ibl <= nbl.get(is); ibl++) {
       iv = isys[ibl][is];
 
-      dctau = vdel[1][1][iv] - dac * vdel[1][2][iv];
-      dthet = vdel[2][1][iv] - dac * vdel[2][2][iv];
-      dmass = vdel[3][1][iv] - dac * vdel[3][2][iv];
+      dctau = vdel[0][0][iv] - dac * vdel[0][1][iv];
+      dthet = vdel[1][0][iv] - dac * vdel[1][1][iv];
+      dmass = vdel[2][0][iv] - dac * vdel[2][1][iv];
       duedg = unew[ibl][is] + dac * u_ac[ibl][is] - uedg[ibl][is];
       ddstr = (dmass - dstr[ibl][is] * duedg) / uedg[ibl][is];
 
