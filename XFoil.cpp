@@ -1056,30 +1056,30 @@ bool XFoil::blsolve() {
     //====== invert va[iv] block
     //
     //------ normalize first row
-    double pivot = 1.0 / va[1][1][iv];
-    va[1][2][iv] *= pivot;
+    double pivot = 1.0 / va[0][0][iv];
+    va[0][1][iv] *= pivot;
     for (int l = iv; l <= nsys; l++) vm[1][l][iv] *= pivot;
     vdel[1][1][iv] *= pivot;
     vdel[1][2][iv] *= pivot;
     //
     //------ eliminate lower first column in va block
     for (int k = 2; k <= 3; k++) {
-      vtmp = va[k][1][iv];
-      va[k][2][iv] -= vtmp * va[1][2][iv];
+      vtmp = va[k - 1][0][iv];
+      va[k - 1][1][iv] -= vtmp * va[0][1][iv];
       for (int l = iv; l <= nsys; l++) vm[k][l][iv] -= vtmp * vm[1][l][iv];
       vdel[k][1][iv] -= vtmp * vdel[1][1][iv];
       vdel[k][2][iv] -= vtmp * vdel[1][2][iv];
     }
     //
     //------ normalize second row
-    pivot = 1.0 / va[2][2][iv];
+    pivot = 1.0 / va[1][1][iv];
     for (int l = iv; l <= nsys; l++) vm[2][l][iv] *= pivot;
     vdel[2][1][iv] *= pivot;
     vdel[2][2][iv] *= pivot;
     //
     //------ eliminate lower second column in va block
     
-    vtmp = va[3][2][iv];
+    vtmp = va[2][1][iv];
     for (int l = iv; l <= nsys; l++) vm[3][l][iv] -= vtmp * vm[2][l][iv];
     vdel[3][1][iv] -= vtmp * vdel[2][1][iv];
     vdel[3][2][iv] -= vtmp * vdel[2][2][iv];
@@ -1104,7 +1104,7 @@ bool XFoil::blsolve() {
     vdel[2][2][iv] -= vtmp2 * vdel[3][2][iv];
     //
     //------ eliminate upper second column in va block
-    vtmp = va[1][2][iv];
+    vtmp = va[0][1][iv];
     for (int l = ivp; l <= nsys; l++) vm[1][l][iv] -= vtmp * vm[2][l][iv];
 
     vdel[1][1][iv] -= vtmp * vdel[2][1][iv];
@@ -1115,8 +1115,8 @@ bool XFoil::blsolve() {
       //
       //====== eliminate vb(iv+1) block][ rows  1 -> 3
       for (int k = 1; k <= 3; k++) {
-        vtmp1 = vb[k][1][ivp];
-        vtmp2 = vb[k][2][ivp];
+        vtmp1 = vb[k - 1][0][ivp];
+        vtmp2 = vb[k - 1][1][ivp];
         vtmp3 = vm[k][iv][ivp];
         for (int l = ivp; l <= nsys; l++)
           vm[k][l][ivp] -= (vtmp1 * vm[1][l][iv] + vtmp2 * vm[2][l][iv] +
@@ -4245,11 +4245,11 @@ bool XFoil::setbl() {
                             (xi_ule1 * ule1_m[jv] + xi_ule2 * ule2_m[jv]);
       }
 
-      vb[1][1][iv] = vs1(0, 0);
-      vb[1][2][iv] = vs1(0, 1);
+      vb[0][0][iv] = vs1(0, 0);
+      vb[0][1][iv] = vs1(0, 1);
 
-      va[1][1][iv] = vs2(0, 0);
-      va[1][2][iv] = vs2(0, 1);
+      va[0][0][iv] = vs2(0, 0);
+      va[0][1][iv] = vs2(0, 1);
 
       if (lalfa)
         vdel[1][2][iv] = vsr[0] * re_clmr + vsm[0] * msq_clmr;
@@ -4270,11 +4270,11 @@ bool XFoil::setbl() {
                         (vs1(1, 4) + vs2(1, 4) + vsx[1]) *
                             (xi_ule1 * ule1_m[jv] + xi_ule2 * ule2_m[jv]);
       }
-      vb[2][1][iv] = vs1(1, 0);
-      vb[2][2][iv] = vs1(1, 1);
+      vb[1][0][iv] = vs1(1, 0);
+      vb[1][1][iv] = vs1(1, 1);
 
-      va[2][1][iv] = vs2(1, 0);
-      va[2][2][iv] = vs2(1, 1);
+      va[1][0][iv] = vs2(1, 0);
+      va[1][1][iv] = vs2(1, 1);
 
       if (lalfa)
         vdel[2][2][iv] = vsr[1] * re_clmr + vsm[1] * msq_clmr;
@@ -4297,11 +4297,11 @@ bool XFoil::setbl() {
                             (xi_ule1 * ule1_m[jv] + xi_ule2 * ule2_m[jv]);
       }
 
-      vb[3][1][iv] = vs1(2, 0);
-      vb[3][2][iv] = vs1(2, 1);
+      vb[2][0][iv] = vs1(2, 0);
+      vb[2][1][iv] = vs1(2, 1);
 
-      va[3][1][iv] = vs2(2, 0);
-      va[3][2][iv] = vs2(2, 1);
+      va[2][0][iv] = vs2(2, 0);
+      va[2][1][iv] = vs2(2, 1);
 
       if (lalfa)
         vdel[3][2][iv] = vsr[2] * re_clmr + vsm[2] * msq_clmr;
@@ -4320,18 +4320,18 @@ bool XFoil::setbl() {
         //----- redefine coefficients for tte, dte, etc
         vz[1][1] = vs1(0, 0) * cte_cte1;
         vz[1][2] = vs1(0, 0) * cte_tte1 + vs1(0, 1) * tte_tte1;
-        vb[1][1][iv] = vs1(0, 0) * cte_cte2;
-        vb[1][2][iv] = vs1(0, 0) * cte_tte2 + vs1(0, 1) * tte_tte2;
+        vb[0][0][iv] = vs1(0, 0) * cte_cte2;
+        vb[0][1][iv] = vs1(0, 0) * cte_tte2 + vs1(0, 1) * tte_tte2;
 
         vz[2][1] = vs1(1, 0) * cte_cte1;
         vz[2][2] = vs1(1, 0) * cte_tte1 + vs1(1, 1) * tte_tte1;
-        vb[2][1][iv] = vs1(1, 0) * cte_cte2;
-        vb[2][2][iv] = vs1(1, 0) * cte_tte2 + vs1(1, 1) * tte_tte2;
+        vb[1][0][iv] = vs1(1, 0) * cte_cte2;
+        vb[1][1][iv] = vs1(1, 0) * cte_tte2 + vs1(1, 1) * tte_tte2;
 
         vz[3][1] = vs1(2, 0) * cte_cte1;
         vz[3][2] = vs1(2, 0) * cte_tte1 + vs1(2, 1) * tte_tte1;
-        vb[3][1][iv] = vs1(2, 0) * cte_cte2;
-        vb[3][2][iv] = vs1(2, 0) * cte_tte2 + vs1(2, 1) * tte_tte2;
+        vb[2][0][iv] = vs1(2, 0) * cte_cte2;
+        vb[2][1][iv] = vs1(2, 0) * cte_tte2 + vs1(2, 1) * tte_tte2;
       }
 
       //---- turbulent intervals will follow if currently at transition interval
