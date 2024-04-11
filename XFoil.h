@@ -233,10 +233,12 @@ class XFoil {
     public:
     double psi;
     double psi_ni;
+    Vector2d qtan;
     static PsiResult sum(PsiResult a, PsiResult b) {
       PsiResult result;
       result.psi = a.psi + b.psi;
       result.psi_ni = a.psi_ni + b.psi_ni;
+      result.qtan = a.qtan + b.qtan;
       return result;
     }
   };
@@ -295,7 +297,6 @@ class XFoil {
 
   double rmxbl;
 
-  double qtan1, qtan2;
   double amax;  // needed for preprocessing
   double minf1;
   bool lblini, lipan;
@@ -356,7 +357,8 @@ class XFoil {
   Matrix2Xd gamu;
   double apanel[IZX], sst, sst_go, sst_gp, gamte, sigte;
   double dste, aste;
-  double qinv[IZX], qinvu[IZX][3], qinv_a[IZX];
+  Matrix2Xd qinvu;
+  double qinv[IZX], qinv_a[IZX];
   double dzdg[IQX], dzdm[IZX], dqdg[IQX], dqdm[IZX];
   FullPivLU<MatrixXd> psi_gamma_lu;
   
