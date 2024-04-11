@@ -120,7 +120,7 @@ bool XFoil::initialize() {
   memset(qf2, 0, sizeof(qf2));
   memset(qf3, 0, sizeof(qf3));
   memset(qinv, 0, sizeof(qinv));
-  memset(qinvu, 0, sizeof(qinvu));
+  qinvu = Matrix2Xd::Zero(2, IZX);
   memset(qinv_a, 0, sizeof(qinv_a));
   memset(qvis, 0, sizeof(qvis));
   spline_length.resize(IZX);
@@ -2129,8 +2129,7 @@ bool XFoil::ggcalc() {
 
   //---- set inviscid alpha=0,90 surface speeds for this geometry
   for (int i = 1; i <= n + 1; i++) {
-    qinvu[i][1] = gamu.col(i).x();
-    qinvu[i][2] = gamu.col(i).y();
+    qinvu.col(i) = gamu.col(i);
   }
 
   lgamu = true;
@@ -3183,8 +3182,7 @@ XFoil::PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector
   psi_result.psi = 0.0;
   psi_result.psi_ni = 0.0;
 
-  qtan1 = 0.0;
-  qtan2 = 0.0;
+  psi_result.qtan = Vector2d::Zero();
   double qtanm = 0.0;
 
   double scs, sds;
@@ -3294,8 +3292,8 @@ XFoil::PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector
     double pdni = pdx1 * x1i + pdx2 * x2i + pdyy * yyi;
     psi_result.psi_ni += (1 / (4 * PI)) * (gsum * psni + gdif * pdni);
 
-    qtan1 += (1 / (4 * PI)) * (gsum1 * psni + gdif1 * pdni);
-    qtan2 += (1 / (4 * PI)) * (gsum2 * psni + gdif2 * pdni);
+    psi_result.qtan.x() += (1 / (4 * PI)) * (gsum1 * psni + gdif1 * pdni);
+    psi_result.qtan.y() += (1 / (4 * PI)) * (gsum2 * psni + gdif2 * pdni);
 
     dqdg[jo] += (1 / (4 * PI)) * (psni - pdni);
     dqdg[jp] += (1 / (4 * PI)) * (psni + pdni);
@@ -3312,8 +3310,8 @@ XFoil::PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector
   //---- dpsi/dn
   psi_result.psi_ni += qinf * (cosa * normal_vector.y() - sina * normal_vector.x());
 
-  qtan1 += qinf * normal_vector.y();
-  qtan2 += -qinf * normal_vector.x();
+  psi_result.qtan.x() += qinf * normal_vector.y();
+  psi_result.qtan.y() += -qinf * normal_vector.x();
 
   return psi_result;
 }
@@ -3589,8 +3587,8 @@ XFoil::PsiResult XFoil::psi_te(int iNode, Vector2d point, Vector2d normal_vector
   //---- dpsi/dni
   psi_result.psi_ni += (1 / (2 * PI)) * (psigni * sigte + pgamni * gamte);
 
-  qtan1 += (1 / (2 * PI)) * (psigni * sigte1 + pgamni * gamte1);
-  qtan2 += (1 / (2 * PI)) * (psigni * sigte2 + pgamni * gamte2);
+  psi_result.qtan.x() += (1 / (2 * PI)) * (psigni * sigte1 + pgamni * gamte1);
+  psi_result.qtan.y() += (1 / (2 * PI)) * (psigni * sigte2 + pgamni * gamte2);
 
   dqdg[n] += -(1 / (2 * PI)) * (psigni * 0.5 * scs - pgamni * 0.5 * sds);
   dqdg[1] += +(1 / (2 * PI)) * (psigni * 0.5 * scs - pgamni * 0.5 * sds);
@@ -3890,8 +3888,8 @@ bool XFoil::qiset() {
   sina = sin(alfa);
 
   for (int i = 1; i <= n + nw; i++) {
-    qinv[i] = cosa * qinvu[i][1] + sina * qinvu[i][2];
-    qinv_a[i] = -sina * qinvu[i][1] + cosa * qinvu[i][2];
+    qinv[i] = cosa * qinvu.col(i).x() + sina * qinvu.col(i).y();
+    qinv_a[i] = -sina * qinvu.col(i).x() + cosa * qinvu.col(i).y();
   }
 
   return true;
@@ -3920,14 +3918,11 @@ bool XFoil::qwcalc() {
   int i;
 
   //---- first wake point (same as te)
-  qinvu[n + 1][1] = qinvu[n][1];
-  qinvu[n + 1][2] = qinvu[n][2];
+  qinvu.col(n + 1) = qinvu.col(n);
 
   //---- rest of wake
   for (i = n + 2; i <= n + nw; i++) {
-    psilin(i, points.col(i), normal_vectors.col(i), false);
-    qinvu[i][1] = qtan1;
-    qinvu[i][2] = qtan2;
+    qinvu.col(i) = psilin(i, points.col(i), normal_vectors.col(i), false).qtan;
   }
 
   return true;
