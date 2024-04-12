@@ -347,7 +347,7 @@ class XFoil {
 
 
   double cl_alf, cl_msq;
-  double cosa, sina, gamma, gamm1;
+  double gamma, gamm1;
   double tkl_msq;
   double xssi[IVX][ISX], uinv[IVX][ISX], mass[IVX][ISX];
 

@@ -268,7 +268,6 @@ bool XFoil::initialize() {
   chord = 0.0;
   cl_alf = 0.0;
   cl_msq = 0.0;
-  cosa = 0.0;
   sina = 0.0;
   tklam = 0.0;
   tkl_msq = 0.0;
@@ -2020,9 +2019,6 @@ bool XFoil::ggcalc() {
 
   double res;
 
-  cosa = cos(alfa);
-  sina = sin(alfa);
-
   writeString("   Calculating unit vorticity distributions ...\n");
 
   MatrixXd dpsi_dgam = MatrixXd::Zero(n + 1, n + 1);
@@ -3167,9 +3163,6 @@ XFoil::PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector
 
   io = iNode;
 
-  cosa = cos(alfa);
-  sina = sin(alfa);
-
   jp = 0;
 
   for (jo = 1; jo <= n; jo++) {
@@ -3305,10 +3298,11 @@ XFoil::PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector
   }
 
   //**** freestream terms
-  psi_result.psi += qinf * (cosa * point.y() - sina * point.x());
+  Vector2d rotateVector = {cos(alfa), sin(alfa)};
+  psi_result.psi += qinf * cross2(rotateVector, point);
 
   //---- dpsi/dn
-  psi_result.psi_ni += qinf * (cosa * normal_vector.y() - sina * normal_vector.x());
+  psi_result.psi_ni += qinf * cross2(rotateVector, normal_vector);
 
   psi_result.qtan.x() += qinf * normal_vector.y();
   psi_result.qtan.y() += -qinf * normal_vector.x();
@@ -3611,9 +3605,6 @@ bool XFoil::pswlin(int i, double xi, double yi, double nxi, double nyi,
 
   io = i;
 
-  cosa = cos(alfa);
-  sina = sin(alfa);
-
   for (jo = n + 1; jo <= n + nw; jo++) {
     dzdm[jo] = 0.0;
     dqdm[jo] = 0.0;
@@ -3884,12 +3875,14 @@ bool XFoil::qdcalc() {
  *      current alpha.
  * -------------------------------------------------------- */
 bool XFoil::qiset() {
-  cosa = cos(alfa);
-  sina = sin(alfa);
-
+  Matrix2d rotateMatrix = Matrix2d {
+    {cos(alfa), sin(alfa)},
+    {-sin(alfa), cos(alfa)}
+  };
+  
   for (int i = 1; i <= n + nw; i++) {
-    qinv[i] = cosa * qinvu.col(i).x() + sina * qinvu.col(i).y();
-    qinv_a[i] = -sina * qinvu.col(i).x() + cosa * qinvu.col(i).y();
+    qinv[i] = rotateMatrix.row(0).dot(qinvu.col(i));
+    qinv_a[i] = rotateMatrix.row(1).dot(qinvu.col(i));
   }
 
   return true;
@@ -4489,13 +4482,15 @@ bool XFoil::specal() {
   //---- calculate surface vorticity distributions for alpha = 0, 90 degrees
   if (!lgamu || !lqaij) ggcalc();
 
-  cosa = cos(alfa);
-  sina = sin(alfa);
+  Matrix2d rotateMatrix = Matrix2d {
+    {cos(alfa), sin(alfa)},
+    {-sin(alfa), cos(alfa)}
+  };
 
   //---- superimpose suitably weighted  alpha = 0, 90  distributions
   for (i = 1; i <= n; i++) {
-    gam[i] = cosa * gamu.col(i).x() + sina * gamu.col(i).y();
-    gam_a[i] = -sina * gamu.col(i).x() + cosa * gamu.col(i).y();
+    gam[i] = rotateMatrix.row(0).dot(gamu.col(i));
+    gam_a[i] = rotateMatrix.row(1).dot(gamu.col(i));
   }
 
   tecalc();
@@ -4590,13 +4585,15 @@ bool XFoil::speccl() {
   mrcl(clspec, minf_cl, reinf_cl);
   comset();
 
-  //---- current alpha is the initial guess for newton variable alfa
-  cosa = cos(alfa);
-  sina = sin(alfa);
+  Matrix2d rotateMatrix = Matrix2d {
+    {cos(alfa), sin(alfa)},
+    {-sin(alfa), cos(alfa)}
+  };
 
+  //---- superimpose suitably weighted  alpha = 0, 90  distributions
   for (i = 1; i <= n; i++) {
-    gam[i] = cosa * gamu.col(i).x() + sina * gamu.col(i).y();
-    gam_a[i] = -sina * gamu.col(i).x() + cosa * gamu.col(i).y();
+    gam[i] = rotateMatrix.row(0).dot(gamu.col(i));
+    gam_a[i] = rotateMatrix.row(1).dot(gamu.col(i));
   }
 
   //---- get corresponding cl, cl_alpha, cl_mach
@@ -4611,11 +4608,13 @@ bool XFoil::speccl() {
     alfa = alfa + rlx * dalfa;
 
     //------ set new surface speed distribution
-    cosa = cos(alfa);
-    sina = sin(alfa);
+    Matrix2d rotateMatrix = Matrix2d {
+      {cos(alfa), sin(alfa)},
+      {-sin(alfa), cos(alfa)}
+    };
     for (i = 1; i <= n; i++) {
-      gam[i] = cosa * gamu.col(i).x() + sina * gamu.col(i).y();
-      gam_a[i] = -sina * gamu.col(i).x() + cosa * gamu.col(i).y();
+      gam[i] = rotateMatrix.row(0).dot(gamu.col(i));
+      gam_a[i] = rotateMatrix.row(1).dot(gamu.col(i));
     }
 
     //------ set new cl(alpha)
