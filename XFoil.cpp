@@ -124,9 +124,7 @@ bool XFoil::initialize() {
   memset(qinv_a, 0, sizeof(qinv_a));
   memset(qvis, 0, sizeof(qvis));
   spline_length.resize(IZX);
-  memset(sig, 0, sizeof(sig));
   snew = VectorXd::Zero(4 * IBX);
-  memset(sig, 0, sizeof(sig));
   memset(thet, 0, sizeof(thet));
   memset(uedg, 0, sizeof(uedg));
   memset(uinv, 0, sizeof(uinv));
@@ -268,7 +266,6 @@ bool XFoil::initialize() {
   chord = 0.0;
   cl_alf = 0.0;
   cl_msq = 0.0;
-  sina = 0.0;
   tklam = 0.0;
   tkl_msq = 0.0;
   sst = 0.0;
@@ -3414,8 +3411,8 @@ XFoil::PsiResult XFoil::psisig(int iNode, int jNode, Vector2d point, Vector2d no
   const double dsm = (points.col(jp) - points.col(jm)).norm();
   double dsim = 1.0 / dsm;
 
-  double ssum = (sig[jp] - sig[jo]) / dso + (sig[jp] - sig[jm]) * dsim;
-  double sdif = (sig[jp] - sig[jo]) / dso - (sig[jp] - sig[jm]) * dsim;
+  double ssum = 0;
+  double sdif = 0;
 
   psi_result.psi += (1 / (4 * PI)) * (psum * ssum + pdif * sdif);
 
@@ -3456,9 +3453,6 @@ XFoil::PsiResult XFoil::psisig(int iNode, int jNode, Vector2d point, Vector2d no
 
   double dsp = (points.col(jq) - points.col(jo)).norm();
   double dsip = 1.0 / dsp;
-
-  ssum = (sig[jq] - sig[jo]) * dsip + (sig[jp] - sig[jo]) / dso;
-  sdif = (sig[jq] - sig[jo]) * dsip - (sig[jp] - sig[jo]) / dso;
 
   psi_result.psi += (1 / (4 * PI)) * (psum * ssum + pdif * sdif);
 
@@ -3691,11 +3685,6 @@ bool XFoil::pswlin(int i, double xi, double yi, double nxi, double nyi,
     const double dsm = (points.col(jp) - points.col(jm)).norm();
     const double dsim = 1.0 / dsm;
 
-    double ssum = (sig[jp] - sig[jo]) / dso + (sig[jp] - sig[jm]) * dsim;
-    double sdif = (sig[jp] - sig[jo]) / dso - (sig[jp] - sig[jm]) * dsim;
-
-    psi = psi + (1 / (4 * PI)) * (psum * ssum + pdif * sdif);
-
     //------- dpsi/dm
     dzdm[jm] = dzdm[jm] + (1 / (4 * PI)) * (-psum * dsim + pdif * dsim);
     dzdm[jo] = dzdm[jo] + (1 / (4 * PI)) * (-psum / dso - pdif / dso);
@@ -3704,7 +3693,6 @@ bool XFoil::pswlin(int i, double xi, double yi, double nxi, double nyi,
     //------- dpsi/dni
     double psni = psx1 * x1i + psx0 * (x1i + x2i) * 0.5 + psyy * yyi;
     double pdni = pdx1 * x1i + pdx0 * (x1i + x2i) * 0.5 + pdyy * yyi;
-    psi_ni = psi_ni + (1 / (4 * PI)) * (psni * ssum + pdni * sdif);
 
     dqdm[jm] = dqdm[jm] + (1 / (4 * PI)) * (-psni * dsim + pdni * dsim);
     dqdm[jo] = dqdm[jo] + (1 / (4 * PI)) * (-psni / dso - pdni / dso);
@@ -3728,11 +3716,6 @@ bool XFoil::pswlin(int i, double xi, double yi, double nxi, double nyi,
     const double dsp = (points.col(jq) - points.col(jo)).norm();
     const double dsip = 1.0 / dsp;
 
-    ssum = (sig[jq] - sig[jo]) * dsip + (sig[jp] - sig[jo]) / dso;
-    sdif = (sig[jq] - sig[jo]) * dsip - (sig[jp] - sig[jo]) / dso;
-
-    psi = psi + (1 / (4 * PI)) * (psum * ssum + pdif * sdif);
-
     //------- dpsi/dm
     dzdm[jo] = dzdm[jo] + (1 / (4 * PI)) * (-psum * (dsip + dsio) - pdif * (dsip - dsio));
     dzdm[jp] = dzdm[jp] + (1 / (4 * PI)) * (psum / dso - pdif / dso);
@@ -3741,8 +3724,7 @@ bool XFoil::pswlin(int i, double xi, double yi, double nxi, double nyi,
     //------- dpsi/dni
     psni = psx0 * (x1i + x2i) * 0.5 + psx2 * x2i + psyy * yyi;
     pdni = pdx0 * (x1i + x2i) * 0.5 + pdx2 * x2i + pdyy * yyi;
-    psi_ni = psi_ni + (1 / (4 * PI)) * (psni * ssum + pdni * sdif);
-
+    
     dqdm[jo] = dqdm[jo] + (1 / (4 * PI)) * (-psni * (dsip + dsio) - pdni * (dsip - dsio));
     dqdm[jp] = dqdm[jp] + (1 / (4 * PI)) * (psni / dso - pdni / dso);
     dqdm[jq] = dqdm[jq] + (1 / (4 * PI)) * (psni * dsip + pdni * dsip);
