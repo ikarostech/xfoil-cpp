@@ -353,7 +353,7 @@ class XFoil {
 
   double vti[IVX][ISX];
   double uinv_a[IVX][ISX];
-  double gam[IQX], gam_a[IQX], sig[IZX];
+  double gam[IQX], gam_a[IQX];
   Matrix2Xd gamu;
   double apanel[IZX], sst, sst_go, sst_gp, gamte, sigte;
   double dste, aste;
