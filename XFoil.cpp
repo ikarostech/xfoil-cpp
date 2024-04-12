@@ -3263,10 +3263,8 @@ XFoil::PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector
     double pdx2 = ((blData1.xz + blData2.xz) * psx2 + psis + blData2.xz * logr22 + psid) * dxinv;
     double pdyy = ((blData1.xz + blData2.xz) * psyy - yy * (logr12 - logr22)) * dxinv;
 
-    double gsum1 = gamu.col(jp).x() + gamu.col(jo).x();
-    double gsum2 = gamu.col(jp).y() + gamu.col(jo).y();
-    double gdif1 = gamu.col(jp).x() - gamu.col(jo).x();
-    double gdif2 = gamu.col(jp).y() - gamu.col(jo).y();
+    Vector2d gsum_vector = gamu.col(jp) + gamu.col(jo);
+    Vector2d gdif_vector = gamu.col(jp) - gamu.col(jo);
 
     double gsum = gam[jp] + gam[jo];
     double gdif = gam[jp] - gam[jo];
@@ -3282,8 +3280,7 @@ XFoil::PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector
     double pdni = pdx1 * x1i + pdx2 * x2i + pdyy * yyi;
     psi_result.psi_ni += (1 / (4 * PI)) * (gsum * psni + gdif * pdni);
 
-    psi_result.qtan.x() += (1 / (4 * PI)) * (gsum1 * psni + gdif1 * pdni);
-    psi_result.qtan.y() += (1 / (4 * PI)) * (gsum2 * psni + gdif2 * pdni);
+    psi_result.qtan += (1 / (4 * PI)) * (psni * gsum_vector + pdni * gdif_vector);
 
     dqdg[jo] += (1 / (4 * PI)) * (psni - pdni);
     dqdg[jp] += (1 / (4 * PI)) * (psni + pdni);
@@ -3411,11 +3408,6 @@ XFoil::PsiResult XFoil::psisig(int iNode, int jNode, Vector2d point, Vector2d no
   const double dsm = (points.col(jp) - points.col(jm)).norm();
   double dsim = 1.0 / dsm;
 
-  double ssum = 0;
-  double sdif = 0;
-
-  psi_result.psi += (1 / (4 * PI)) * (psum * ssum + pdif * sdif);
-
   //------- dpsi/dm
   dzdm[jm] += (1 / (4 * PI)) * (-psum * dsim + pdif * dsim);
   dzdm[jo] += (1 / (4 * PI)) * (-psum / dso - pdif / dso);
@@ -3424,9 +3416,6 @@ XFoil::PsiResult XFoil::psisig(int iNode, int jNode, Vector2d point, Vector2d no
   //------- dpsi/dni
   double psni = psx1 * x1i + psx0 * (x1i + x2i) * 0.5 + psyy * yyi;
   double pdni = pdx1 * x1i + pdx0 * (x1i + x2i) * 0.5 + pdyy * yyi;
-  psi_result.psi_ni += (1 / (4 * PI)) * (psni * ssum + pdni * sdif);
-
-  double qtanm = qtanm + (1 / (4 * PI)) * (psni * ssum + pdni * sdif);
 
   dqdm[jm] += (1 / (4 * PI)) * (-psni * dsim + pdni * dsim);
   dqdm[jo] += (1 / (4 * PI)) * (-psni / dso - pdni / dso);
@@ -3454,8 +3443,6 @@ XFoil::PsiResult XFoil::psisig(int iNode, int jNode, Vector2d point, Vector2d no
   double dsp = (points.col(jq) - points.col(jo)).norm();
   double dsip = 1.0 / dsp;
 
-  psi_result.psi += (1 / (4 * PI)) * (psum * ssum + pdif * sdif);
-
   //------- dpsi/dm
   dzdm[jo] += (1 / (4 * PI)) * (-psum * (dsip + dsio) - pdif * (dsip - dsio));
   dzdm[jp] += (1 / (4 * PI)) * (psum / dso - pdif / dso);
@@ -3464,9 +3451,6 @@ XFoil::PsiResult XFoil::psisig(int iNode, int jNode, Vector2d point, Vector2d no
   //------- dpsi/dni
   psni = psx0 * (x1i + x2i) * 0.5 + psx2 * x2i + psyy * yyi;
   pdni = pdx0 * (x1i + x2i) * 0.5 + pdx2 * x2i + pdyy * yyi;
-  psi_result.psi_ni = (1 / (4 * PI)) * (psni * ssum + pdni * sdif);
-
-  qtanm = qtanm + (1 / (4 * PI)) * (psni * ssum + pdni * sdif);
 
   dqdm[jo] += (1 / (4 * PI)) * (-psni * (dsip + dsio) - pdni * (dsip - dsio));
   dqdm[jp] += (1 / (4 * PI)) * (psni / dso - pdni / dso);
@@ -3554,10 +3538,8 @@ XFoil::PsiResult XFoil::psi_te(int iNode, Vector2d point, Vector2d normal_vector
   double pgamni = pgamx1 * x1i + pgamx2 * x2i + pgamyy * yyi;
 
   //---- TE panel source and vortex strengths
-  double sigte1 = 0.5 * scs * (gamu.col(1).x() - gamu.col(n).x());
-  double sigte2 = 0.5 * scs * (gamu.col(1).y() - gamu.col(n).y());
-  double gamte1 = -0.5 * sds * (gamu.col(1).x() - gamu.col(n).x());
-  double gamte2 = -0.5 * sds * (gamu.col(1).y() - gamu.col(n).y());
+  Vector2d sigte_vector = 0.5 * scs * (gamu.col(1) - gamu.col(n));
+  Vector2d gamte_vector = -0.5 * sds * (gamu.col(1) - gamu.col(n));
 
   sigte = 0.5 * scs * (gam[1] - gam[n]);
   gamte = -0.5 * sds * (gam[1] - gam[n]);
@@ -3575,8 +3557,7 @@ XFoil::PsiResult XFoil::psi_te(int iNode, Vector2d point, Vector2d normal_vector
   //---- dpsi/dni
   psi_result.psi_ni += (1 / (2 * PI)) * (psigni * sigte + pgamni * gamte);
 
-  psi_result.qtan.x() += (1 / (2 * PI)) * (psigni * sigte1 + pgamni * gamte1);
-  psi_result.qtan.y() += (1 / (2 * PI)) * (psigni * sigte2 + pgamni * gamte2);
+  psi_result.qtan += (1 / (2 * PI)) * (psigni * sigte_vector + pgamni * gamte_vector);
 
   dqdg[n] += -(1 / (2 * PI)) * (psigni * 0.5 * scs - pgamni * 0.5 * sds);
   dqdg[1] += +(1 / (2 * PI)) * (psigni * 0.5 * scs - pgamni * 0.5 * sds);
@@ -3724,7 +3705,7 @@ bool XFoil::pswlin(int i, double xi, double yi, double nxi, double nyi,
     //------- dpsi/dni
     psni = psx0 * (x1i + x2i) * 0.5 + psx2 * x2i + psyy * yyi;
     pdni = pdx0 * (x1i + x2i) * 0.5 + pdx2 * x2i + pdyy * yyi;
-    
+
     dqdm[jo] = dqdm[jo] + (1 / (4 * PI)) * (-psni * (dsip + dsio) - pdni * (dsip - dsio));
     dqdm[jp] = dqdm[jp] + (1 / (4 * PI)) * (psni / dso - pdni / dso);
     dqdm[jq] = dqdm[jq] + (1 / (4 * PI)) * (psni * dsip + pdni * dsip);
