@@ -3563,8 +3563,8 @@ XFoil::PsiResult XFoil::psi_te(int iNode, Vector2d point, Vector2d normal_vector
  *			airfoil:  1   < i < n
  *			wake:	  n+1 < i < n+nw
  *-------------------------------------------------------------------- */
-bool XFoil::pswlin(int i, Vector2d point, Vector2d normal_vector,
-                   double &psi, double &psi_ni) {
+XFoil::PsiResult XFoil::pswlin(int i, Vector2d point, Vector2d normal_vector) {
+  PsiResult psi_result;
   double g1, g2, t1, t2;
   int io, jo;
 
@@ -3575,8 +3575,8 @@ bool XFoil::pswlin(int i, Vector2d point, Vector2d normal_vector,
     dqdm[jo] = 0.0;
   }
 
-  psi = 0.0;
-  psi_ni = 0.0;
+  psi_result.psi = 0.0;
+  psi_result.psi_ni = 0.0;
 
   for (jo = n + 1; jo <= n + nw - 1; jo++) {
     int jp = jo + 1;
@@ -3698,7 +3698,7 @@ bool XFoil::pswlin(int i, Vector2d point, Vector2d normal_vector,
     dqdm[jq] = dqdm[jq] + (1 / (4 * PI)) * (psni * dsip + pdni * dsip);
   }
 
-  return true;
+  return psi_result;
 }
 
 /** -----------------------------------------------------
@@ -3707,7 +3707,7 @@ bool XFoil::pswlin(int i, Vector2d point, Vector2d normal_vector,
  * ------------------------------------------------------ */
 bool XFoil::qdcalc() {
   int i, j, k, iu;
-  double psi, psi_n, sum;
+  double sum;
   VectorXd gamu_temp(n + 1);
 
   // TRACE("calculating source influence matrix ...\n");
@@ -3737,7 +3737,7 @@ bool XFoil::qdcalc() {
 
   //---- set up coefficient matrix of dpsi/dm on airfoil surface
   for (i = 1; i <= n; i++) {
-    pswlin(i, points.col(i), normal_vectors.col(i), psi, psi_n);
+    pswlin(i, points.col(i), normal_vectors.col(i));
     for (j = n + 1; j <= n + nw; j++) {
       bij[i][j] = -dzdm[j];
     }
@@ -3785,7 +3785,7 @@ bool XFoil::qdcalc() {
       dij[i][j] = dqdm[j];
     }
     //------ wake contribution
-    pswlin(i, points.col(i), normal_vectors.col(i), psi, psi_n);
+    pswlin(i, points.col(i), normal_vectors.col(i));
     for (j = n + 1; j <= n + nw; j++) {
       dij[i][j] = dqdm[j];
     }
