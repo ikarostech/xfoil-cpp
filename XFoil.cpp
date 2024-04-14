@@ -336,7 +336,7 @@ bool XFoil::abcopy(Matrix2Xd copyFrom) {
   dpoints_ds.row(0) = spline::splind(points.row(0), spline_length, n);
   dpoints_ds.row(1) = spline::splind(points.row(1), spline_length, n);
   normal_vectors = ncalc(points, spline_length, n);
-  lefind(sle, points, dpoints_ds, spline_length, n);
+  lefind(sle, points.middleCols(INDEX_START_WITH, n), dpoints_ds.middleCols(INDEX_START_WITH, n), spline_length.segment(INDEX_START_WITH, n), n);
   point_le.x() = spline::seval(sle, points.row(0), dpoints_ds.row(0), spline_length, n);
   point_le.y() = spline::seval(sle, points.row(1), dpoints_ds.row(1), spline_length, n);
   point_te = 0.5 * (points.col(1) + points.col(n));
@@ -2385,13 +2385,13 @@ bool XFoil::lefind(double &sle, Matrix2Xd points, Matrix2Xd dpoints_ds, VectorXd
   int i;
   double dseps;
   //---- convergence tolerance
-  dseps = (s[n] - s[1]) * 0.00001;
+  dseps = (s[n - 1] - s[0]) * 0.00001;
 
   //---- set trailing edge point coordinates
-  point_te = 0.5 * (points.col(1) + points.col(n));
+  point_te = 0.5 * (points.col(0) + points.col(n - 1));
 
   //---- get first guess for sle
-  for (i = 3; i <= n - 2; i++) {
+  for (i = 2; i < n - 2; i++) {
     const Vector2d dpoint_te = points.col(i) - point_te;
     const Vector2d dpoint = points.col(i + 1) - points.col(i);
     const double dotp = dpoint_te.dot(dpoint);
