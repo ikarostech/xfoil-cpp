@@ -246,7 +246,7 @@ class XFoil {
   PsiResult psisig(int iNode, int jNode, Vector2d point, Vector2d normal_vector);
   PsiResult psi_te(int i, Vector2d point, Vector2d normal_vector);
   
-  bool pswlin(int i, Vector2d point, Vector2d normal_vector, double &psi, double &psi_ni);
+  PsiResult pswlin(int i, Vector2d point, Vector2d normal_vector);
   bool qdcalc();
   bool qiset();
   bool qvfue();
