@@ -56,12 +56,36 @@ using namespace Eigen;
 //------ derived dimensioning limit parameters
 
 class blData {
- public:
+  public:
+  class blVector {
+  public:
+    double scalar;
+    Vector<double, 5> vector;
+    Vector<double, 3> pos_vector() {
+      return vector.segment(0, 3);
+    }
+    double& u() {
+      return vector[0];
+    }
+    double& t() {
+      return vector[1];
+    }
+    double& d() {
+      return vector[2];
+    }
+    double& ms() {
+      return vector[3];
+    }
+    double& re() {
+      return vector[4];
+    }
+  };
+  blVector hkz;
   double xz, uz, tz, dz, sz, amplz, uz_uei, uz_ms, dwz, 
       hz, hz_tz, hz_dz, 
       mz, mz_uz, mz_ms, 
       rz, rz_uz, rz_ms,
-      hkz, hkz_uz, hkz_tz, hkz_dz, hkz_ms, 
+      //hkz, hkz_uz, hkz_tz, hkz_dz, hkz_ms, 
       hsz, hsz_uz, hsz_tz, hsz_dz, hsz_ms, hsz_re, 
       hcz, hcz_uz, hcz_tz, hcz_dz, hcz_ms, 
       rtz, rtz_uz, rtz_tz, rtz_ms, rtz_re, 
@@ -308,7 +332,7 @@ class XFoil {
   
   double qvis[IZX];
   
-  double adeg, xcmref, ycmref;
+  double xcmref, ycmref;
   double tklam;
   Matrix2Xd dpoints_ds; //formerly xp, yp
   VectorXd spline_length;
