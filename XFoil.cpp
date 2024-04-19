@@ -1366,7 +1366,6 @@ bool XFoil::blvar(int ityp) {
   blData2.cqz.t() = blData2.cqz.t() + cq2_h2 * blData2.hz_tz;
   blData2.cqz.d() = blData2.cqz.d() + cq2_h2 * blData2.hz_dz;
 
-
   //---- set skin friction coefficient
   if (ityp == 3) {
     //----- wake
@@ -1521,7 +1520,6 @@ bool XFoil::blvar(int ityp) {
   blData2.dez.t() += (3.15 + 1.72 / (blData2.hkz.scalar - 1.0));
   blData2.dez.d() += 1.0;
   
-
   hdmax = 12.0;
   if (blData2.dez.scalar > hdmax * blData2.tz) {
     blData2.dez.scalar = hdmax * blData2.tz;
