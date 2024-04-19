@@ -60,7 +60,7 @@ class blData {
   class blVector {
   public:
     double scalar;
-    Vector<double, 5> vector;
+    Vector<double, 6> vector = Vector<double, 6>::Zero();
     Vector<double, 3> pos_vector() {
       return vector.segment(0, 3);
     }
@@ -73,27 +73,21 @@ class blData {
     double& d() {
       return vector[2];
     }
-    double& ms() {
+    double& s() {
       return vector[3];
     }
-    double& re() {
+    double& ms() {
       return vector[4];
     }
+    double& re() {
+      return vector[5];
+    }
   };
-  blVector hkz;
+  blVector hkz, hsz, hcz, rtz, cfz, diz, usz, cqz, dez;
   double xz, uz, tz, dz, sz, amplz, uz_uei, uz_ms, dwz, 
       hz, hz_tz, hz_dz, 
       mz, mz_uz, mz_ms, 
-      rz, rz_uz, rz_ms,
-      //hkz, hkz_uz, hkz_tz, hkz_dz, hkz_ms, 
-      hsz, hsz_uz, hsz_tz, hsz_dz, hsz_ms, hsz_re, 
-      hcz, hcz_uz, hcz_tz, hcz_dz, hcz_ms, 
-      rtz, rtz_uz, rtz_tz, rtz_ms, rtz_re, 
-      cfz, cfz_uz, cfz_tz, cfz_dz, cfz_ms, cfz_re,
-      diz, diz_uz, diz_tz, diz_dz, diz_sz, diz_ms, diz_re,
-      usz, usz_uz, usz_tz, usz_dz, usz_ms, usz_re, 
-      cqz, cqz_uz, cqz_tz, cqz_dz, cqz_ms, cqz_re, 
-      dez, dez_uz, dez_tz, dez_dz, dez_ms;
+      rz, rz_uz, rz_ms;
 };
 
 class XFoil {
