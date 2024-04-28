@@ -1303,30 +1303,21 @@ bool XFoil::blvar(int ityp) {
   us2_hk2 = 0.5 * blData2.hsz.scalar * (-1.0 / (gbcon * blData2.hz));
   us2_h2 = 0.5 * blData2.hsz.scalar * (blData2.hkz.scalar - 1.0) / (gbcon * blData2.hz * blData2.hz);
 
-  blData2.usz.u() = us2_hs2 * blData2.hsz.u() + us2_hk2 * blData2.hkz.u();
-  blData2.usz.t() = us2_hs2 * blData2.hsz.t() + us2_hk2 * blData2.hkz.t() + us2_h2 * blData2.hz_tz;
-  blData2.usz.d() = us2_hs2 * blData2.hsz.d() + us2_hk2 * blData2.hkz.d() + us2_h2 * blData2.hz_dz;
-  blData2.usz.ms() = us2_hs2 * blData2.hsz.ms() + us2_hk2 * blData2.hkz.ms();
-  blData2.usz.re() = us2_hs2 * blData2.hsz.re();
+  blData2.usz.vector = us2_hs2 * blData2.hsz.vector + us2_hk2 * blData2.hkz.vector;
+
+  blData2.usz.t() = blData2.usz.t() + us2_h2 * blData2.hz_tz;
+  blData2.usz.d() = blData2.usz.d() + us2_h2 * blData2.hz_dz;
 
   if (ityp <= 2 && blData2.usz.scalar > 0.95) {
     //       write(*,*) 'blvar: us clamped:', us2
     blData2.usz.scalar = 0.98;
-    blData2.usz.u() = 0.0;
-    blData2.usz.t() = 0.0;
-    blData2.usz.d() = 0.0;
-    blData2.usz.ms() = 0.0;
-    blData2.usz.re() = 0.0;
+    blData2.usz.vector = Vector<double , 6>::Zero();
   }
 
   if (ityp == 3 && blData2.usz.scalar > 0.99995) {
     //       write(*,*) 'blvar: wake us clamped:', us2
     blData2.usz.scalar = 0.99995;
-    blData2.usz.u() = 0.0;
-    blData2.usz.t() = 0.0;
-    blData2.usz.d() = 0.0;
-    blData2.usz.ms() = 0.0;
-    blData2.usz.re() = 0.0;
+    blData2.usz.vector = Vector<double , 6>::Zero();
   }
 
   //---- equilibrium wake layer shear coefficient (ctau)eq ** 1/2
@@ -1424,13 +1415,13 @@ bool XFoil::blvar(int ityp) {
       cf2t_hk2 = c_ft.hk;
       double cf2t_rt2 = c_ft.rt;
       double cf2t_m2 = c_ft.msq;
-      Vector<double, 6> cf2t_vector = {
-        cf2t_hk2 * blData2.hkz.u() + cf2t_rt2 * blData2.rtz.u() + cf2t_m2 * blData2.mz_uz,
-        cf2t_hk2 * blData2.hkz.t() + cf2t_rt2 * blData2.rtz.t(),
-        cf2t_hk2 * blData2.hkz.d(),
+      Vector<double, 6> cf2t_vector = cf2t_hk2 * blData2.hkz.vector + cf2t_rt2 * blData2.rtz.vector + Vector<double, 6> {
+        cf2t_m2 * blData2.mz_uz,
         0,
-        cf2t_hk2 * blData2.hkz.ms() + cf2t_rt2 * blData2.rtz.ms() + cf2t_m2 * blData2.mz_ms,
-        cf2t_rt2 * blData2.rtz.re()
+        0,
+        0,
+        cf2t_m2 * blData2.mz_ms,
+        0
       };
 
       blData2.diz.scalar = (0.5 * cf2t * blData2.usz.scalar) * 2.0 / blData2.hsz.scalar;
