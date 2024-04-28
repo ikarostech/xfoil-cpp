@@ -180,7 +180,7 @@ class XFoil {
              double dswaki, double uei);
   bool blsolve();
   bool blsys();
-  bool blvar(int ityp);
+  bool blvar(blData& ref, int ityp);
   double cang(Matrix2Xd points);
   bool cdcalc();
 
