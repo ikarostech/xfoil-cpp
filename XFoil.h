@@ -201,11 +201,6 @@ class XFoil {
   bool getxyf(Matrix2Xd points, Matrix2Xd dpoints_ds, VectorXd s,
               int n, double &tops, double &bots, double xf, double &yf);
   bool ggcalc();
-  bool hct(double hk, double msq, double &hc, double &hc_hk, double &hc_msq);
-  bool hkin(double h, double msq, double &hk, double &hk_h, double &hk_msq);
-  bool hsl(double hk, double &hs, double &hs_hk, double &hs_rt, double &hs_msq);
-  bool hst(double hk, double rt, double msq, double &hs, double &hs_hk,
-           double &hs_rt, double &hs_msq);
   bool iblpan();
   bool iblsys();
   bool lefind(double &sle, Matrix2Xd points, Matrix2Xd dpoints_ds, VectorXd s, int n);
