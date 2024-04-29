@@ -35,5 +35,5 @@ class blData {
       rz, rz_uz, rz_ms;
 };
 class boundary_layer {
-  static bool blvar(blData& ref, int ityp);
+
 };
