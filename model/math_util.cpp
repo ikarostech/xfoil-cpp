@@ -1,10 +1,10 @@
-#include "matrix.hpp"
+#include "math_util.hpp"
 
 #include "../Eigen/Core"
 #include <iostream>
 const int INDEX_START_WITH = 1;
 
-ThomasAlgorithmResult matrix::tridiagonalSolve(Eigen::MatrixXd A, Eigen::VectorXd d) {
+ThomasAlgorithmResult MathUtil::tridiagonalSolve(Eigen::MatrixXd A, Eigen::VectorXd d) {
     int n = A.rows();
     Eigen::VectorXd x(n);
 
@@ -37,4 +37,16 @@ ThomasAlgorithmResult matrix::tridiagonalSolve(Eigen::MatrixXd A, Eigen::VectorX
     result.A = A;
     result.x = d;
     return result;
+}
+
+double MathUtil::pow(double a, int b) {
+    if (b < 1) {
+        return 1;
+    }
+    if (b == 1) {
+        return a;
+    }
+    else {
+        return a * pow(a, b - 1);
+    }
 }

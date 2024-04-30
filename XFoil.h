@@ -47,7 +47,7 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 #include "Eigen/Dense"
 #include "Eigen/StdVector"
 
-#include "model/matrix.hpp"
+#include "model/math_util.hpp"
 #include "model/spline.hpp"
 #include "model/boundary_layer.hpp"
 #include "xfoil_params.h"

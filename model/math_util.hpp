@@ -5,7 +5,8 @@ class ThomasAlgorithmResult {
     Eigen::MatrixXd A;
     Eigen::VectorXd x;
 };
-class matrix {
+class MathUtil {
     public:
     static ThomasAlgorithmResult tridiagonalSolve(Eigen::MatrixXd A, Eigen::VectorXd d);
+    static double pow(double a, int b);
 };

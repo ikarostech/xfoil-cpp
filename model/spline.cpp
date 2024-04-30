@@ -1,5 +1,5 @@
 #include "spline.hpp"
-#include "matrix.hpp"
+#include "math_util.hpp"
 #include <iostream>
 Eigen::VectorXd spline::scalc(Eigen::Matrix2Xd points, int n, const int s_size) {
     Eigen::VectorXd s = Eigen::VectorXd::Zero(s_size);
@@ -129,7 +129,7 @@ Eigen::VectorXd spline::splind(Eigen::VectorXd x, Eigen::VectorXd s, int n) {
   vectorD(n - 1) = 2.0 * (x[n - 1 + INDEX_START_WITH] - x[n - 2 + INDEX_START_WITH]) / (s[n - 1  + INDEX_START_WITH] - s[n - 2 + INDEX_START_WITH]);
 
   //---- solve for derivative array xs
-  Eigen::VectorXd vectorXs = matrix::tridiagonalSolve(matrixA, vectorD).x;
+  Eigen::VectorXd vectorXs = MathUtil::tridiagonalSolve(matrixA, vectorD).x;
   //FIXME xsの0とn移行が0でないと結果がおかしくなるバグが存在
   xs[0] = 0;
   xs[n] = 0;

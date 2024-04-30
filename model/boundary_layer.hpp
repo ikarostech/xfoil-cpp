@@ -36,6 +36,8 @@ class blData {
 };
 class boundary_layer {
     public:
+
+    //TODO 副作用の除去
     static bool hct(double hk, double msq, double &hc, double &hc_hk, double &hc_msq);
     static bool hkin(double h, double msq, double &hk, double &hk_h, double &hk_msq);
     static bool hsl(double hk, double &hs, double &hs_hk, double &hs_rt, double &hs_msq);
