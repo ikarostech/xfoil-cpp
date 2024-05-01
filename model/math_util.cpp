@@ -43,9 +43,6 @@ double MathUtil::pow(double a, int b) {
     if (b < 1) {
         return 1;
     }
-    if (b == 1) {
-        return a;
-    }
     else {
         return a * pow(a, b - 1);
     }
