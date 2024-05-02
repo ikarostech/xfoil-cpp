@@ -866,7 +866,7 @@ bool XFoil::blkin() {
   //     calculates turbulence-independent secondary "2"
   //     variables from the primary "2" variables.
   //----------------------------------------------------------
-  double tr2, herat, he_u2, he_ms, v2_he, hk2_h2, hk2_m2;
+  double tr2, herat, he_u2, he_ms, v2_he;
   //---- set edge mach number ** 2
   blData2.mz = blData2.uz * blData2.uz * hstinv / (gm1bl * (1.0 - 0.5 * blData2.uz * blData2.uz * hstinv));
   tr2 = 1.0 + 0.5 * gm1bl * blData2.mz;
@@ -891,12 +891,13 @@ bool XFoil::blkin() {
   v2_he = (1.5 / herat - 1.0 / (herat + hvrat));
 
   //---- set kinematic shape parameter
-  boundary_layer::hkin(blData2.hz, blData2.mz, blData2.hkz.scalar, hk2_h2, hk2_m2);
+  boundary_layer::KineticShapeParameterResult hkin_result = boundary_layer::hkin(blData2.hz, blData2.mz);
+  blData2.hkz.scalar = hkin_result.hk;
 
-  blData2.hkz.u() = hk2_m2 * blData2.mz_uz;
-  blData2.hkz.t() = hk2_h2 * blData2.hz_tz;
-  blData2.hkz.d() = hk2_h2 * blData2.hz_dz;
-  blData2.hkz.ms() = hk2_m2 * blData2.mz_ms;
+  blData2.hkz.u() = hkin_result.hk_msq * blData2.mz_uz;
+  blData2.hkz.t() = hkin_result.hk_h * blData2.hz_tz;
+  blData2.hkz.d() = hkin_result.hk_h * blData2.hz_dz;
+  blData2.hkz.ms() = hkin_result.hk_msq * blData2.mz_ms;
 
   //---- set momentum thickness reynolds number
   blData2.rtz.scalar = blData2.rz * blData2.uz * blData2.tz / (sqrt(herat * herat * herat) * (1.0 + hvrat) / (herat + hvrat) / reybl);
@@ -1192,7 +1193,7 @@ bool XFoil::blsolve() {
  * ---------------------------------------------------- */
 bool XFoil::blvar(blData& ref, int ityp) {
   double hs2_hk2, hs2_rt2, hs2_m2;
-  double hc2_hk2, hc2_m2, us2_hs2, us2_hk2, us2_h2;
+  double us2_hs2, us2_hk2, us2_h2;
   double hkc, hkc_hk2, hkc_rt2, hkb, usb;
   double cq2_hs2, cq2_us2, cq2_hk2;
   double cq2_rt2, cq2_h2, cf2_hk2, cf2_rt2, cf2_m2;
@@ -1209,16 +1210,27 @@ bool XFoil::blvar(blData& ref, int ityp) {
   if (ityp != 3) ref.hkz.scalar = std::max(ref.hkz.scalar, 1.05000);
 
   //---- density thickness shape parameter     ( h** )
-  boundary_layer::hct(ref.hkz.scalar, ref.mz, ref.hcz.scalar, hc2_hk2, hc2_m2);
-  ref.hcz.pos_vector() = hc2_hk2 * ref.hkz.pos_vector();
-  ref.hcz.u() += hc2_m2 * ref.mz_uz;
-  ref.hcz.ms()+= hc2_m2 * ref.mz_ms;
+  boundary_layer::DensityShapeParameterResult hct_result = boundary_layer::hct(ref.hkz.scalar, ref.mz);
+  ref.hcz.scalar = hct_result.hc;
+  ref.hcz.pos_vector() = hct_result.hc_hk * ref.hkz.pos_vector();
+  ref.hcz.u() += hct_result.hc_msq * ref.mz_uz;
+  ref.hcz.ms()+= hct_result.hc_msq * ref.mz_ms;
 
   //---- set ke thickness shape parameter from  h - h*  correlations
-  if (ityp == 1)
-    boundary_layer::hsl(ref.hkz.scalar, ref.hsz.scalar, hs2_hk2, hs2_rt2, hs2_m2);
-  else
-    boundary_layer::hst(ref.hkz.scalar, ref.rtz.scalar, ref.mz, ref.hsz.scalar, hs2_hk2, hs2_rt2, hs2_m2);
+  if (ityp == 1) {
+    boundary_layer::ThicknessShapeParameterResult hsl_result = boundary_layer::hsl(ref.hkz.scalar);
+    ref.hsz.scalar = hsl_result.hs;
+    hs2_hk2 = hsl_result.hs_hk;
+    hs2_rt2 = hsl_result.hs_rt;
+    hs2_m2 = hsl_result.hs_msq;
+  }
+  else {
+    boundary_layer::ThicknessShapeParameterResult hst_result = boundary_layer::hst(ref.hkz.scalar, ref.rtz.scalar, ref.mz);
+    ref.hsz.scalar = hst_result.hs;
+    hs2_hk2 = hst_result.hs_hk;
+    hs2_rt2 = hst_result.hs_rt;
+    hs2_m2 = hst_result.hs_msq;
+  }
 
   ref.hsz.vector = hs2_hk2 * ref.hkz.vector + hs2_rt2 * ref.rtz.vector;
   ref.hsz.u() = ref.hsz.u() + hs2_m2 * ref.mz_uz;
@@ -1877,28 +1889,26 @@ bool XFoil::dil(double hk, double rt, double &di, double &di_hk,
 
 bool XFoil::dilw(double hk, double rt, double &di, double &di_hk,
                  double &di_rt) {
-  //	double msq = 0.0;
-  double hs, hs_hk, hs_rt, hs_msq;
 
-  boundary_layer::hsl(hk, hs, hs_hk, hs_rt, hs_msq);
+  boundary_layer::ThicknessShapeParameterResult hsl_result = boundary_layer::hsl(hk);
   //---- laminar wake dissipation function  ( 2 cd/h* )
   double rcd = 1.10 * (1.0 - 1.0 / hk) * (1.0 - 1.0 / hk) / hk;
   double rcd_hk = -1.10 * (1.0 - 1.0 / hk) * 2.0 / hk / hk / hk - rcd / hk;
 
-  di = 2.0 * rcd / (hs * rt);
-  di_hk = 2.0 * rcd_hk / (hs * rt) - ((di) / hs) * hs_hk;
-  di_rt = -(di) / rt - ((di) / hs) * hs_rt;
+  di = 2.0 * rcd / (hsl_result.hs * rt);
+  di_hk = 2.0 * rcd_hk / (hsl_result.hs * rt) - ((di) / hsl_result.hs) * hsl_result.hs_hk;
+  di_rt = -(di) / rt - ((di) / hsl_result.hs) * hsl_result.hs_rt;
 
   return true;
 }
 
 bool XFoil::dslim(double &dstr, double thet, double msq, double hklim) {
-  double h, hk, hk_h, hk_m, dh;
+  double h, dh;
   h = (dstr) / thet;
 
-  boundary_layer::hkin(h, msq, hk, hk_h, hk_m);
+  boundary_layer::KineticShapeParameterResult hkin_result = boundary_layer::hkin(h, msq);
 
-  dh = std::max(0.0, hklim - hk) / hk_h;
+  dh = std::max(0.0, hklim - hkin_result.hk) / hkin_result.hk_h;
   dstr = (dstr) + dh * thet;
 
   return true;
@@ -2372,7 +2382,8 @@ bool XFoil::mrchdu() {
             thm = thet[ibl - 1][is];
             msq =
                 uem * uem * hstinv / (gm1bl * (1.0 - 0.5 * uem * uem * hstinv));
-            boundary_layer::hkin(dsm / thm, msq, hkref, dummy, dummy);
+            boundary_layer::KineticShapeParameterResult hkin_result = boundary_layer::hkin(dsm / thm, msq);
+            hkref = hkin_result.hk;
           }
 
           //--------- if current point ibl was laminar, then...
@@ -2677,7 +2688,8 @@ bool XFoil::mrchue() {
             msq =
                 uei * uei * hstinv / (gm1bl * (1.0 - 0.5 * uei * uei * hstinv));
             htest = (dsi + rlx * vsrez[2]) / (thi + rlx * vsrez[1]);
-            boundary_layer::hkin(htest, msq, hktest, dummy, dummy);
+            boundary_layer::KineticShapeParameterResult hkin_result = boundary_layer::hkin(htest, msq);
+            hktest = hkin_result.hk;
 
             //---------- decide whether to do direct or inverse problem based on
             // hk
