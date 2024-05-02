@@ -38,8 +38,29 @@ class boundary_layer {
     public:
 
     //TODO 副作用の除去
-    static bool hct(double hk, double msq, double &hc, double &hc_hk, double &hc_msq);
-    static bool hkin(double h, double msq, double &hk, double &hk_h, double &hk_msq);
-    static bool hsl(double hk, double &hs, double &hs_hk, double &hs_rt, double &hs_msq);
-    static bool hst(double hk, double rt, double msq, double &hs, double &hs_hk, double &hs_rt, double &hs_msq);
+    class DensityShapeParameterResult {
+        public:
+        double hc;
+        double hc_hk;
+        double hc_msq;
+    };
+    static DensityShapeParameterResult hct(double hk, double msq);
+
+    class KineticShapeParameterResult {
+      public:
+      double hk;
+      double hk_h;
+      double hk_msq;
+    };
+    static KineticShapeParameterResult hkin(double h, double msq);
+
+    class ThicknessShapeParameterResult {
+        public:
+        double hs;
+        double hs_hk;
+        double hs_rt;
+        double hs_msq;
+    };
+    static ThicknessShapeParameterResult hsl(double hk);
+    static ThicknessShapeParameterResult hst(double hk, double rt, double msq);
 };
