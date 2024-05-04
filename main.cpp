@@ -90,7 +90,7 @@ int loadDatFile(std::string filename, double x[604], double y[604]) {
 }
 
 int main() {
-  double x[604], y[604], nx[604], ny[604];
+  double x[604], y[604];
   int n = 0;
 
   std::stringstream ss;
@@ -109,7 +109,7 @@ int main() {
 
   XFoil *foil = new XFoil();
 
-  if (!foil->initXFoilGeometry(n, x, y, nx, ny)) {
+  if (!foil->initXFoilGeometry(n, x, y)) {
     std::cout << "Initialization error!" << std::endl;
     return 1;
   }

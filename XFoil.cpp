@@ -1749,16 +1749,14 @@ bool XFoil::cpcalc(int n, const double q[], double qinf, double minf, double cp[
 
   if (denneg) {
     writeString(
-        "CpCalc: local speed too larger\n Compressibility corrections "
-        "invalid\n",
-        true);
+        "CpCalc: local speed too larger\n Compressibility corrections invalid\n");
     return false;
   }
 
   return true;
 }
 
-void XFoil::writeString(std::string str, bool bFullReport) {
+void XFoil::writeString(std::string str) {
   *m_pOutStream << str;
 }
 
@@ -2111,7 +2109,7 @@ bool XFoil::iblpan() {
   if (iblmax > IVX) {
     ss << "iblpan :  ***  bl array overflow\n";
     ss << "Increase IVX to at least " << iblmax << "\n";
-    writeString(ss.str(), true);
+    writeString(ss.str());
     return false;
   }
 
@@ -2134,7 +2132,7 @@ bool XFoil::iblsys() {
 
   nsys = iv;
   if (nsys > 2 * IVX) {
-    writeString("*** iblsys: bl system array overflow. ***", true);
+    writeString("*** iblsys: bl system array overflow. ***");
     return false;
   }
 
@@ -2144,7 +2142,7 @@ bool XFoil::iblsys() {
 /** Loads the Foil's geometry in XFoil,
  *  calculates the normal vectors,
  *  and sets the results in current foil */
-bool XFoil::initXFoilGeometry(int fn, const double *fx, const double *fy, double *fnx, double *fny) {
+bool XFoil::initXFoilGeometry(int fn, const double *fx, const double *fy) {
 
   Matrix2Xd buffer_points = Matrix2Xd::Zero(2, fn + 1);
   for (int i = 0; i < fn; i++) {
@@ -2243,7 +2241,6 @@ bool XFoil::lefind(double &sle, Matrix2Xd points, Matrix2Xd dpoints_ds, VectorXd
       spline::d2val(sle, points.row(1), dpoints_ds.row(1), s, n)
     };
 
-    Vector2d point_chord = point_le - point_te;
     Vector2d chord = point_le - point_te;
 
     //------ drive dot product between chord line and le tangent to zero
@@ -2279,7 +2276,7 @@ bool XFoil::mrchdu() {
   int is = 0, ibl, ibm, itrold, iw = 0, itbl;  // icom
 
   double senswt = 0.0, thi, uei, dsi, cti, dswaki, ratlen = 0.0;
-  double sens = 0.0, sennew = 0.0, dummy = 0.0, msq = 0.0, thm = 0.0, dsm = 0.0,
+  double sens = 0.0, sennew = 0.0, msq = 0.0, thm = 0.0, dsm = 0.0,
          uem = 0.0;
   double xsi, hklim = 0.0, dsw = 0.0;
   double ami = 0.0, dte = 0.0, cte = 0.0, tte = 0.0, ueref = 0.0, hkref = 0.0,
@@ -2474,7 +2471,7 @@ bool XFoil::mrchdu() {
       ss << "     mrchdu: convergence failed at " << ibl << " ,  side " << is
          << ", res=" << std::setw(4) << std::fixed << std::setprecision(3)
          << dmax << "\n";
-      writeString(ss.str(), true);
+      writeString(ss.str());
       ss.str("");
 
       if (dmax <= 0.1) goto stop109;
@@ -2574,7 +2571,7 @@ bool XFoil::mrchue() {
   double msq, ratlen, dsw, hklim;
   double hlmax, htmax, xsi, uei, ucon, tsq, thi, ami, cti, dsi;
   double dswaki;
-  double htest, hktest, dummy;
+  double htest, hktest;
   double cst;
   double cte, dte, tte, dmax, hmax, htarg;
   cte = dte = tte = dmax = hmax = htarg = 0.0;
@@ -2749,7 +2746,7 @@ bool XFoil::mrchue() {
 
             //---------- try again with prescribed hk
 
-            goto stop100;
+            continue;
           }
         } else {
           //-------- inverse mode (force hk to prescribed value htarg)
@@ -2785,15 +2782,13 @@ bool XFoil::mrchue() {
         dslim(dsw, thi, msq, hklim);
         dsi = dsw + dswaki;
         if (dmax <= 0.00001) goto stop110;
-      stop100:
-        int nothing = 1;
 
       }  // end itbl loop
 
       ss.str("");
       ss << "     mrchue: convergence failed at " << ibl << ",  side " << is
          << ", res =" << std::fixed << std::setprecision(3) << dmax << "\n";
-      writeString(ss.str(), true);
+      writeString(ss.str());
 
       //------ the current unconverged solution might still be reasonable...
       if (dmax > 0.1) {
@@ -2920,8 +2915,8 @@ bool XFoil::mrcl(double cls, double &m_cls, double &r_cls) {
 
   if (minf >= 0.99) {
     // TRACE("      artificially limiting mach to  0.99\n");
-    writeString("mrcl: Cl too low for chosen Mach(Cl) dependence\n", true);
-    writeString("      artificially limiting mach to  0.99", true);
+    writeString("mrcl: Cl too low for chosen Mach(Cl) dependence\n");
+    writeString("      artificially limiting mach to  0.99");
     minf = 0.99;
     m_cls = 0.0;
   }
@@ -2931,10 +2926,10 @@ bool XFoil::mrcl(double cls, double &m_cls, double &r_cls) {
 
   if (rrat > 100.0) {
     // TRACE("     artificially limiting re to %f\n",reinf1*100.0);
-    writeString("mrcl: cl too low for chosen Re(Cl) dependence\n", true);
+    writeString("mrcl: cl too low for chosen Re(Cl) dependence\n");
     ss << "      artificially limiting Re to " << std::fixed
        << std::setprecision(0) << reinf1 * 100.0 << "\n";
-    writeString(ss.str(), true);
+    writeString(ss.str());
     ss.str("");
     reinf = reinf1 * 100.0;
     r_cls = 0.0;
@@ -2992,7 +2987,6 @@ XFoil::PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector
   psi_result.psi_ni = 0.0;
 
   psi_result.qtan = Vector2d::Zero();
-  double qtanm = 0.0;
 
   double scs, sds;
   if (sharp) {
@@ -3012,10 +3006,6 @@ XFoil::PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector
 
     //------ skip null panel
     if (fabs(dso) < 1.0e-7) continue;
-
-    double dsio = 1.0 / dso;
-
-    double apan = apanel[jo];
 
     Vector2d r1 = point - points.col(jo);
     Vector2d r2 = point - points.col(jp);
@@ -3282,7 +3272,6 @@ XFoil::PsiResult XFoil::psi_te(int iNode, Vector2d point, Vector2d normal_vector
   PsiResult psi_result;
   psi_result.psi = 0;
   psi_result.psi_ni = 0;
-  double dso = (points.col(n) - points.col(1)).norm();
 
   //------ skip null panel
 
@@ -4178,7 +4167,7 @@ bool XFoil::setexp(double spline_length[], double ds1, double smax, int nn) {
   disc = std::max(0.0, disc);
 
   if (nex <= 1) {
-    writeString("setexp: cannot fill array.  n too small\n", true);
+    writeString("setexp: cannot fill array.  n too small\n");
     return false;
   } else {
     if (nex == 2)
@@ -4203,7 +4192,7 @@ bool XFoil::setexp(double spline_length[], double ds1, double smax, int nn) {
     if (fabs(dratio) < 1.0e-5) goto stop11;
   }
 
-  writeString("Setexp: Convergence failed.  Continuing anyway ...\n", true);
+  writeString("Setexp: Convergence failed.  Continuing anyway ...\n");
 
   //-- set up stretched array using converged geometric ratio
 stop11:
@@ -4304,7 +4293,7 @@ bool XFoil::specal() {
     }
   }
   if (!bConv) {
-    writeString("Specal:  MInf convergence failed\n", true);
+    writeString("Specal:  MInf convergence failed\n");
     return false;
   }
 
@@ -4392,7 +4381,7 @@ bool XFoil::speccl() {
     }
   }
   if (!bConv) {
-    writeString("Speccl:  cl convergence failed", true);
+    writeString("Speccl:  cl convergence failed");
     return false;
   }
 
@@ -4434,7 +4423,7 @@ bool XFoil::stfind() {
   }
 
   if (!bFound) {
-    writeString("stfind: Stagnation point not found. Continuing ...\n", true);
+    writeString("stfind: Stagnation point not found. Continuing ...\n");
     i = n / 2;
   }
 
@@ -4805,7 +4794,7 @@ bool XFoil::trchek() {
   }
 
   // TRACE("trchek2 - n2 convergence failed\n");
-  writeString("trchek2 - n2 convergence failed\n", true);
+  writeString("trchek2 - n2 convergence failed\n");
   if (s_bCancel) return false;
 stop101:
 
@@ -5638,7 +5627,7 @@ bool XFoil::ViscousIter() {
     lvconv = true;
     avisc = alfa;
     mvisc = minf;
-    writeString("----------CONVERGED----------\n\n", true);
+    writeString("----------CONVERGED----------\n\n");
   }
 
   return true;
@@ -5769,15 +5758,13 @@ bool XFoil::xyWake() {
   //-----------------------------------------------------
   double ds1, sx, sy, smod;
   //
-  writeString("   Calculating wake trajectory ...\n", true);
+  writeString("   Calculating wake trajectory ...\n");
   //
   //--- number of wake points
   nw = n / 8 + 2;
   if (nw > IWX) {
     writeString(
-        " XYWake: array size (IWX) too small.\n  Last wake point index "
-        "reduced.",
-        true);
+        " XYWake: array size (IWX) too small.\n  Last wake point index reduced.");
     nw = IWX;
   }
 
