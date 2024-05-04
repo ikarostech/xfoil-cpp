@@ -67,8 +67,7 @@ class XFoil {
   bool isValidFoilPointSize(Matrix2Xd points);
   
   bool initialize();
-  bool initXFoilGeometry(int fn, const double *fx, const double *fy, double *fnx,
-                         double *fny);
+  bool initXFoilGeometry(int fn, const double *fx, const double *fy);
 
   enum class ReynoldsType {
     CONSTANT,
@@ -89,7 +88,7 @@ class XFoil {
 
   bool clcalc(double xref, double yref);
 
-  void writeString(std::string str, bool bFullReport = false);
+  void writeString(std::string str);
   bool specal();
   bool speccl();
   bool viscal();
