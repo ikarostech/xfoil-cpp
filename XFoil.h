@@ -86,7 +86,7 @@ class XFoil {
                          bool bViscous, std::stringstream &outStream);
 
 
-  bool clcalc(double xref, double yref);
+  bool clcalc(Vector2d ref);
 
   void writeString(std::string str);
   bool specal();
@@ -286,7 +286,7 @@ class XFoil {
   
   double qvis[IZX];
   
-  double xcmref, ycmref;
+  Vector2d cmref;
   double tklam;
   Matrix2Xd dpoints_ds; //formerly xp, yp
   VectorXd spline_length;

@@ -214,8 +214,7 @@ bool XFoil::initialize() {
   }
 
   //---- default cm reference location
-  xcmref = 0.25;
-  ycmref = 0.0;
+  cmref = Vector2d {0.25, 0.0};
 
   waklen = 1.0;
 
@@ -1626,21 +1625,13 @@ XFoil::C_f XFoil::cft(double hk, double rt, double msq) {
   return c_f;
 }
 
-bool XFoil::clcalc(double xref, double yref) {
-  Vector2d ref = {xref, yref};
-  // modified techwinder : all other variables are member variables (ex fortran
-  // common)
+bool XFoil::clcalc(Vector2d ref) {
+  
   //-----------------------------------------------------------
   //	   integrates surface pressures to get cl and cm.
   //	   integrates skin friction to get cdf.
   //	   calculates dcl/dalpha for prescribed-cl routines.
   //-----------------------------------------------------------
-
-  // techwinder addition : calculate XCp position
-
-  //---- moment-reference coordinates
-  ////ccc	   xref = 0.25
-  ////ccc	   yref = 0.
 
   double beta, beta_msq, bfac, bfac_msq, cginc;
   double cpi_gam, cpc_cpi;
@@ -4212,7 +4203,7 @@ bool XFoil::setMach() {
   if (lvisc) {
     cpcalc(n + nw, qvis, qinf, minf, cpv);
   }
-  clcalc(xcmref, ycmref);
+  clcalc(cmref);
   cdcalc();
   lvconv = false;
   return true;
@@ -4259,7 +4250,7 @@ bool XFoil::specal() {
   comset();
 
   //---- set corresponding cl(m)
-  clcalc(xcmref, ycmref);
+  clcalc(cmref);
   //---- iterate on clm
   bool bConv = false;
   for (itcl = 1; itcl <= 20; itcl++) {
@@ -4285,7 +4276,7 @@ bool XFoil::specal() {
 
     //------ set new cl(m)
     comset();
-    clcalc(xcmref, ycmref);
+    clcalc(cmref);
 
     if (fabs(dclm) <= 1.0e-6) {
       bConv = true;
@@ -4300,7 +4291,7 @@ bool XFoil::specal() {
   //---- set final mach, cl, cp distributions, and hinge moment
   mrcl(cl, minf_cl, reinf_cl);
   comset();
-  clcalc(xcmref, ycmref);
+  clcalc(cmref);
   /*
           if (!cpcalc(n,qinv,qinf,minf,cpi)) return false;// no need to carry on
           if(lvisc) {
@@ -4352,7 +4343,7 @@ bool XFoil::speccl() {
   }
 
   //---- get corresponding cl, cl_alpha, cl_mach
-  clcalc(xcmref, ycmref);
+  clcalc(cmref);
 
   //---- newton loop for alpha to get specified inviscid cl
   bool bConv = false;
@@ -4373,7 +4364,7 @@ bool XFoil::speccl() {
     }
 
     //------ set new cl(alpha)
-    clcalc(xcmref, ycmref);
+    clcalc(cmref);
 
     if (fabs(dalfa) <= 1.0e-6) {
       bConv = true;
@@ -5566,7 +5557,7 @@ bool XFoil::viscal() {
       cpcalc(n, qinv, qinf, minf, cpi);
 
     gamqv();
-    clcalc(xcmref, ycmref);
+    clcalc(cmref);
     cdcalc();
   }
 
@@ -5608,7 +5599,7 @@ bool XFoil::ViscousIter() {
   stmove();  //	------ relocate stagnation point
 
   //	------ set updated cl,cd
-  clcalc(xcmref, ycmref);
+  clcalc(cmref);
   cdcalc();
 
   //	------ display changes and test for convergence
