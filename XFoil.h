@@ -292,10 +292,7 @@ class XFoil {
   VectorXd spline_length;
   double dtor;
 
-  double thet[IVX][ISX], ctau[IVX][ISX], ctq[IVX][ISX], uedg[IVX][ISX];
-
-  SidePair<VectorXd> dstr;
-  //double dstr[IVX][ISX];
+  SidePair<VectorXd> thet, ctau, dstr, uedg, ctq;
   
   int itran[ISX];
 
