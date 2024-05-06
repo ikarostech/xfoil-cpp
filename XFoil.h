@@ -294,7 +294,8 @@ class XFoil {
 
   double thet[IVX][ISX], ctau[IVX][ISX], ctq[IVX][ISX], uedg[IVX][ISX];
 
-  double dstr[IVX][ISX];
+  SidePair<VectorXd> dstr;
+  //double dstr[IVX][ISX];
   
   int itran[ISX];
 
