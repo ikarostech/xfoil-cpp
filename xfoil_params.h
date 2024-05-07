@@ -27,7 +27,6 @@
 #define IQX2 151 /**< IQX/2 */
 #define IWX 50   /**< number of wake panel nodes */
 #define IPX 6    /**< 6 number of qspec[s] distributions */
-#define ISX 3    /**< number of airfoil sides */
 #define IBX 604  /**< 600 number of buffer airfoil nodes = 2*IQX */
 #define IZX 350  /**< 350 = number of panel nodes [airfoil + wake] */
 #define IVX \
