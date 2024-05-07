@@ -111,8 +111,6 @@ class XFoil {
 
   static bool isCancelled() { return s_bCancel; }
   static void setCancel(bool bCancel) { s_bCancel = bCancel; }
-  static void setFullReport(bool bFull) { s_bFullReport = bFull; }
-  static bool fullReport() { return s_bFullReport; }
   static double VAccel() { return vaccel; }
   static void setVAccel(double accel) { vaccel = accel; }
 
@@ -173,7 +171,7 @@ class XFoil {
     T top;
     T bottom;
     //FIXME deprecated
-    T get(int side) {
+    T& get(int side) {
       if (side == 1) {
         return top;
       }
@@ -254,19 +252,15 @@ class XFoil {
  public:
   static double vaccel;
   static bool s_bCancel;
-  static bool s_bFullReport;
   std::stringstream *m_pOutStream;
 
   double clspec;
-
-  int nc1;
 
   Matrix2Xd normal_vectors;
 
   double cl, cm, cd, cpi[IZX], cpv[IZX], acrit;
   double xcp;
   double alfa, avisc, awake, reinf1, qinf, mvisc, rmsbl, ante;
-  double cpmn;
   double minf, reinf;
   bool lalfa, lvisc, lvconv, lwake;
   double qgamm[IBX + 1];
@@ -278,7 +272,8 @@ class XFoil {
   double minf1;
   bool lblini, lipan;
   
-  int n, ipan[IVX][ISX];
+  int n;
+  SidePair<VectorXi> ipan, isys;
   SidePair<int> iblte, nbl;
   
   Matrix2Xd points; //formerly x,y
@@ -293,8 +288,8 @@ class XFoil {
   double dtor;
 
   SidePair<VectorXd> thet, ctau, dstr, uedg, ctq;
-  
-  int itran[ISX];
+  SidePair<VectorXd> xssi, uinv, uinv_a, mass, vti;  
+  SidePair<int> itran;
 
  public: //private:
   double qf0[IQX + 1], qf1[IQX + 1], qf2[IQX + 1], qf3[IQX + 1];
@@ -311,7 +306,6 @@ class XFoil {
   double sccon, gacon, gbcon, gbc0, gbc1, gccon, dlcon, ctcon;
 
   int nsys;
-  double isys[IVX][ISX];
   VectorXd snew;
 
   double sle;
@@ -324,10 +318,9 @@ class XFoil {
   double cl_alf, cl_msq;
   double gamma, gamm1;
   double tkl_msq;
-  double xssi[IVX][ISX], uinv[IVX][ISX], mass[IVX][ISX];
 
-  double vti[IVX][ISX];
-  double uinv_a[IVX][ISX];
+
+
   double gam[IQX], gam_a[IQX];
   Matrix2Xd gamu;
   double apanel[IZX], sst, sst_go, sst_gp, gamte, sigte;
