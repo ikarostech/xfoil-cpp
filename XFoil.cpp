@@ -1555,20 +1555,20 @@ double XFoil::cang(Matrix2Xd points) {
 }
 
 bool XFoil::cdcalc() {
-
-  if (lvisc && lblini) {
-    //---- set variables at the end of the wake
-    double thwake = thet.bottom[nbl.bottom];
-    double urat = uedg.bottom[nbl.bottom] / qinf;
-    double uewake = uedg.bottom[nbl.bottom] * (1.0 - tklam) / (1.0 - tklam * urat * urat);
-    double shwake = dstr.bottom[nbl.bottom] / thet.bottom[nbl.bottom];
-
-    //---- extrapolate wake to downstream infinity using squire-young relation
-    //      (reduces errors of the wake not being long enough)
-    cd = 2.0 * thwake * pow((uewake / qinf), (0.5 * (5.0 + shwake)));
-  } else {
+  if (!(lvisc && lblini)) {
     cd = 0.0;
+    return true;
   }
+
+  //---- set variables at the end of the wake
+  double thwake = thet.bottom[nbl.bottom];
+  double urat = uedg.bottom[nbl.bottom] / qinf;
+  double uewake = uedg.bottom[nbl.bottom] * (1.0 - tklam) / (1.0 - tklam * urat * urat);
+  double shwake = dstr.bottom[nbl.bottom] / thet.bottom[nbl.bottom];
+
+  //---- extrapolate wake to downstream infinity using squire-young relation
+  //      (reduces errors of the wake not being long enough)
+  cd = 2.0 * thwake * pow((uewake / qinf), (0.5 * (5.0 + shwake)));
 
   return true;
 }
@@ -1630,17 +1630,13 @@ bool XFoil::clcalc(Vector2d ref) {
   //	   calculates dcl/dalpha for prescribed-cl routines.
   //-----------------------------------------------------------
 
-  double beta, beta_msq, bfac, bfac_msq, cginc;
-  double cpi_gam, cpc_cpi;
-  double cpg1, cpg1_msq, cpg1_alf;
-
   xcp = 0.0;
 
-  beta = sqrt(1.0 - minf * minf);
-  beta_msq = -0.5 / beta;
+  const double beta = sqrt(1.0 - minf * minf);
+  const double beta_msq = -0.5 / beta;
 
-  bfac = 0.5 * minf * minf / (1.0 + beta);
-  bfac_msq = 0.5 / (1.0 + beta) - bfac / (1.0 + beta) * beta_msq;
+  const double bfac = 0.5 * minf * minf / (1.0 + beta);
+  const double bfac_msq = 0.5 / (1.0 + beta) - bfac / (1.0 + beta) * beta_msq;
 
   cl = 0.0;
   cm = 0.0;
@@ -1648,13 +1644,13 @@ bool XFoil::clcalc(Vector2d ref) {
   cl_alf = 0.0;
   cl_msq = 0.0;
   
-  cginc = 1.0 - (gam[1] / qinf) * (gam[1] / qinf);
-  cpg1 = cginc / (beta + bfac * cginc);
-  cpg1_msq = -cpg1 / (beta + bfac * cginc) * (beta_msq + bfac_msq * cginc);
+  double cginc = 1.0 - (gam[1] / qinf) * (gam[1] / qinf);
+  double cpg1 = cginc / (beta + bfac * cginc);
+  double cpg1_msq = -cpg1 / (beta + bfac * cginc) * (beta_msq + bfac_msq * cginc);
 
-  cpi_gam = -2.0 * gam[1] / qinf / qinf;
-  cpc_cpi = (1.0 - bfac * cpg1) / (beta + bfac * cginc);
-  cpg1_alf = cpc_cpi * cpi_gam * gam_a[1];
+  double cpi_gam = -2.0 * gam[1] / qinf / qinf;
+  double cpc_cpi = (1.0 - bfac * cpg1) / (beta + bfac * cginc);
+  double cpg1_alf = cpc_cpi * cpi_gam * gam_a[1];
 
   for (int i = 1; i <= n; i++) {
     int ip = i + 1;
@@ -1889,12 +1885,11 @@ bool XFoil::dilw(double hk, double rt, double &di, double &di_hk,
 }
 
 bool XFoil::dslim(double &dstr, double thet, double msq, double hklim) {
-  double h, dh;
-  h = (dstr) / thet;
+  const double h = (dstr) / thet;
 
   boundary_layer::KineticShapeParameterResult hkin_result = boundary_layer::hkin(h, msq);
 
-  dh = std::max(0.0, hklim - hkin_result.hk) / hkin_result.hk_h;
+  const double dh = std::max(0.0, hklim - hkin_result.hk) / hkin_result.hk_h;
   dstr = (dstr) + dh * thet;
 
   return true;
@@ -2051,29 +2046,26 @@ bool XFoil::ggcalc() {
  *     sets  bl location -> panel location  pointer array ipan
  * -----------------------------------------------------------*/
 bool XFoil::iblpan() {
-  int iblmax, is, ibl;
+  int iblmax, ibl;
   std::stringstream ss;
 
   //-- top surface first
-  is = 1;
-
   ibl = 1;
   for (int i = ist; i >= 1; i--) {
     ibl = ibl + 1;
-    ipan.get(is)[ibl] = i;
-    vti.get(is)[ibl] = 1.0;
+    ipan.top[ibl] = i;
+    vti.top[ibl] = 1.0;
   }
 
   iblte.top = ibl;
   nbl.top = ibl;
 
   //-- bottom surface next
-  is = 2;
   ibl = 1;
   for (int i = ist + 1; i <= n; i++) {
     ibl = ibl + 1;
-    ipan.get(is)[ibl] = i;
-    vti.get(is)[ibl] = -1.0;
+    ipan.bottom[ibl] = i;
+    vti.bottom[ibl] = -1.0;
   }
 
   //-- wake
@@ -2081,12 +2073,12 @@ bool XFoil::iblpan() {
 
   for (int iw = 1; iw <= nw; iw++) {
     int i = n + iw;
-    ibl = iblte.get(is) + iw;
-    ipan.get(is)[ibl] = i;
-    vti.get(is)[ibl] = -1.0;
+    ibl = iblte.bottom + iw;
+    ipan.bottom[ibl] = i;
+    vti.bottom[ibl] = -1.0;
   }
 
-  nbl.bottom = iblte.get(is) + nw;
+  nbl.bottom = iblte.bottom + nw;
 
   //-- upper wake pointers (for plotting only)
   for (int iw = 1; iw <= nw; iw++) {
@@ -2555,9 +2547,9 @@ bool XFoil::mrchdu() {
 bool XFoil::mrchue() {
   std::stringstream ss;
   bool direct;
-  int is, ibl, ibm, iw, itbl;
+  //int is, ibl, ibm, iw, itbl;
   double msq, ratlen, dsw, hklim;
-  double hlmax, htmax, xsi, uei, ucon, tsq, thi, ami, cti, dsi;
+  double xsi, uei, ucon, tsq, thi, ami, cti, dsi;
   double dswaki;
   double htest, hktest;
   double cst;
@@ -2565,10 +2557,10 @@ bool XFoil::mrchue() {
   cte = dte = tte = dmax = hmax = htarg = 0.0;
 
   //---- shape parameters for separation criteria
-  hlmax = 3.8;
-  htmax = 2.5;
+  const double hlmax = 3.8;
+  const double htmax = 2.5;
 
-  for (is = 1; is <= 2; is++) {  // 2000
+  for (int is = 1; is <= 2; is++) {  // 2000
     ss << "    Side " << is << " ...\n";
     writeString(ss.str());
 
@@ -2597,9 +2589,9 @@ bool XFoil::mrchue() {
     itran.get(is) = iblte.get(is);
 
     //---- march downstream
-    for (ibl = 2; ibl <= nbl.get(is); ibl++) {  // 1000
-      ibm = ibl - 1;
-      iw = ibl - iblte.get(is);
+    for (int ibl = 2; ibl <= nbl.get(is); ibl++) {  // 1000
+      int ibm = ibl - 1;
+      int iw = ibl - iblte.get(is);
       simi = (ibl == 2);
       wake = ibl > iblte.get(is);
 
@@ -2616,7 +2608,7 @@ bool XFoil::mrchue() {
       direct = true;
 
       //------ newton iteration loop for current station
-      for (itbl = 1; itbl <= 25; itbl++) {  // 100
+      for (int itbl = 1; itbl <= 25; itbl++) {  // 100
 
         //-------- assemble 10x3 linearized system for dctau, dth, dds, due, dxi
         //         at the previous "1" station and the current "2" station
@@ -3512,7 +3504,6 @@ XFoil::PsiResult XFoil::pswlin(int i, Vector2d point, Vector2d normal_vector) {
  * 	   matrix for current airfoil and wake geometry.
  * ------------------------------------------------------ */
 bool XFoil::qdcalc() {
-  int i, j, k, iu;
   double sum;
   VectorXd gamu_temp(n + 1);
 
@@ -3522,19 +3513,19 @@ bool XFoil::qdcalc() {
   if (!ladij) {
     //----- calculate source influence matrix for airfoil surface if it doesn't
     // exist
-    for (j = 1; j <= n; j++) {
+    for (int j = 1; j <= n; j++) {
       //------- multiply each dpsi/sig vector by inverse of factored dpsi/dgam
       // matrix
-      for (iu = 1; iu <= n + 1; iu++) {
+      for (int iu = 1; iu <= n + 1; iu++) {
         gamu_temp[iu - 1] = bij[iu][j];
       }
       gamu_temp = psi_gamma_lu.solve(gamu_temp);
-      for (iu = 1; iu <= n + 1; iu++) {
+      for (int iu = 1; iu <= n + 1; iu++) {
         bij[iu][j] = gamu_temp[iu - 1];
       }
 
       //------- store resulting dgam/dsig = dqtan/dsig vector
-      for (i = 1; i <= n; i++) {
+      for (int i = 1; i <= n; i++) {
         dij[i][j] = bij[i][j];
       }
     }
@@ -3542,35 +3533,35 @@ bool XFoil::qdcalc() {
   }
 
   //---- set up coefficient matrix of dpsi/dm on airfoil surface
-  for (i = 1; i <= n; i++) {
+  for (int i = 1; i <= n; i++) {
     pswlin(i, points.col(i), normal_vectors.col(i));
-    for (j = n + 1; j <= n + nw; j++) {
+    for (int j = n + 1; j <= n + nw; j++) {
       bij[i][j] = -dzdm[j];
     }
   }
 
   //---- set up kutta condition (no direct source influence)
-  for (j = n + 1; j <= n + nw; j++) bij[n + 1][j] = 0.0;
+  for (int j = n + 1; j <= n + nw; j++) bij[n + 1][j] = 0.0;
 
   //---- sharp te gamma extrapolation also has no source influence
   if (sharp) {
-    for (j = n + 1; j <= n + nw; j++) bij[n][j] = 0.0;
+    for (int j = n + 1; j <= n + nw; j++) bij[n][j] = 0.0;
   }
 
   //---- multiply by inverse of factored dpsi/dgam matrix
-  for (j = n + 1; j <= n + nw; j++) {
-    for (iu = 1; iu <= n + 1; iu++) {
+  for (int j = n + 1; j <= n + nw; j++) {
+    for (int iu = 1; iu <= n + 1; iu++) {
       gamu_temp[iu - 1] = bij[iu][j];
     }
     gamu_temp = psi_gamma_lu.solve(gamu_temp);
 
-    for (iu = 1; iu <= n + 1; iu++) {
+    for (int iu = 1; iu <= n + 1; iu++) {
       bij[iu][j] = gamu_temp[iu - 1];
     }
   }
   //---- set the source influence matrix for the wake sources
-  for (i = 1; i <= n; i++) {
-    for (j = n + 1; j <= n + nw; j++) {
+  for (int i = 1; i <= n; i++) {
+    for (int j = n + 1; j <= n + nw; j++) {
       dij[i][j] = bij[i][j];
     }
   }
@@ -3580,45 +3571,45 @@ bool XFoil::qdcalc() {
 
   //---- calculate dqtan/dgam and dqtan/dsig at the wake points
 
-  for (i = n + 1; i <= n + nw; i++) {
+  for (int i = n + 1; i <= n + nw; i++) {
     int iw = i - n;
     //------ airfoil contribution at wake panel node
     psilin(i, points.col(i), normal_vectors.col(i), true);
-    for (j = 1; j <= n; j++) {
+    for (int j = 1; j <= n; j++) {
       cij[iw][j] = dqdg[j];
     }
-    for (j = 1; j <= n; j++) {
+    for (int j = 1; j <= n; j++) {
       dij[i][j] = dqdm[j];
     }
     //------ wake contribution
     pswlin(i, points.col(i), normal_vectors.col(i));
-    for (j = n + 1; j <= n + nw; j++) {
+    for (int j = n + 1; j <= n + nw; j++) {
       dij[i][j] = dqdm[j];
     }
   }
 
   //---- add on effect of all sources on airfoil vorticity which effects wake
   // qtan
-  for (i = n + 1; i <= n + nw; i++) {
+  for (int i = n + 1; i <= n + nw; i++) {
     int iw = i - n;
 
     //------ airfoil surface source contribution first
-    for (j = 1; j <= n; j++) {
+    for (int j = 1; j <= n; j++) {
       sum = 0.0;
-      for (k = 1; k <= n; k++) sum = sum + cij[iw][k] * dij[k][j];
+      for (int k = 1; k <= n; k++) sum = sum + cij[iw][k] * dij[k][j];
       dij[i][j] = dij[i][j] + sum;
     }
 
     //------ wake source contribution next
-    for (j = n + 1; j <= n + nw; j++) {
+    for (int j = n + 1; j <= n + nw; j++) {
       sum = 0.0;
-      for (k = 1; k <= n; k++) sum = sum + cij[iw][k] * bij[k][j];
+      for (int k = 1; k <= n; k++) sum = sum + cij[iw][k] * bij[k][j];
       dij[i][j] = dij[i][j] + sum;
     }
   }
 
   //---- make sure first wake point has same velocity as trailing edge
-  for (j = 1; j <= n + nw; j++) {
+  for (int j = 1; j <= n + nw; j++) {
     dij[n + 1][j] = dij[n][j];
   }
 
@@ -3648,9 +3639,8 @@ bool XFoil::qiset() {
  *     sets panel viscous tangential velocity from viscous ue
  * -------------------------------------------------------------- */
 bool XFoil::qvfue() {
-  int is, ibl;
-  for (is = 1; is <= 2; is++) {
-    for (ibl = 2; ibl <= nbl.get(is); ibl++) {
+  for (int is = 1; is <= 2; is++) {
+    for (int ibl = 2; ibl <= nbl.get(is); ibl++) {
       int i = ipan.get(is)[ibl];
       qvis[i] = vti.get(is)[ibl] * uedg.get(is)[ibl];
     }
@@ -3664,13 +3654,12 @@ bool XFoil::qvfue() {
  *      on wake due to freestream and airfoil surface vorticity.
  * --------------------------------------------------------------- */
 bool XFoil::qwcalc() {
-  int i;
 
   //---- first wake point (same as te)
   qinvu.col(n + 1) = qinvu.col(n);
 
   //---- rest of wake
-  for (i = n + 2; i <= n + nw; i++) {
+  for (int i = n + 2; i <= n + nw; i++) {
     qinvu.col(i) = psilin(i, points.col(i), normal_vectors.col(i), false).qtan;
   }
 
@@ -3704,7 +3693,7 @@ bool XFoil::setbl() {
   //-------------------------------------------------
 
   std::stringstream ss;
-  int i, ibl, iv, iw, j, js = 0, jv, jbl, is = 0;
+  //int i, ibl, iv, iw, j, js = 0, jv, jbl, is = 0;
   int ile1 = 0, ile2 = 0, ite1 = 0, ite2 = 0, jvte1 = 0, jvte2 = 0;
   double u1_m[2 * IVX + 1], u2_m[2 * IVX + 1];
   double d1_m[2 * IVX + 1], d2_m[2 * IVX + 1];
@@ -3790,8 +3779,8 @@ bool XFoil::setbl() {
 
   ueset();
 
-  for (is = 1; is <= 2; is++) {
-    for (ibl = 2; ibl <= nbl.get(is); ibl++) {
+  for (int is = 1; is <= 2; is++) {
+    for (int ibl = 2; ibl <= nbl.get(is); ibl++) {
       double temp = usav.get(is)[ibl];
       usav.get(is)[ibl] = uedg.get(is)[ibl];
       uedg.get(is)[ibl] = temp;
@@ -3809,10 +3798,10 @@ bool XFoil::setbl() {
   dule2 = uedg.bottom[2] - usav.bottom[2];
 
   //---- set le and te ue sensitivities wrt all m values
-  for (js = 1; js <= 2; js++) {
-    for (jbl = 2; jbl <= nbl.get(js); jbl++) {
-      j = ipan.get(js)[jbl];
-      jv = isys.get(js)[jbl];
+  for (int js = 1; js <= 2; js++) {
+    for (int jbl = 2; jbl <= nbl.get(js); jbl++) {
+      int j = ipan.get(js)[jbl];
+      int jv = isys.get(js)[jbl];
       ule1_m[jv] = -vti.top[2] * vti.get(js)[jbl] * dij[ile1][j];
       ule2_m[jv] = -vti.bottom[2] * vti.get(js)[jbl] * dij[ile2][j];
       ute1_m[jv] = -vti.top[iblte.top] * vti.get(js)[jbl] * dij[ite1][j];
@@ -3826,11 +3815,11 @@ bool XFoil::setbl() {
   writeString(" \n");
 
   //*** go over each boundary layer/wake
-  for (is = 1; is <= 2; is++) {
+  for (int is = 1; is <= 2; is++) {
     //---- there is no station "1" at similarity, so zero everything out
-    for (js = 1; js <= 2; js++) {
-      for (jbl = 2; jbl <= nbl.get(js); jbl++) {
-        jv = isys.get(js)[jbl];
+    for (int js = 1; js <= 2; js++) {
+      for (int jbl = 2; jbl <= nbl.get(js); jbl++) {
+        int jv = isys.get(js)[jbl];
         u1_m[jv] = 0.0;
         d1_m[jv] = 0.0;
       }
@@ -3842,7 +3831,6 @@ bool XFoil::setbl() {
     double dds1 = 0.0;
 
     //---- similarity station pressure gradient parameter  x/u du/dx
-    ibl = 2;
     bule = 1.0;
 
     //---- set forced transition arc length position
@@ -3852,15 +3840,15 @@ bool XFoil::setbl() {
     turb = false;
 
     //**** sweep downstream setting up bl equation linearizations
-    for (ibl = 2; ibl <= nbl.get(is); ibl++) {
-      iv = isys.get(is)[ibl];
+    for (int ibl = 2; ibl <= nbl.get(is); ibl++) {
+      int iv = isys.get(is)[ibl];
 
       simi = (ibl == 2);
       wake = (ibl > iblte.get(is));
       tran = (ibl == itran.get(is));
       turb = (ibl > itran.get(is));
 
-      i = ipan.get(is)[ibl];
+      int i = ipan.get(is)[ibl];
 
       //---- set primary variables for current station
       xsi = xssi.get(is)[ibl];
@@ -3875,7 +3863,7 @@ bool XFoil::setbl() {
       dsi = mdi / uei;
 
       if (wake) {
-        iw = ibl - iblte.get(is);
+        int iw = ibl - iblte.get(is);
         dswaki = wgap[iw];
       } else
         dswaki = 0.0;
@@ -3884,10 +3872,10 @@ bool XFoil::setbl() {
       d2_m2 = 1.0 / uei;
       d2_u2 = -dsi / uei;
 
-      for (js = 1; js <= 2; js++) {
-        for (jbl = 2; jbl <= nbl.get(js); jbl++) {
-          j = ipan.get(js)[jbl];
-          jv = isys.get(js)[jbl];
+      for (int js = 1; js <= 2; js++) {
+        for (int jbl = 2; jbl <= nbl.get(js); jbl++) {
+          int j = ipan.get(js)[jbl];
+          int jv = isys.get(js)[jbl];
           u2_m[jv] = -vti.get(is)[ibl] * vti.get(js)[jbl] * dij[i][j];
           d2_m[jv] = d2_u2 * u2_m[jv];
         }
@@ -3945,9 +3933,9 @@ bool XFoil::setbl() {
 
         //----- re-define d1 sensitivities wrt m since d1 depends on both te ds
         // values
-        for (js = 1; js <= 2; js++) {
-          for (jbl = 2; jbl <= nbl.get(js); jbl++) {            
-            jv = isys.get(js)[jbl];
+        for (int js = 1; js <= 2; js++) {
+          for (int jbl = 2; jbl <= nbl.get(js); jbl++) {            
+            int jv = isys.get(js)[jbl];
             d1_m[jv] = dte_ute1 * ute1_m[jv] + dte_ute2 * ute2_m[jv];
           }
         }
@@ -3977,7 +3965,7 @@ bool XFoil::setbl() {
 
       //---- stuff bl system coefficients into main jacobian matrix
 
-      for (jv = 1; jv <= nsys; jv++) {
+      for (int jv = 1; jv <= nsys; jv++) {
         vm[0][jv][iv] = vs1(0, 2) * d1_m[jv] + vs1(0, 3) * u1_m[jv] +
                         vs2(0, 2) * d2_m[jv] + vs2(0, 3) * u2_m[jv] +
                         (vs1(0, 4) + vs2(0, 4) + vsx[0]) *
@@ -4003,7 +3991,7 @@ bool XFoil::setbl() {
                        (vs1(0, 4) + vs2(0, 4) + vsx[0]) *
                            (xi_ule1 * dule1 + xi_ule2 * dule2);
 
-      for (jv = 1; jv <= nsys; jv++) {
+      for (int jv = 1; jv <= nsys; jv++) {
         vm[1][jv][iv] = vs1(1, 2) * d1_m[jv] + vs1(1, 3) * u1_m[jv] +
                         vs2(1, 2) * d2_m[jv] + vs2(1, 3) * u2_m[jv] +
                         (vs1(1, 4) + vs2(1, 4) + vsx[1]) *
@@ -4029,7 +4017,7 @@ bool XFoil::setbl() {
                            (xi_ule1 * dule1 + xi_ule2 * dule2);
 
       // memory overlap problem
-      for (jv = 1; jv <= nsys; jv++) {
+      for (int jv = 1; jv <= nsys; jv++) {
         vm[2][jv][iv] = vs1(2, 2) * d1_m[jv] + vs1(2, 3) * u1_m[jv] +
                         vs2(2, 2) * d2_m[jv] + vs2(2, 3) * u2_m[jv] +
                         (vs1(2, 4) + vs2(2, 4) + vsx[2]) *
@@ -4093,9 +4081,9 @@ bool XFoil::setbl() {
         blmid(3);
       }
 
-      for (js = 1; js <= 2; js++) {
-        for (jbl = 2; jbl <= nbl.get(js); jbl++) {
-          jv = isys.get(js)[jbl];
+      for (int js = 1; js <= 2; js++) {
+        for (int jbl = 2; jbl <= nbl.get(js); jbl++) {
+          int jv = isys.get(js)[jbl];
           u1_m[jv] = u2_m[jv];
           d1_m[jv] = d2_m[jv];
         }
@@ -4132,7 +4120,7 @@ bool XFoil::setexp(double spline_length[], double ds1, double smax, int nn) {
   //       smax  (input)   final s value:      s(nn)
   //       nn    (input)   number of points
   //........................................................
-  int nex, iter, n;
+  int nex;
   double sigma, rnex, rni, aaa, bbb, ccc;
   double disc, ratio, sigman, res;
   double dresdr, dratio, ds;
@@ -4163,7 +4151,7 @@ bool XFoil::setexp(double spline_length[], double ds1, double smax, int nn) {
   if (ratio == 1.0) goto stop11;
 
   //-- newton iteration for actual geometric ratio
-  for (iter = 1; iter <= 100; iter++) {
+  for (int iter = 1; iter <= 100; iter++) {
     sigman = (pow(ratio, (double)nex) - 1.0) / (ratio - 1.0);
     res = pow(sigman, rni) - pow(sigma, rni);
     dresdr = rni * pow(sigman, rni) *
@@ -4182,8 +4170,8 @@ bool XFoil::setexp(double spline_length[], double ds1, double smax, int nn) {
 stop11:
   spline_length[1] = 0.0;
   ds = ds1;
-  for (n = 2; n <= nn; n++) {
-    spline_length[n] = spline_length[n - 1] + ds;
+  for (int i = 2; i <= nn; i++) {
+    spline_length[i] = spline_length[i - 1] + ds;
     ds = ds * ratio;
   }
   return true;
@@ -4216,7 +4204,6 @@ double XFoil::sign(double a, double b) {
 bool XFoil::specal() {
   double minf_clm, reinf_clm;
   double clm;
-  int i, irlx, itcl;
 
   //---- calculate surface vorticity distributions for alpha = 0, 90 degrees
   if (!lgamu || !lqaij) ggcalc();
@@ -4227,7 +4214,7 @@ bool XFoil::specal() {
   };
 
   //---- superimpose suitably weighted  alpha = 0, 90  distributions
-  for (i = 1; i <= n; i++) {
+  for (int i = 1; i <= n; i++) {
     gam[i] = rotateMatrix.row(0).dot(gamu.col(i - INDEX_START_WITH));
     gam_a[i] = rotateMatrix.row(1).dot(gamu.col(i - INDEX_START_WITH));
   }
@@ -4246,7 +4233,7 @@ bool XFoil::specal() {
   clcalc(cmref);
   //---- iterate on clm
   bool bConv = false;
-  for (itcl = 1; itcl <= 20; itcl++) {
+  for (int itcl = 1; itcl <= 20; itcl++) {
     const double msq_clm = 2.0 * minf * minf_clm;
     const double dclm = (cl - clm) / (1.0 - cl_msq * msq_clm);
 
@@ -4254,7 +4241,7 @@ bool XFoil::specal() {
     rlx = 1.0;
 
     //------ under-relaxation loop to avoid driving m(cl) above 1
-    for (irlx = 1; irlx <= 12; irlx++) {
+    for (int irlx = 1; irlx <= 12; irlx++) {
       clm = clm1 + rlx * dclm;
 
       //-------- set new freestream mach m(clm)
@@ -4285,16 +4272,7 @@ bool XFoil::specal() {
   mrcl(cl, minf_cl, reinf_cl);
   comset();
   clcalc(cmref);
-  /*
-          if (!cpcalc(n,qinv,qinf,minf,cpi)) return false;// no need to carry on
-          if(lvisc) {
-                  if(!cpcalc(n+nw,qvis,qinf,minf,cpv)) return false;// no need
-     to carry on if(!cpcalc(n+nw,qinv,qinf,minf,cpi)) return false;// no need to
-     carry on
-          }
-          else   if (!cpcalc(n,qinv,qinf,minf,cpi)) return false;// no need to
-     carry on
-  */
+
   cpcalc(n, qinv, qinf, minf, cpi);
   if (lvisc) {
     cpcalc(n + nw, qvis, qinf, minf, cpv);
@@ -4302,11 +4280,9 @@ bool XFoil::specal() {
   } else
     cpcalc(n, qinv, qinf, minf, cpi);
 
-  // Added techwinder to get inviscid q after viscous calculation
-  for (i = 1; i <= n; i++) {
+  for (int i = 1; i <= n; i++) {
     qgamm[i] = gam[i];
   }
-  // end techwinder addition
 
   return true;
 }
@@ -4315,7 +4291,6 @@ bool XFoil::speccl() {
   //-----------------------------------------
   //     converges to specified inviscid cl.
   //-----------------------------------------
-  int i, ital;
 
   //---- calculate surface vorticity distributions for alpha = 0, 90 degrees
   if (!lgamu || !lqaij) ggcalc();
@@ -4330,7 +4305,7 @@ bool XFoil::speccl() {
   };
 
   //---- superimpose suitably weighted  alpha = 0, 90  distributions
-  for (i = 1; i <= n; i++) {
+  for (int i = 1; i <= n; i++) {
     gam[i] = rotateMatrix.row(0).dot(gamu.col(i - INDEX_START_WITH));
     gam_a[i] = rotateMatrix.row(1).dot(gamu.col(i - INDEX_START_WITH));
   }
@@ -4340,7 +4315,7 @@ bool XFoil::speccl() {
 
   //---- newton loop for alpha to get specified inviscid cl
   bool bConv = false;
-  for (ital = 1; ital <= 20; ital++) {
+  for (int ital = 1; ital <= 20; ital++) {
     const double dalfa = (clspec - cl) / cl_alf;
     rlx = 1.0;
 
@@ -4351,7 +4326,7 @@ bool XFoil::speccl() {
       {cos(alfa), sin(alfa)},
       {-sin(alfa), cos(alfa)}
     };
-    for (i = 1; i <= n; i++) {
+    for (int i = 1; i <= n; i++) {
       gam[i] = rotateMatrix.row(0).dot(gamu.col(i - INDEX_START_WITH));
       gam_a[i] = rotateMatrix.row(1).dot(gamu.col(i - INDEX_START_WITH));
     }
@@ -4435,7 +4410,7 @@ bool XFoil::stmove() {
   //--------------------------------------------------
   //    moves stagnation point location to new panel.
   //---------------------------------------------------
-  int ibl, istold, is;
+  int istold;
   //-- locate new stagnation point arc length sst from gam distribution
   istold = ist;
   stfind();
@@ -4465,7 +4440,7 @@ bool XFoil::stmove() {
       itran.bottom = itran.bottom - idif;
 
       //---- move top side bl variables downstream
-      for (ibl = nbl.top; ibl >= idif + 2; ibl--) {
+      for (int ibl = nbl.top; ibl >= idif + 2; ibl--) {
         ctau.top[ibl] = ctau.top[ibl - idif];
         thet.top[ibl] = thet.top[ibl - idif];
         dstr.top[ibl] = dstr.top[ibl - idif];
@@ -4474,7 +4449,7 @@ bool XFoil::stmove() {
 
       //---- set bl variables between old and new stagnation point
       const double dudx = uedg.top[idif + 2] / xssi.top[idif + 2];
-      for (ibl = idif + 1; ibl >= 2; ibl--) {
+      for (int ibl = idif + 1; ibl >= 2; ibl--) {
         ctau.top[ibl] = ctau.top[idif + 2];
         thet.top[ibl] = thet.top[idif + 2];
         dstr.top[ibl] = dstr.top[idif + 2];
@@ -4482,7 +4457,7 @@ bool XFoil::stmove() {
       }
 
       //---- move bottom side bl variables upstream
-      for (ibl = 2; ibl <= nbl.bottom; ibl++) {
+      for (int ibl = 2; ibl <= nbl.bottom; ibl++) {
         ctau.bottom[ibl] = ctau.bottom[ibl + idif];
         thet.bottom[ibl] = thet.bottom[ibl + idif];
         dstr.bottom[ibl] = dstr.bottom[ibl + idif];
@@ -4496,7 +4471,7 @@ bool XFoil::stmove() {
       itran.bottom = itran.bottom + idif;
 
       //---- move bottom side bl variables downstream
-      for (ibl = nbl.bottom; ibl >= idif + 2; ibl--) {
+      for (int ibl = nbl.bottom; ibl >= idif + 2; ibl--) {
         ctau.bottom[ibl] = ctau.bottom[ibl - idif];
         thet.bottom[ibl] = thet.bottom[ibl - idif];
         dstr.bottom[ibl] = dstr.bottom[ibl - idif];
@@ -4505,7 +4480,7 @@ bool XFoil::stmove() {
 
       //---- set bl variables between old and new stagnation point
       const double dudx = uedg.bottom[idif + 2] / xssi.bottom[idif + 2];
-      for (ibl = idif + 1; ibl >= 2; ibl--) {
+      for (int ibl = idif + 1; ibl >= 2; ibl--) {
         ctau.bottom[ibl] = ctau.bottom[idif + 2];
         thet.bottom[ibl] = thet.bottom[idif + 2];
         dstr.bottom[ibl] = dstr.bottom[idif + 2];
@@ -4513,7 +4488,7 @@ bool XFoil::stmove() {
       }
 
       //---- move top side bl variables upstream
-      for (ibl = 2; ibl <= nbl.top; ibl++) {
+      for (int ibl = 2; ibl <= nbl.top; ibl++) {
         ctau.top[ibl] = ctau.top[ibl + idif];
         thet.top[ibl] = thet.top[ibl + idif];
         dstr.top[ibl] = dstr.top[ibl + idif];
@@ -4523,8 +4498,8 @@ bool XFoil::stmove() {
   }
 
   //-- set new mass array since ue has been tweaked
-  for (is = 1; is <= 2; is++) {
-    for (ibl = 2; ibl <= nbl.get(is); ibl++)
+  for (int is = 1; is <= 2; is++) {
+    for (int ibl = 2; ibl <= nbl.get(is); ibl++)
       mass.get(is)[ibl] = dstr.get(is)[ibl] * uedg.get(is)[ibl];
   }
 
@@ -4622,7 +4597,6 @@ bool XFoil::trchek() {
   //  if n2>ncrit:  nt=ncrit , xt=(ncrit-n1)/(n2-n1)  (transition)
   //
   //----------------------------------------------------------------
-  int itam = 0;
   double amplt, sfa, sfa_a1, sfa_a2, sfx;
   double sfx_x1, sfx_x2, sfx_xf;
   double tt, dt, ut, amsave;
@@ -4654,7 +4628,7 @@ bool XFoil::trchek() {
   blData2.amplz = blData1.amplz + ax_result.ax * (blData2.xz - blData1.xz);
 
   //---- solve implicit system for amplification ampl2
-  for (itam = 1; itam <= 30; itam++) {
+  for (int itam = 1; itam <= 30; itam++) {
     //---- define weighting factors wf1,wf2 for defining "t" quantities from 1,2
     if (blData2.amplz <= amcrit) {
       //------ there is no transition yet,  "t" is the same as "2"
@@ -4932,7 +4906,6 @@ bool XFoil::trdif() {
       st_t2;
   double st_d1, st_d2, st_u1, st_u2, st_xf;
   double ctr, ctr_hk2;
-  int k;
 
   saveblData(1);
   saveblData(2);
@@ -5025,7 +4998,7 @@ bool XFoil::trdif() {
   //-    in other words, convert residual sensitivities wrt "t" variables
   //-    into sensitivities wrt "1" and "2" variables.  the amplification
   //-    equation is unnecessary here, so the k=1 row is left empty.
-  for (k = 1; k < 3; k++) {
+  for (int k = 1; k < 3; k++) {
     blrez[k] = vsrez[k];
     blm[k] = vsm[k] + vs2(k, 1) * tt_ms + vs2(k, 2) * dt_ms +
              vs2(k, 3) * ut_ms + vs2(k, 4) * xt_ms;
@@ -5123,7 +5096,7 @@ bool XFoil::trdif() {
   bt1.block(0, 0, 3, 5) = vs1.block(0, 0, 3, 5) * bt1_right;
   bt2.block(0, 0, 3, 5) = vs1.block(0, 0, 3, 5) * bt2_right;
   bt2 += vs2;
-  for (k = 0; k < 3; k++) {
+  for (int k = 0; k < 3; k++) {
     btrez[k] = vsrez[k];
     btm[k] = vsm[k] + vs1(k, 0) * st_ms + vs1(k, 1) * tt_ms +
              vs1(k, 2) * dt_ms + vs1(k, 3) * ut_ms + vs1(k, 4) * xt_ms;
@@ -5168,18 +5141,13 @@ bool XFoil::ueset() {
   //---------------------------------------------------------
   //     sets ue from inviscid ue plus all source influence
   //---------------------------------------------------------
-  int i, is, ibl, j, js, jbl;
-  double dui, ue_m;
-  for (is = 1; is <= 2; is++) {
-    for (ibl = 2; ibl <= nbl.get(is); ibl++) {
-      i = ipan.get(is)[ibl];
-
-      dui = 0.0;
-      for (js = 1; js <= 2; js++) {
-        for (jbl = 2; jbl <= nbl.get(js); jbl++) {
-          j = ipan.get(js)[jbl];
-          ue_m = -vti.get(is)[ibl] * vti.get(js)[jbl] * dij[i][j];
-          dui = dui + ue_m * mass.get(js)[jbl];
+  for (int is = 1; is <= 2; is++) {
+    for (int ibl = 2; ibl <= nbl.get(is); ibl++) {
+      double dui = 0.0;
+      for (int js = 1; js <= 2; js++) {
+        for (int jbl = 2; jbl <= nbl.get(js); jbl++) {
+          double ue_m = -vti.get(is)[ibl] * vti.get(js)[jbl] * dij[ipan.get(is)[ibl]][ipan.get(js)[jbl]];
+          dui += ue_m * mass.get(js)[jbl];
         }
       }
 
@@ -5193,13 +5161,11 @@ bool XFoil::uicalc() {
   //--------------------------------------------------------------
   //     sets inviscid ue from panel inviscid tangential velocity
   //--------------------------------------------------------------
-  int i, ibl, is;
-
-  for (is = 1; is <= 2; is++) {
+  for (int is = 1; is <= 2; is++) {
     uinv.get(is)[1] = 0.0;
     uinv_a.get(is)[1] = 0.0;
-    for (ibl = 2; ibl <= nbl.get(is); ibl++) {
-      i = ipan.get(is)[ibl];
+    for (int ibl = 2; ibl <= nbl.get(is); ibl++) {
+      int i = ipan.get(is)[ibl];
       uinv.get(is)[ibl] = vti.get(is)[ibl] * qinv[i];
       uinv_a.get(is)[ibl] = vti.get(is)[ibl] * qinv_a[i];
     }
@@ -5218,7 +5184,7 @@ bool XFoil::update() {
   //        if lalfa=false, "ac" is alpha
   //------------------------------------------------------------------
 
-  int i = 0, is = 0, iv, iw, j, js, jv, ibl, jbl, kbl = 0;
+  //int i = 0, is = 0, iv, iw, j, js, jv, ibl, jbl, kbl = 0;
   
   SidePair<VectorXd> unew, u_ac;
   unew.top = VectorXd::Zero(IVX);
@@ -5251,15 +5217,15 @@ bool XFoil::update() {
 
   //--- calculate new ue distribution assuming no under-relaxation
   //--- also set the sensitivity of ue wrt to alpha or re
-  for (is = 1; is <= 2; is++) {
-    for (ibl = 2; ibl <= nbl.get(is); ibl++) {
-      i = ipan.get(is)[ibl];
+  for (int is = 1; is <= 2; is++) {
+    for (int ibl = 2; ibl <= nbl.get(is); ibl++) {
+      int i = ipan.get(is)[ibl];
       dui = 0.0;
       dui_ac = 0.0;
-      for (js = 1; js <= 2; js++) {
-        for (jbl = 2; jbl <= nbl.get(js); jbl++) {
-          j = ipan.get(js)[jbl];
-          jv = isys.get(js)[jbl];
+      for (int js = 1; js <= 2; js++) {
+        for (int jbl = 2; jbl <= nbl.get(js); jbl++) {
+          int j = ipan.get(js)[jbl];
+          int jv = isys.get(js)[jbl];
           ue_m = -vti.get(is)[ibl] * vti.get(js)[jbl] * dij[i][j];
           dui = dui + ue_m * (mass.get(js)[jbl] + vdel[2][0][jv]);
           dui_ac = dui_ac + ue_m * (-vdel[2][1][jv]);
@@ -5279,9 +5245,9 @@ bool XFoil::update() {
 
   //--- set new qtan from new ue with appropriate sign change
 
-  for (is = 1; is <= 2; is++) {
-    for (ibl = 2; ibl <= iblte.get(is); ibl++) {
-      i = ipan.get(is)[ibl];
+  for (int is = 1; is <= 2; is++) {
+    for (int ibl = 2; ibl <= iblte.get(is); ibl++) {
+      int i = ipan.get(is)[ibl];
       qnew[i] = vti.get(is)[ibl] * unew.get(is)[ibl];
       q_ac[i] = vti.get(is)[ibl] * u_ac.get(is)[ibl];
     }
@@ -5302,16 +5268,15 @@ bool XFoil::update() {
   cl_ms = 0.0;
   cl_ac = 0.0;
 
-  i = 1;
-  cginc = 1.0 - (qnew[i] / qinf) * (qnew[i] / qinf);
+  cginc = 1.0 - (qnew[1] / qinf) * (qnew[1] / qinf);
   cpg1 = cginc / (beta + bfac * cginc);
   cpg1_ms = -cpg1 / (beta + bfac * cginc) * (beta_msq + bfac_msq * cginc);
 
-  cpi_q = -2.0 * qnew[i] / qinf / qinf;
+  cpi_q = -2.0 * qnew[1] / qinf / qinf;
   cpc_cpi = (1.0 - bfac * cpg1) / (beta + bfac * cginc);
-  cpg1_ac = cpc_cpi * cpi_q * q_ac[i];
+  cpg1_ac = cpc_cpi * cpi_q * q_ac[1];
 
-  for (i = 1; i <= n; i++) {
+  for (int i = 1; i <= n; i++) {
     int ip = i + 1;
     if (i == n) ip = 1;
 
@@ -5372,9 +5337,9 @@ bool XFoil::update() {
   dlo = -.5;
   //--- calculate changes in bl variables and under-relaxation if needed
 
-  for (is = 1; is <= 2; is++) {
-    for (ibl = 2; ibl <= nbl.get(is); ibl++) {
-      iv = isys.get(is)[ibl];
+  for (int is = 1; is <= 2; is++) {
+    for (int ibl = 2; ibl <= nbl.get(is); ibl++) {
+      int iv = isys.get(is)[ibl];
       //------- set changes without underrelaxation
       dctau = vdel[0][0][iv] - dac * vdel[0][1][iv];
       dthet = vdel[1][0][iv] - dac * vdel[1][1][iv];
@@ -5448,9 +5413,9 @@ bool XFoil::update() {
   }
 
   //--- update bl variables with underrelaxed changes
-  for (is = 1; is <= 2; is++) {
-    for (ibl = 2; ibl <= nbl.get(is); ibl++) {
-      iv = isys.get(is)[ibl];
+  for (int is = 1; is <= 2; is++) {
+    for (int ibl = 2; ibl <= nbl.get(is); ibl++) {
+      int iv = isys.get(is)[ibl];
 
       dctau = vdel[0][0][iv] - dac * vdel[0][1][iv];
       dthet = vdel[1][0][iv] - dac * vdel[1][1][iv];
@@ -5464,8 +5429,7 @@ bool XFoil::update() {
       uedg.get(is)[ibl] = uedg.get(is)[ibl] + rlx * duedg;
 
       if (ibl > iblte.get(is)) {
-        iw = ibl - iblte.get(is);
-        dswaki = wgap[iw];
+        dswaki = wgap[ibl - iblte.get(is)];
       } else
         dswaki = 0.0;
       //------- eliminate absurd transients
@@ -5488,7 +5452,7 @@ bool XFoil::update() {
   }
 
   //--- equate upper wake arrays to lower wake arrays
-  for (kbl = 1; kbl <= nbl.bottom - iblte.bottom; kbl++) {
+  for (int kbl = 1; kbl <= nbl.bottom - iblte.bottom; kbl++) {
     ctau.top[iblte.top + kbl] = ctau.bottom[iblte.bottom + kbl];
     thet.top[iblte.top + kbl] = thet.bottom[iblte.bottom + kbl];
     dstr.top[iblte.top + kbl] = dstr.bottom[iblte.bottom + kbl];
@@ -5625,60 +5589,46 @@ bool XFoil::xicalc() {
   //-------------------------------------------------------------
   //     sets bl arc length array on each airfoil side and wake
   //-------------------------------------------------------------
-  double telrat, crosp, dwdxte, aa, bb;
-  int i, ibl, is, iw;
-  is = 1;
 
-  xssi.get(is)[1] = 0.0;
-
-  for (ibl = 2; ibl <= iblte.get(is); ibl++) {
-    i = ipan.get(is)[ibl];
-    xssi.get(is)[ibl] = sst - spline_length[i];
+  xssi.top[1] = 0.0;
+  for (int ibl = 2; ibl <= iblte.top; ibl++) {
+    xssi.top[ibl] = sst - spline_length[ipan.top[ibl]];
   }
 
-  is = 2;
-
-  xssi.get(is)[1] = 0.0;
-
-  for (ibl = 2; ibl <= iblte.get(is); ibl++) {
-    i = ipan.get(is)[ibl];
-    xssi.get(is)[ibl] = spline_length[i] - sst;
+  xssi.bottom[1] = 0.0;
+  for (int ibl = 2; ibl <= iblte.bottom; ibl++) {
+    xssi.bottom[ibl] = spline_length[ipan.bottom[ibl]] - sst;
   }
 
-  ibl = iblte.get(is) + 1;
-  xssi.get(is)[ibl] = xssi.get(is)[ibl - 1];
-
-  for (ibl = iblte.get(is) + 2; ibl <= nbl.get(is); ibl++) {
-    int i = ipan.get(is)[ibl];
-    xssi.get(is)[ibl] =
-        xssi.get(is)[ibl - 1] + (points.col(i) - points.col(i - 1)).norm();
+  xssi.bottom[iblte.bottom + 1] = xssi.bottom[iblte.bottom];
+  for (int ibl = iblte.bottom + 2; ibl <= nbl.bottom; ibl++) {
+    xssi.bottom[ibl] =
+        xssi.bottom[ibl - 1] + (points.col(ipan.bottom[ibl]) - points.col(ipan.bottom[ibl] - 1)).norm();
   }
 
   //---- trailing edge flap length to te gap ratio
-  telrat = 2.50;
+  const double telrat = 2.50;
 
   //---- set up parameters for te flap cubics
 
-  crosp = cross2(dpoints_ds.col(n).normalized(), dpoints_ds.col(1).normalized());
-  dwdxte = crosp / sqrt(1.0 - crosp * crosp);
+  const double crosp = cross2(dpoints_ds.col(n).normalized(), dpoints_ds.col(1).normalized());
+  double dwdxte = crosp / sqrt(1.0 - crosp * crosp);
 
   //---- limit cubic to avoid absurd te gap widths
   dwdxte = std::max(dwdxte, -3.0 / telrat);
   dwdxte = std::min(dwdxte, 3.0 / telrat);
 
-  aa = 3.0 + telrat * dwdxte;
-  bb = -2.0 - telrat * dwdxte;
+  const double aa = 3.0 + telrat * dwdxte;
+  const double bb = -2.0 - telrat * dwdxte;
 
   if (sharp) {
-    for (iw = 1; iw <= nw; iw++) wgap[iw] = 0.0;
+    for (int iw = 1; iw <= nw; iw++) wgap[iw] = 0.0;
   }
 
   else {
     //----- set te flap (wake gap) array
-    is = 2;
-    for (iw = 1; iw <= nw; iw++) {
-      ibl = iblte.get(is) + iw;
-      const double zn = 1.0 - (xssi.get(is)[ibl] - xssi.get(is)[iblte.get(is)]) / (telrat * ante);
+    for (int iw = 1; iw <= nw; iw++) {
+      const double zn = 1.0 - (xssi.bottom[iblte.bottom + iw] - xssi.bottom[iblte.bottom]) / (telrat * ante);
       wgap[iw] = 0.0;
       if (zn >= 0.0) wgap[iw] = ante * (aa + bb * zn) * zn * zn;
     }
@@ -5762,30 +5712,29 @@ bool XFoil::xyWake() {
   point_te = 0.5 * (points.col(1) + points.col(n));
 
   //-- set first wake point a tiny distance behind te
-  int i = n + 1;
   sx = 0.5 * (dpoints_ds.col(n).y() - dpoints_ds.col(1).y());
   sy = 0.5 * (dpoints_ds.col(1).x() - dpoints_ds.col(n).x());
   smod = sqrt(sx * sx + sy * sy);
-  normal_vectors.col(i).x() = sx / smod;
-  normal_vectors.col(i).y() = sy / smod;
-  points.col(i).x() = point_te.x() - 0.0001 * normal_vectors.col(i).y();
-  points.col(i).y() = point_te.y() + 0.0001 * normal_vectors.col(i).x();
-  spline_length[i] = spline_length[n];
+  normal_vectors.col(n + 1).x() = sx / smod;
+  normal_vectors.col(n + 1).y() = sy / smod;
+  points.col(n + 1).x() = point_te.x() - 0.0001 * normal_vectors.col(n + 1).y();
+  points.col(n + 1).y() = point_te.y() + 0.0001 * normal_vectors.col(n + 1).x();
+  spline_length[n + 1] = spline_length[n];
 
   //---- calculate streamfunction gradient components at first point
   Vector2d psi = {
-    psilin(i, points.col(i), {1.0, 0.0}, false).psi_ni,
-    psilin(i, points.col(i), {0.0, 1.0}, false).psi_ni
+    psilin(n + 1, points.col(n + 1), {1.0, 0.0}, false).psi_ni,
+    psilin(n + 1, points.col(n + 1), {0.0, 1.0}, false).psi_ni
   };
 
   //---- set unit vector normal to wake at first point
-  normal_vectors.col(i + 1) = -psi.normalized();
+  normal_vectors.col(n + 2) = -psi.normalized();
 
   //---- set angle of wake panel normal
-  apanel[i] = atan2(psi.y(), psi.x());
+  apanel[n + 1] = atan2(psi.y(), psi.x());
 
   //---- set rest of wake points
-  for (i = n + 2; i <= n + nw; i++) {
+  for (int i = n + 2; i <= n + nw; i++) {
     const double ds = snew[i] - snew[i - 1];
 
     //------ set new point ds downstream of last point
