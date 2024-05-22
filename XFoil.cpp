@@ -118,8 +118,7 @@ bool XFoil::initialize() {
   mass.bottom = VectorXd::Zero(IVX);
   normal_vectors = Matrix2Xd::Zero(2, IZX);
   gamu = Matrix2Xd::Zero(2, IQX);
-  memset(gam, 0, sizeof(gam));
-  memset(gam_a, 0, sizeof(gam_a));
+  gam = Matrix2Xd::Zero(2, IQX);
   memset(qf0, 0, sizeof(qf0));
   memset(qf1, 0, sizeof(qf1));
   memset(qf2, 0, sizeof(qf2));
@@ -231,8 +230,6 @@ bool XFoil::initialize() {
   hmom = 0.0;
 
   // added techwinder : fortran initializes to 0
-  imxbl = 0;
-  ismxbl = 0;
   ist = 0;
 
   qinfbl = 0.0;
@@ -1644,25 +1641,25 @@ bool XFoil::clcalc(Vector2d ref) {
   cl_alf = 0.0;
   cl_msq = 0.0;
   
-  double cginc = 1.0 - (gam[1] / qinf) * (gam[1] / qinf);
+  double cginc = 1.0 - (gam(0, 1) / qinf) * (gam(0, 1) / qinf);
   double cpg1 = cginc / (beta + bfac * cginc);
   double cpg1_msq = -cpg1 / (beta + bfac * cginc) * (beta_msq + bfac_msq * cginc);
 
-  double cpi_gam = -2.0 * gam[1] / qinf / qinf;
+  double cpi_gam = -2.0 * gam(0, 1) / qinf / qinf;
   double cpc_cpi = (1.0 - bfac * cpg1) / (beta + bfac * cginc);
-  double cpg1_alf = cpc_cpi * cpi_gam * gam_a[1];
+  double cpg1_alf = cpc_cpi * cpi_gam * gam(1, 1);
 
   for (int i = 1; i <= n; i++) {
     int ip = i + 1;
     if (i == n) ip = 1;
 
-    cginc = 1.0 - (gam[ip] / qinf) * (gam[ip] / qinf);
+    cginc = 1.0 - (gam(0, ip) / qinf) * (gam(0, ip) / qinf);
     double cpg2 = cginc / (beta + bfac * cginc);
     double cpg2_msq = -cpg2 / (beta + bfac * cginc) * (beta_msq + bfac_msq * cginc);
 
-    cpi_gam = -2.0 * gam[ip] / qinf / qinf;
+    cpi_gam = -2.0 * gam(0, ip) / qinf / qinf;
     cpc_cpi = (1.0 - bfac * cpg2) / (beta + bfac * cginc);
-    double cpg2_alf = cpc_cpi * cpi_gam * gam_a[ip];
+    double cpg2_alf = cpc_cpi * cpi_gam * gam(1, ip);
 
     Matrix2d rotateMatrix = Matrix2d {
       {cos(alfa), sin(alfa)},
@@ -1897,8 +1894,8 @@ bool XFoil::dslim(double &dstr, double thet, double msq, double hklim) {
 
 bool XFoil::gamqv() {
   for (int i = 1; i <= n; i++) {
-    gam[i] = qvis[i];
-    gam_a[i] = qinv_a[i];
+    gam(0, i) = qvis[i];
+    gam(1, i) = qinv_a[i];
   }
 
   return true;
@@ -3055,8 +3052,8 @@ XFoil::PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector
     Vector2d gsum_vector = gamu.col(jp - INDEX_START_WITH) + gamu.col(jo - INDEX_START_WITH);
     Vector2d gdif_vector = gamu.col(jp - INDEX_START_WITH) - gamu.col(jo - INDEX_START_WITH);
 
-    double gsum = gam[jp] + gam[jo];
-    double gdif = gam[jp] - gam[jo];
+    double gsum = gam(0, jp) + gam(0, jo);
+    double gdif = gam(0, jp) - gam(0, jo);
 
     psi_result.psi += (1 / (4 * PI)) * (psis * gsum + psid * gdif);
 
@@ -3329,8 +3326,8 @@ XFoil::PsiResult XFoil::psi_te(int iNode, Vector2d point, Vector2d normal_vector
   Vector2d sigte_vector = 0.5 * scs * (gamu.col(0) - gamu.col(n - 1));
   Vector2d gamte_vector = -0.5 * sds * (gamu.col(0) - gamu.col(n - 1));
 
-  sigte = 0.5 * scs * (gam[1] - gam[n]);
-  gamte = -0.5 * sds * (gam[1] - gam[n]);
+  sigte = 0.5 * scs * (gam(0, 1) - gam(0, n));
+  gamte = -0.5 * sds * (gam(0, 1) - gam(0, n));
 
   //---- TE panel contribution to psi
   psi_result.psi += (1 / (2 * PI)) * (psig * sigte + pgam * gamte);
@@ -4215,8 +4212,8 @@ bool XFoil::specal() {
 
   //---- superimpose suitably weighted  alpha = 0, 90  distributions
   for (int i = 1; i <= n; i++) {
-    gam[i] = rotateMatrix.row(0).dot(gamu.col(i - INDEX_START_WITH));
-    gam_a[i] = rotateMatrix.row(1).dot(gamu.col(i - INDEX_START_WITH));
+    gam(0, i) = rotateMatrix.row(0).dot(gamu.col(i - INDEX_START_WITH));
+    gam(1, i) = rotateMatrix.row(1).dot(gamu.col(i - INDEX_START_WITH));
   }
 
   tecalc();
@@ -4281,7 +4278,7 @@ bool XFoil::specal() {
     cpcalc(n, qinv, qinf, minf, cpi);
 
   for (int i = 1; i <= n; i++) {
-    qgamm[i] = gam[i];
+    qgamm[i] = gam(0, i);
   }
 
   return true;
@@ -4306,8 +4303,8 @@ bool XFoil::speccl() {
 
   //---- superimpose suitably weighted  alpha = 0, 90  distributions
   for (int i = 1; i <= n; i++) {
-    gam[i] = rotateMatrix.row(0).dot(gamu.col(i - INDEX_START_WITH));
-    gam_a[i] = rotateMatrix.row(1).dot(gamu.col(i - INDEX_START_WITH));
+    gam(0, i) = rotateMatrix.row(0).dot(gamu.col(i - INDEX_START_WITH));
+    gam(1, i) = rotateMatrix.row(1).dot(gamu.col(i - INDEX_START_WITH));
   }
 
   //---- get corresponding cl, cl_alpha, cl_mach
@@ -4327,8 +4324,8 @@ bool XFoil::speccl() {
       {-sin(alfa), cos(alfa)}
     };
     for (int i = 1; i <= n; i++) {
-      gam[i] = rotateMatrix.row(0).dot(gamu.col(i - INDEX_START_WITH));
-      gam_a[i] = rotateMatrix.row(1).dot(gamu.col(i - INDEX_START_WITH));
+      gam(0, i) = rotateMatrix.row(0).dot(gamu.col(i - INDEX_START_WITH));
+      gam(1, i) = rotateMatrix.row(1).dot(gamu.col(i - INDEX_START_WITH));
     }
 
     //------ set new cl(alpha)
@@ -4375,7 +4372,7 @@ bool XFoil::stfind() {
 
   bFound = false;
   for (i = 1; i <= n - 1; i++) {
-    if (gam[i] >= 0.0 && gam[i + 1] < 0.0) {
+    if (gam(0, i) >= 0.0 && gam(0, i + 1) < 0.0) {
       bFound = true;
       break;
     }
@@ -4387,14 +4384,14 @@ bool XFoil::stfind() {
   }
 
   ist = i;
-  dgam = gam[i + 1] - gam[i];
+  dgam = gam(0, i + 1) - gam(0, i);
   ds = spline_length[i + 1] - spline_length[i];
 
   //---- evaluate so as to minimize roundoff for very small gam[i] or gam[i+1]
-  if (gam[i] < -gam[i + 1])
-    sst = spline_length[i] - ds * (gam[i] / dgam);
+  if (gam(0, i) < -gam(0, i + 1))
+    sst = spline_length[i] - ds * (gam(0, i) / dgam);
   else
-    sst = spline_length[i + 1] - ds * (gam[i + 1] / dgam);
+    sst = spline_length[i + 1] - ds * (gam(0, i + 1) / dgam);
 
   //---- tweak stagnation point if it falls right on a node (very unlikely)
   if (sst <= spline_length[i]) sst = spline_length[i] + 0.0000001;
@@ -4536,8 +4533,8 @@ bool XFoil::tecalc() {
   }
 
   //---- TE panel source and vorticity strengths
-  sigte = 0.5 * (gam[1] - gam[n]) * scs;
-  gamte = -.5 * (gam[1] - gam[n]) * sds;
+  sigte = 0.5 * (gam(0, 1) - gam(0, n)) * scs;
+  gamte = -.5 * (gam(0, 1) - gam(0, n)) * sds;
 
   return true;
 }
@@ -5374,8 +5371,6 @@ bool XFoil::update() {
         rmxbl = dn1;
         if (ibl < itran.get(is)) vmxbl = "n";
         if (ibl >= itran.get(is)) vmxbl = "c";
-        imxbl = ibl;
-        ismxbl = is;
       }
       if (rdn1 > dhi) rlx = dhi / dn1;
       if (rdn1 < dlo) rlx = dlo / dn1;
@@ -5384,8 +5379,6 @@ bool XFoil::update() {
       if (fabs(dn2) > fabs(rmxbl)) {
         rmxbl = dn2;
         vmxbl = "t";
-        imxbl = ibl;
-        ismxbl = is;
       }
       if (rdn2 > dhi) rlx = dhi / dn2;
       if (rdn2 < dlo) rlx = dlo / dn2;
@@ -5394,8 +5387,6 @@ bool XFoil::update() {
       if (fabs(dn3) > fabs(rmxbl)) {
         rmxbl = dn3;
         vmxbl = "d";
-        imxbl = ibl;
-        ismxbl = is;
       }
       if (rdn3 > dhi) rlx = dhi / dn3;
       if (rdn3 < dlo) rlx = dlo / dn3;
@@ -5405,8 +5396,6 @@ bool XFoil::update() {
       if (fabs(dn4) > fabs(rmxbl)) {
         rmxbl = duedg;
         vmxbl = "u";
-        imxbl = ibl;
-        ismxbl = is;
       }
       if (rdn4 > dhi) rlx = dhi / dn4;
       if (rdn4 < dlo) rlx = dlo / dn4;
@@ -5574,18 +5563,6 @@ bool XFoil::ViscousIter() {
   //	------ set updated cl,cd
   clcalc(cmref);
   cdcalc();
-
-  //	------ display changes and test for convergence
-  if (rlx < 1.0) {
-    ss << "     rms:" << std::scientific << std::setprecision(2) << rmsbl
-       << "   max:" << std::scientific << std::setprecision(2) << rmxbl
-       << " at " << imxbl << " " << ismxbl << "   rlx:" << std::fixed
-       << std::setprecision(3) << "\n";
-  } else if (fabs(rlx - 1.0) < 0.001) {
-    ss << "     rms:" << std::scientific << std::setprecision(2) << rmsbl
-       << "   max:" << std::scientific << std::setprecision(2) << rmxbl
-       << " at " << imxbl << " " << ismxbl << "\n";
-  }
 
   if (rmsbl < eps1) {
     lvconv = true;

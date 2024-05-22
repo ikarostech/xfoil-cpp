@@ -320,8 +320,8 @@ class XFoil {
   double tkl_msq;
 
 
-
-  double gam[IQX], gam_a[IQX];
+  Matrix2Xd gam;
+  //double gam[IQX], gam_a[IQX];
   Matrix2Xd gamu;
   double apanel[IZX], sst, sst_go, sst_gp, gamte, sigte;
   double dste, aste;
@@ -344,8 +344,6 @@ class XFoil {
   const double hvrat = 0.35;
 
   blData blData1, blData2;
-
-  int imxbl, ismxbl;
 
   double cfm, cfm_ms, cfm_re, cfm_u1, cfm_t1, cfm_d1, cfm_u2, cfm_t2, cfm_d2;
   double xt, xt_a1, xt_ms, xt_re, xt_xf, xt_x1, xt_t1, xt_d1, xt_u1, xt_x2,
