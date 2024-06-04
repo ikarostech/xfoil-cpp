@@ -321,12 +321,12 @@ class XFoil {
 
 
   Matrix2Xd gam;
-  //double gam[IQX], gam_a[IQX];
   Matrix2Xd gamu;
   double apanel[IZX], sst, sst_go, sst_gp, gamte, sigte;
   double dste, aste;
   Matrix2Xd qinvu;
-  double qinv[IZX], qinv_a[IZX];
+  Matrix2Xd qinv;
+  //double qinv[IZX], qinv_a[IZX];
   double dzdg[IQX], dzdm[IZX], dqdg[IQX], dqdm[IZX];
   FullPivLU<MatrixXd> psi_gamma_lu;
   
