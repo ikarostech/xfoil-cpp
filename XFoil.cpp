@@ -4126,8 +4126,6 @@ bool XFoil::setexp(double spline_length[], double ds1, double smax, int nn) {
     else
       ratio = (-bbb + sqrt(disc)) / (2.0 * aaa) + 1.0;
   }
-  //FIXME double型の==比較
-  if (ratio == 1.0) goto stop11;
 
   //-- newton iteration for actual geometric ratio
   for (int iter = 1; iter <= 100; iter++) {
@@ -4140,13 +4138,11 @@ bool XFoil::setexp(double spline_length[], double ds1, double smax, int nn) {
     dratio = -res / dresdr;
     ratio = ratio + dratio;
 
-    if (fabs(dratio) < 1.0e-5) goto stop11;
+    if (fabs(dratio) < 1.0e-5) {
+      break;
+    }
   }
 
-  writeString("Setexp: Convergence failed.  Continuing anyway ...\n");
-
-  //-- set up stretched array using converged geometric ratio
-stop11:
   spline_length[1] = 0.0;
   ds = ds1;
   for (int i = 2; i <= nn; i++) {
@@ -4228,7 +4224,7 @@ bool XFoil::specal() {
 
       //-------- if mach is ok, go do next newton iteration
       //FIXME double型の==比較
-      if (mach_type == MachType::CONSTANT || minf == 0.0 || minf_clm != 0.0) break;  // goto 91
+      if (mach_type == MachType::CONSTANT || minf == 0.0 || minf_clm != 0.0) break;
 
       rlx = 0.5 * rlx;
     }
@@ -4674,6 +4670,8 @@ bool XFoil::trchek() {
     //---- calculate laminar secondary "t" variables hkt, rtt
     blkin();
 
+    
+
     hkt = blData2.hkz.scalar;
     hkt_tt = blData2.hkz.t();
     hkt_dt = blData2.hkz.d();
@@ -4697,7 +4695,9 @@ bool XFoil::trchek() {
     ax_result = axset(blData1.hkz.scalar, blData1.tz, blData1.rtz.scalar, blData1.amplz, hkt, tt, rtt, amplt, amcrit);
 
     //---- punch out early if there is no amplification here
-    if (ax_result.ax <= 0.0) goto stop101;
+    if (ax_result.ax <= 0.0) {
+      break;
+    }
 
     //---- set sensitivity of ax(a2)
     ax_result.ax_a2 = (ax_result.ax_hk2 * hkt_tt + ax_result.ax_t2 + ax_result.ax_rt2 * rtt_tt) * tt_a2 +
@@ -4713,21 +4713,29 @@ bool XFoil::trchek() {
     rlx = 1.0;
     dxt = xt_a2 * da2;
 
-    if (rlx * fabs(dxt / (blData2.xz - blData1.xz)) > 0.05) rlx = 0.05 * fabs((blData2.xz - blData1.xz) / dxt);
+    if (rlx * fabs(dxt / (blData2.xz - blData1.xz)) > 0.05) {
+      rlx = 0.05 * fabs((blData2.xz - blData1.xz) / dxt);
+    }
 
-    if (rlx * fabs(da2) > 1.0) rlx = 1.0 * fabs(1.0 / da2);
+    if (rlx * fabs(da2) > 1.0) {
+      rlx = 1.0 * fabs(1.0 / da2);
+    }
 
     //---- check if converged
-    if (fabs(da2) < daeps) goto stop101;
+    if (fabs(da2) < daeps) {
+      break;
+    }
 
     if ((blData2.amplz > amcrit && blData2.amplz + rlx * da2 < amcrit) ||
-        (blData2.amplz < amcrit && blData2.amplz + rlx * da2 > amcrit))
+        (blData2.amplz < amcrit && blData2.amplz + rlx * da2 > amcrit)) {
       //------ limited newton step so ampl2 doesn't step across amcrit either
       // way
       blData2.amplz = amcrit;
-    else
+    }
+    else {
       //------ regular newton step
       blData2.amplz = blData2.amplz + rlx * da2;
+    }
   }
 
   // TRACE("trchek2 - n2 convergence failed\n");
