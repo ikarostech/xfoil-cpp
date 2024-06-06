@@ -117,7 +117,8 @@ class XFoil {
   bool setMach();
 
   bool comset();
-  bool mrcl(double cls, double &m_cls, double &r_cls);
+  double getActualMach(double cls, MachType mach_type);
+  double getActualReynolds(double cls, ReynoldsType reynolds_type);
   bool restoreblData(int icom);
   bool saveblData(int icom);
 

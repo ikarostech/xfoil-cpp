@@ -294,7 +294,8 @@ bool XFoil::initialize() {
   vaccel = 0.01;
 
   //---- set minf, reinf, based on current cl-dependence
-  mrcl(1.0, minf_cl, reinf_cl);
+  minf_cl = getActualMach(1.0, mach_type);
+  reinf_cl = getActualReynolds(1.0, reynolds_type);
 
   //---- set various compressibility parameters from minf
   comset();
@@ -2844,69 +2845,43 @@ bool XFoil::mrchue() {
  *      from unit-cl values and specified cls
  *      depending on matyp,retyp flags.
  * -------------------------------------------- */
-bool XFoil::mrcl(double cls, double &m_cls, double &r_cls) {
-  std::stringstream ss;
-  double rrat, cla;
-  cla = std::max(cls, 0.000001);
-
+double XFoil::getActualMach(double cls, MachType mach_type) {
+  const double cla = std::max(cls, 0.000001);
   switch (mach_type) {
     case MachType::CONSTANT: {
       minf = minf1;
-      m_cls = 0.0;
-      break;
+      return 0.0;
     }
     case MachType::FIXED_LIFT: {
       minf = minf1 / sqrt(cla);
-      m_cls = -0.5 * minf / cla;
-      break;
+      return -0.5 * minf / cla;
     }
     case MachType::FIXED_LIFT_AND_DYNAMIC_PRESSURE: {
       minf = minf1;
-      m_cls = 0.0;
-      break;
+      return 0.0;
     }
+    default:
+      return 0;
   }
-
+}
+double XFoil::getActualReynolds(double cls, ReynoldsType reynolds_type) {
+  const double cla = std::max(cls, 0.000001);
   switch (reynolds_type) {
     case ReynoldsType::CONSTANT: {
       reinf = reinf1;
-      r_cls = 0.0;
-      break;
+      return 0.0;
     }
     case ReynoldsType::FIXED_LIFT: {
       reinf = reinf1 / sqrt(cla);
-      r_cls = -0.5 * reinf / cla;
-      break;
+      return -0.5 * reinf / cla;
     }
     case ReynoldsType::FIXED_LIFT_AND_DYNAMIC_PRESSURE: {
       reinf = reinf1 / cla;
-      r_cls = -reinf / cla;
-      break;
+      return -reinf / cla;
     }
+    default:
+      return 0;
   }
-
-  if (minf >= 0.99) {
-    // TRACE("      artificially limiting mach to  0.99\n");
-    writeString("mrcl: Cl too low for chosen Mach(Cl) dependence\n");
-    writeString("      artificially limiting mach to  0.99");
-    minf = 0.99;
-    m_cls = 0.0;
-  }
-
-  rrat = 1.0;
-  if (reinf1 > 0.0) rrat = reinf / reinf1;
-
-  if (rrat > 100.0) {
-    // TRACE("     artificially limiting re to %f\n",reinf1*100.0);
-    writeString("mrcl: cl too low for chosen Re(Cl) dependence\n");
-    ss << "      artificially limiting Re to " << std::fixed
-       << std::setprecision(0) << reinf1 * 100.0 << "\n";
-    writeString(ss.str());
-    ss.str("");
-    reinf = reinf1 * 100.0;
-    r_cls = 0.0;
-  }
-  return true;
 }
 
 Matrix2Xd XFoil::ncalc(Matrix2Xd points, VectorXd spline_length, int n) {
@@ -3709,7 +3684,9 @@ bool XFoil::setbl() {
   cti = 0.0;  // techwinder added, otherwise variable is not initialized
 
   //---- set current minf(cl)
-  mrcl(clmr, ma_clmr, re_clmr);
+  ma_clmr = getActualMach(clmr, mach_type);
+  re_clmr = getActualReynolds(clmr, reynolds_type);
+
   msq_clmr = 2.0 * minf * ma_clmr;
 
   //---- set compressibility parameter tklam and derivative tk_msq
@@ -4153,7 +4130,8 @@ bool XFoil::setexp(double spline_length[], double ds1, double smax, int nn) {
 }
 
 bool XFoil::setMach() {
-  mrcl(1.0, minf_cl, reinf_cl);
+  minf_cl = getActualMach(1.0, mach_type);
+  reinf_cl = getActualReynolds(1.0, reynolds_type);
   comset();
   cpcalc(n, qinv.row(0).data(), qinf, minf, cpi);
   if (lvisc) {
@@ -4201,7 +4179,8 @@ bool XFoil::specal() {
   clm = 1.0;
 
   //---- set corresponding  m(clm), re(clm)
-  mrcl(clm, minf_clm, reinf_clm);
+  minf_clm = getActualMach(clm, mach_type);
+  reinf_clm = getActualReynolds(clm, reynolds_type);
   comset();
 
   //---- set corresponding cl(m)
@@ -4220,7 +4199,8 @@ bool XFoil::specal() {
       clm = clm1 + rlx * dclm;
 
       //-------- set new freestream mach m(clm)
-      mrcl(clm, minf_clm, reinf_clm);
+      minf_clm = getActualMach(clm, mach_type);
+      reinf_clm = getActualReynolds(clm, reynolds_type);
 
       //-------- if mach is ok, go do next newton iteration
       //FIXME double型の==比較
@@ -4244,7 +4224,8 @@ bool XFoil::specal() {
   }
 
   //---- set final mach, cl, cp distributions, and hinge moment
-  mrcl(cl, minf_cl, reinf_cl);
+  minf_cl = getActualMach(cl, mach_type);
+  reinf_cl = getActualReynolds(cl, reynolds_type);
   comset();
   clcalc(cmref);
 
@@ -4271,7 +4252,8 @@ bool XFoil::speccl() {
   if (!lgamu || !lqaij) ggcalc();
 
   //---- set freestream mach from specified cl -- mach will be held fixed
-  mrcl(clspec, minf_cl, reinf_cl);
+  minf_cl = getActualMach(clspec, mach_type);
+  reinf_cl = getActualReynolds(clspec, reynolds_type);
   comset();
 
   Matrix2d rotateMatrix = Matrix2d {
@@ -5527,7 +5509,8 @@ bool XFoil::ViscousIter() {
   update();  //	------ update bl variables
 
   if (lalfa) {  //	------- set new freestream mach, re from new cl
-    mrcl(cl, minf_cl, reinf_cl);
+    minf_cl = getActualMach(cl, mach_type);
+    reinf_cl = getActualReynolds(cl, reynolds_type);
     comset();
   } else {  //	------- set new inviscid speeds qinv and uinv for new alpha
     qiset();
