@@ -123,8 +123,9 @@ bool XFoil::initialize() {
   memset(qf1, 0, sizeof(qf1));
   memset(qf2, 0, sizeof(qf2));
   memset(qf3, 0, sizeof(qf3));
-  qinv = Matrix2Xd::Zero(2, IZX);
+  memset(qinv, 0, sizeof(qinv));
   qinvu = Matrix2Xd::Zero(2, IZX);
+  memset(qinv_a, 0, sizeof(qinv_a));
   memset(qvis, 0, sizeof(qvis));
   spline_length.resize(IZX);
   snew = VectorXd::Zero(4 * IBX);
@@ -1893,8 +1894,8 @@ bool XFoil::dslim(double &dstr, double thet, double msq, double hklim) {
 
 bool XFoil::gamqv() {
   for (int i = 1; i <= n; i++) {
-    gam(0, i) = qinv(0, i);
-    gam(1, i) = qinv(1, i);
+    gam(0, i) = qvis[i];
+    gam(1, i) = qinv_a[i];
   }
 
   return true;
@@ -3624,8 +3625,8 @@ bool XFoil::qiset() {
   };
   
   for (int i = 1; i <= n + nw; i++) {
-    qinv(0, i) = rotateMatrix.row(0).dot(qinvu.col(i));
-    qinv(1, i) = rotateMatrix.row(1).dot(qinvu.col(i));
+    qinv[i] = rotateMatrix.row(0).dot(qinvu.col(i));
+    qinv_a[i] = rotateMatrix.row(1).dot(qinvu.col(i));
   }
 
   return true;
@@ -4176,7 +4177,7 @@ stop11:
 bool XFoil::setMach() {
   mrcl(1.0, minf_cl, reinf_cl);
   comset();
-  cpcalc(n, qinv.row(0).data(), qinf, minf, cpi);
+  cpcalc(n, qinv, qinf, minf, cpi);
   if (lvisc) {
     cpcalc(n + nw, qvis, qinf, minf, cpv);
   }
@@ -4269,12 +4270,12 @@ bool XFoil::specal() {
   comset();
   clcalc(cmref);
 
-  cpcalc(n, qinv.row(0).data(), qinf, minf, cpi);
+  cpcalc(n, qinv, qinf, minf, cpi);
   if (lvisc) {
     cpcalc(n + nw, qvis, qinf, minf, cpv);
-    cpcalc(n + nw, qinv.row(0).data(), qinf, minf, cpi);
+    cpcalc(n + nw, qinv, qinf, minf, cpi);
   } else
-    cpcalc(n, qinv.row(0).data(), qinf, minf, cpi);
+    cpcalc(n, qinv, qinf, minf, cpi);
 
   for (int i = 1; i <= n; i++) {
     qgamm[i] = gam(0, i);
@@ -4346,10 +4347,10 @@ bool XFoil::speccl() {
 
   if (lvisc) {
     cpcalc(n + nw, qvis, qinf, minf, cpv);
-    cpcalc(n + nw, qinv.row(0).data(), qinf, minf, cpi);
+    cpcalc(n + nw, qinv, qinf, minf, cpi);
 
   } else {
-    cpcalc(n, qinv.row(0).data(), qinf, minf, cpi);
+    cpcalc(n, qinv, qinf, minf, cpi);
   }
 
   return true;
@@ -5174,8 +5175,8 @@ bool XFoil::uicalc() {
     uinv_a.get(is)[1] = 0.0;
     for (int ibl = 2; ibl <= nbl.get(is); ibl++) {
       int i = ipan.get(is)[ibl];
-      uinv.get(is)[ibl] = vti.get(is)[ibl] * qinv(0, i);
-      uinv_a.get(is)[ibl] = vti.get(is)[ibl] * qinv(1, i);
+      uinv.get(is)[ibl] = vti.get(is)[ibl] * qinv[i];
+      uinv_a.get(is)[ibl] = vti.get(is)[ibl] * qinv_a[i];
     }
   }
 
@@ -5513,9 +5514,9 @@ bool XFoil::viscal() {
     
     if (lvisc) {
       cpcalc(n + nw, qvis, qinf, minf, cpv);
-      cpcalc(n + nw, qinv.row(0).data(), qinf, minf, cpi);
+      cpcalc(n + nw, qinv, qinf, minf, cpi);
     } else
-      cpcalc(n, qinv.row(0).data(), qinf, minf, cpi);
+      cpcalc(n, qinv, qinf, minf, cpi);
 
     gamqv();
     clcalc(cmref);
@@ -5530,7 +5531,7 @@ bool XFoil::viscal() {
 
 bool XFoil::ViscalEnd() {
 
-  cpcalc(n + nw, qinv.row(0).data(), qinf, minf, cpi);
+  cpcalc(n + nw, qinv, qinf, minf, cpi);
   cpcalc(n + nw, qvis, qinf, minf, cpv);
 
   return true;
