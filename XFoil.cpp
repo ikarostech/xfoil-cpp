@@ -1333,9 +1333,9 @@ bool XFoil::blvar(blData& ref, int ityp) {
   if (ityp == 1) {
     //----- laminar
     double di2_hk2, di2_rt2;
-    dil(ref.hkz.scalar, ref.rtz.scalar, ref.diz.scalar, di2_hk2, di2_rt2);
-
-    ref.diz.vector = di2_hk2 * ref.hkz.vector + di2_rt2 * ref.rtz.vector;
+    DissipationResult dissipation_result = dil(ref.hkz.scalar, ref.rtz.scalar);
+    ref.diz.scalar = dissipation_result.di;
+    ref.diz.vector = dissipation_result.di_hk * ref.hkz.vector + dissipation_result.di_rt * ref.rtz.vector;
   } else {
     if (ityp == 2) {
       //----- turbulent wall contribution
@@ -1409,24 +1409,23 @@ bool XFoil::blvar(blData& ref, int ityp) {
   }
 
   if (ityp == 2) {
-    dil(ref.hkz.scalar, ref.rtz.scalar, di2l, di2l_hk2, di2l_rt2);
-
-    if (di2l > ref.diz.scalar) {
+    DissipationResult dissipation_result = dil(ref.hkz.scalar, ref.rtz.scalar);
+    if (dissipation_result.di > ref.diz.scalar) {
       //------- laminar cd is greater than turbulent cd -- use laminar
       //-       (this will only occur for unreasonably small rtheta)
-      ref.diz.scalar = di2l;
-      ref.diz.vector = di2l_hk2 * ref.hkz.vector + di2l_rt2 * ref.rtz.vector;
+      ref.diz.scalar = dissipation_result.di;
+      ref.diz.vector = dissipation_result.di_hk * ref.hkz.vector + dissipation_result.di_rt * ref.rtz.vector;
     }
   }
 
   if (ityp == 3) {
     //------ laminar wake cd
-    dilw(ref.hkz.scalar, ref.rtz.scalar, di2l, di2l_hk2, di2l_rt2);
+    DissipationResult dissipation_result = dilw(ref.hkz.scalar, ref.rtz.scalar);
     if (di2l > ref.diz.scalar) {
       //------- laminar wake cd is greater than turbulent cd -- use laminar
       //-       (this will only occur for unreasonably small rtheta)
-      ref.diz.scalar = di2l;
-      ref.diz.vector = di2l_hk2 * ref.hkz.vector + di2l_rt2 * ref.rtz.vector;
+      ref.diz.scalar = dissipation_result.di;
+      ref.diz.vector = dissipation_result.di_hk * ref.hkz.vector + dissipation_result.di_rt * ref.rtz.vector;
     }
 
     //----- double dissipation for the wake (two wake halves)
@@ -1846,36 +1845,35 @@ XFoil::EnvEnResult XFoil::dampl(double hk, double th, double rt) {
 }
 
 /** Laminar dissipation function  ( 2 cd/h* )     (from Falkner-Skan)*/
-bool XFoil::dil(double hk, double rt, double &di, double &di_hk,
-                double &di_rt) {
+XFoil::DissipationResult XFoil::dil(double hk, double rt) {
+  DissipationResult result;
   if (hk < 4.0) {
-    di = (0.00205 * pow((4.0 - hk), 5.5) + 0.207) / rt;
-    di_hk = (-.00205 * 5.5 * pow((4.0 - hk), 4.5)) / rt;
+    result.di = (0.00205 * pow((4.0 - hk), 5.5) + 0.207) / rt;
+    result.di_hk = (-.00205 * 5.5 * pow((4.0 - hk), 4.5)) / rt;
   } else {
     double hkb = hk - 4.0;
     double den = 1.0 + 0.02 * hkb * hkb;
-    di = (-.0016 * hkb * hkb / den + 0.207) / rt;
-    di_hk =
+    result.di = (-.0016 * hkb * hkb / den + 0.207) / rt;
+    result.di_hk =
         (-.0016 * 2.0 * hkb * (1.0 / den - 0.02 * hkb * hkb / den / den)) / rt;
   }
-  di_rt = -(di) / rt;
+  result.di_rt = -(result.di) / rt;
 
-  return true;
+  return result;
 }
 
-bool XFoil::dilw(double hk, double rt, double &di, double &di_hk,
-                 double &di_rt) {
-
+XFoil::DissipationResult XFoil::dilw(double hk, double rt) {
+  DissipationResult result;
   boundary_layer::ThicknessShapeParameterResult hsl_result = boundary_layer::hsl(hk);
   //---- laminar wake dissipation function  ( 2 cd/h* )
   double rcd = 1.10 * (1.0 - 1.0 / hk) * (1.0 - 1.0 / hk) / hk;
   double rcd_hk = -1.10 * (1.0 - 1.0 / hk) * 2.0 / hk / hk / hk - rcd / hk;
 
-  di = 2.0 * rcd / (hsl_result.hs * rt);
-  di_hk = 2.0 * rcd_hk / (hsl_result.hs * rt) - ((di) / hsl_result.hs) * hsl_result.hs_hk;
-  di_rt = -(di) / rt - ((di) / hsl_result.hs) * hsl_result.hs_rt;
+  result.di = 2.0 * rcd / (hsl_result.hs * rt);
+  result.di_hk = 2.0 * rcd_hk / (hsl_result.hs * rt) - ((result.di) / hsl_result.hs) * hsl_result.hs_hk;
+  result.di_rt = -(result.di) / rt - ((result.di) / hsl_result.hs) * hsl_result.hs_rt;
 
-  return true;
+  return result;
 }
 
 bool XFoil::dslim(double &dstr, double thet, double msq, double hklim) {

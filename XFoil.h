@@ -191,8 +191,15 @@ class XFoil {
     double ax_rt;
   };
   EnvEnResult dampl(double hk, double th, double rt);
-  bool dil(double hk, double rt, double &di, double &di_hk, double &di_rt);
-  bool dilw(double hk, double rt, double &di, double &di_hk, double &di_rt);
+
+  class DissipationResult {
+    public:
+    double di;
+    double di_hk;
+    double di_rt;
+  };
+  DissipationResult dil(double hk, double rt);
+  DissipationResult dilw(double hk, double rt);
   bool dslim(double &dstr, double thet, double msq, double hklim);
 
   bool gamqv();
