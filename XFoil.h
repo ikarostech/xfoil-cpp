@@ -182,7 +182,7 @@ class XFoil {
       throw invalid_argument("invalid side type");
     }
   };
-  bool cpcalc(int n, const double q[], double qinf, double minf, double cp[]);
+  VectorXd cpcalc(int n, const double q[], double qinf, double minf);
   class EnvEnResult {
     public:
     double ax;
@@ -274,7 +274,9 @@ class XFoil {
 
   Matrix2Xd normal_vectors;
 
-  double cl, cm, cd, cpi[IZX], cpv[IZX], acrit;
+  double cl, cm, cd, acrit;
+  //double cpi[IZX], cpv[IZX]
+  VectorXd cpi, cpv;
   double xcp;
   double alfa, avisc, awake, reinf1, qinf, mvisc, rmsbl, ante;
   double minf, reinf;
