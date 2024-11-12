@@ -94,8 +94,8 @@ bool XFoil::initialize() {
   memset(blsav, 0, sizeof(blsav));
   memset(bij, 0, sizeof(bij));
   memset(cij, 0, sizeof(cij));
-  memset(cpi, 0, sizeof(cpi));
-  memset(cpv, 0, sizeof(cpv));
+  cpi = VectorXd::Zero(IVX);
+  cpv = VectorXd::Zero(IVX);
   ctau.top = VectorXd::Zero(IVX);
   ctau.bottom = VectorXd::Zero(IVX);
   ctq.top = VectorXd::Zero(IVX);
@@ -1707,15 +1707,13 @@ bool XFoil::comset() {
 /** ---------------------------------------------
  *      sets compressible cp from speed.
  * ---------------------------------------------- */
-bool XFoil::cpcalc(int n, const double q[], double qinf, double minf, double cp[]) {
-
-  bool denneg;
+VectorXd XFoil::cpcalc(int n, const double q[], double qinf, double minf) {
+  VectorXd cp = VectorXd::Zero(n + INDEX_START_WITH);
+  bool denneg = false;
   double beta, bfac;
 
-  beta = sqrt(1.0 - minf * minf);
-  bfac = 0.5 * minf * minf / (1.0 + beta);
-
-  denneg = false;
+  beta = sqrt(1.0 - MathUtil::pow(minf, 2));
+  bfac = 0.5 * MathUtil::pow(minf, 2) / (1.0 + beta);
 
   for (int i = 1; i <= n; i++) {
     const double cpinc = 1.0 - (q[i] / qinf) * (q[i] / qinf);
@@ -1727,10 +1725,9 @@ bool XFoil::cpcalc(int n, const double q[], double qinf, double minf, double cp[
   if (denneg) {
     writeString(
         "CpCalc: local speed too larger\n Compressibility corrections invalid\n");
-    return false;
   }
 
-  return true;
+  return cp;
 }
 
 void XFoil::writeString(std::string str) {
@@ -4132,9 +4129,9 @@ bool XFoil::setMach() {
   minf_cl = getActualMach(1.0, mach_type);
   reinf_cl = getActualReynolds(1.0, reynolds_type);
   comset();
-  cpcalc(n, qinv, qinf, minf, cpi);
+  cpi = cpcalc(n, qinv, qinf, minf);
   if (lvisc) {
-    cpcalc(n + nw, qvis, qinf, minf, cpv);
+    cpv = cpcalc(n + nw, qvis, qinf, minf);
   }
   clcalc(cmref);
   cdcalc();
@@ -4228,12 +4225,12 @@ bool XFoil::specal() {
   comset();
   clcalc(cmref);
 
-  cpcalc(n, qinv, qinf, minf, cpi);
+  cpi = cpcalc(n, qinv, qinf, minf);
   if (lvisc) {
-    cpcalc(n + nw, qvis, qinf, minf, cpv);
-    cpcalc(n + nw, qinv, qinf, minf, cpi);
+    cpv = cpcalc(n + nw, qvis, qinf, minf);
+    cpi = cpcalc(n + nw, qinv, qinf, minf);
   } else
-    cpcalc(n, qinv, qinf, minf, cpi);
+    cpi = cpcalc(n, qinv, qinf, minf);
 
   for (int i = 1; i <= n; i++) {
     qgamm[i] = gam(0, i);
@@ -4305,11 +4302,11 @@ bool XFoil::speccl() {
   qiset();
 
   if (lvisc) {
-    cpcalc(n + nw, qvis, qinf, minf, cpv);
-    cpcalc(n + nw, qinv, qinf, minf, cpi);
+    cpv = cpcalc(n + nw, qvis, qinf, minf);
+    cpi = cpcalc(n + nw, qinv, qinf, minf);
 
   } else {
-    cpcalc(n, qinv, qinf, minf, cpi);
+    cpi = cpcalc(n, qinv, qinf, minf);
   }
 
   return true;
@@ -5484,10 +5481,10 @@ bool XFoil::viscal() {
     qvfue();
     
     if (lvisc) {
-      cpcalc(n + nw, qvis, qinf, minf, cpv);
-      cpcalc(n + nw, qinv, qinf, minf, cpi);
+      cpv = cpcalc(n + nw, qvis, qinf, minf);
+      cpi = cpcalc(n + nw, qinv, qinf, minf);
     } else
-      cpcalc(n, qinv, qinf, minf, cpi);
+      cpi = cpcalc(n, qinv, qinf, minf);
 
     gamqv();
     clcalc(cmref);
@@ -5502,8 +5499,8 @@ bool XFoil::viscal() {
 
 bool XFoil::ViscalEnd() {
 
-  cpcalc(n + nw, qinv, qinf, minf, cpi);
-  cpcalc(n + nw, qvis, qinf, minf, cpv);
+  cpi = cpcalc(n + nw, qinv, qinf, minf);
+  cpv = cpcalc(n + nw, qvis, qinf, minf);
 
   return true;
 }
