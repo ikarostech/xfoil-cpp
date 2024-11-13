@@ -2910,14 +2910,9 @@ Matrix2Xd XFoil::ncalc(Matrix2Xd points, VectorXd spline_length, int n) {
  * ----------------------------------------------------------------------- */
 XFoil::PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector, bool siglin) {
   PsiResult psi_result;
-  int io, jo, jp;
   
   //---- distance tolerance for determining if two points are the same
   const double seps = (spline_length[n] - spline_length[1]) * 0.00001;
-
-  io = iNode;
-
-  jp = 0;
 
   psi_result.psi = 0.0;
   psi_result.psi_ni = 0.0;
@@ -2932,20 +2927,16 @@ XFoil::PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector
     scs = ante / dste;
     sds = aste / dste;
   }
-  for (jo = 1; jo <= n; jo++) {
-    // stop10
-    jp = jo + 1;
-    if (jo == n) {
-      jp = 1;
-    }
-    double dso = (points.col(jo) - points.col(jp)).norm();
+  for (int jo = 0; jo < n; jo++) {
+    int jp = (jo + 1) % n;
+    double dso = (points.col(jo + INDEX_START_WITH) - points.col(jp + INDEX_START_WITH)).norm();
 
     //------ skip null panel
     if (fabs(dso) < 1.0e-7) continue;
 
-    Vector2d r1 = point - points.col(jo);
-    Vector2d r2 = point - points.col(jp);
-    Vector2d s = (points.col(jp) - points.col(jo)).normalized();
+    Vector2d r1 = point - points.col(jo + INDEX_START_WITH);
+    Vector2d r2 = point - points.col(jp + INDEX_START_WITH);
+    Vector2d s = (points.col(jp + INDEX_START_WITH) - points.col(jo + INDEX_START_WITH)).normalized();
 
     blData1.xz = s.dot(r1);
     blData2.xz = s.dot(r2);
@@ -2957,7 +2948,7 @@ XFoil::PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector
 
     //------ set reflection flag sgn to avoid branch problems with arctan
     double sgn;
-    if (io >= 1 && io <= n) {
+    if (iNode >= 1 && iNode <= n) {
       //------- no problem on airfoil surface
       sgn = 1.0;
     } else {
@@ -2967,7 +2958,7 @@ XFoil::PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector
 
     //------ set log(r^2) and arctan(x/y), correcting for reflection if any
     double logr12;
-    if (io != jo && rs1 > 0.0) {
+    if (iNode != jo + INDEX_START_WITH && rs1 > 0.0) {
       logr12 = log(rs1);
       blData1.tz = atan2(sgn * blData1.xz, sgn * yy) + (0.5 - 0.5 * sgn) * PI;
     } else {
@@ -2975,7 +2966,7 @@ XFoil::PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector
       blData1.tz = 0.0;
     }
     double logr22;
-    if (io != jp && rs2 > 0.0) {
+    if (iNode != jp + INDEX_START_WITH && rs2 > 0.0) {
       logr22 = log(rs2);
       blData2.tz = atan2(sgn * blData2.xz, sgn * yy) + (0.5 - 0.5 * sgn) * PI;
     } else {
@@ -2986,9 +2977,9 @@ XFoil::PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector
     double x1i = s.dot(normal_vector);
     double x2i = s.dot(normal_vector);
     double yyi = cross2(s, normal_vector);
-    if (jo == n) break;
+    if (jo + INDEX_START_WITH == n) break;
     if (siglin) {
-      PsiResult sig_result = psisig(io, jo, point, normal_vector);
+      PsiResult sig_result = psisig(iNode, jo + INDEX_START_WITH, point, normal_vector);
       psi_result = PsiResult::sum(psi_result, sig_result);
     }
 
@@ -3008,17 +2999,17 @@ XFoil::PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector
     double pdx2 = ((blData1.xz + blData2.xz) * psx2 + psis + blData2.xz * logr22 + psid) * dxinv;
     double pdyy = ((blData1.xz + blData2.xz) * psyy - yy * (logr12 - logr22)) * dxinv;
 
-    Vector2d gsum_vector = gamu.col(jp - INDEX_START_WITH) + gamu.col(jo - INDEX_START_WITH);
-    Vector2d gdif_vector = gamu.col(jp - INDEX_START_WITH) - gamu.col(jo - INDEX_START_WITH);
+    Vector2d gsum_vector = gamu.col(jp) + gamu.col(jo);
+    Vector2d gdif_vector = gamu.col(jp) - gamu.col(jo);
 
-    double gsum = gam(0, jp) + gam(0, jo);
-    double gdif = gam(0, jp) - gam(0, jo);
+    double gsum = gam(0, jp + INDEX_START_WITH) + gam(0, jo + INDEX_START_WITH);
+    double gdif = gam(0, jp + INDEX_START_WITH) - gam(0, jo + INDEX_START_WITH);
 
     psi_result.psi += (1 / (4 * PI)) * (psis * gsum + psid * gdif);
 
     //------ dpsi/dgam
-    psi_result.dzdg[jo] += (1 / (4 * PI)) * (psis - psid);
-    psi_result.dzdg[jp] += (1 / (4 * PI)) * (psis + psid);
+    psi_result.dzdg[jo + INDEX_START_WITH] += (1 / (4 * PI)) * (psis - psid);
+    psi_result.dzdg[jp + INDEX_START_WITH] += (1 / (4 * PI)) * (psis + psid);
 
     //------ dpsi/dni
     double psni = psx1 * x1i + psx2 * x2i + psyy * yyi;
@@ -3027,8 +3018,8 @@ XFoil::PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector
 
     psi_result.qtan += (1 / (4 * PI)) * (psni * gsum_vector + pdni * gdif_vector);
 
-    psi_result.dqdg[jo] += (1 / (4 * PI)) * (psni - pdni);
-    psi_result.dqdg[jp] += (1 / (4 * PI)) * (psni + pdni);
+    psi_result.dqdg[jo + INDEX_START_WITH] += (1 / (4 * PI)) * (psni - pdni);
+    psi_result.dqdg[jp + INDEX_START_WITH] += (1 / (4 * PI)) * (psni + pdni);
   
   }
   if ((points.col(n) - points.col(1)).norm() > seps) {
