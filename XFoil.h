@@ -275,7 +275,6 @@ class XFoil {
   Matrix2Xd normal_vectors;
 
   double cl, cm, cd, acrit;
-  //double cpi[IZX], cpv[IZX]
   VectorXd cpi, cpv;
   double xcp;
   double alfa, avisc, awake, reinf1, qinf, mvisc, rmsbl, ante;
@@ -339,7 +338,6 @@ class XFoil {
 
 
   Matrix2Xd gam;
-  //double gam[IQX], gam_a[IQX];
   Matrix2Xd gamu;
   double apanel[IZX], sst, sst_go, sst_gp, gamte, sigte;
   double dste, aste;
