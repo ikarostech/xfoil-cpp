@@ -346,7 +346,8 @@ class XFoil {
   double dzdg[IQX], dzdm[IZX], dqdg[IQX], dqdm[IZX];
   FullPivLU<MatrixXd> psi_gamma_lu;
   
-  double bij[IQX][IZX], dij[IZX][IZX];
+  MatrixXd bij;
+  double dij[IZX][IZX];
   double cij[IWX][IQX];
 
   Matrix<double, 4, 5> vs1, vs2;

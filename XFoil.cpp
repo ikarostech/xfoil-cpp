@@ -92,7 +92,8 @@ bool XFoil::initialize() {
 
   memset(apanel, 0, sizeof(apanel));
   memset(blsav, 0, sizeof(blsav));
-  memset(bij, 0, sizeof(bij));
+  
+  bij = MatrixXd::Zero(IQX, IZX);
   memset(cij, 0, sizeof(cij));
   cpi = VectorXd::Zero(IVX);
   cpv = VectorXd::Zero(IVX);
@@ -1939,7 +1940,7 @@ bool XFoil::ggcalc() {
     }
 
     for (int j = 0; j < n; j++) {
-      bij[i - INDEX_START_WITH][j] = -psi_result.dzdm[j + INDEX_START_WITH];
+      bij(i - INDEX_START_WITH, j) = -psi_result.dzdm[j + INDEX_START_WITH];
     }
 
     //------ dres/dpsio
@@ -1963,7 +1964,7 @@ bool XFoil::ggcalc() {
   psi.col(n).y() = -res;
 
   //---- set up Kutta condition (no direct source influence)
-  for (int j = 0; j < n; j++) bij[n][j] = 0.0;
+  for (int j = 0; j < n; j++) bij(n, j) = 0.0;
 
   if (sharp) {
     //----- set zero internal velocity in TE corner
@@ -1995,7 +1996,7 @@ bool XFoil::ggcalc() {
     }
 
     //----- -dres/dmass
-    for (int j = 0; j < n; j++) bij[n - 1][j] = -psi_result.dqdm[j];
+    for (int j = 0; j < n; j++) bij(n - 1, j) = -psi_result.dqdm[j];
 
     //----- dres/dpsio
     dpsi_dgam(n - 1, n);
@@ -3458,16 +3459,16 @@ bool XFoil::qdcalc() {
       //------- multiply each dpsi/sig vector by inverse of factored dpsi/dgam
       // matrix
       for (int iu = 0; iu <= n; iu++) {
-        gamu_temp[iu] = bij[iu][j - INDEX_START_WITH];
+        gamu_temp[iu] = bij(iu, j - INDEX_START_WITH);
       }
       gamu_temp = psi_gamma_lu.solve(gamu_temp);
       for (int iu = 0; iu <= n; iu++) {
-        bij[iu][j - INDEX_START_WITH] = gamu_temp[iu];
+        bij(iu, j - INDEX_START_WITH) = gamu_temp[iu];
       }
 
       //------- store resulting dgam/dsig = dqtan/dsig vector
       for (int i = 1; i <= n; i++) {
-        dij[i][j] = bij[i - INDEX_START_WITH][j - INDEX_START_WITH];
+        dij[i][j] = bij(i - INDEX_START_WITH, j - INDEX_START_WITH);
       }
     }
     ladij = true;
@@ -3477,33 +3478,28 @@ bool XFoil::qdcalc() {
   for (int i = 1; i <= n; i++) {
     PsiResult psi_result = pswlin(i, points.col(i), normal_vectors.col(i));
     for (int j = n + 1; j <= n + nw; j++) {
-      bij[i - INDEX_START_WITH][j - INDEX_START_WITH] = -psi_result.dzdm[j];
+      bij(i - INDEX_START_WITH, j - INDEX_START_WITH) = -psi_result.dzdm[j];
     }
   }
 
   //---- set up kutta condition (no direct source influence)
-  for (int j = n; j < n + nw; j++) bij[n][j] = 0.0;
-
-  //---- sharp te gamma extrapolation also has no source influence
-  if (sharp) {
-    for (int j = n; j < n + nw; j++) bij[n][j] = 0.0;
-  }
+  for (int j = n; j < n + nw; j++) bij(n, j) = 0.0;
 
   //---- multiply by inverse of factored dpsi/dgam matrix
   for (int j = n + 1; j <= n + nw; j++) {
     for (int iu = 0; iu <= n; iu++) {
-      gamu_temp[iu] = bij[iu][j - INDEX_START_WITH];
+      gamu_temp[iu] = bij(iu, j - INDEX_START_WITH);
     }
     gamu_temp = psi_gamma_lu.solve(gamu_temp);
 
     for (int iu = 0; iu <= n; iu++) {
-      bij[iu][j - INDEX_START_WITH] = gamu_temp[iu];
+      bij(iu, j - INDEX_START_WITH) = gamu_temp[iu];
     }
   }
   //---- set the source influence matrix for the wake sources
   for (int i = 1; i <= n; i++) {
     for (int j = n + 1; j <= n + nw; j++) {
-      dij[i][j] = bij[i - INDEX_START_WITH][j - INDEX_START_WITH];
+      dij[i][j] = bij(i - INDEX_START_WITH, j - INDEX_START_WITH);
     }
   }
 
@@ -3544,7 +3540,7 @@ bool XFoil::qdcalc() {
     //------ wake source contribution next
     for (int j = n + 1; j <= n + nw; j++) {
       sum = 0.0;
-      for (int k = 1; k <= n; k++) sum = sum + cij[iw][k] * bij[k - INDEX_START_WITH][j - INDEX_START_WITH];
+      for (int k = 1; k <= n; k++) sum = sum + cij[iw][k] * bij(k - INDEX_START_WITH, j - INDEX_START_WITH);
       dij[i][j] = dij[i][j] + sum;
     }
   }
