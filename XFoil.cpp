@@ -3455,30 +3455,30 @@ bool XFoil::qdcalc() {
   if (!ladij) {
     //----- calculate source influence matrix for airfoil surface if it doesn't
     // exist
-    for (int j = 1; j <= n; j++) {
+    for (int j = 0; j < n; j++) {
       //------- multiply each dpsi/sig vector by inverse of factored dpsi/dgam
       // matrix
       for (int iu = 0; iu <= n; iu++) {
-        gamu_temp[iu] = bij(iu, j - INDEX_START_WITH);
+        gamu_temp[iu] = bij(iu, j);
       }
       gamu_temp = psi_gamma_lu.solve(gamu_temp);
       for (int iu = 0; iu <= n; iu++) {
-        bij(iu, j - INDEX_START_WITH) = gamu_temp[iu];
+        bij(iu, j) = gamu_temp[iu];
       }
 
       //------- store resulting dgam/dsig = dqtan/dsig vector
-      for (int i = 1; i <= n; i++) {
-        dij[i][j] = bij(i - INDEX_START_WITH, j - INDEX_START_WITH);
+      for (int i = 0; i < n; i++) {
+        dij[i + INDEX_START_WITH][j + INDEX_START_WITH] = bij(i, j);
       }
     }
     ladij = true;
   }
 
   //---- set up coefficient matrix of dpsi/dm on airfoil surface
-  for (int i = 1; i <= n; i++) {
-    PsiResult psi_result = pswlin(i, points.col(i), normal_vectors.col(i));
-    for (int j = n + 1; j <= n + nw; j++) {
-      bij(i - INDEX_START_WITH, j - INDEX_START_WITH) = -psi_result.dzdm[j];
+  for (int i = 0; i < n; i++) {
+    PsiResult psi_result = pswlin(i, points.col(i + INDEX_START_WITH), normal_vectors.col(i + INDEX_START_WITH));
+    for (int j = n; j < n + nw; j++) {
+      bij(i, j) = -psi_result.dzdm[j + INDEX_START_WITH];
     }
   }
 
@@ -3486,20 +3486,18 @@ bool XFoil::qdcalc() {
   for (int j = n; j < n + nw; j++) bij(n, j) = 0.0;
 
   //---- multiply by inverse of factored dpsi/dgam matrix
-  for (int j = n + 1; j <= n + nw; j++) {
+  for (int j = n; j < n + nw; j++) {
     for (int iu = 0; iu <= n; iu++) {
-      gamu_temp[iu] = bij(iu, j - INDEX_START_WITH);
+      gamu_temp[iu] = bij(iu, j);
     }
     gamu_temp = psi_gamma_lu.solve(gamu_temp);
 
-    for (int iu = 0; iu <= n; iu++) {
-      bij(iu, j - INDEX_START_WITH) = gamu_temp[iu];
-    }
+    bij.col(j).head(n + 1) = gamu_temp;
   }
   //---- set the source influence matrix for the wake sources
-  for (int i = 1; i <= n; i++) {
-    for (int j = n + 1; j <= n + nw; j++) {
-      dij[i][j] = bij(i - INDEX_START_WITH, j - INDEX_START_WITH);
+  for (int i = 0; i < n; i++) {
+    for (int j = n; j < n + nw; j++) {
+      dij[i + INDEX_START_WITH][j + INDEX_START_WITH] = bij(i, j);
     }
   }
 
@@ -3508,46 +3506,46 @@ bool XFoil::qdcalc() {
 
   //---- calculate dqtan/dgam and dqtan/dsig at the wake points
 
-  for (int i = n + 1; i <= n + nw; i++) {
+  for (int i = n; i < n + nw; i++) {
     int iw = i - n;
     //------ airfoil contribution at wake panel node
-    PsiResult psi_result = psilin(i, points.col(i), normal_vectors.col(i), true);
-    for (int j = 1; j <= n; j++) {
-      cij[iw][j] = psi_result.dqdg[j];
+    PsiResult psi_result = psilin(i + INDEX_START_WITH, points.col(i + INDEX_START_WITH), normal_vectors.col(i + INDEX_START_WITH), true);
+    for (int j = 0; j < n; j++) {
+      cij[iw + INDEX_START_WITH][j + INDEX_START_WITH] = psi_result.dqdg[j + INDEX_START_WITH];
     }
-    for (int j = 1; j <= n; j++) {
-      dij[i][j] = psi_result.dqdm[j];
+    for (int j = 0; j < n; j++) {
+      dij[i + INDEX_START_WITH][j + INDEX_START_WITH] = psi_result.dqdm[j + INDEX_START_WITH];
     }
     //------ wake contribution
-    psi_result = pswlin(i, points.col(i), normal_vectors.col(i));
-    for (int j = n + 1; j <= n + nw; j++) {
-      dij[i][j] = psi_result.dqdm[j];
+    psi_result = pswlin(i + INDEX_START_WITH, points.col(i + INDEX_START_WITH), normal_vectors.col(i + INDEX_START_WITH));
+    for (int j = n; j < n + nw; j++) {
+      dij[i + INDEX_START_WITH][j + INDEX_START_WITH] = psi_result.dqdm[j + INDEX_START_WITH];
     }
   }
 
   //---- add on effect of all sources on airfoil vorticity which effects wake
   // qtan
-  for (int i = n + 1; i <= n + nw; i++) {
+  for (int i = n; i < n + nw; i++) {
     int iw = i - n;
 
     //------ airfoil surface source contribution first
-    for (int j = 1; j <= n; j++) {
+    for (int j = 0; j < n; j++) {
       sum = 0.0;
-      for (int k = 1; k <= n; k++) sum = sum + cij[iw][k] * dij[k][j];
-      dij[i][j] = dij[i][j] + sum;
+      for (int k = 0; k < n; k++) sum = sum + cij[iw + INDEX_START_WITH][k + INDEX_START_WITH] * dij[k + INDEX_START_WITH][j + INDEX_START_WITH];
+      dij[i + INDEX_START_WITH][j + INDEX_START_WITH] = dij[i + INDEX_START_WITH][j + INDEX_START_WITH] + sum;
     }
 
     //------ wake source contribution next
-    for (int j = n + 1; j <= n + nw; j++) {
+    for (int j = n; j < n + nw; j++) {
       sum = 0.0;
-      for (int k = 1; k <= n; k++) sum = sum + cij[iw][k] * bij(k - INDEX_START_WITH, j - INDEX_START_WITH);
-      dij[i][j] = dij[i][j] + sum;
+      for (int k = 0; k < n; k++) sum = sum + cij[iw + INDEX_START_WITH][k + INDEX_START_WITH] * bij(k, j);
+      dij[i + INDEX_START_WITH][j + INDEX_START_WITH] = dij[i + INDEX_START_WITH][j + INDEX_START_WITH] + sum;
     }
   }
 
   //---- make sure first wake point has same velocity as trailing edge
-  for (int j = 1; j <= n + nw; j++) {
-    dij[n + 1][j] = dij[n][j];
+  for (int j = 0; j < n + nw; j++) {
+    dij[n + 1][j + INDEX_START_WITH] = dij[n][j + INDEX_START_WITH];
   }
 
   lwdij = true;
