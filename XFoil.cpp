@@ -505,8 +505,7 @@ XFoil::AxResult XFoil::axset(double hk1, double t1, double rt1, double a1, doubl
 bool XFoil::bldif(int ityp) {
 
   double hupwt, hdcon, hl, hd_hk1, hd_hk2, hlsq, ehh;
-  double upw, upw_hl, upw_hd, upw_hk1, upw_hk2, upw_u1, upw_t1, upw_d1;
-  double upw_u2, upw_t2, upw_d2, upw_ms;
+  double upw, upw_hl, upw_hd, upw_hk1, upw_hk2;
   double dxi, slog, scc, scc_usa;
   double rezc, z_ax, hr, hr_hka;
   double hl_hk1, hl_hk2, sa, cqa, cfa, hka, usa, rta, dea, da, ald;
@@ -577,13 +576,9 @@ bool XFoil::bldif(int ityp) {
   upw_hk1 = upw_hl * hl_hk1 + upw_hd * hd_hk1;
   upw_hk2 = upw_hl * hl_hk2 + upw_hd * hd_hk2;
 
-  upw_u1 = upw_hk1 * blData1.hkz.u();
-  upw_t1 = upw_hk1 * blData1.hkz.t();
-  upw_d1 = upw_hk1 * blData1.hkz.d();
-  upw_u2 = upw_hk2 * blData2.hkz.u();
-  upw_t2 = upw_hk2 * blData2.hkz.t();
-  upw_d2 = upw_hk2 * blData2.hkz.d();
-  upw_ms = upw_hk1 * blData1.hkz.ms() + upw_hk2 * blData2.hkz.ms();
+  Vector3d upw1 = upw_hk1 * blData1.hkz.pos_vector();
+  Vector3d upw2 = upw_hk2 * blData2.hkz.pos_vector();
+  double upw_ms = upw_hk1 * blData1.hkz.ms() + upw_hk2 * blData2.hkz.ms();
 
   if (ityp == 0) {
     //***** le point -->  set zero amplification factor
@@ -695,14 +690,16 @@ bool XFoil::bldif(int ityp) {
       z_hk2 = upw * z_hka;
 
       vs1(0, 0) = z_s1;
-      vs1(0, 1) = z_upw * upw_t1 + z_de * blData1.dez.t() + z_us * blData1.usz.t();
-      vs1(0, 2) = z_d + z_upw * upw_d1 + z_de * blData1.dez.d() + z_us * blData1.usz.d();
-      vs1(0, 3) = z_u1 + z_upw * upw_u1 + z_de * blData1.dez.u() + z_us * blData1.usz.u();
+      vs1(0, 1) = z_upw * upw1.y() + z_de * blData1.dez.t() + z_us * blData1.usz.t();
+      vs1(0, 2) = z_d + z_upw * upw1.z() + z_de * blData1.dez.d() + z_us * blData1.usz.d();
+      vs1(0, 3) = z_u1 + z_upw * upw1.x() + z_de * blData1.dez.u() + z_us * blData1.usz.u();
+      //vs1.col(0).segment(1,3) = z_upw * upw1 + z_de * blData1.dez.pos_vector() + z_us * blData1.usz.pos_vector();
       vs1(0, 4) = z_x1;
       vs2(0, 0) = z_s2;
-      vs2(0, 1) = z_upw * upw_t2 + z_de * blData2.dez.t() + z_us * blData2.usz.t();
-      vs2(0, 2) = z_d + z_upw * upw_d2 + z_de * blData2.dez.d() + z_us * blData2.usz.d();
-      vs2(0, 3) = z_u2 + z_upw * upw_u2 + z_de * blData2.dez.u() + z_us * blData2.usz.u();
+      vs2(0, 1) = z_upw * upw2.y() + z_de * blData2.dez.t() + z_us * blData2.usz.t();
+      vs2(0, 2) = z_d + z_upw * upw2.z() + z_de * blData2.dez.d() + z_us * blData2.usz.d();
+      vs2(0, 3) = z_u2 + z_upw * upw2.x() + z_de * blData2.dez.u() + z_us * blData2.usz.u();
+      //vs2.col(0).segment(1,3) = z_upw * upw2 + z_de * blData2.dez.pos_vector() + z_us * blData2.usz.pos_vector();
       vs2(0, 4) = z_x2;
       vsm[0] = z_upw * upw_ms + z_de * blData1.dez.ms() + z_us * blData1.usz.ms() +
                z_de * blData2.dez.ms() + z_us * blData2.usz.ms();
@@ -845,12 +842,12 @@ bool XFoil::bldif(int ityp) {
   vsr[2] = z_hs1 * blData1.hsz.re() + z_cf1 * blData1.cfz.re() + z_di1 * blData1.diz.re() + z_hs2 * blData2.hsz.re() +
            z_cf2 * blData2.cfz.re() + z_di2 * blData2.diz.re();
 
-  vs1(2, 1) += 0.5 * (z_hca * blData1.hcz.t() + z_ha * blData1.hz_tz) + z_upw * upw_t1;
-  vs1(2, 2) += 0.5 * (z_hca * blData1.hcz.d() + z_ha * blData1.hz_dz) + z_upw * upw_d1;
-  vs1(2, 3) += 0.5 * (z_hca * blData1.hcz.u()) + z_upw * upw_u1;
-  vs2(2, 1) += 0.5 * (z_hca * blData2.hcz.t() + z_ha * blData2.hz_tz) + z_upw * upw_t2;
-  vs2(2, 2) += 0.5 * (z_hca * blData2.hcz.d() + z_ha * blData2.hz_dz) + z_upw * upw_d2;
-  vs2(2, 3) += 0.5 * (z_hca * blData2.hcz.u()) + z_upw * upw_u2;
+  vs1(2, 1) += 0.5 * (z_hca * blData1.hcz.t() + z_ha * blData1.hz_tz) + z_upw * upw1.y();
+  vs1(2, 2) += 0.5 * (z_hca * blData1.hcz.d() + z_ha * blData1.hz_dz) + z_upw * upw1.z();
+  vs1(2, 3) += 0.5 * (z_hca * blData1.hcz.u()) + z_upw * upw1.x();
+  vs2(2, 1) += 0.5 * (z_hca * blData2.hcz.t() + z_ha * blData2.hz_tz) + z_upw * upw2.y();
+  vs2(2, 2) += 0.5 * (z_hca * blData2.hcz.d() + z_ha * blData2.hz_dz) + z_upw * upw2.z();
+  vs2(2, 3) += 0.5 * (z_hca * blData2.hcz.u()) + z_upw * upw2.x();
 
   vsm[2] = 0.5 * (z_hca * blData1.hcz.ms()) + z_upw * upw_ms + 0.5 * (z_hca * blData2.hcz.ms());
 
@@ -4566,7 +4563,7 @@ bool XFoil::trchek() {
   blData2.amplz = blData1.amplz + ax_result.ax * (blData2.xz - blData1.xz);
 
   //---- solve implicit system for amplification ampl2
-  for (int itam = 1; itam <= 30; itam++) {
+  for (int itam = 0; itam < 30; itam++) {
     //---- define weighting factors wf1,wf2 for defining "t" quantities from 1,2
     if (blData2.amplz <= amcrit) {
       //------ there is no transition yet,  "t" is the same as "2"
