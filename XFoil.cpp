@@ -690,16 +690,16 @@ bool XFoil::bldif(int ityp) {
       z_hk2 = upw * z_hka;
 
       vs1(0, 0) = z_s1;
-      vs1(0, 1) = z_upw * upw1.y() + z_de * blData1.dez.t() + z_us * blData1.usz.t();
-      vs1(0, 2) = z_d + z_upw * upw1.z() + z_de * blData1.dez.d() + z_us * blData1.usz.d();
-      vs1(0, 3) = z_u1 + z_upw * upw1.x() + z_de * blData1.dez.u() + z_us * blData1.usz.u();
-      //vs1.col(0).segment(1,3) = z_upw * upw1 + z_de * blData1.dez.pos_vector() + z_us * blData1.usz.pos_vector();
+      vs1(0, 1) = z_de * blData1.dez.t() + z_us * blData1.usz.t();
+      vs1(0, 2) = z_d + z_de * blData1.dez.d() + z_us * blData1.usz.d();
+      vs1(0, 3) = z_u1 + z_de * blData1.dez.u() + z_us * blData1.usz.u();
+      vs1.col(0).segment(1,3) += z_upw * upw1;
       vs1(0, 4) = z_x1;
       vs2(0, 0) = z_s2;
-      vs2(0, 1) = z_upw * upw2.y() + z_de * blData2.dez.t() + z_us * blData2.usz.t();
-      vs2(0, 2) = z_d + z_upw * upw2.z() + z_de * blData2.dez.d() + z_us * blData2.usz.d();
-      vs2(0, 3) = z_u2 + z_upw * upw2.x() + z_de * blData2.dez.u() + z_us * blData2.usz.u();
-      //vs2.col(0).segment(1,3) = z_upw * upw2 + z_de * blData2.dez.pos_vector() + z_us * blData2.usz.pos_vector();
+      vs2(0, 1) = z_de * blData2.dez.t() + z_us * blData2.usz.t();
+      vs2(0, 2) = z_d + z_de * blData2.dez.d() + z_us * blData2.usz.d();
+      vs2(0, 3) = z_u2 + z_de * blData2.dez.u() + z_us * blData2.usz.u();
+      vs2.col(0).segment(1,3) += z_upw * upw2;
       vs2(0, 4) = z_x2;
       vsm[0] = z_upw * upw_ms + z_de * blData1.dez.ms() + z_us * blData1.usz.ms() +
                z_de * blData2.dez.ms() + z_us * blData2.usz.ms();
@@ -842,12 +842,12 @@ bool XFoil::bldif(int ityp) {
   vsr[2] = z_hs1 * blData1.hsz.re() + z_cf1 * blData1.cfz.re() + z_di1 * blData1.diz.re() + z_hs2 * blData2.hsz.re() +
            z_cf2 * blData2.cfz.re() + z_di2 * blData2.diz.re();
 
-  vs1(2, 1) += 0.5 * (z_hca * blData1.hcz.t() + z_ha * blData1.hz_tz) + z_upw * upw1.y();
-  vs1(2, 2) += 0.5 * (z_hca * blData1.hcz.d() + z_ha * blData1.hz_dz) + z_upw * upw1.z();
-  vs1(2, 3) += 0.5 * (z_hca * blData1.hcz.u()) + z_upw * upw1.x();
-  vs2(2, 1) += 0.5 * (z_hca * blData2.hcz.t() + z_ha * blData2.hz_tz) + z_upw * upw2.y();
-  vs2(2, 2) += 0.5 * (z_hca * blData2.hcz.d() + z_ha * blData2.hz_dz) + z_upw * upw2.z();
-  vs2(2, 3) += 0.5 * (z_hca * blData2.hcz.u()) + z_upw * upw2.x();
+  vs1(2, 1) += 0.5 * (z_hca * blData1.hcz.t() + z_ha * blData1.hz_tz) + z_upw * upw1.x();
+  vs1(2, 2) += 0.5 * (z_hca * blData1.hcz.d() + z_ha * blData1.hz_dz) + z_upw * upw1.y();
+  vs1(2, 3) += 0.5 * (z_hca * blData1.hcz.u()) + z_upw * upw1.z();
+  vs2(2, 1) += 0.5 * (z_hca * blData2.hcz.t() + z_ha * blData2.hz_tz) + z_upw * upw2.x();
+  vs2(2, 2) += 0.5 * (z_hca * blData2.hcz.d() + z_ha * blData2.hz_dz) + z_upw * upw2.y();
+  vs2(2, 3) += 0.5 * (z_hca * blData2.hcz.u()) + z_upw * upw2.z();
 
   vsm[2] = 0.5 * (z_hca * blData1.hcz.ms()) + z_upw * upw_ms + 0.5 * (z_hca * blData2.hcz.ms());
 

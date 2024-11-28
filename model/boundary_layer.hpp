@@ -9,13 +9,13 @@ class blData {
     Eigen::Vector<double, 3> pos_vector() {
       return vector.segment(0, 3);
     }
-    double& u() {
+    double& t() {
       return vector[0];
     }
-    double& t() {
+    double& d() {
       return vector[1];
     }
-    double& d() {
+    double& u() {
       return vector[2];
     }
     double& s() {
