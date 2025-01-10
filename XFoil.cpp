@@ -20,12 +20,13 @@
 
 *****************************************************************************/
 
-#include "XFoil.h"
 #include <cstring>
 #include "Eigen/Core"
 #include "Eigen/Dense"
 #include "Eigen/StdVector"
 using namespace Eigen;
+
+#include "XFoil.h"
 // determinant
 double cross2(const Eigen::Vector2d& a, const Eigen::Vector2d& b)
 {
@@ -1193,7 +1194,7 @@ bool XFoil::blvar(blData& ref, int ityp) {
   double di2_us2, di2_cf2t, hmin, hm_rt2;
   double grt, fl, fl_hk2, fl_rt2, tfl;
   double dfac, df_fl, df_hk2, df_rt2;
-  double di2l, di2l_hk2, di2l_rt2, de2_hk2, hdmax;
+  double di2l, de2_hk2, hdmax;
 
   //	double gbcon, gccon, ctcon, hkc2;//were are they initialized?
   if (ityp == 3) ref.hkz.scalar = std::max(ref.hkz.scalar, 1.00005);
@@ -1332,7 +1333,6 @@ bool XFoil::blvar(blData& ref, int ityp) {
   //---- dissipation function    2 cd / h*
   if (ityp == 1) {
     //----- laminar
-    double di2_hk2, di2_rt2;
     DissipationResult dissipation_result = dil(ref.hkz.scalar, ref.rtz.scalar);
     ref.diz.scalar = dissipation_result.di;
     ref.diz.vector = dissipation_result.di_hk * ref.hkz.vector + dissipation_result.di_rt * ref.rtz.vector;
@@ -2918,8 +2918,7 @@ XFoil::PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector
   psi_result.psi_ni = 0.0;
 
   psi_result.qtan = Vector2d::Zero();
-
-  double scs, sds;
+  /*
   if (sharp) {
     scs = 1.0;
     sds = 0.0;
@@ -2927,6 +2926,7 @@ XFoil::PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector
     scs = ante / dste;
     sds = aste / dste;
   }
+  */
   for (int jo = 0; jo < n; jo++) {
     int jp = (jo + 1) % n;
     double dso = (points.col(jo + INDEX_START_WITH) - points.col(jp + INDEX_START_WITH)).norm();
@@ -3044,6 +3044,7 @@ XFoil::PsiResult XFoil::psisig(int iNode, int jNode, Vector2d point, Vector2d no
   PsiResult psi_result;
   psi_result.psi = 0;
   psi_result.psi_ni = 0;
+  /*
   double scs, sds;
   if (sharp) {
     scs = 1.0;
@@ -3052,6 +3053,7 @@ XFoil::PsiResult XFoil::psisig(int iNode, int jNode, Vector2d point, Vector2d no
     scs = ante / dste;
     sds = aste / dste;
   }
+  */
   int io = iNode;
   int jo = jNode;
 
@@ -4135,7 +4137,7 @@ double XFoil::sign(double a, double b) {
  *      Converges to specified alpha.
  */
 bool XFoil::specal() {
-  double minf_clm, reinf_clm;
+  double minf_clm;
   double clm;
 
   //---- calculate surface vorticity distributions for alpha = 0, 90 degrees
@@ -4160,7 +4162,7 @@ bool XFoil::specal() {
 
   //---- set corresponding  m(clm), re(clm)
   minf_clm = getActualMach(clm, mach_type);
-  reinf_clm = getActualReynolds(clm, reynolds_type);
+
   comset();
 
   //---- set corresponding cl(m)
@@ -4180,7 +4182,6 @@ bool XFoil::specal() {
 
       //-------- set new freestream mach m(clm)
       minf_clm = getActualMach(clm, mach_type);
-      reinf_clm = getActualReynolds(clm, reynolds_type);
 
       //-------- if mach is ok, go do next newton iteration
       //FIXME double型の==比較
@@ -4703,7 +4704,6 @@ bool XFoil::trchek() {
   // TRACE("trchek2 - n2 convergence failed\n");
   writeString("trchek2 - n2 convergence failed\n");
   if (s_bCancel) return false;
-stop101:
 
   //---- test for free or forced transition
   trfree = (blData2.amplz >= amcrit);
@@ -5148,7 +5148,7 @@ bool XFoil::update() {
   double dac = 0.0, dhi = 0.0, dlo = 0.0, dctau, dthet, dmass, duedg, ddstr;
   double dn1, dn2, dn3, dn4, rdn1, rdn2, rdn3, rdn4;
   double dswaki, hklim, msq, dsw;
-  double dui, dui_ac, ue_m , uinv_ac, sa = 0.0, ca = 0.0,
+  double dui, dui_ac, ue_m , uinv_ac,
          beta = 0.0, beta_msq = 0.0, bfac = 0.0, bfac_msq = 0.0;
   double clnew = 0.0, cl_a = 0.0, cl_ms = 0.0, cl_ac = 0.0, cginc = 0.0;
   double cpg1 = 0.0, cpg1_ms = 0.0, cpi_q = 0.0, cpc_cpi = 0.0, cpg1_ac = 0.0;
@@ -5203,9 +5203,6 @@ bool XFoil::update() {
   }
 
   //--- calculate new cl from this new qtan
-  sa = sin(alfa);
-  ca = cos(alfa);
-
   beta = sqrt(1.0 - minf * minf);
   beta_msq = -0.5 / beta;
 
