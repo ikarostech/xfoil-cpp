@@ -6,7 +6,6 @@
 class spline {
     public:
     const static int INDEX_START_WITH = 1;
-    /*
     /**
      * @brief x,y座標から翼尾からの累計長さを求めます
      * 
