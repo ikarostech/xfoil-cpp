@@ -3040,25 +3040,17 @@ XFoil::PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector
   return psi_result;
 }
 
-XFoil::PsiResult XFoil::psisig(int iNode, int jNode, Vector2d point, Vector2d normal_vector) {
+XFoil::PsiResult XFoil::psisig(int iNode, int jo, Vector2d point, Vector2d normal_vector) {
   PsiResult psi_result;
   psi_result.psi = 0;
   psi_result.psi_ni = 0;
 
   int io = iNode;
-  int jo = jNode;
 
-  int jp = jo + 1;
-  int jm = max(0, jo - 1);
-  int jq = jp + 1;
+  int jp = (jo == n - 1) ? 0 : jo + 1;
+  int jm = std::max(0, jo - 1);
+  int jq = (jo >= n - 2) ? jp : jp + 1;
 
-  if (jo + INDEX_START_WITH == n - 1)
-    jq = jp;
-  else {
-    if (jo + INDEX_START_WITH == n) {
-      jp = 1;
-    }
-  }
   double dso = (points.col(jo + INDEX_START_WITH) - points.col(jp + INDEX_START_WITH)).norm();
 
   double dsio = 1.0 / dso;
