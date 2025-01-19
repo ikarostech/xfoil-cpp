@@ -29,10 +29,19 @@ class blData {
     }
   };
   blVector hkz, hsz, hcz, rtz, cfz, diz, usz, cqz, dez;
+  class blParam {
+    public:
+    double xz, uz, tz, dz, sz, amplz, uz_uei, uz_ms, dwz, 
+      hz, hz_tz, hz_dz, 
+      mz, mz_uz, mz_ms, 
+      rz, rz_uz, rz_ms;
+  };
+  blParam param; /*
   double xz, uz, tz, dz, sz, amplz, uz_uei, uz_ms, dwz, 
       hz, hz_tz, hz_dz, 
       mz, mz_uz, mz_ms, 
       rz, rz_uz, rz_ms;
+      */
 };
 class boundary_layer {
     public:

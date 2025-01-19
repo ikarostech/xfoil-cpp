@@ -533,9 +533,9 @@ bool XFoil::bldif(int ityp) {
     ddlog = 0.0;
   } else {
     //----- usual logarithmic differences
-    xlog = log(blData2.xz / blData1.xz);
-    ulog = log(blData2.uz / blData1.uz);
-    tlog = log(blData2.tz / blData1.tz);
+    xlog = log(blData2.param.xz / blData1.param.xz);
+    ulog = log(blData2.param.uz / blData1.param.uz);
+    tlog = log(blData2.param.tz / blData1.param.tz);
     hlog = log(blData2.hsz.scalar / blData1.hsz.scalar);
     ddlog = 1.0;
   }
@@ -585,16 +585,16 @@ bool XFoil::bldif(int ityp) {
     //***** le point -->  set zero amplification factor
     vs2(0, 0) = 1.0;
     vsr[0] = 0.0;
-    vsrez[0] = -blData2.amplz;
+    vsrez[0] = -blData2.param.amplz;
   } else {
     if (ityp == 1) {
       //***** laminar part -->  set amplification equation
       //----- set average amplification ax over interval x1..x2
 
-      AxResult ax_result = axset(blData1.hkz.scalar, blData1.tz, blData1.rtz.scalar, blData1.amplz, blData2.hkz.scalar, blData2.tz, blData2.rtz.scalar, blData2.amplz, amcrit);
+      AxResult ax_result = axset(blData1.hkz.scalar, blData1.param.tz, blData1.rtz.scalar, blData1.param.amplz, blData2.hkz.scalar, blData2.param.tz, blData2.rtz.scalar, blData2.param.amplz, amcrit);
 
-      rezc = blData2.amplz - blData1.amplz - ax_result.ax * (blData2.xz - blData1.xz);
-      z_ax = -(blData2.xz - blData1.xz);
+      rezc = blData2.param.amplz - blData1.param.amplz - ax_result.ax * (blData2.param.xz - blData1.param.xz);
+      z_ax = -(blData2.param.xz - blData1.param.xz);
 
       vs1(0, 0) = z_ax * ax_result.ax_a1 - 1.0;
       vs1(0, 1) = z_ax * (ax_result.ax_hk1 * blData1.hkz.t() + ax_result.ax_t1 + ax_result.ax_rt1 * blData1.rtz.t());
@@ -614,7 +614,7 @@ bool XFoil::bldif(int ityp) {
     } else {
       //***** turbulent part -->  set shear lag equation
 
-      sa = (1.0 - upw) * blData1.sz + upw * blData2.sz;
+      sa = (1.0 - upw) * blData1.param.sz + upw * blData2.param.sz;
       cqa = (1.0 - upw) * blData1.cqz.scalar + upw * blData2.cqz.scalar;
       cfa = (1.0 - upw) * blData1.cfz.scalar + upw * blData2.cfz.scalar;
       hka = (1.0 - upw) * blData1.hkz.scalar + upw * blData2.hkz.scalar;
@@ -622,7 +622,7 @@ bool XFoil::bldif(int ityp) {
       usa = 0.5 * (blData1.usz.scalar + blData2.usz.scalar);
       rta = 0.5 * (blData1.rtz.scalar + blData2.rtz.scalar);
       dea = 0.5 * (blData1.dez.scalar + blData2.dez.scalar);
-      da = 0.5 * (blData1.dz + blData2.dz);
+      da = 0.5 * (blData1.param.dz + blData2.param.dz);
 
       if (ityp == 3)
         ald = dlcon;  //------ increased dissipation length in wake (decrease
@@ -655,8 +655,8 @@ bool XFoil::bldif(int ityp) {
       scc = sccon * 1.333 / (1.0 + usa);
       scc_usa = -scc / (1.0 + usa);
 
-      slog = log(blData2.sz / blData1.sz);
-      dxi = blData2.xz - blData1.xz;
+      slog = log(blData2.param.sz / blData1.param.sz);
+      dxi = blData2.param.xz - blData1.param.xz;
 
       rezc = scc * (cqa - sa * ald) * dxi - dea * 2.0 * slog +
              dea * 2.0 * (uq * dxi - ulog);
@@ -672,17 +672,17 @@ bool XFoil::bldif(int ityp) {
       z_sa = -scc * dxi * ald;
       z_dea = 2.0 * (uq * dxi - ulog - slog);
 
-      z_upw = z_cqa * (blData2.cqz.scalar - blData1.cqz.scalar) + z_sa * (blData2.sz - blData1.sz) + z_cfa * (blData2.cfz.scalar - blData1.cfz.scalar) +
+      z_upw = z_cqa * (blData2.cqz.scalar - blData1.cqz.scalar) + z_sa * (blData2.param.sz - blData1.param.sz) + z_cfa * (blData2.cfz.scalar - blData1.cfz.scalar) +
               z_hka * (blData2.hkz.scalar - blData1.hkz.scalar);
       double z_de = 0.5 * z_dea;
       double z_us = 0.5 * z_usa;
       double z_d = 0.5 * z_da;
-      z_u1 = -z_ul / blData1.uz;
-      z_u2 = z_ul / blData2.uz;
+      z_u1 = -z_ul / blData1.param.uz;
+      z_u2 = z_ul / blData2.param.uz;
       z_x1 = -z_dxi;
       z_x2 = z_dxi;
-      z_s1 = (1.0 - upw) * z_sa - z_sl / blData1.sz;
-      z_s2 = upw * z_sa + z_sl / blData2.sz;
+      z_s1 = (1.0 - upw) * z_sa - z_sl / blData1.param.sz;
+      z_s2 = upw * z_sa + z_sl / blData2.param.sz;
       z_cq1 = (1.0 - upw) * z_cqa;
       z_cq2 = upw * z_cqa;
       z_cf1 = (1.0 - upw) * z_cfa;
@@ -725,23 +725,23 @@ bool XFoil::bldif(int ityp) {
   }  // endif
 
   //**** set up momentum equation
-  ha = 0.5 * (blData1.hz + blData2.hz);
-  ma = 0.5 * (blData1.mz + blData2.mz);
-  xa = 0.5 * (blData1.xz + blData2.xz);
-  ta = 0.5 * (blData1.tz + blData2.tz);
-  hwa = 0.5 * (blData1.dwz / blData1.tz + blData2.dwz / blData2.tz);
+  ha = 0.5 * (blData1.param.hz + blData2.param.hz);
+  ma = 0.5 * (blData1.param.mz + blData2.param.mz);
+  xa = 0.5 * (blData1.param.xz + blData2.param.xz);
+  ta = 0.5 * (blData1.param.tz + blData2.param.tz);
+  hwa = 0.5 * (blData1.param.dwz / blData1.param.tz + blData2.param.dwz / blData2.param.tz);
 
   //---- set cf term, using central value cfm for better accuracy in drag
-  cfx = 0.50 * cfm * xa / ta + 0.25 * (blData1.cfz.scalar * blData1.xz / blData1.tz + blData2.cfz.scalar * blData2.xz / blData2.tz);
+  cfx = 0.50 * cfm * xa / ta + 0.25 * (blData1.cfz.scalar * blData1.param.xz / blData1.param.tz + blData2.cfz.scalar * blData2.param.xz / blData2.param.tz);
   cfx_xa = 0.50 * cfm / ta;
   cfx_ta = -.50 * cfm * xa / ta / ta;
 
-  cfx_x1 = 0.25 * blData1.cfz.scalar / blData1.tz + cfx_xa * 0.5;
-  cfx_x2 = 0.25 * blData2.cfz.scalar / blData2.tz + cfx_xa * 0.5;
-  cfx_t1 = -.25 * blData1.cfz.scalar * blData1.xz / blData1.tz / blData1.tz + cfx_ta * 0.5;
-  cfx_t2 = -.25 * blData2.cfz.scalar * blData2.xz / blData2.tz / blData2.tz + cfx_ta * 0.5;
-  cfx_cf1 = 0.25 * blData1.xz / blData1.tz;
-  cfx_cf2 = 0.25 * blData2.xz / blData2.tz;
+  cfx_x1 = 0.25 * blData1.cfz.scalar / blData1.param.tz + cfx_xa * 0.5;
+  cfx_x2 = 0.25 * blData2.cfz.scalar / blData2.param.tz + cfx_xa * 0.5;
+  cfx_t1 = -.25 * blData1.cfz.scalar * blData1.param.xz / blData1.param.tz / blData1.param.tz + cfx_ta * 0.5;
+  cfx_t2 = -.25 * blData2.cfz.scalar * blData2.param.xz / blData2.param.tz / blData2.param.tz + cfx_ta * 0.5;
+  cfx_cf1 = 0.25 * blData1.param.xz / blData1.param.tz;
+  cfx_cf2 = 0.25 * blData2.param.xz / blData2.param.tz;
   cfx_cfm = 0.50 * xa / ta;
 
   btmp = ha + 2.0 - ma + hwa;
@@ -760,38 +760,38 @@ bool XFoil::bldif(int ityp) {
   z_cf2 = z_cfx * cfx_cf2;
 
   z_t1 =
-      -z_tl / blData1.tz + z_cfx * cfx_t1 + z_hwa * 0.5 * (-blData1.dwz / blData1.tz / blData1.tz);
+      -z_tl / blData1.param.tz + z_cfx * cfx_t1 + z_hwa * 0.5 * (-blData1.param.dwz / blData1.param.tz / blData1.param.tz);
   z_t2 =
-      z_tl / blData2.tz + z_cfx * cfx_t2 + z_hwa * 0.5 * (-blData2.dwz / blData2.tz / blData2.tz);
-  z_x1 = -z_xl / blData1.xz + z_cfx * cfx_x1;
-  z_x2 = z_xl / blData2.xz + z_cfx * cfx_x2;
-  z_u1 = -z_ul / blData1.uz;
-  z_u2 = z_ul / blData2.uz;
+      z_tl / blData2.param.tz + z_cfx * cfx_t2 + z_hwa * 0.5 * (-blData2.param.dwz / blData2.param.tz / blData2.param.tz);
+  z_x1 = -z_xl / blData1.param.xz + z_cfx * cfx_x1;
+  z_x2 = z_xl / blData2.param.xz + z_cfx * cfx_x2;
+  z_u1 = -z_ul / blData1.param.uz;
+  z_u2 = z_ul / blData2.param.uz;
 
-  vs1(1, 1) = 0.5 * z_ha * blData1.hz_tz + z_cfm * cfm_t1 + z_cf1 * blData1.cfz.t() + z_t1;
-  vs1(1, 2) = 0.5 * z_ha * blData1.hz_dz + z_cfm * cfm_d1 + z_cf1 * blData1.cfz.d();
-  vs1(1, 3) = 0.5 * z_ma * blData1.mz_uz + z_cfm * cfm_u1 + z_cf1 * blData1.cfz.u() + z_u1;
+  vs1(1, 1) = 0.5 * z_ha * blData1.param.hz_tz + z_cfm * cfm_t1 + z_cf1 * blData1.cfz.t() + z_t1;
+  vs1(1, 2) = 0.5 * z_ha * blData1.param.hz_dz + z_cfm * cfm_d1 + z_cf1 * blData1.cfz.d();
+  vs1(1, 3) = 0.5 * z_ma * blData1.param.mz_uz + z_cfm * cfm_u1 + z_cf1 * blData1.cfz.u() + z_u1;
   vs1(1, 4) = z_x1;
-  vs2(1, 1) = 0.5 * z_ha * blData2.hz_tz + z_cfm * cfm_t2 + z_cf2 * blData2.cfz.t() + z_t2;
-  vs2(1, 2) = 0.5 * z_ha * blData2.hz_dz + z_cfm * cfm_d2 + z_cf2 * blData2.cfz.d();
-  vs2(1, 3) = 0.5 * z_ma * blData2.mz_uz + z_cfm * cfm_u2 + z_cf2 * blData2.cfz.u() + z_u2;
+  vs2(1, 1) = 0.5 * z_ha * blData2.param.hz_tz + z_cfm * cfm_t2 + z_cf2 * blData2.cfz.t() + z_t2;
+  vs2(1, 2) = 0.5 * z_ha * blData2.param.hz_dz + z_cfm * cfm_d2 + z_cf2 * blData2.cfz.d();
+  vs2(1, 3) = 0.5 * z_ma * blData2.param.mz_uz + z_cfm * cfm_u2 + z_cf2 * blData2.cfz.u() + z_u2;
   vs2(1, 4) = z_x2;
 
-  vsm[1] = 0.5 * z_ma * blData1.mz_ms + z_cfm * cfm_ms + z_cf1 * blData1.cfz.ms() +
-           0.5 * z_ma * blData2.mz_ms + z_cf2 * blData2.cfz.ms();
+  vsm[1] = 0.5 * z_ma * blData1.param.mz_ms + z_cfm * cfm_ms + z_cf1 * blData1.cfz.ms() +
+           0.5 * z_ma * blData2.param.mz_ms + z_cf2 * blData2.cfz.ms();
   vsr[1] = z_cfm * cfm_re + z_cf1 * blData1.cfz.re() + z_cf2 * blData2.cfz.re();
   vsx[1] = 0.0;
   vsrez[1] = -rezt;
 
   //**** set up shape parameter equation
 
-  xot1 = blData1.xz / blData1.tz;
-  xot2 = blData2.xz / blData2.tz;
+  xot1 = blData1.param.xz / blData1.param.tz;
+  xot2 = blData2.param.xz / blData2.param.tz;
 
-  ha = 0.5 * (blData1.hz + blData2.hz);
+  ha = 0.5 * (blData1.param.hz + blData2.param.hz);
   hsa = 0.5 * (blData1.hsz.scalar + blData2.hsz.scalar);
   hca = 0.5 * (blData1.hcz.scalar + blData2.hcz.scalar);
-  hwa = 0.5 * (blData1.dwz / blData1.tz + blData2.dwz / blData2.tz);
+  hwa = 0.5 * (blData1.param.dwz / blData1.param.tz + blData2.param.dwz / blData2.param.tz);
 
   dix = (1.0 - upw) * blData1.diz.scalar * xot1 + upw * blData2.diz.scalar * xot2;
   cfx = (1.0 - upw) * blData1.cfz.scalar * xot1 + upw * blData2.cfz.scalar * xot2;
@@ -820,15 +820,15 @@ bool XFoil::bldif(int ityp) {
   z_di1 = (1.0 - upw) * z_dix * xot1;
   z_di2 = upw * z_dix * xot2;
 
-  z_t1 = (1.0 - upw) * (z_cfx * blData1.cfz.scalar + z_dix * blData1.diz.scalar) * (-xot1 / blData1.tz);
-  z_t2 = upw * (z_cfx * blData2.cfz.scalar + z_dix * blData2.diz.scalar) * (-xot2 / blData2.tz);
-  z_x1 = (1.0 - upw) * (z_cfx * blData1.cfz.scalar + z_dix * blData1.diz.scalar) / blData1.tz - z_xl / blData1.xz;
-  z_x2 = upw * (z_cfx * blData2.cfz.scalar + z_dix * blData2.diz.scalar) / blData2.tz + z_xl / blData2.xz;
-  z_u1 = -z_ul / blData1.uz;
-  z_u2 = z_ul / blData2.uz;
+  z_t1 = (1.0 - upw) * (z_cfx * blData1.cfz.scalar + z_dix * blData1.diz.scalar) * (-xot1 / blData1.param.tz);
+  z_t2 = upw * (z_cfx * blData2.cfz.scalar + z_dix * blData2.diz.scalar) * (-xot2 / blData2.param.tz);
+  z_x1 = (1.0 - upw) * (z_cfx * blData1.cfz.scalar + z_dix * blData1.diz.scalar) / blData1.param.tz - z_xl / blData1.param.xz;
+  z_x2 = upw * (z_cfx * blData2.cfz.scalar + z_dix * blData2.diz.scalar) / blData2.param.tz + z_xl / blData2.param.xz;
+  z_u1 = -z_ul / blData1.param.uz;
+  z_u2 = z_ul / blData2.param.uz;
 
-  z_t1 = z_t1 + z_hwa * 0.5 * (-blData1.dwz / blData1.tz / blData1.tz);
-  z_t2 = z_t2 + z_hwa * 0.5 * (-blData2.dwz / blData2.tz / blData2.tz);
+  z_t1 = z_t1 + z_hwa * 0.5 * (-blData1.param.dwz / blData1.param.tz / blData1.param.tz);
+  z_t2 = z_t2 + z_hwa * 0.5 * (-blData2.param.dwz / blData2.param.tz / blData2.param.tz);
 
   vs1(2, 0) = z_di1 * blData1.diz.s();
   vs1(2, 1) = z_hs1 * blData1.hsz.t() + z_cf1 * blData1.cfz.t() + z_di1 * blData1.diz.t() + z_t1;
@@ -845,11 +845,11 @@ bool XFoil::bldif(int ityp) {
   vsr[2] = z_hs1 * blData1.hsz.re() + z_cf1 * blData1.cfz.re() + z_di1 * blData1.diz.re() + z_hs2 * blData2.hsz.re() +
            z_cf2 * blData2.cfz.re() + z_di2 * blData2.diz.re();
 
-  vs1(2, 1) += 0.5 * (z_hca * blData1.hcz.t() + z_ha * blData1.hz_tz) + z_upw * upw1.x();
-  vs1(2, 2) += 0.5 * (z_hca * blData1.hcz.d() + z_ha * blData1.hz_dz) + z_upw * upw1.y();
+  vs1(2, 1) += 0.5 * (z_hca * blData1.hcz.t() + z_ha * blData1.param.hz_tz) + z_upw * upw1.x();
+  vs1(2, 2) += 0.5 * (z_hca * blData1.hcz.d() + z_ha * blData1.param.hz_dz) + z_upw * upw1.y();
   vs1(2, 3) += 0.5 * (z_hca * blData1.hcz.u()) + z_upw * upw1.z();
-  vs2(2, 1) += 0.5 * (z_hca * blData2.hcz.t() + z_ha * blData2.hz_tz) + z_upw * upw2.x();
-  vs2(2, 2) += 0.5 * (z_hca * blData2.hcz.d() + z_ha * blData2.hz_dz) + z_upw * upw2.y();
+  vs2(2, 1) += 0.5 * (z_hca * blData2.hcz.t() + z_ha * blData2.param.hz_tz) + z_upw * upw2.x();
+  vs2(2, 2) += 0.5 * (z_hca * blData2.hcz.d() + z_ha * blData2.param.hz_dz) + z_upw * upw2.y();
   vs2(2, 3) += 0.5 * (z_hca * blData2.hcz.u()) + z_upw * upw2.z();
 
   vsm[2] = 0.5 * (z_hca * blData1.hcz.ms()) + z_upw * upw_ms + 0.5 * (z_hca * blData2.hcz.ms());
@@ -867,42 +867,42 @@ bool XFoil::blkin() {
   //----------------------------------------------------------
   double tr2, herat, he_u2, he_ms, v2_he;
   //---- set edge mach number ** 2
-  blData2.mz = blData2.uz * blData2.uz * hstinv / (gm1bl * (1.0 - 0.5 * blData2.uz * blData2.uz * hstinv));
-  tr2 = 1.0 + 0.5 * gm1bl * blData2.mz;
-  blData2.mz_uz = 2.0 * blData2.mz * tr2 / blData2.uz;
-  blData2.mz_ms = blData2.uz * blData2.uz * tr2 / (gm1bl * (1.0 - 0.5 * blData2.uz * blData2.uz * hstinv)) * hstinv_ms;
+  blData2.param.mz = blData2.param.uz * blData2.param.uz * hstinv / (gm1bl * (1.0 - 0.5 * blData2.param.uz * blData2.param.uz * hstinv));
+  tr2 = 1.0 + 0.5 * gm1bl * blData2.param.mz;
+  blData2.param.mz_uz = 2.0 * blData2.param.mz * tr2 / blData2.param.uz;
+  blData2.param.mz_ms = blData2.param.uz * blData2.param.uz * tr2 / (gm1bl * (1.0 - 0.5 * blData2.param.uz * blData2.param.uz * hstinv)) * hstinv_ms;
 
   //---- set edge density (isentropic relation)
-  blData2.rz = rstbl * pow(tr2, (-1.0 / gm1bl));
-  blData2.rz_uz = -blData2.rz / tr2 * 0.5 * blData2.mz_uz;
-  blData2.rz_ms = -blData2.rz / tr2 * 0.5 * blData2.mz_ms + rstbl_ms * pow(tr2, (-1.0 / gm1bl));
+  blData2.param.rz = rstbl * pow(tr2, (-1.0 / gm1bl));
+  blData2.param.rz_uz = -blData2.param.rz / tr2 * 0.5 * blData2.param.mz_uz;
+  blData2.param.rz_ms = -blData2.param.rz / tr2 * 0.5 * blData2.param.mz_ms + rstbl_ms * pow(tr2, (-1.0 / gm1bl));
 
   //---- set shape parameter
-  blData2.hz = blData2.dz / blData2.tz;
-  blData2.hz_dz = 1.0 / blData2.tz;
-  blData2.hz_tz = -blData2.hz / blData2.tz;
+  blData2.param.hz = blData2.param.dz / blData2.param.tz;
+  blData2.param.hz_dz = 1.0 / blData2.param.tz;
+  blData2.param.hz_tz = -blData2.param.hz / blData2.param.tz;
 
   //---- set edge static/stagnation enthalpy
-  herat = 1.0 - 0.5 * blData2.uz * blData2.uz * hstinv;
-  he_u2 = -blData2.uz * hstinv;
-  he_ms = -0.5 * blData2.uz * blData2.uz * hstinv_ms;
+  herat = 1.0 - 0.5 * blData2.param.uz * blData2.param.uz * hstinv;
+  he_u2 = -blData2.param.uz * hstinv;
+  he_ms = -0.5 * blData2.param.uz * blData2.param.uz * hstinv_ms;
   //---- set molecular viscosity
   v2_he = (1.5 / herat - 1.0 / (herat + hvrat));
 
   //---- set kinematic shape parameter
-  boundary_layer::KineticShapeParameterResult hkin_result = boundary_layer::hkin(blData2.hz, blData2.mz);
+  boundary_layer::KineticShapeParameterResult hkin_result = boundary_layer::hkin(blData2.param.hz, blData2.param.mz);
   blData2.hkz.scalar = hkin_result.hk;
 
-  blData2.hkz.u() = hkin_result.hk_msq * blData2.mz_uz;
-  blData2.hkz.t() = hkin_result.hk_h * blData2.hz_tz;
-  blData2.hkz.d() = hkin_result.hk_h * blData2.hz_dz;
-  blData2.hkz.ms() = hkin_result.hk_msq * blData2.mz_ms;
+  blData2.hkz.u() = hkin_result.hk_msq * blData2.param.mz_uz;
+  blData2.hkz.t() = hkin_result.hk_h * blData2.param.hz_tz;
+  blData2.hkz.d() = hkin_result.hk_h * blData2.param.hz_dz;
+  blData2.hkz.ms() = hkin_result.hk_msq * blData2.param.mz_ms;
 
   //---- set momentum thickness reynolds number
-  blData2.rtz.scalar = blData2.rz * blData2.uz * blData2.tz / (sqrt(herat * herat * herat) * (1.0 + hvrat) / (herat + hvrat) / reybl);
-  blData2.rtz.u() = blData2.rtz.scalar * (1.0 / blData2.uz + blData2.rz_uz / blData2.rz - v2_he * he_u2);
-  blData2.rtz.t() = blData2.rtz.scalar / blData2.tz;
-  blData2.rtz.ms() = blData2.rtz.scalar * (blData2.rz_ms / blData2.rz + (1 / reybl * reybl_ms - v2_he * he_ms));
+  blData2.rtz.scalar = blData2.param.rz * blData2.param.uz * blData2.param.tz / (sqrt(herat * herat * herat) * (1.0 + hvrat) / (herat + hvrat) / reybl);
+  blData2.rtz.u() = blData2.rtz.scalar * (1.0 / blData2.param.uz + blData2.param.rz_uz / blData2.param.rz - v2_he * he_u2);
+  blData2.rtz.t() = blData2.rtz.scalar / blData2.param.tz;
+  blData2.rtz.ms() = blData2.rtz.scalar * (blData2.param.rz_ms / blData2.param.rz + (1 / reybl * reybl_ms - v2_he * he_ms));
   blData2.rtz.re() = blData2.rtz.scalar * (reybl_re / reybl);
 
   return true;
@@ -923,15 +923,15 @@ bool XFoil::blmid(int ityp) {
   if (simi) {
     blData1.hkz = blData2.hkz;
     blData1.rtz = blData2.rtz;
-    blData1.mz = blData2.mz;
-    blData1.mz_uz = blData2.mz_uz;
-    blData1.mz_ms = blData2.mz_ms;
+    blData1.param.mz = blData2.param.mz;
+    blData1.param.mz_uz = blData2.param.mz_uz;
+    blData1.param.mz_ms = blData2.param.mz_ms;
   }
 
   //---- define stuff for midpoint cf
   hka = 0.5 * (blData1.hkz.scalar + blData2.hkz.scalar);
   rta = 0.5 * (blData1.rtz.scalar + blData2.rtz.scalar);
-  ma = 0.5 * (blData1.mz + blData2.mz);
+  ma = 0.5 * (blData1.param.mz + blData2.param.mz);
 
   //---- midpoint skin friction coefficient  (zero in wake)
   if (ityp == 3) {
@@ -967,16 +967,16 @@ bool XFoil::blmid(int ityp) {
       }
     }
   }
-  cfm_u1 = 0.5 * (cfm_hka * blData1.hkz.u() + cfm_ma * blData1.mz_uz + cfm_rta * blData1.rtz.u());
+  cfm_u1 = 0.5 * (cfm_hka * blData1.hkz.u() + cfm_ma * blData1.param.mz_uz + cfm_rta * blData1.rtz.u());
   cfm_t1 = 0.5 * (cfm_hka * blData1.hkz.t() + cfm_rta * blData1.rtz.t());
   cfm_d1 = 0.5 * (cfm_hka * blData1.hkz.d());
 
-  cfm_u2 = 0.5 * (cfm_hka * blData2.hkz.u() + cfm_ma * blData2.mz_uz + cfm_rta * blData2.rtz.u());
+  cfm_u2 = 0.5 * (cfm_hka * blData2.hkz.u() + cfm_ma * blData2.param.mz_uz + cfm_rta * blData2.rtz.u());
   cfm_t2 = 0.5 * (cfm_hka * blData2.hkz.t() + cfm_rta * blData2.rtz.t());
   cfm_d2 = 0.5 * (cfm_hka * blData2.hkz.d());
 
-  cfm_ms = 0.5 * (cfm_hka * blData1.hkz.ms() + cfm_ma * blData1.mz_ms + cfm_rta * blData1.rtz.ms() +
-                  cfm_hka * blData2.hkz.ms() + cfm_ma * blData2.mz_ms + cfm_rta * blData2.rtz.ms());
+  cfm_ms = 0.5 * (cfm_hka * blData1.hkz.ms() + cfm_ma * blData1.param.mz_ms + cfm_rta * blData1.rtz.ms() +
+                  cfm_hka * blData2.hkz.ms() + cfm_ma * blData2.param.mz_ms + cfm_rta * blData2.rtz.ms());
   cfm_re = 0.5 * (cfm_rta * blData1.rtz.re() + cfm_rta * blData2.rtz.re());
 
   return true;
@@ -987,17 +987,17 @@ bool XFoil::blmid(int ityp) {
  *  ---------------------------------------------------------- */
 bool XFoil::blprv(double xsi, double ami, double cti, double thi, double dsi,
                   double dswaki, double uei) {
-  blData2.xz = xsi;
-  blData2.amplz = ami;
-  blData2.sz = cti;
-  blData2.tz = thi;
-  blData2.dz = dsi - dswaki;
-  blData2.dwz = dswaki;
+  blData2.param.xz = xsi;
+  blData2.param.amplz = ami;
+  blData2.param.sz = cti;
+  blData2.param.tz = thi;
+  blData2.param.dz = dsi - dswaki;
+  blData2.param.dwz = dswaki;
 
-  blData2.uz = uei * (1.0 - tkbl) / (1.0 - tkbl * (uei / qinfbl) * (uei / qinfbl));
-  blData2.uz_uei = (1.0 + tkbl * (2.0 * blData2.uz * uei / qinfbl / qinfbl - 1.0)) /
+  blData2.param.uz = uei * (1.0 - tkbl) / (1.0 - tkbl * (uei / qinfbl) * (uei / qinfbl));
+  blData2.param.uz_uei = (1.0 + tkbl * (2.0 * blData2.param.uz * uei / qinfbl / qinfbl - 1.0)) /
            (1.0 - tkbl * (uei / qinfbl) * (uei / qinfbl));
-  blData2.uz_ms = (blData2.uz * (uei / qinfbl) * (uei / qinfbl) - uei) * tkbl_ms /
+  blData2.param.uz_ms = (blData2.param.uz * (uei / qinfbl) * (uei / qinfbl) - uei) * tkbl_ms /
           (1.0 - tkbl * (uei / qinfbl) * (uei / qinfbl));
   return true;
 }
@@ -1201,11 +1201,11 @@ bool XFoil::blvar(blData& ref, int ityp) {
   if (ityp != 3) ref.hkz.scalar = std::max(ref.hkz.scalar, 1.05000);
 
   //---- density thickness shape parameter     ( h** )
-  boundary_layer::DensityShapeParameterResult hct_result = boundary_layer::hct(ref.hkz.scalar, ref.mz);
+  boundary_layer::DensityShapeParameterResult hct_result = boundary_layer::hct(ref.hkz.scalar, ref.param.mz);
   ref.hcz.scalar = hct_result.hc;
   ref.hcz.pos_vector() = hct_result.hc_hk * ref.hkz.pos_vector();
-  ref.hcz.u() += hct_result.hc_msq * ref.mz_uz;
-  ref.hcz.ms()+= hct_result.hc_msq * ref.mz_ms;
+  ref.hcz.u() += hct_result.hc_msq * ref.param.mz_uz;
+  ref.hcz.ms()+= hct_result.hc_msq * ref.param.mz_ms;
 
   //---- set ke thickness shape parameter from  h - h*  correlations
   if (ityp == 1) {
@@ -1216,7 +1216,7 @@ bool XFoil::blvar(blData& ref, int ityp) {
     hs2_m2 = hsl_result.hs_msq;
   }
   else {
-    boundary_layer::ThicknessShapeParameterResult hst_result = boundary_layer::hst(ref.hkz.scalar, ref.rtz.scalar, ref.mz);
+    boundary_layer::ThicknessShapeParameterResult hst_result = boundary_layer::hst(ref.hkz.scalar, ref.rtz.scalar, ref.param.mz);
     ref.hsz.scalar = hst_result.hs;
     hs2_hk2 = hst_result.hs_hk;
     hs2_rt2 = hst_result.hs_rt;
@@ -1224,19 +1224,19 @@ bool XFoil::blvar(blData& ref, int ityp) {
   }
 
   ref.hsz.vector = hs2_hk2 * ref.hkz.vector + hs2_rt2 * ref.rtz.vector;
-  ref.hsz.u() = ref.hsz.u() + hs2_m2 * ref.mz_uz;
-  ref.hsz.ms() = ref.hsz.ms() + hs2_m2 * ref.mz_uz;
+  ref.hsz.u() = ref.hsz.u() + hs2_m2 * ref.param.mz_uz;
+  ref.hsz.ms() = ref.hsz.ms() + hs2_m2 * ref.param.mz_uz;
 
   //---- normalized slip velocity  us
-  ref.usz.scalar = 0.5 * ref.hsz.scalar * (1.0 - (ref.hkz.scalar - 1.0) / (gbcon * ref.hz));
-  us2_hs2 = 0.5 * (1.0 - (ref.hkz.scalar - 1.0) / (gbcon * ref.hz));
-  us2_hk2 = 0.5 * ref.hsz.scalar * (-1.0 / (gbcon * ref.hz));
-  us2_h2 = 0.5 * ref.hsz.scalar * (ref.hkz.scalar - 1.0) / (gbcon * ref.hz * ref.hz);
+  ref.usz.scalar = 0.5 * ref.hsz.scalar * (1.0 - (ref.hkz.scalar - 1.0) / (gbcon * ref.param.hz));
+  us2_hs2 = 0.5 * (1.0 - (ref.hkz.scalar - 1.0) / (gbcon * ref.param.hz));
+  us2_hk2 = 0.5 * ref.hsz.scalar * (-1.0 / (gbcon * ref.param.hz));
+  us2_h2 = 0.5 * ref.hsz.scalar * (ref.hkz.scalar - 1.0) / (gbcon * ref.param.hz * ref.param.hz);
 
   ref.usz.vector = us2_hs2 * ref.hsz.vector + us2_hk2 * ref.hkz.vector;
 
-  ref.usz.t() = ref.usz.t() + us2_h2 * ref.hz_tz;
-  ref.usz.d() = ref.usz.d() + us2_h2 * ref.hz_dz;
+  ref.usz.t() = ref.usz.t() + us2_h2 * ref.param.hz_tz;
+  ref.usz.d() = ref.usz.d() + us2_h2 * ref.param.hz_dz;
 
   if (ityp <= 2 && ref.usz.scalar > 0.95) {
     //       write(*,*) 'blvar: us clamped:', us2
@@ -1269,23 +1269,23 @@ bool XFoil::blvar(blData& ref, int ityp) {
 
   hkb = ref.hkz.scalar - 1.0;
   usb = 1.0 - ref.usz.scalar;
-  ref.cqz.scalar = sqrt(ctcon * ref.hsz.scalar * hkb * hkc * hkc / (usb * ref.hz * ref.hkz.scalar * ref.hkz.scalar));
-  cq2_hs2 = ctcon * hkb * hkc * hkc / (usb * ref.hz * ref.hkz.scalar * ref.hkz.scalar) * 0.5 / ref.cqz.scalar;
+  ref.cqz.scalar = sqrt(ctcon * ref.hsz.scalar * hkb * hkc * hkc / (usb * ref.param.hz * ref.hkz.scalar * ref.hkz.scalar));
+  cq2_hs2 = ctcon * hkb * hkc * hkc / (usb * ref.param.hz * ref.hkz.scalar * ref.hkz.scalar) * 0.5 / ref.cqz.scalar;
   cq2_us2 =
-      ctcon * ref.hsz.scalar * hkb * hkc * hkc / (usb * ref.hz * ref.hkz.scalar * ref.hkz.scalar) / usb * 0.5 / ref.cqz.scalar;
-  cq2_hk2 = ctcon * ref.hsz.scalar * hkc * hkc / (usb * ref.hz * ref.hkz.scalar * ref.hkz.scalar) * 0.5 / ref.cqz.scalar -
-            ctcon * ref.hsz.scalar * hkb * hkc * hkc / (usb * ref.hz * ref.hkz.scalar * ref.hkz.scalar * ref.hkz.scalar) * 2.0 *
+      ctcon * ref.hsz.scalar * hkb * hkc * hkc / (usb * ref.param.hz * ref.hkz.scalar * ref.hkz.scalar) / usb * 0.5 / ref.cqz.scalar;
+  cq2_hk2 = ctcon * ref.hsz.scalar * hkc * hkc / (usb * ref.param.hz * ref.hkz.scalar * ref.hkz.scalar) * 0.5 / ref.cqz.scalar -
+            ctcon * ref.hsz.scalar * hkb * hkc * hkc / (usb * ref.param.hz * ref.hkz.scalar * ref.hkz.scalar * ref.hkz.scalar) * 2.0 *
                 0.5 / ref.cqz.scalar +
-            ctcon * ref.hsz.scalar * hkb * hkc / (usb * ref.hz * ref.hkz.scalar * ref.hkz.scalar) * 2.0 * 0.5 / ref.cqz.scalar *
+            ctcon * ref.hsz.scalar * hkb * hkc / (usb * ref.param.hz * ref.hkz.scalar * ref.hkz.scalar) * 2.0 * 0.5 / ref.cqz.scalar *
                 hkc_hk2;
-  cq2_rt2 = ctcon * ref.hsz.scalar * hkb * hkc / (usb * ref.hz * ref.hkz.scalar * ref.hkz.scalar) * 2.0 * 0.5 / ref.cqz.scalar *
+  cq2_rt2 = ctcon * ref.hsz.scalar * hkb * hkc / (usb * ref.param.hz * ref.hkz.scalar * ref.hkz.scalar) * 2.0 * 0.5 / ref.cqz.scalar *
             hkc_rt2;
   cq2_h2 =
-      -ctcon * ref.hsz.scalar * hkb * hkc * hkc / (usb * ref.hz * ref.hkz.scalar * ref.hkz.scalar) / ref.hz * 0.5 / ref.cqz.scalar;
+      -ctcon * ref.hsz.scalar * hkb * hkc * hkc / (usb * ref.param.hz * ref.hkz.scalar * ref.hkz.scalar) / ref.param.hz * 0.5 / ref.cqz.scalar;
 
   ref.cqz.vector = cq2_hs2 * ref.hsz.vector + cq2_us2 * ref.usz.vector + cq2_hk2 * ref.hkz.vector + cq2_rt2 * ref.rtz.vector;
-  ref.cqz.t() = ref.cqz.t() + cq2_h2 * ref.hz_tz;
-  ref.cqz.d() = ref.cqz.d() + cq2_h2 * ref.hz_dz;
+  ref.cqz.t() = ref.cqz.t() + cq2_h2 * ref.param.hz_tz;
+  ref.cqz.d() = ref.cqz.d() + cq2_h2 * ref.param.hz_dz;
 
 
   //---- set skin friction coefficient
@@ -1311,7 +1311,7 @@ bool XFoil::blvar(blData& ref, int ityp) {
       cf2l_hk2 = c_fl.hk;
       cf2l_rt2 = c_fl.rt;
       cf2l_m2 = c_fl.msq;
-      C_f c_ft = cft(ref.hkz.scalar, ref.rtz.scalar, ref.mz);
+      C_f c_ft = cft(ref.hkz.scalar, ref.rtz.scalar, ref.param.mz);
       ref.cfz.scalar = c_ft.cf;
       cf2_hk2 = c_ft.hk;
       cf2_rt2 = c_ft.rt;
@@ -1327,8 +1327,8 @@ bool XFoil::blvar(blData& ref, int ityp) {
     }
   }
   ref.cfz.vector = cf2_hk2 * ref.hkz.vector + cf2_rt2 * ref.rtz.vector;
-  ref.cfz.u() += cf2_m2 * ref.mz_uz;
-  ref.cfz.ms() += cf2_m2 * ref.mz_ms;
+  ref.cfz.u() += cf2_m2 * ref.param.mz_uz;
+  ref.cfz.ms() += cf2_m2 * ref.param.mz_ms;
 
   //---- dissipation function    2 cd / h*
   if (ityp == 1) {
@@ -1339,17 +1339,17 @@ bool XFoil::blvar(blData& ref, int ityp) {
   } else {
     if (ityp == 2) {
       //----- turbulent wall contribution
-      C_f c_ft = cft(ref.hkz.scalar, ref.rtz.scalar, ref.mz);
+      C_f c_ft = cft(ref.hkz.scalar, ref.rtz.scalar, ref.param.mz);
       cf2t = c_ft.cf;
       cf2t_hk2 = c_ft.hk;
       double cf2t_rt2 = c_ft.rt;
       double cf2t_m2 = c_ft.msq;
       Vector<double, 6> cf2t_vector = cf2t_hk2 * ref.hkz.vector + cf2t_rt2 * ref.rtz.vector + Vector<double, 6> {
-        cf2t_m2 * ref.mz_uz,
+        cf2t_m2 * ref.param.mz_uz,
         0,
         0,
         0,
-        cf2t_m2 * ref.mz_ms,
+        cf2t_m2 * ref.param.mz_ms,
         0
       };
 
@@ -1389,10 +1389,10 @@ bool XFoil::blvar(blData& ref, int ityp) {
   }
   //---- add on turbulent outer layer contribution
   if (ityp != 1) {
-    double dd = ref.sz * ref.sz * (0.995 - ref.usz.scalar) * 2.0 / ref.hsz.scalar;
-    double dd_hs2 = -ref.sz * ref.sz * (0.995 - ref.usz.scalar) * 2.0 / ref.hsz.scalar / ref.hsz.scalar;
-    double dd_us2 = -ref.sz * ref.sz * 2.0 / ref.hsz.scalar;
-    const double dd_s2 = ref.sz * 2.0 * (0.995 - ref.usz.scalar) * 2.0 / ref.hsz.scalar;
+    double dd = ref.param.sz * ref.param.sz * (0.995 - ref.usz.scalar) * 2.0 / ref.hsz.scalar;
+    double dd_hs2 = -ref.param.sz * ref.param.sz * (0.995 - ref.usz.scalar) * 2.0 / ref.hsz.scalar / ref.hsz.scalar;
+    double dd_us2 = -ref.param.sz * ref.param.sz * 2.0 / ref.hsz.scalar;
+    const double dd_s2 = ref.param.sz * 2.0 * (0.995 - ref.usz.scalar) * 2.0 / ref.hsz.scalar;
 
     ref.diz.scalar = ref.diz.scalar + dd;
     ref.diz.s() = dd_s2;
@@ -1434,16 +1434,16 @@ bool XFoil::blvar(blData& ref, int ityp) {
   }
 
   //---- bl thickness (delta) from simplified green's correlation
-  ref.dez.scalar = (3.15 + 1.72 / (ref.hkz.scalar - 1.0)) * ref.tz + ref.dz;
-  de2_hk2 = (-1.72 / (ref.hkz.scalar - 1.0) / (ref.hkz.scalar - 1.0)) * ref.tz;
+  ref.dez.scalar = (3.15 + 1.72 / (ref.hkz.scalar - 1.0)) * ref.param.tz + ref.param.dz;
+  de2_hk2 = (-1.72 / (ref.hkz.scalar - 1.0) / (ref.hkz.scalar - 1.0)) * ref.param.tz;
   ref.dez.vector = de2_hk2 * ref.hkz.vector;
   ref.dez.t() += (3.15 + 1.72 / (ref.hkz.scalar - 1.0));
   ref.dez.d() += 1.0;
   
 
   hdmax = 12.0;
-  if (ref.dez.scalar > hdmax * ref.tz) {
-    ref.dez.scalar = hdmax * ref.tz;
+  if (ref.dez.scalar > hdmax * ref.param.tz) {
+    ref.dez.scalar = hdmax * ref.param.tz;
     ref.dez.vector = Vector<double, 6>::Zero();
     ref.dez.t() = hdmax;
   }
@@ -1516,9 +1516,9 @@ bool XFoil::blsys() {
     double res_ms = vsm[k];
 
     //------ combine with derivatives of compressible  u1,u2 = uec(uei m)
-    vs1(k, 3) *= blData1.uz_uei;
-    vs2(k, 3) *= blData2.uz_uei;
-    vsm[k] = res_u1 * blData1.uz_ms + res_u2 * blData2.uz_ms + res_ms;
+    vs1(k, 3) *= blData1.param.uz_uei;
+    vs2(k, 3) *= blData2.param.uz_uei;
+    vsm[k] = res_u1 * blData1.param.uz_ms + res_u2 * blData2.param.uz_ms + res_ms;
   }
   return true;
 }
@@ -2318,7 +2318,7 @@ bool XFoil::mrchdu() {
         //-------- check for transition and set appropriate flags and things
         if ((!simi) && (!turb)) {
           trchek();
-          ami = blData2.amplz;
+          ami = blData2.param.amplz;
           if (tran) itran.get(is) = ibl;
           if (!tran) itran.get(is) = ibl + 2;
         }
@@ -2336,7 +2336,7 @@ bool XFoil::mrchdu() {
         //-------- set stuff at first iteration...
         if (itbl == 1) {
           //--------- set "baseline" ue and hk for forming  ue(hk)  relation
-          ueref = blData2.uz;
+          ueref = blData2.param.uz;
           hkref = blData2.hkz.scalar;
 
           //--------- if current point ibl was turbulent and is now laminar,
@@ -2359,7 +2359,7 @@ bool XFoil::mrchdu() {
             if (turb) ctau.get(is)[ibl] = ctau.get(is)[ibl - 1];
             if (tran || turb) {
               cti = ctau.get(is)[ibl];
-              blData2.sz = cti;
+              blData2.param.sz = cti;
             }
           }
         }
@@ -2369,8 +2369,8 @@ bool XFoil::mrchdu() {
           vs2(3, 0) = 0.0;
           vs2(3, 1) = 0.0;
           vs2(3, 2) = 0.0;
-          vs2(3, 3) = blData2.uz_uei;
-          vsrez[3] = ueref - blData2.uz;
+          vs2(3, 3) = blData2.param.uz_uei;
+          vsrez[3] = ueref - blData2.param.uz;
         } else {
           //******** calculate ue-hk characteristic slope
           
@@ -2378,7 +2378,7 @@ bool XFoil::mrchdu() {
           vs2(3, 0) = 0.0;
           vs2(3, 1) = blData2.hkz.t();
           vs2(3, 2) = blData2.hkz.d();
-          vs2(3, 3) = blData2.hkz.u() * blData2.uz_uei;
+          vs2(3, 3) = blData2.hkz.u() * blData2.param.uz_uei;
           vsrez[3] = 1.0;
 
           //--------- calculate due response
@@ -2395,9 +2395,9 @@ bool XFoil::mrchdu() {
           vs2(3, 0) = 0.0;
           vs2(3, 1) = blData2.hkz.t() * hkref;
           vs2(3, 2) = blData2.hkz.d() * hkref;
-          vs2(3, 3) = (blData2.hkz.u() * hkref + sens / ueref) * blData2.uz_uei;
+          vs2(3, 3) = (blData2.hkz.u() * hkref + sens / ueref) * blData2.param.uz_uei;
           vsrez[3] = -(hkref * hkref) * (blData2.hkz.scalar / hkref - 1.0) -
-                     sens * (blData2.uz / ueref - 1.0);
+                     sens * (blData2.param.uz / ueref - 1.0);
         }
 
         //-------- solve newton system for current "2" station
@@ -2478,7 +2478,7 @@ bool XFoil::mrchdu() {
       //------- check for transition and set appropriate flags and things
       if ((!simi) && (!turb)) {
         trchek();
-        ami = blData2.amplz;
+        ami = blData2.param.amplz;
         if (tran) itran.get(is) = ibl;
         if (!tran) itran.get(is) = ibl + 2;
       }
@@ -2536,14 +2536,14 @@ bool XFoil::mrchdu() {
 bool XFoil::mrchue() {
   std::stringstream ss;
   bool direct;
-  //int is, ibl, ibm, iw, itbl;
+
   double msq, ratlen, dsw, hklim;
   double xsi, uei, ucon, tsq, thi, ami, cti, dsi;
   double dswaki;
   double htest, hktest;
   double cst;
-  double cte, dte, tte, dmax, hmax, htarg;
-  cte = dte = tte = dmax = hmax = htarg = 0.0;
+  double cte, dte, tte, dmax, hmax, htarg = 0.0;
+  //double cte = dte = tte = dmax = hmax = htarg = 0.0;
 
   //---- shape parameters for separation criteria
   const double hlmax = 3.8;
@@ -2609,14 +2609,14 @@ bool XFoil::mrchue() {
         //-------- check for transition and set appropriate flags and things
         if ((!simi) && (!turb)) {
           trchek();
-          ami = blData2.amplz;
+          ami = blData2.param.amplz;
 
           //--------- fixed bug   md 7 jun 99
           if (tran) {
             itran.get(is) = ibl;
             if (cti <= 0.0) {
               cti = 0.03;
-              blData2.sz = cti;
+              blData2.param.sz = cti;
             }
           } else
             itran.get(is) = ibl + 2;
@@ -2674,17 +2674,17 @@ bool XFoil::mrchue() {
             if (ibl < itran.get(is))
               //----------- laminar case: relatively slow increase in hk
               // downstream
-              htarg = blData1.hkz.scalar + 0.03 * (blData2.xz - blData1.xz) / blData1.tz;
+              htarg = blData1.hkz.scalar + 0.03 * (blData2.param.xz - blData1.param.xz) / blData1.param.tz;
             else if (ibl == itran.get(is)) {
               //----------- transition interval: weighted laminar and turbulent
               // case
-              htarg = blData1.hkz.scalar + (0.03 * (xt - blData1.xz) - 0.15 * (blData2.xz - xt)) / blData1.tz;
+              htarg = blData1.hkz.scalar + (0.03 * (xt - blData1.param.xz) - 0.15 * (blData2.param.xz - xt)) / blData1.param.tz;
             } else if (wake) {
               //----------- turbulent wake case:
               //--          asymptotic wake behavior with approximate backward
               // euler
               
-              cst = 0.03 * (blData2.xz - blData1.xz) / blData1.tz;
+              cst = 0.03 * (blData2.param.xz - blData1.param.xz) / blData1.param.tz;
               auto euler = [] (double hk2, double hk1, double cst) -> double {
                 return hk2 - (hk2 + cst * pow(hk2 - 1 , 3) - hk1) / (1 + 3 * cst * pow(hk2 - 1, 2));
               };
@@ -2697,8 +2697,8 @@ bool XFoil::mrchue() {
               htarg = blData2.hkz.scalar;
             } else
               htarg =
-                  blData1.hkz.scalar - 0.15 * (blData2.xz - blData1.xz) /
-                            blData1.tz;  //----------- turbulent case: relatively
+                  blData1.hkz.scalar - 0.15 * (blData2.param.xz - blData1.param.xz) /
+                            blData1.param.tz;  //----------- turbulent case: relatively
                                      // fast decrease in hk downstream
 
             //---------- limit specified hk to something reasonable
@@ -2792,7 +2792,7 @@ bool XFoil::mrchue() {
       //------- check for transition and set appropriate flags and things
       if ((!simi) && (!turb)) {
         trchek();
-        ami = blData2.amplz;
+        ami = blData2.param.amplz;
         if (tran) itran.get(is) = ibl;
         if (!tran) itran.get(is) = ibl + 2;
       }
@@ -2938,8 +2938,8 @@ XFoil::PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector
     Vector2d r2 = point - points.col(jp + INDEX_START_WITH);
     Vector2d s = (points.col(jp + INDEX_START_WITH) - points.col(jo + INDEX_START_WITH)).normalized();
 
-    blData1.xz = s.dot(r1);
-    blData2.xz = s.dot(r2);
+    blData1.param.xz = s.dot(r1);
+    blData2.param.xz = s.dot(r2);
     double yy = cross2(s, r1);
 
     //FIXME normを使うと正しく計算されない。計算精度の問題？
@@ -2960,18 +2960,18 @@ XFoil::PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector
     double logr12;
     if (iNode != jo + INDEX_START_WITH && rs1 > 0.0) {
       logr12 = log(rs1);
-      blData1.tz = atan2(sgn * blData1.xz, sgn * yy) + (0.5 - 0.5 * sgn) * PI;
+      blData1.param.tz = atan2(sgn * blData1.param.xz, sgn * yy) + (0.5 - 0.5 * sgn) * PI;
     } else {
       logr12 = 0.0;
-      blData1.tz = 0.0;
+      blData1.param.tz = 0.0;
     }
     double logr22;
     if (iNode != jp + INDEX_START_WITH && rs2 > 0.0) {
       logr22 = log(rs2);
-      blData2.tz = atan2(sgn * blData2.xz, sgn * yy) + (0.5 - 0.5 * sgn) * PI;
+      blData2.param.tz = atan2(sgn * blData2.param.xz, sgn * yy) + (0.5 - 0.5 * sgn) * PI;
     } else {
       logr22 = 0.0;
-      blData2.tz = 0.0;
+      blData2.param.tz = 0.0;
     }
 
     double x1i = s.dot(normal_vector);
@@ -2984,20 +2984,20 @@ XFoil::PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector
     }
 
     //------ calculate vortex panel contribution to psi
-    double dxinv = 1.0 / (blData1.xz - blData2.xz);
-    double psis = 0.5 * blData1.xz * logr12 - 0.5 * blData2.xz * logr22 + blData2.xz - blData1.xz +
-           yy * (blData1.tz - blData2.tz);
-    double psid = ((blData1.xz + blData2.xz) * psis +
-            0.5 * (rs2 * logr22 - rs1 * logr12 + blData1.xz * blData1.xz - blData2.xz * blData2.xz)) *
+    double dxinv = 1.0 / (blData1.param.xz - blData2.param.xz);
+    double psis = 0.5 * blData1.param.xz * logr12 - 0.5 * blData2.param.xz * logr22 + blData2.param.xz - blData1.param.xz +
+           yy * (blData1.param.tz - blData2.param.tz);
+    double psid = ((blData1.param.xz + blData2.param.xz) * psis +
+            0.5 * (rs2 * logr22 - rs1 * logr12 + blData1.param.xz * blData1.param.xz - blData2.param.xz * blData2.param.xz)) *
            dxinv;
 
     double psx1 = 0.5 * logr12;
     double psx2 = -.5 * logr22;
-    double psyy = blData1.tz - blData2.tz;
+    double psyy = blData1.param.tz - blData2.param.tz;
 
-    double pdx1 = ((blData1.xz + blData2.xz) * psx1 + psis - blData1.xz * logr12 - psid) * dxinv;
-    double pdx2 = ((blData1.xz + blData2.xz) * psx2 + psis + blData2.xz * logr22 + psid) * dxinv;
-    double pdyy = ((blData1.xz + blData2.xz) * psyy - yy * (logr12 - logr22)) * dxinv;
+    double pdx1 = ((blData1.param.xz + blData2.param.xz) * psx1 + psis - blData1.param.xz * logr12 - psid) * dxinv;
+    double pdx2 = ((blData1.param.xz + blData2.param.xz) * psx2 + psis + blData2.param.xz * logr22 + psid) * dxinv;
+    double pdyy = ((blData1.param.xz + blData2.param.xz) * psyy - yy * (logr12 - logr22)) * dxinv;
 
     Vector2d gsum_vector = gamu.col(jp) + gamu.col(jo);
     Vector2d gdif_vector = gamu.col(jp) - gamu.col(jo);
@@ -3210,8 +3210,8 @@ XFoil::PsiResult XFoil::psi_te(int iNode, Vector2d point, Vector2d normal_vector
   Vector2d r2 = point - points.col(1);
   Vector2d s = (points.col(1) - points.col(n)).normalized();
 
-  blData1.xz = s.dot(r1);
-  blData2.xz = s.dot(r2);
+  blData1.param.xz = s.dot(r1);
+  blData2.param.xz = s.dot(r2);
   double yy = cross2(s, r1);
 
   //FIXME normを使うと正しく計算されない。計算精度の問題？
@@ -3232,18 +3232,18 @@ XFoil::PsiResult XFoil::psi_te(int iNode, Vector2d point, Vector2d normal_vector
   double logr12, logr22;
   if (iNode != n && rs1 > 0.0) {
     logr12 = log(rs1);
-    blData1.tz = atan2(sgn * blData1.xz, sgn * yy) + (0.5 - 0.5 * sgn) * PI;
+    blData1.param.tz = atan2(sgn * blData1.param.xz, sgn * yy) + (0.5 - 0.5 * sgn) * PI;
   } else {
     logr12 = 0.0;
-    blData1.tz = 0.0;
+    blData1.param.tz = 0.0;
   }
   
   if (iNode != 1 && rs2 > 0.0) {
     logr22 = log(rs2);
-    blData2.tz = atan2(sgn * blData2.xz, sgn * yy) + (0.5 - 0.5 * sgn) * PI;
+    blData2.param.tz = atan2(sgn * blData2.param.xz, sgn * yy) + (0.5 - 0.5 * sgn) * PI;
   } else {
     logr22 = 0.0;
-    blData2.tz = 0.0;
+    blData2.param.tz = 0.0;
   }
 
   double scs, sds;
@@ -3259,17 +3259,17 @@ XFoil::PsiResult XFoil::psi_te(int iNode, Vector2d point, Vector2d normal_vector
   double x2i = s.dot(normal_vector);
   double yyi = cross2(s, normal_vector);
 
-  double psig = 0.5 * yy * (logr12 - logr22) + blData2.xz * (blData2.tz - apan) -
-         blData1.xz * (blData1.tz - apan);
+  double psig = 0.5 * yy * (logr12 - logr22) + blData2.param.xz * (blData2.param.tz - apan) -
+         blData1.param.xz * (blData1.param.tz - apan);
   double pgam =
-      0.5 * blData1.xz * logr12 - 0.5 * blData2.xz * logr22 + blData2.xz - blData1.xz + yy * (blData1.tz - blData2.tz);
+      0.5 * blData1.param.xz * logr12 - 0.5 * blData2.param.xz * logr22 + blData2.param.xz - blData1.param.xz + yy * (blData1.param.tz - blData2.param.tz);
 
-  double psigx1 = -(blData1.tz - apan);
-  double psigx2 = blData2.tz - apan;
+  double psigx1 = -(blData1.param.tz - apan);
+  double psigx2 = blData2.param.tz - apan;
   double psigyy = 0.5 * (logr12 - logr22);
   double pgamx1 = 0.5 * logr12;
   double pgamx2 = -0.5 * logr22;
-  double pgamyy = blData1.tz - blData2.tz;
+  double pgamyy = blData1.param.tz - blData2.param.tz;
 
   double psigni = psigx1 * x1i + psigx2 * x2i + psigyy * yyi;
   double pgamni = pgamx1 * x1i + pgamx2 * x2i + pgamyy * yyi;
@@ -3338,8 +3338,8 @@ XFoil::PsiResult XFoil::pswlin(int i, Vector2d point, Vector2d normal_vector) {
 
     const Vector2d s = (points.col(jp) - points.col(jo)) * dsio;
 
-    blData1.xz = s.dot(r1);
-    blData2.xz = s.dot(r2);
+    blData1.param.xz = s.dot(r1);
+    blData2.param.xz = s.dot(r2);
     const double yy = cross2(s, r1);
     const double rs1 = r1.dot(r1);
     const double rs2 = r2.dot(r2);
@@ -3354,7 +3354,7 @@ XFoil::PsiResult XFoil::pswlin(int i, Vector2d point, Vector2d normal_vector) {
 
     if (io != jo && rs1 > 0.0) {
       g1 = log(rs1);
-      t1 = atan2(sgn * blData1.xz, sgn * yy) - (0.5 - 0.5 * sgn) * PI;
+      t1 = atan2(sgn * blData1.param.xz, sgn * yy) - (0.5 - 0.5 * sgn) * PI;
     } else {
       g1 = 0.0;
       t1 = 0.0;
@@ -3362,7 +3362,7 @@ XFoil::PsiResult XFoil::pswlin(int i, Vector2d point, Vector2d normal_vector) {
 
     if (io != jp && rs2 > 0.0) {
       g2 = log(rs2);
-      t2 = atan2(sgn * blData2.xz, sgn * yy) - (0.5 - 0.5 * sgn) * PI;
+      t2 = atan2(sgn * blData2.param.xz, sgn * yy) - (0.5 - 0.5 * sgn) * PI;
     } else {
       g2 = 0.0;
       t2 = 0.0;
@@ -3371,25 +3371,25 @@ XFoil::PsiResult XFoil::pswlin(int i, Vector2d point, Vector2d normal_vector) {
     const double x2i = s.dot(normal_vector);
     const double yyi = cross2(s, normal_vector);
     //------- set up midpoint quantities
-    const double x0 = 0.5 * (blData1.xz + blData2.xz);
+    const double x0 = 0.5 * (blData1.param.xz + blData2.param.xz);
     const double rs0 = x0 * x0 + yy * yy;
     const double g0 = log(rs0);
     const double t0 = atan2(sgn * x0, sgn * yy) - (0.5 - 0.5 * sgn) * PI;
 
     //------- calculate source contribution to psi	for  1-0  half-panel
-    double dxinv = 1.0 / (blData1.xz - x0);
-    double psum = x0 * (t0 - apan) - blData1.xz * (t1 - apan) + 0.5 * yy * (g1 - g0);
-    double pdif = ((blData1.xz + x0) * psum + rs1 * (t1 - apan) - rs0 * (t0 - apan) +
-            (x0 - blData1.xz) * yy) *
+    double dxinv = 1.0 / (blData1.param.xz - x0);
+    double psum = x0 * (t0 - apan) - blData1.param.xz * (t1 - apan) + 0.5 * yy * (g1 - g0);
+    double pdif = ((blData1.param.xz + x0) * psum + rs1 * (t1 - apan) - rs0 * (t0 - apan) +
+            (x0 - blData1.param.xz) * yy) *
            dxinv;
 
     double psx1 = -(t1 - apan);
     double psx0 = t0 - apan;
     double psyy = 0.5 * (g1 - g0);
 
-    double pdx1 = ((blData1.xz + x0) * psx1 + psum + 2.0 * blData1.xz * (t1 - apan) - pdif) * dxinv;
-    double pdx0 = ((blData1.xz + x0) * psx0 + psum - 2.0 * x0 * (t0 - apan) + pdif) * dxinv;
-    double pdyy = ((blData1.xz + x0) * psyy + 2.0 * (x0 - blData1.xz + yy * (t1 - t0))) * dxinv;
+    double pdx1 = ((blData1.param.xz + x0) * psx1 + psum + 2.0 * blData1.param.xz * (t1 - apan) - pdif) * dxinv;
+    double pdx0 = ((blData1.param.xz + x0) * psx0 + psum - 2.0 * x0 * (t0 - apan) + pdif) * dxinv;
+    double pdyy = ((blData1.param.xz + x0) * psyy + 2.0 * (x0 - blData1.param.xz + yy * (t1 - t0))) * dxinv;
 
     const double dsm = (points.col(jp) - points.col(jm)).norm();
     const double dsim = 1.0 / dsm;
@@ -3408,19 +3408,19 @@ XFoil::PsiResult XFoil::pswlin(int i, Vector2d point, Vector2d normal_vector) {
     psi_result.dqdm[jp] += (1 / (4 * PI)) * (psni * (dsio + dsim) + pdni * (dsio - dsim));
 
     //------- calculate source contribution to psi	for  0-2  half-panel
-    dxinv = 1.0 / (x0 - blData2.xz);
-    psum = blData2.xz * (t2 - apan) - x0 * (t0 - apan) + 0.5 * yy * (g0 - g2);
-    pdif = ((x0 + blData2.xz) * psum + rs0 * (t0 - apan) - rs2 * (t2 - apan) +
-            (blData2.xz - x0) * yy) *
+    dxinv = 1.0 / (x0 - blData2.param.xz);
+    psum = blData2.param.xz * (t2 - apan) - x0 * (t0 - apan) + 0.5 * yy * (g0 - g2);
+    pdif = ((x0 + blData2.param.xz) * psum + rs0 * (t0 - apan) - rs2 * (t2 - apan) +
+            (blData2.param.xz - x0) * yy) *
            dxinv;
 
     psx0 = -(t0 - apan);
     const double psx2 = t2 - apan;
     psyy = 0.5 * (g0 - g2);
 
-    pdx0 = ((x0 + blData2.xz) * psx0 + psum + 2.0 * x0 * (t0 - apan) - pdif) * dxinv;
-    const double pdx2 = ((x0 + blData2.xz) * psx2 + psum - 2.0 * blData2.xz * (t2 - apan) + pdif) * dxinv;
-    pdyy = ((x0 + blData2.xz) * psyy + 2.0 * (blData2.xz - x0 + yy * (t0 - t2))) * dxinv;
+    pdx0 = ((x0 + blData2.param.xz) * psx0 + psum + 2.0 * x0 * (t0 - apan) - pdif) * dxinv;
+    const double pdx2 = ((x0 + blData2.param.xz) * psx2 + psum - 2.0 * blData2.param.xz * (t2 - apan) + pdif) * dxinv;
+    pdyy = ((x0 + blData2.param.xz) * psyy + 2.0 * (blData2.param.xz - x0 + yy * (t0 - t2))) * dxinv;
 
     const double dsp = (points.col(jq) - points.col(jo)).norm();
     const double dsip = 1.0 / dsp;
@@ -3834,13 +3834,13 @@ bool XFoil::setbl() {
       //---- check for transition and set tran, xt, etc. if found
       if (tran) {
         trchek();
-        ami = blData2.amplz;
+        ami = blData2.param.amplz;
       }
 
       if (ibl == itran.get(is) && !tran) {
         // TRACE("setbl: xtr???  n1=%d n2=%d: \n", ampl1, ampl2);
 
-        ss << "setbl: xtr???  n1=" << blData1.amplz << " n2=" << blData2.amplz << ":\n";
+        ss << "setbl: xtr???  n1=" << blData1.param.amplz << " n2=" << blData2.param.amplz << ":\n";
         writeString(ss.str());
         ss.str("");
       }
@@ -4497,15 +4497,15 @@ bool XFoil::tesys(double cte, double tte, double dte) {
 
   vs1(0, 0) = -1.0;
   vs2(0, 0) = 1.0;
-  vsrez[0] = cte - blData2.sz;
+  vsrez[0] = cte - blData2.param.sz;
 
   vs1(1, 1) = -1.0;
   vs2(1, 1) = 1.0;
-  vsrez[1] = tte - blData2.tz;
+  vsrez[1] = tte - blData2.param.tz;
 
   vs1(2, 2) = -1.0;
   vs2(2, 2) = 1.0;
-  vsrez[2] = dte - blData2.dz - blData2.dwz;
+  vsrez[2] = dte - blData2.param.dz - blData2.param.dwz;
 
   return true;
 }
@@ -4560,17 +4560,17 @@ bool XFoil::trchek() {
   saveblData(2);
 
   //---- calculate average amplification rate ax over x1..x2 interval
-  AxResult ax_result = axset(blData1.hkz.scalar, blData1.tz, blData1.rtz.scalar, blData1.amplz, blData2.hkz.scalar, blData2.tz, blData2.rtz.scalar, blData2.amplz, amcrit);
+  AxResult ax_result = axset(blData1.hkz.scalar, blData1.param.tz, blData1.rtz.scalar, blData1.param.amplz, blData2.hkz.scalar, blData2.param.tz, blData2.rtz.scalar, blData2.param.amplz, amcrit);
 
   //---- set initial guess for iterate n2 (ampl2) at x2
-  blData2.amplz = blData1.amplz + ax_result.ax * (blData2.xz - blData1.xz);
+  blData2.param.amplz = blData1.param.amplz + ax_result.ax * (blData2.param.xz - blData1.param.xz);
 
   //---- solve implicit system for amplification ampl2
   for (int itam = 0; itam < 30; itam++) {
     //---- define weighting factors wf1,wf2 for defining "t" quantities from 1,2
-    if (blData2.amplz <= amcrit) {
+    if (blData2.param.amplz <= amcrit) {
       //------ there is no transition yet,  "t" is the same as "2"
-      amplt = blData2.amplz;
+      amplt = blData2.param.amplz;
       amplt_a2 = 1.0;
       sfa = 1.0;
       sfa_a1 = 0.0;
@@ -4579,16 +4579,16 @@ bool XFoil::trchek() {
       //------ there is transition in x1..x2, "t" is set from n1, n2
       amplt = amcrit;
       amplt_a2 = 0.0;
-      sfa = (amplt - blData1.amplz) / (blData2.amplz - blData1.amplz);
-      sfa_a1 = (sfa - 1.0) / (blData2.amplz - blData1.amplz);
-      sfa_a2 = (-sfa) / (blData2.amplz - blData1.amplz);
+      sfa = (amplt - blData1.param.amplz) / (blData2.param.amplz - blData1.param.amplz);
+      sfa_a1 = (sfa - 1.0) / (blData2.param.amplz - blData1.param.amplz);
+      sfa_a2 = (-sfa) / (blData2.param.amplz - blData1.param.amplz);
     }
 
-    if (xiforc < blData2.xz) {
-      sfx = (xiforc - blData1.xz) / (blData2.xz - blData1.xz);
-      sfx_x1 = (sfx - 1.0) / (blData2.xz - blData1.xz);
-      sfx_x2 = (-sfx) / (blData2.xz - blData1.xz);
-      sfx_xf = 1.0 / (blData2.xz - blData1.xz);
+    if (xiforc < blData2.param.xz) {
+      sfx = (xiforc - blData1.param.xz) / (blData2.param.xz - blData1.param.xz);
+      sfx_x1 = (sfx - 1.0) / (blData2.param.xz - blData1.param.xz);
+      sfx_x2 = (-sfx) / (blData2.param.xz - blData1.param.xz);
+      sfx_xf = 1.0 / (blData2.param.xz - blData1.param.xz);
     } else {
       sfx = 1.0;
       sfx_x1 = 0.0;
@@ -4614,21 +4614,21 @@ bool XFoil::trchek() {
     }
 
     //---- interpolate bl variables to xt
-    xt = blData1.xz * (1 - wf) + blData2.xz * wf;
-    tt = blData1.tz * (1 - wf) + blData2.tz * wf;
-    dt = blData1.dz * (1 - wf) + blData2.dz * wf;
-    ut = blData1.uz * (1 - wf) + blData2.uz * wf;
+    xt = blData1.param.xz * (1 - wf) + blData2.param.xz * wf;
+    tt = blData1.param.tz * (1 - wf) + blData2.param.tz * wf;
+    dt = blData1.param.dz * (1 - wf) + blData2.param.dz * wf;
+    ut = blData1.param.uz * (1 - wf) + blData2.param.uz * wf;
 
-    xt_a2 = (blData2.xz - blData1.xz) * wf_a2;
-    tt_a2 = (blData2.tz - blData1.tz) * wf_a2;
-    dt_a2 = (blData2.dz - blData1.dz) * wf_a2;
-    ut_a2 = (blData2.uz - blData1.uz) * wf_a2;
+    xt_a2 = (blData2.param.xz - blData1.param.xz) * wf_a2;
+    tt_a2 = (blData2.param.tz - blData1.param.tz) * wf_a2;
+    dt_a2 = (blData2.param.dz - blData1.param.dz) * wf_a2;
+    ut_a2 = (blData2.param.uz - blData1.param.uz) * wf_a2;
 
     //---- temporarily set "2" variables from "t" for blkin
-    blData2.xz = xt;
-    blData2.tz = tt;
-    blData2.dz = dt;
-    blData2.uz = ut;
+    blData2.param.xz = xt;
+    blData2.param.tz = tt;
+    blData2.param.dz = dt;
+    blData2.param.uz = ut;
 
     //---- calculate laminar secondary "t" variables hkt, rtt
     blkin();
@@ -4648,14 +4648,14 @@ bool XFoil::trchek() {
     rtt_re = blData2.rtz.re();
 
     //---- restore clobbered "2" variables, except for ampl2
-    amsave = blData2.amplz;
+    amsave = blData2.param.amplz;
 
     restoreblData(2);
 
-    blData2.amplz = amsave;
+    blData2.param.amplz = amsave;
 
     //---- calculate amplification rate ax over current x1-xt interval
-    ax_result = axset(blData1.hkz.scalar, blData1.tz, blData1.rtz.scalar, blData1.amplz, hkt, tt, rtt, amplt, amcrit);
+    ax_result = axset(blData1.hkz.scalar, blData1.param.tz, blData1.rtz.scalar, blData1.param.amplz, hkt, tt, rtt, amplt, amcrit);
 
     //---- punch out early if there is no amplification here
     if (ax_result.ax <= 0.0) {
@@ -4668,16 +4668,16 @@ bool XFoil::trchek() {
             (ax_result.ax_hk2 * hkt_ut + ax_result.ax_rt2 * rtt_ut) * ut_a2 + ax_result.ax_a2 * amplt_a2;
 
     //---- residual for implicit ampl2 definition (amplification equation)
-    res = blData2.amplz - blData1.amplz - ax_result.ax * (blData2.xz - blData1.xz);
-    res_a2 = 1.0 -  ax_result.ax_a2 * (blData2.xz - blData1.xz);
+    res = blData2.param.amplz - blData1.param.amplz - ax_result.ax * (blData2.param.xz - blData1.param.xz);
+    res_a2 = 1.0 -  ax_result.ax_a2 * (blData2.param.xz - blData1.param.xz);
 
     da2 = -res / res_a2;
 
     rlx = 1.0;
     dxt = xt_a2 * da2;
 
-    if (rlx * fabs(dxt / (blData2.xz - blData1.xz)) > 0.05) {
-      rlx = 0.05 * fabs((blData2.xz - blData1.xz) / dxt);
+    if (rlx * fabs(dxt / (blData2.param.xz - blData1.param.xz)) > 0.05) {
+      rlx = 0.05 * fabs((blData2.param.xz - blData1.param.xz) / dxt);
     }
 
     if (rlx * fabs(da2) > 1.0) {
@@ -4689,15 +4689,15 @@ bool XFoil::trchek() {
       break;
     }
 
-    if ((blData2.amplz > amcrit && blData2.amplz + rlx * da2 < amcrit) ||
-        (blData2.amplz < amcrit && blData2.amplz + rlx * da2 > amcrit)) {
+    if ((blData2.param.amplz > amcrit && blData2.param.amplz + rlx * da2 < amcrit) ||
+        (blData2.param.amplz < amcrit && blData2.param.amplz + rlx * da2 > amcrit)) {
       //------ limited newton step so ampl2 doesn't step across amcrit either
       // way
-      blData2.amplz = amcrit;
+      blData2.param.amplz = amcrit;
     }
     else {
       //------ regular newton step
-      blData2.amplz = blData2.amplz + rlx * da2;
+      blData2.param.amplz = blData2.param.amplz + rlx * da2;
     }
   }
 
@@ -4706,8 +4706,8 @@ bool XFoil::trchek() {
   if (s_bCancel) return false;
 
   //---- test for free or forced transition
-  trfree = (blData2.amplz >= amcrit);
-  trforc = (xiforc > blData1.xz) && (xiforc <= blData2.xz);
+  trfree = (blData2.param.amplz >= amcrit);
+  trforc = (xiforc > blData1.param.xz) && (xiforc <= blData2.param.xz);
 
   //---- set transition interval flag
   tran = (trforc || trfree);
@@ -4751,22 +4751,22 @@ bool XFoil::trchek() {
   dt_d2 = wf;
   ut_u2 = wf;
 
-  xt_a1 = (blData2.xz - blData1.xz) * wf_a1;
-  tt_a1 = (blData2.tz - blData1.tz) * wf_a1;
-  dt_a1 = (blData2.dz - blData1.dz) * wf_a1;
-  ut_a1 = (blData2.uz - blData1.uz) * wf_a1;
+  xt_a1 = (blData2.param.xz - blData1.param.xz) * wf_a1;
+  tt_a1 = (blData2.param.tz - blData1.param.tz) * wf_a1;
+  dt_a1 = (blData2.param.dz - blData1.param.dz) * wf_a1;
+  ut_a1 = (blData2.param.uz - blData1.param.uz) * wf_a1;
 
-  xt_x1 += (blData2.xz - blData1.xz) * wf_x1;
-  tt_x1 = (blData2.tz - blData1.tz) * wf_x1;
-  dt_x1 = (blData2.dz - blData1.dz) * wf_x1;
-  ut_x1 = (blData2.uz - blData1.uz) * wf_x1;
+  xt_x1 += (blData2.param.xz - blData1.param.xz) * wf_x1;
+  tt_x1 = (blData2.param.tz - blData1.param.tz) * wf_x1;
+  dt_x1 = (blData2.param.dz - blData1.param.dz) * wf_x1;
+  ut_x1 = (blData2.param.uz - blData1.param.uz) * wf_x1;
 
-  xt_x2 += (blData2.xz - blData1.xz) * wf_x2;
-  tt_x2 = (blData2.tz - blData1.tz) * wf_x2;
-  dt_x2 = (blData2.dz - blData1.dz) * wf_x2;
-  ut_x2 = (blData2.uz - blData1.uz) * wf_x2;
+  xt_x2 += (blData2.param.xz - blData1.param.xz) * wf_x2;
+  tt_x2 = (blData2.param.tz - blData1.param.tz) * wf_x2;
+  dt_x2 = (blData2.param.dz - blData1.param.dz) * wf_x2;
+  ut_x2 = (blData2.param.uz - blData1.param.uz) * wf_x2;
 
-  xt_xf = (blData2.xz - blData1.xz) * wf_xf;
+  xt_xf = (blData2.param.xz - blData1.param.xz) * wf_xf;
 
   //---- at this point, ax = ax( hk1, t1, rt1, a1, hkt, tt, rtt, at )
 
@@ -4801,7 +4801,7 @@ bool XFoil::trchek() {
   double ax_re = ax_result.ax_rt2 * rtt_re + ax_result.ax_rt1 * blData1.rtz.re();
 
   //---- set sensitivities of residual res
-  z_ax = -(blData2.xz - blData1.xz);
+  z_ax = -(blData2.param.xz - blData1.param.xz);
 
   z_a1 = z_ax * ax_a1 - 1.0;
   z_t1 = z_ax * ax_t1;
@@ -4860,12 +4860,12 @@ bool XFoil::trdif() {
   saveblData(2);
 
   //---- weighting factors for linear interpolation to transition point
-  double wf = (xt - blData1.xz) / (blData2.xz - blData1.xz);
-  double wf_xt = 1.0 / (blData2.xz - blData1.xz);
+  double wf = (xt - blData1.param.xz) / (blData2.param.xz - blData1.param.xz);
+  double wf_xt = 1.0 / (blData2.param.xz - blData1.param.xz);
 
   double wf_a1 = wf_xt * xt_a1;
-  double wf_x1 = wf_xt * xt_x1 + (wf - 1.0) / (blData2.xz - blData1.xz);
-  double wf_x2 = wf_xt * xt_x2 - wf / (blData2.xz - blData1.xz);
+  double wf_x1 = wf_xt * xt_x1 + (wf - 1.0) / (blData2.param.xz - blData1.param.xz);
+  double wf_x2 = wf_xt * xt_x2 - wf / (blData2.param.xz - blData1.param.xz);
   double wf_t1 = wf_xt * xt_t1;
   double wf_t2 = wf_xt * xt_t2;
   double wf_d1 = wf_xt * xt_d1;
@@ -4879,56 +4879,56 @@ bool XFoil::trdif() {
   //**** first,  do laminar part between x1 and xt
 
   //-----interpolate primary variables to transition point
-  tt = blData1.tz * (1 - wf) + blData2.tz * wf;
-  tt_a1 = (blData2.tz - blData1.tz) * wf_a1;
-  tt_x1 = (blData2.tz - blData1.tz) * wf_x1;
-  tt_x2 = (blData2.tz - blData1.tz) * wf_x2;
-  tt_t1 = (blData2.tz - blData1.tz) * wf_t1 + (1 - wf);
-  tt_t2 = (blData2.tz - blData1.tz) * wf_t2 + wf;
-  tt_d1 = (blData2.tz - blData1.tz) * wf_d1;
-  tt_d2 = (blData2.tz - blData1.tz) * wf_d2 ;
-  tt_u1 = (blData2.tz - blData1.tz) * wf_u1;
-  tt_u2 = (blData2.tz - blData1.tz) * wf_u2;
-  tt_ms = (blData2.tz - blData1.tz) * wf_ms;
-  tt_re = (blData2.tz - blData1.tz) * wf_re;
-  tt_xf = (blData2.tz - blData1.tz) * wf_xf;
+  tt = blData1.param.tz * (1 - wf) + blData2.param.tz * wf;
+  tt_a1 = (blData2.param.tz - blData1.param.tz) * wf_a1;
+  tt_x1 = (blData2.param.tz - blData1.param.tz) * wf_x1;
+  tt_x2 = (blData2.param.tz - blData1.param.tz) * wf_x2;
+  tt_t1 = (blData2.param.tz - blData1.param.tz) * wf_t1 + (1 - wf);
+  tt_t2 = (blData2.param.tz - blData1.param.tz) * wf_t2 + wf;
+  tt_d1 = (blData2.param.tz - blData1.param.tz) * wf_d1;
+  tt_d2 = (blData2.param.tz - blData1.param.tz) * wf_d2 ;
+  tt_u1 = (blData2.param.tz - blData1.param.tz) * wf_u1;
+  tt_u2 = (blData2.param.tz - blData1.param.tz) * wf_u2;
+  tt_ms = (blData2.param.tz - blData1.param.tz) * wf_ms;
+  tt_re = (blData2.param.tz - blData1.param.tz) * wf_re;
+  tt_xf = (blData2.param.tz - blData1.param.tz) * wf_xf;
 
-  dt = blData1.dz * (1 - wf) + blData2.dz * wf;
-  dt_a1 = (blData2.dz - blData1.dz) * wf_a1;
-  dt_x1 = (blData2.dz - blData1.dz) * wf_x1;
-  dt_x2 = (blData2.dz - blData1.dz) * wf_x2;
-  dt_t1 = (blData2.dz - blData1.dz) * wf_t1;
-  dt_t2 = (blData2.dz - blData1.dz) * wf_t2;
-  dt_d1 = (blData2.dz - blData1.dz) * wf_d1 + (1 - wf);
-  dt_d2 = (blData2.dz - blData1.dz) * wf_d2 + wf;
-  dt_u1 = (blData2.dz - blData1.dz) * wf_u1;
-  dt_u2 = (blData2.dz - blData1.dz) * wf_u2;
-  dt_ms = (blData2.dz - blData1.dz) * wf_ms;
-  dt_re = (blData2.dz - blData1.dz) * wf_re;
-  dt_xf = (blData2.dz - blData1.dz) * wf_xf;
+  dt = blData1.param.dz * (1 - wf) + blData2.param.dz * wf;
+  dt_a1 = (blData2.param.dz - blData1.param.dz) * wf_a1;
+  dt_x1 = (blData2.param.dz - blData1.param.dz) * wf_x1;
+  dt_x2 = (blData2.param.dz - blData1.param.dz) * wf_x2;
+  dt_t1 = (blData2.param.dz - blData1.param.dz) * wf_t1;
+  dt_t2 = (blData2.param.dz - blData1.param.dz) * wf_t2;
+  dt_d1 = (blData2.param.dz - blData1.param.dz) * wf_d1 + (1 - wf);
+  dt_d2 = (blData2.param.dz - blData1.param.dz) * wf_d2 + wf;
+  dt_u1 = (blData2.param.dz - blData1.param.dz) * wf_u1;
+  dt_u2 = (blData2.param.dz - blData1.param.dz) * wf_u2;
+  dt_ms = (blData2.param.dz - blData1.param.dz) * wf_ms;
+  dt_re = (blData2.param.dz - blData1.param.dz) * wf_re;
+  dt_xf = (blData2.param.dz - blData1.param.dz) * wf_xf;
 
-  ut = blData1.uz * (1 - wf) + blData2.uz * wf;
-  ut_a1 = (blData2.uz - blData1.uz) * wf_a1;
-  ut_x1 = (blData2.uz - blData1.uz) * wf_x1;
-  ut_x2 = (blData2.uz - blData1.uz) * wf_x2;
-  ut_t1 = (blData2.uz - blData1.uz) * wf_t1;
-  ut_t2 = (blData2.uz - blData1.uz) * wf_t2;
-  ut_d1 = (blData2.uz - blData1.uz) * wf_d1;
-  ut_d2 = (blData2.uz - blData1.uz) * wf_d2;
-  ut_u1 = (blData2.uz - blData1.uz) * wf_u1 + (1 - wf);
-  ut_u2 = (blData2.uz - blData1.uz) * wf_u2 + wf;
-  ut_ms = (blData2.uz - blData1.uz) * wf_ms;
-  ut_re = (blData2.uz - blData1.uz) * wf_re;
-  ut_xf = (blData2.uz - blData1.uz) * wf_xf;
+  ut = blData1.param.uz * (1 - wf) + blData2.param.uz * wf;
+  ut_a1 = (blData2.param.uz - blData1.param.uz) * wf_a1;
+  ut_x1 = (blData2.param.uz - blData1.param.uz) * wf_x1;
+  ut_x2 = (blData2.param.uz - blData1.param.uz) * wf_x2;
+  ut_t1 = (blData2.param.uz - blData1.param.uz) * wf_t1;
+  ut_t2 = (blData2.param.uz - blData1.param.uz) * wf_t2;
+  ut_d1 = (blData2.param.uz - blData1.param.uz) * wf_d1;
+  ut_d2 = (blData2.param.uz - blData1.param.uz) * wf_d2;
+  ut_u1 = (blData2.param.uz - blData1.param.uz) * wf_u1 + (1 - wf);
+  ut_u2 = (blData2.param.uz - blData1.param.uz) * wf_u2 + wf;
+  ut_ms = (blData2.param.uz - blData1.param.uz) * wf_ms;
+  ut_re = (blData2.param.uz - blData1.param.uz) * wf_re;
+  ut_xf = (blData2.param.uz - blData1.param.uz) * wf_xf;
 
   //---- set primary "t" variables at xt  (really placed into "2" variables)
-  blData2.xz = xt;
-  blData2.tz = tt;
-  blData2.dz = dt;
-  blData2.uz = ut;
+  blData2.param.xz = xt;
+  blData2.param.tz = tt;
+  blData2.param.dz = dt;
+  blData2.param.uz = ut;
 
-  blData2.amplz = amcrit;
-  blData2.sz = 0.0;
+  blData2.param.amplz = amcrit;
+  blData2.param.sz = 0.0;
 
   //---- calculate laminar secondary "t" variables
   blkin();
@@ -5010,8 +5010,8 @@ bool XFoil::trdif() {
   st_re = st_tt * tt_re + st_dt * dt_re + st_ut * ut_re + st_re;
   st_xf = st_tt * tt_xf + st_dt * dt_xf + st_ut * ut_xf;
 
-  blData2.amplz = 0.0;
-  blData2.sz = st;
+  blData2.param.amplz = 0.0;
+  blData2.param.sz = st;
 
   //---- recalculate turbulent secondary "t" variables using proper cti
   blvar(blData2, 2);
