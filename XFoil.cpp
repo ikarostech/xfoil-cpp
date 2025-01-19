@@ -1935,11 +1935,11 @@ bool XFoil::ggcalc() {
 
     //------ dres/dgamma
     for (int j = 0; j < n; j++) {
-      dpsi_dgam(i - 1, j) = psi_result.dzdg[j + INDEX_START_WITH];
+      dpsi_dgam(i - 1, j) = psi_result.dzdg[j];
     }
 
     for (int j = 0; j < n; j++) {
-      bij(i - INDEX_START_WITH, j) = -psi_result.dzdm[j + INDEX_START_WITH];
+      bij(i - INDEX_START_WITH, j) = -psi_result.dzdm[j];
     }
 
     //------ dres/dpsio
@@ -1991,7 +1991,7 @@ bool XFoil::ggcalc() {
     
     //----- dres/dgamma
     for (int j = 0; j < n; j++) {
-      dpsi_dgam(n - 1, j) = psi_result.dqdg[j + INDEX_START_WITH];
+      dpsi_dgam(n - 1, j) = psi_result.dqdg[j];
     }
 
     //----- -dres/dmass
@@ -3000,8 +3000,8 @@ XFoil::PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector
     psi_result.psi += (1 / (4 * PI)) * (psis * gsum + psid * gdif);
 
     //------ dpsi/dgam
-    psi_result.dzdg[jo + INDEX_START_WITH] += (1 / (4 * PI)) * (psis - psid);
-    psi_result.dzdg[jp + INDEX_START_WITH] += (1 / (4 * PI)) * (psis + psid);
+    psi_result.dzdg[jo] += (1 / (4 * PI)) * (psis - psid);
+    psi_result.dzdg[jp] += (1 / (4 * PI)) * (psis + psid);
 
     //------ dpsi/dni
     double psni = psx1 * x1i + psx2 * x2i + psyy * yyi;
@@ -3010,8 +3010,8 @@ XFoil::PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector
 
     psi_result.qtan += (1 / (4 * PI)) * (psni * gsum_vector + pdni * gdif_vector);
 
-    psi_result.dqdg[jo + INDEX_START_WITH] += (1 / (4 * PI)) * (psni - pdni);
-    psi_result.dqdg[jp + INDEX_START_WITH] += (1 / (4 * PI)) * (psni + pdni);
+    psi_result.dqdg[jo] += (1 / (4 * PI)) * (psni - pdni);
+    psi_result.dqdg[jp] += (1 / (4 * PI)) * (psni + pdni);
   
   }
   if ((points.col(n) - points.col(1)).norm() > seps) {
@@ -3122,17 +3122,17 @@ XFoil::PsiResult XFoil::psisig(int iNode, int jo, Vector2d point, Vector2d norma
   double dsim = 1.0 / dsm;
 
   //------- dpsi/dm
-  psi_result.dzdm[jm + INDEX_START_WITH] += (1 / (4 * PI)) * (-psum * dsim + pdif * dsim);
-  psi_result.dzdm[jo + INDEX_START_WITH] += (1 / (4 * PI)) * (-psum / dso - pdif / dso);
-  psi_result.dzdm[jp + INDEX_START_WITH] += (1 / (4 * PI)) * (psum * (dsio + dsim) + pdif * (dsio - dsim));
+  psi_result.dzdm[jm] += (1 / (4 * PI)) * (-psum * dsim + pdif * dsim);
+  psi_result.dzdm[jo] += (1 / (4 * PI)) * (-psum / dso - pdif / dso);
+  psi_result.dzdm[jp] += (1 / (4 * PI)) * (psum * (dsio + dsim) + pdif * (dsio - dsim));
 
   //------- dpsi/dni
   double psni = psx1 * x1i + psx0 * (x1i + x2i) * 0.5 + psyy * yyi;
   double pdni = pdx1 * x1i + pdx0 * (x1i + x2i) * 0.5 + pdyy * yyi;
 
-  psi_result.dqdm[jm + INDEX_START_WITH] += (1 / (4 * PI)) * (-psni * dsim + pdni * dsim);
-  psi_result.dqdm[jo + INDEX_START_WITH] += (1 / (4 * PI)) * (-psni / dso - pdni / dso);
-  psi_result.dqdm[jp + INDEX_START_WITH] += (1 / (4 * PI)) * (psni * (dsio + dsim) + pdni * (dsio - dsim));
+  psi_result.dqdm[jm] += (1 / (4 * PI)) * (-psni * dsim + pdni * dsim);
+  psi_result.dqdm[jo] += (1 / (4 * PI)) * (-psni / dso - pdni / dso);
+  psi_result.dqdm[jp] += (1 / (4 * PI)) * (psni * (dsio + dsim) + pdni * (dsio - dsim));
 
   //------- calculate source contribution to psi	for  0-2  half-panel
   dxinv = 1.0 / (x0 - x2);
@@ -3157,17 +3157,17 @@ XFoil::PsiResult XFoil::psisig(int iNode, int jo, Vector2d point, Vector2d norma
   double dsip = 1.0 / dsp;
 
   //------- dpsi/dm
-  psi_result.dzdm[jo + INDEX_START_WITH] += (1 / (4 * PI)) * (-psum * (dsip + dsio) - pdif * (dsip - dsio));
-  psi_result.dzdm[jp + INDEX_START_WITH] += (1 / (4 * PI)) * (psum / dso - pdif / dso);
-  psi_result.dzdm[jq + INDEX_START_WITH] += (1 / (4 * PI)) * (psum * dsip + pdif * dsip);
+  psi_result.dzdm[jo] += (1 / (4 * PI)) * (-psum * (dsip + dsio) - pdif * (dsip - dsio));
+  psi_result.dzdm[jp] += (1 / (4 * PI)) * (psum / dso - pdif / dso);
+  psi_result.dzdm[jq] += (1 / (4 * PI)) * (psum * dsip + pdif * dsip);
 
   //------- dpsi/dni
   psni = psx0 * (x1i + x2i) * 0.5 + psx2 * x2i + psyy * yyi;
   pdni = pdx0 * (x1i + x2i) * 0.5 + pdx2 * x2i + pdyy * yyi;
 
-  psi_result.dqdm[jo + INDEX_START_WITH] += (1 / (4 * PI)) * (-psni * (dsip + dsio) - pdni * (dsip - dsio));
-  psi_result.dqdm[jp + INDEX_START_WITH] += (1 / (4 * PI)) * (psni / dso - pdni / dso);
-  psi_result.dqdm[jq + INDEX_START_WITH] += (1 / (4 * PI)) * (psni * dsip + pdni * dsip);
+  psi_result.dqdm[jo] += (1 / (4 * PI)) * (-psni * (dsip + dsio) - pdni * (dsip - dsio));
+  psi_result.dqdm[jp] += (1 / (4 * PI)) * (psni / dso - pdni / dso);
+  psi_result.dqdm[jq] += (1 / (4 * PI)) * (psni * dsip + pdni * dsip);
 
   return psi_result;
 }
@@ -3260,19 +3260,19 @@ XFoil::PsiResult XFoil::psi_te(int iNode, Vector2d point, Vector2d normal_vector
   psi_result.psi += (1 / (2 * PI)) * (psig * sigte + pgam * gamte);
 
   //---- dpsi/dgam
-  psi_result.dzdg[n] += -(1 / (2 * PI)) * psig * scs * 0.5;
-  psi_result.dzdg[1] += +(1 / (2 * PI)) * psig * scs * 0.5;
+  psi_result.dzdg[n - 1] += -(1 / (2 * PI)) * psig * scs * 0.5;
+  psi_result.dzdg[0] += +(1 / (2 * PI)) * psig * scs * 0.5;
 
-  psi_result.dzdg[n] += +(1 / (2 * PI)) * pgam * sds * 0.5;
-  psi_result.dzdg[1] += -(1 / (2 * PI)) * pgam * sds * 0.5;
+  psi_result.dzdg[n - 1] += +(1 / (2 * PI)) * pgam * sds * 0.5;
+  psi_result.dzdg[0] += -(1 / (2 * PI)) * pgam * sds * 0.5;
 
   //---- dpsi/dni
   psi_result.psi_ni += (1 / (2 * PI)) * (psigni * sigte + pgamni * gamte);
 
   psi_result.qtan += (1 / (2 * PI)) * (psigni * sigte_vector + pgamni * gamte_vector);
 
-  psi_result.dqdg[n] += -(1 / (2 * PI)) * (psigni * 0.5 * scs - pgamni * 0.5 * sds);
-  psi_result.dqdg[1] += +(1 / (2 * PI)) * (psigni * 0.5 * scs - pgamni * 0.5 * sds);
+  psi_result.dqdg[n - 1] += -(1 / (2 * PI)) * (psigni * 0.5 * scs - pgamni * 0.5 * sds);
+  psi_result.dqdg[0] += +(1 / (2 * PI)) * (psigni * 0.5 * scs - pgamni * 0.5 * sds);
 
   return psi_result;
 }
@@ -3370,17 +3370,17 @@ XFoil::PsiResult XFoil::pswlin(int i, Vector2d point, Vector2d normal_vector) {
     const double dsim = 1.0 / dsm;
 
     //------- dpsi/dm
-    psi_result.dzdm[jm + INDEX_START_WITH] += (1 / (4 * PI)) * (-psum * dsim + pdif * dsim);
-    psi_result.dzdm[jo + INDEX_START_WITH] += (1 / (4 * PI)) * (-psum / dso - pdif / dso);
-    psi_result.dzdm[jp + INDEX_START_WITH] += (1 / (4 * PI)) * (psum * (dsio + dsim) + pdif * (dsio - dsim));
+    psi_result.dzdm[jm] += (1 / (4 * PI)) * (-psum * dsim + pdif * dsim);
+    psi_result.dzdm[jo] += (1 / (4 * PI)) * (-psum / dso - pdif / dso);
+    psi_result.dzdm[jp] += (1 / (4 * PI)) * (psum * (dsio + dsim) + pdif * (dsio - dsim));
 
     //------- dpsi/dni
     double psni = psx1 * x1i + psx0 * (x1i + x2i) * 0.5 + psyy * yyi;
     double pdni = pdx1 * x1i + pdx0 * (x1i + x2i) * 0.5 + pdyy * yyi;
 
-    psi_result.dqdm[jm + INDEX_START_WITH] += (1 / (4 * PI)) * (-psni * dsim + pdni * dsim);
-    psi_result.dqdm[jo + INDEX_START_WITH] += (1 / (4 * PI)) * (-psni / dso - pdni / dso);
-    psi_result.dqdm[jp + INDEX_START_WITH] += (1 / (4 * PI)) * (psni * (dsio + dsim) + pdni * (dsio - dsim));
+    psi_result.dqdm[jm] += (1 / (4 * PI)) * (-psni * dsim + pdni * dsim);
+    psi_result.dqdm[jo] += (1 / (4 * PI)) * (-psni / dso - pdni / dso);
+    psi_result.dqdm[jp] += (1 / (4 * PI)) * (psni * (dsio + dsim) + pdni * (dsio - dsim));
 
     //------- calculate source contribution to psi	for  0-2  half-panel
     dxinv = 1.0 / (x0 - blData2.param.xz);
@@ -3401,17 +3401,17 @@ XFoil::PsiResult XFoil::pswlin(int i, Vector2d point, Vector2d normal_vector) {
     const double dsip = 1.0 / dsp;
 
     //------- dpsi/dm
-    psi_result.dzdm[jo + INDEX_START_WITH] += (1 / (4 * PI)) * (-psum * (dsip + dsio) - pdif * (dsip - dsio));
-    psi_result.dzdm[jp + INDEX_START_WITH] += (1 / (4 * PI)) * (psum / dso - pdif / dso);
-    psi_result.dzdm[jq + INDEX_START_WITH] += (1 / (4 * PI)) * (psum * dsip + pdif * dsip);
+    psi_result.dzdm[jo] += (1 / (4 * PI)) * (-psum * (dsip + dsio) - pdif * (dsip - dsio));
+    psi_result.dzdm[jp] += (1 / (4 * PI)) * (psum / dso - pdif / dso);
+    psi_result.dzdm[jq] += (1 / (4 * PI)) * (psum * dsip + pdif * dsip);
 
     //------- dpsi/dni
     psni = psx0 * (x1i + x2i) * 0.5 + psx2 * x2i + psyy * yyi;
     pdni = pdx0 * (x1i + x2i) * 0.5 + pdx2 * x2i + pdyy * yyi;
 
-    psi_result.dqdm[jo + INDEX_START_WITH] += (1 / (4 * PI)) * (-psni * (dsip + dsio) - pdni * (dsip - dsio));
-    psi_result.dqdm[jp + INDEX_START_WITH] += (1 / (4 * PI)) * (psni / dso - pdni / dso);
-    psi_result.dqdm[jq + INDEX_START_WITH] += (1 / (4 * PI)) * (psni * dsip + pdni * dsip);
+    psi_result.dqdm[jo] += (1 / (4 * PI)) * (-psni * (dsip + dsio) - pdni * (dsip - dsio));
+    psi_result.dqdm[jp] += (1 / (4 * PI)) * (psni / dso - pdni / dso);
+    psi_result.dqdm[jq] += (1 / (4 * PI)) * (psni * dsip + pdni * dsip);
   }
 
   return psi_result;
@@ -3454,7 +3454,7 @@ bool XFoil::qdcalc() {
   for (int i = 0; i < n; i++) {
     PsiResult psi_result = pswlin(i, points.col(i + INDEX_START_WITH), normal_vectors.col(i + INDEX_START_WITH));
     for (int j = n; j < n + nw; j++) {
-      bij(i, j) = -psi_result.dzdm[j + INDEX_START_WITH];
+      bij(i, j) = -psi_result.dzdm[j];
     }
   }
 
@@ -3487,15 +3487,15 @@ bool XFoil::qdcalc() {
     //------ airfoil contribution at wake panel node
     PsiResult psi_result = psilin(i + INDEX_START_WITH, points.col(i + INDEX_START_WITH), normal_vectors.col(i + INDEX_START_WITH), true);
     for (int j = 0; j < n; j++) {
-      cij[iw + INDEX_START_WITH][j + INDEX_START_WITH] = psi_result.dqdg[j + INDEX_START_WITH];
+      cij[iw + INDEX_START_WITH][j + INDEX_START_WITH] = psi_result.dqdg[j];
     }
     for (int j = 0; j < n; j++) {
-      dij[i + INDEX_START_WITH][j + INDEX_START_WITH] = psi_result.dqdm[j + INDEX_START_WITH];
+      dij[i + INDEX_START_WITH][j + INDEX_START_WITH] = psi_result.dqdm[j];
     }
     //------ wake contribution
     psi_result = pswlin(i + INDEX_START_WITH, points.col(i + INDEX_START_WITH), normal_vectors.col(i + INDEX_START_WITH));
     for (int j = n; j < n + nw; j++) {
-      dij[i + INDEX_START_WITH][j + INDEX_START_WITH] = psi_result.dqdm[j + INDEX_START_WITH];
+      dij[i + INDEX_START_WITH][j + INDEX_START_WITH] = psi_result.dqdm[j];
     }
   }
 
