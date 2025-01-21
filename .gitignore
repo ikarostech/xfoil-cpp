@@ -5,4 +5,5 @@ gtest/*
 gmock/*
 lib/*
 out/*
+build/*
 .vscode/*
