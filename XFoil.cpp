@@ -2908,7 +2908,7 @@ Matrix2Xd XFoil::ncalc(Matrix2Xd points, VectorXd spline_length, int n) {
  *			airfoil:  1   < i < n
  *			wake:	  n+1 < i < n+nw
  * ----------------------------------------------------------------------- */
-XFoil::PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector, bool siglin) {
+PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector, bool siglin) {
   PsiResult psi_result;
   
   //---- distance tolerance for determining if two points are the same
@@ -3040,7 +3040,7 @@ XFoil::PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector
   return psi_result;
 }
 
-XFoil::PsiResult XFoil::psisig(int iNode, int jo, Vector2d point, Vector2d normal_vector) {
+PsiResult XFoil::psisig(int iNode, int jo, Vector2d point, Vector2d normal_vector) {
   PsiResult psi_result;
   psi_result.psi = 0;
   psi_result.psi_ni = 0;
@@ -3179,13 +3179,10 @@ XFoil::PsiResult XFoil::psisig(int iNode, int jo, Vector2d point, Vector2d norma
   return psi_result;
 }
 
-XFoil::PsiResult XFoil::psi_te(int iNode, Vector2d point, Vector2d normal_vector) {
-  PsiResult psi_result;
-  psi_result.psi = 0;
-  psi_result.psi_ni = 0;
+PsiResult XFoil::psi_te(int iNode, Vector2d point, Vector2d normal_vector) {
+  PsiResult psi_result = PsiResult();
 
   //------ skip null panel
-
   double apan = apanel[n];
 
   Vector2d r1 = point - points.col(n);
@@ -3292,7 +3289,7 @@ XFoil::PsiResult XFoil::psi_te(int iNode, Vector2d point, Vector2d normal_vector
  *			airfoil:  1   < i < n
  *			wake:	  n+1 < i < n+nw
  *-------------------------------------------------------------------- */
-XFoil::PsiResult XFoil::pswlin(int i, Vector2d point, Vector2d normal_vector) {
+PsiResult XFoil::pswlin(int i, Vector2d point, Vector2d normal_vector) {
   PsiResult psi_result;
   double g1, g2, t1, t2;
   int io, jo;

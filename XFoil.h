@@ -50,6 +50,7 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 #include "model/math_util.hpp"
 #include "model/spline.hpp"
 #include "model/boundary_layer.hpp"
+#include "model/psi.hpp"
 #include "xfoil_params.h"
 
 using namespace std;
@@ -213,27 +214,8 @@ class XFoil {
   bool mrchdu();
   bool mrchue();
   Matrix2Xd ncalc(Matrix2Xd point, VectorXd spline_length, int n);
-  class PsiResult {
-    public:
-    double psi;
-    double psi_ni;
-    Vector2d qtan = Vector2d::Zero();
-    Vector<double, IQX> dzdg = Vector<double, IQX>::Zero();
-    Vector<double, IQX> dqdg = Vector<double, IQX>::Zero();
-    Vector<double, IZX> dzdm = Vector<double, IZX>::Zero();
-    Vector<double, IZX> dqdm = Vector<double, IZX>::Zero();
-    static PsiResult sum(PsiResult a, PsiResult b) {
-      PsiResult result;
-      result.psi = a.psi + b.psi;
-      result.psi_ni = a.psi_ni + b.psi_ni;
-      result.qtan = a.qtan + b.qtan;
-      result.dzdg = a.dzdg + b.dzdg;
-      result.dqdg = a.dqdg + b.dqdg;
-      result.dzdm = a.dzdm + b.dzdm;
-      result.dqdm = a.dqdm + b.dqdm;
-      return result;
-    }
-  };
+
+  // TODO modle/psi.hppへ移植
   PsiResult psilin(int i, Vector2d point, Vector2d normal_vector, bool siglin);
   PsiResult psisig(int iNode, int jNode, Vector2d point, Vector2d normal_vector);
   PsiResult psi_te(int i, Vector2d point, Vector2d normal_vector);
