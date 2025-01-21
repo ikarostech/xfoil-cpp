@@ -1,4 +1,4 @@
-#include "../Eigen/Core"
+#include <Eigen/Core>
 
 class blData {
     public:

@@ -1,7 +1,7 @@
 #include <vector>
-#include "../Eigen/Core"
-#include "../Eigen/Dense"
-#include "../Eigen/StdVector"
+#include <Eigen/Core>
+#include <Eigen/Dense>
+#include <Eigen/StdVector>
 
 class spline {
     public:
