@@ -1,6 +1,6 @@
 #include "math_util.hpp"
 
-#include "../Eigen/Core"
+#include <Eigen/Core>
 #include <iostream>
 const int INDEX_START_WITH = 1;
 
