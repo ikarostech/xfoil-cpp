@@ -2884,7 +2884,7 @@ Matrix2Xd XFoil::ncalc(Matrix2Xd points, VectorXd spline_length, int n) {
 
   Matrix2Xd normal_vector = Matrix2Xd::Zero(2, IZX);
   normal_vector.row(0) = spline::splind(points.row(0), spline_length, n);
-  normal_vector.row(1) = spline::splind(points.row(0), spline_length, n);
+  normal_vector.row(1) = spline::splind(points.row(1), spline_length, n);
   for (int i = 1; i <= n; i++) {
     Vector2d temp = normal_vector.col(i);
     normal_vector.col(i).x() = temp.normalized().y();
@@ -3431,13 +3431,9 @@ bool XFoil::qdcalc() {
     for (int j = 0; j < n; j++) {
       //------- multiply each dpsi/sig vector by inverse of factored dpsi/dgam
       // matrix
-      for (int iu = 0; iu <= n; iu++) {
-        gamu_temp[iu] = bij(iu, j);
-      }
+      gamu_temp = bij.col(j).head(n + 1);
       gamu_temp = psi_gamma_lu.solve(gamu_temp);
-      for (int iu = 0; iu <= n; iu++) {
-        bij(iu, j) = gamu_temp[iu];
-      }
+      bij.col(j).head(n + 1) = gamu_temp;
 
       //------- store resulting dgam/dsig = dqtan/dsig vector
       for (int i = 0; i < n; i++) {
@@ -3456,15 +3452,13 @@ bool XFoil::qdcalc() {
   }
 
   //---- set up kutta condition (no direct source influence)
+  
   for (int j = n; j < n + nw; j++) bij(n, j) = 0.0;
 
   //---- multiply by inverse of factored dpsi/dgam matrix
   for (int j = n; j < n + nw; j++) {
-    for (int iu = 0; iu <= n; iu++) {
-      gamu_temp[iu] = bij(iu, j);
-    }
+    gamu_temp = bij.col(j).head(n + 1);
     gamu_temp = psi_gamma_lu.solve(gamu_temp);
-
     bij.col(j).head(n + 1) = gamu_temp;
   }
   //---- set the source influence matrix for the wake sources
