@@ -95,14 +95,13 @@ bool XFoil::initialize() {
   memset(blsav, 0, sizeof(blsav));
   
   bij = MatrixXd::Zero(IQX, IZX);
-  memset(cij, 0, sizeof(cij));
+  dij = MatrixXd::Zero(IZX, IZX);
   cpi = VectorXd::Zero(IVX);
   cpv = VectorXd::Zero(IVX);
   ctau.top = VectorXd::Zero(IVX);
   ctau.bottom = VectorXd::Zero(IVX);
   ctq.top = VectorXd::Zero(IVX);
   ctq.bottom = VectorXd::Zero(IVX);
-  memset(dij, 0, sizeof(dij));
   dstr.top = VectorXd::Zero(IVX);
   dstr.bottom = VectorXd::Zero(IVX);
   
@@ -694,7 +693,6 @@ bool XFoil::bldif(int ityp) {
       //vs1(0, 1) = z_us * blData1.usz.t();
       vs1(0, 2) = z_d;// + z_us * blData1.usz.d();
       vs1(0, 3) = z_u1;// + z_us * blData1.usz.u();
-      vs1.col(0).segment(1,3) += (z_upw * upw1) + (z_de * blData1.dez.pos_vector()) + (z_us * blData1.usz.pos_vector());
       vs1(0, 4) = z_x1;
       vs2(0, 0) = z_s2;
       //vs2(0, 1) = z_de * blData2.dez.t() + z_us * blData2.usz.t();
@@ -705,11 +703,14 @@ bool XFoil::bldif(int ityp) {
       vsm[0] = z_upw * upw_ms + z_de * blData1.dez.ms() + z_us * blData1.usz.ms() +
                z_de * blData2.dez.ms() + z_us * blData2.usz.ms();
 
-      vs1(0, 1) += z_cq1 * blData1.cqz.t() + z_cf1 * blData1.cfz.t() + z_hk1 * blData1.hkz.t();
-      vs1(0, 2) += z_cq1 * blData1.cqz.d() + z_cf1 * blData1.cfz.d() + z_hk1 * blData1.hkz.d();
-      vs1(0, 3) += z_cq1 * blData1.cqz.u() + z_cf1 * blData1.cfz.u() + z_hk1 * blData1.hkz.u();
-      // ↓ とんでもなく遅いので変数の方を変えるとかしないと無理そう
-      //vs1.col(0).segment(1,3) += (z_cq1 * blData1.cqz.pos_vector()) + (z_cf1 * blData1.cfz.pos_vector()) + (z_hk1 * blData1.hkz.pos_vector());
+      // 実行速度を改善するため一時変数に結果をまとめる
+      Vector3d vs1_vector = z_upw * upw1
+        + z_de * blData1.dez.pos_vector()
+        + z_us * blData1.usz.pos_vector()
+        + z_cq1 * blData1.cqz.pos_vector()
+        + z_cf1 * blData1.cfz.pos_vector()
+        + z_hk1 * blData1.hkz.pos_vector();
+      vs1.col(0).segment(1,3) += vs1_vector;
 
       vs2(0, 1) += z_cq2 * blData2.cqz.t() + z_cf2 * blData2.cfz.t() + z_hk2 * blData2.hkz.t();
       vs2(0, 2) += z_cq2 * blData2.cqz.d() + z_cf2 * blData2.cfz.d() + z_hk2 * blData2.hkz.d();
@@ -1885,9 +1886,9 @@ bool XFoil::dslim(double &dstr, double thet, double msq, double hklim) {
 }
 
 bool XFoil::gamqv() {
-  for (int i = 1; i <= n; i++) {
-    gam(0, i) = qvis[i];
-    gam(1, i) = qinv_a[i];
+  for (int i = 0; i < n; i++) {
+    gam(0, i + INDEX_START_WITH) = qvis[i + INDEX_START_WITH];
+    gam(1, i + INDEX_START_WITH) = qinv_a[i];
   }
 
   return true;
@@ -2022,8 +2023,8 @@ bool XFoil::ggcalc() {
   }
 
   //---- set inviscid alpha=0,90 surface speeds for this geometry
-  for (int i = 1; i <= n + 1; i++) {
-    qinvu.col(i) = gamu.col(i - INDEX_START_WITH);
+  for (int i = 0; i <= n; i++) {
+    qinvu.col(i) = gamu.col(i);
   }
 
   lgamu = true;
@@ -3419,7 +3420,6 @@ PsiResult XFoil::pswlin(int i, Vector2d point, Vector2d normal_vector) {
  * 	   matrix for current airfoil and wake geometry.
  * ------------------------------------------------------ */
 bool XFoil::qdcalc() {
-  double sum;
   VectorXd gamu_temp(n + 1);
 
   // TRACE("calculating source influence matrix ...\n");
@@ -3436,10 +3436,9 @@ bool XFoil::qdcalc() {
       bij.col(j).head(n + 1) = gamu_temp;
 
       //------- store resulting dgam/dsig = dqtan/dsig vector
-      for (int i = 0; i < n; i++) {
-        dij[i][j] = bij(i, j);
-      }
+      dij.col(j).head(n) = bij.col(j).head(n);
     }
+    
     ladij = true;
   }
 
@@ -3462,31 +3461,23 @@ bool XFoil::qdcalc() {
     bij.col(j).head(n + 1) = gamu_temp;
   }
   //---- set the source influence matrix for the wake sources
-  for (int i = 0; i < n; i++) {
-    for (int j = n; j < n + nw; j++) {
-      dij[i][j] = bij(i, j);
-    }
-  }
+  dij.block(0, n, n, nw) = bij.block(0, n, n, nw);
 
   //**** now we need to calculate the influence of sources on the wake
   // velocities
 
   //---- calculate dqtan/dgam and dqtan/dsig at the wake points
-
+  MatrixXd cij = MatrixXd::Zero(nw, n);
   for (int i = n; i < n + nw; i++) {
     int iw = i - n;
     //------ airfoil contribution at wake panel node
     PsiResult psi_result = psilin(i + INDEX_START_WITH, points.col(i + INDEX_START_WITH), normal_vectors.col(i + INDEX_START_WITH), true);
-    for (int j = 0; j < n; j++) {
-      cij[iw][j] = psi_result.dqdg[j];
-    }
-    for (int j = 0; j < n; j++) {
-      dij[i][j] = psi_result.dqdm[j];
-    }
+    cij.row(iw) = psi_result.dqdg.head(n).transpose();
+    dij.row(i).head(n) = psi_result.dqdm.head(n).transpose();
     //------ wake contribution
     psi_result = pswlin(i + INDEX_START_WITH, points.col(i + INDEX_START_WITH), normal_vectors.col(i + INDEX_START_WITH));
     for (int j = n; j < n + nw; j++) {
-      dij[i][j] = psi_result.dqdm[j];
+      dij(i, j) = psi_result.dqdm[j];
     }
   }
 
@@ -3496,24 +3487,17 @@ bool XFoil::qdcalc() {
     int iw = i - n;
 
     //------ airfoil surface source contribution first
-    for (int j = 0; j < n; j++) {
-      sum = 0.0;
-      for (int k = 0; k < n; k++) sum = sum + cij[iw][k] * dij[k][j];
-      dij[i][j] = dij[i ][j] + sum;
-    }
+    dij.row(i).head(n) += cij.row(iw).head(n) * dij.topLeftCorner(n, n);
 
     //------ wake source contribution next
-    for (int j = n; j < n + nw; j++) {
-      sum = 0.0;
-      for (int k = 0; k < n; k++) sum = sum + cij[iw][k] * bij(k, j);
-      dij[i][j] = dij[i][j] + sum;
-    }
+    dij.row(i).segment(n, nw) += cij.row(iw).head(n) * bij.block(0, n, n, nw);
   }
 
   //---- make sure first wake point has same velocity as trailing edge
   for (int j = 0; j < n + nw; j++) {
-    dij[n][j] = dij[n - 1][j];
+    dij(n, j) = dij(n - 1, j);
   }
+  dij.row(n) = dij.row(n - 1);
 
   lwdij = true;
   return true;
@@ -3529,7 +3513,7 @@ bool XFoil::qiset() {
     {-sin(alfa), cos(alfa)}
   };
   
-  for (int i = 1; i <= n + nw; i++) {
+  for (int i = 0; i < n + nw; i++) {
     qinv[i] = rotateMatrix.row(0).dot(qinvu.col(i));
     qinv_a[i] = rotateMatrix.row(1).dot(qinvu.col(i));
   }
@@ -3558,11 +3542,11 @@ bool XFoil::qvfue() {
 bool XFoil::qwcalc() {
 
   //---- first wake point (same as te)
-  qinvu.col(n + 1) = qinvu.col(n);
+  qinvu.col(n) = qinvu.col(n - 1);
 
   //---- rest of wake
-  for (int i = n + 2; i <= n + nw; i++) {
-    qinvu.col(i) = psilin(i, points.col(i), normal_vectors.col(i), false).qtan;
+  for (int i = n + 1; i < n + nw; i++) {
+    qinvu.col(i) = psilin(i + INDEX_START_WITH, points.col(i + INDEX_START_WITH), normal_vectors.col(i + INDEX_START_WITH), false).qtan;
   }
 
   return true;
@@ -3706,10 +3690,10 @@ bool XFoil::setbl() {
     for (int jbl = 2; jbl <= nbl.get(js); jbl++) {
       int j = ipan.get(js)[jbl];
       int jv = isys.get(js)[jbl];
-      ule1_m[jv] = -vti.top[2] * vti.get(js)[jbl] * dij[ile1 - INDEX_START_WITH][j - INDEX_START_WITH];
-      ule2_m[jv] = -vti.bottom[2] * vti.get(js)[jbl] * dij[ile2 - INDEX_START_WITH][j - INDEX_START_WITH];
-      ute1_m[jv] = -vti.top[iblte.top] * vti.get(js)[jbl] * dij[ite1 - INDEX_START_WITH][j - INDEX_START_WITH];
-      ute2_m[jv] = -vti.bottom[iblte.bottom] * vti.get(js)[jbl] * dij[ite2 - INDEX_START_WITH][j - INDEX_START_WITH];
+      ule1_m[jv] = -vti.top[2] * vti.get(js)[jbl] * dij(ile1 - INDEX_START_WITH, j - INDEX_START_WITH);
+      ule2_m[jv] = -vti.bottom[2] * vti.get(js)[jbl] * dij(ile2 - INDEX_START_WITH, j - INDEX_START_WITH);
+      ute1_m[jv] = -vti.top[iblte.top] * vti.get(js)[jbl] * dij(ite1 - INDEX_START_WITH, j - INDEX_START_WITH);
+      ute2_m[jv] = -vti.bottom[iblte.bottom] * vti.get(js)[jbl] * dij(ite2 - INDEX_START_WITH, j - INDEX_START_WITH);
     }
   }
 
@@ -3780,7 +3764,7 @@ bool XFoil::setbl() {
         for (int jbl = 2; jbl <= nbl.get(js); jbl++) {
           int j = ipan.get(js)[jbl];
           int jv = isys.get(js)[jbl];
-          u2_m[jv] = -vti.get(is)[ibl] * vti.get(js)[jbl] * dij[i - INDEX_START_WITH][j - INDEX_START_WITH];
+          u2_m[jv] = -vti.get(is)[ibl] * vti.get(js)[jbl] * dij(i - INDEX_START_WITH, j - INDEX_START_WITH);
           d2_m[jv] = d2_u2 * u2_m[jv];
         }
       }
@@ -5061,7 +5045,7 @@ bool XFoil::ueset() {
       double dui = 0.0;
       for (int js = 1; js <= 2; js++) {
         for (int jbl = 2; jbl <= nbl.get(js); jbl++) {
-          double ue_m = -vti.get(is)[ibl] * vti.get(js)[jbl] * dij[ipan.get(is)[ibl] - INDEX_START_WITH][ipan.get(js)[jbl] - INDEX_START_WITH];
+          double ue_m = -vti.get(is)[ibl] * vti.get(js)[jbl] * dij(ipan.get(is)[ibl] - INDEX_START_WITH, ipan.get(js)[jbl] - INDEX_START_WITH);
           dui += ue_m * mass.get(js)[jbl];
         }
       }
@@ -5081,8 +5065,8 @@ bool XFoil::uicalc() {
     uinv_a.get(is)[1] = 0.0;
     for (int ibl = 2; ibl <= nbl.get(is); ibl++) {
       int i = ipan.get(is)[ibl];
-      uinv.get(is)[ibl] = vti.get(is)[ibl] * qinv[i];
-      uinv_a.get(is)[ibl] = vti.get(is)[ibl] * qinv_a[i];
+      uinv.get(is)[ibl] = vti.get(is)[ibl] * qinv[i - INDEX_START_WITH];
+      uinv_a.get(is)[ibl] = vti.get(is)[ibl] * qinv_a[i - INDEX_START_WITH];
     }
   }
 
@@ -5141,7 +5125,7 @@ bool XFoil::update() {
         for (int jbl = 2; jbl <= nbl.get(js); jbl++) {
           int j = ipan.get(js)[jbl];
           int jv = isys.get(js)[jbl];
-          ue_m = -vti.get(is)[ibl] * vti.get(js)[jbl] * dij[i - INDEX_START_WITH][j - INDEX_START_WITH];
+          ue_m = -vti.get(is)[ibl] * vti.get(js)[jbl] * dij(i - INDEX_START_WITH, j - INDEX_START_WITH);
           dui = dui + ue_m * (mass.get(js)[jbl] + vdel[2][0][jv]);
           dui_ac = dui_ac + ue_m * (-vdel[2][1][jv]);
         }
