@@ -311,7 +311,7 @@ class XFoil {
   Vector2d point_le;
   Vector2d point_te;
   double chord, wgap[IWX], waklen;
-  int nw, ist;
+  int nw, i_stagnation;
 
 
   double cl_alf, cl_msq;

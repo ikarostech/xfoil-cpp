@@ -227,7 +227,7 @@ bool XFoil::initialize() {
   hmom = 0.0;
 
   // added techwinder : fortran initializes to 0
-  ist = 0;
+  i_stagnation = 0;
 
   qinfbl = 0.0;
   tkbl = 0.0;
@@ -2041,7 +2041,7 @@ bool XFoil::iblpan() {
 
   //-- top surface first
   ibl = 1;
-  for (int i = ist; i >= 1; i--) {
+  for (int i = i_stagnation; i >= 1; i--) {
     ibl = ibl + 1;
     ipan.top[ibl] = i;
     vti.top[ibl] = 1.0;
@@ -2052,7 +2052,7 @@ bool XFoil::iblpan() {
 
   //-- bottom surface next
   ibl = 1;
-  for (int i = ist + 1; i <= n; i++) {
+  for (int i = i_stagnation + 1; i <= n; i++) {
     ibl = ibl + 1;
     ipan.bottom[ibl] = i;
     vti.bottom[ibl] = -1.0;
@@ -4274,7 +4274,7 @@ bool XFoil::stfind() {
     i = n / 2;
   }
 
-  ist = i;
+  i_stagnation = i;
   dgam = gam(0, i + 1) - gam(0, i);
   ds = spline_length[i + 1] - spline_length[i];
 
@@ -4300,10 +4300,10 @@ bool XFoil::stmove() {
   //---------------------------------------------------
   int istold;
   //-- locate new stagnation point arc length sst from gam distribution
-  istold = ist;
+  istold = i_stagnation;
   stfind();
 
-  if (istold == ist) {
+  if (istold == i_stagnation) {
     //--- recalculate new arc length array
     xicalc();
   }
@@ -4320,9 +4320,9 @@ bool XFoil::stmove() {
     //--- set  bl position -> system line  pointers
     iblsys();
 
-    if (ist > istold) {
+    if (i_stagnation > istold) {
       //---- increase in number of points on top side (is=1)
-      int idif = ist - istold;
+      int idif = i_stagnation - istold;
 
       itran.top = itran.top + idif;
       itran.bottom = itran.bottom - idif;
@@ -4353,7 +4353,7 @@ bool XFoil::stmove() {
       }
     } else {
       //---- increase in number of points on bottom side (is=2)
-      int idif = istold - ist;
+      int idif = istold - i_stagnation;
 
       itran.top = itran.top - idif;
       itran.bottom = itran.bottom + idif;
