@@ -183,7 +183,7 @@ class XFoil {
       throw invalid_argument("invalid side type");
     }
   };
-  VectorXd cpcalc(int n, const double q[], double qinf, double minf);
+  VectorXd cpcalc(int n, VectorXd q, double qinf, double minf);
   class EnvEnResult {
     public:
     double ax;
@@ -278,8 +278,6 @@ class XFoil {
   Matrix2Xd points; //formerly x,y
   SidePair<double> xstrip;
   
-  double qvis[IZX];
-  
   Vector2d cmref;
   double tklam;
   Matrix2Xd dpoints_ds; //formerly xp, yp
@@ -324,7 +322,7 @@ class XFoil {
   double apanel[IZX], sst, sst_go, sst_gp, gamte, sigte;
   double dste, aste;
   Matrix2Xd qinvu;
-  double qinv[IZX], qinv_a[IZX];
+  VectorXd qinv, qinv_a, qvis;
   double dzdg[IQX], dzdm[IZX], dqdg[IQX], dqdm[IZX];
   FullPivLU<MatrixXd> psi_gamma_lu;
   
