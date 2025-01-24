@@ -120,10 +120,10 @@ bool XFoil::initialize() {
   memset(qf1, 0, sizeof(qf1));
   memset(qf2, 0, sizeof(qf2));
   memset(qf3, 0, sizeof(qf3));
-  memset(qinv, 0, sizeof(qinv));
+  qinv = VectorXd::Zero(IVX);
+  qinv_a = VectorXd::Zero(IVX);
   qinvu = Matrix2Xd::Zero(2, IZX);
-  memset(qinv_a, 0, sizeof(qinv_a));
-  memset(qvis, 0, sizeof(qvis));
+  qvis = VectorXd::Zero(IVX);
   spline_length.resize(IZX);
   snew = VectorXd::Zero(4 * IBX);
   thet.top = VectorXd::Zero(IVX);
@@ -1708,15 +1708,15 @@ bool XFoil::comset() {
 /** ---------------------------------------------
  *      sets compressible cp from speed.
  * ---------------------------------------------- */
-VectorXd XFoil::cpcalc(int n, const double q[], double qinf, double minf) {
-  VectorXd cp = VectorXd::Zero(n + INDEX_START_WITH);
+VectorXd XFoil::cpcalc(int n, VectorXd q, double qinf, double minf) {
+  VectorXd cp = VectorXd::Zero(n);
   bool denneg = false;
   double beta, bfac;
 
   beta = sqrt(1.0 - MathUtil::pow(minf, 2));
   bfac = 0.5 * MathUtil::pow(minf, 2) / (1.0 + beta);
 
-  for (int i = 1; i <= n; i++) {
+  for (int i = 0; i < n; i++) {
     const double cpinc = 1.0 - (q[i] / qinf) * (q[i] / qinf);
     const double den = beta + bfac * cpinc;
     cp[i] = cpinc / den;
@@ -1887,7 +1887,7 @@ bool XFoil::dslim(double &dstr, double thet, double msq, double hklim) {
 
 bool XFoil::gamqv() {
   for (int i = 0; i < n; i++) {
-    gam(0, i + INDEX_START_WITH) = qvis[i + INDEX_START_WITH];
+    gam(0, i + INDEX_START_WITH) = qvis[i];
     gam(1, i + INDEX_START_WITH) = qinv_a[i];
   }
 
@@ -3534,7 +3534,7 @@ bool XFoil::qiset() {
 bool XFoil::qvfue() {
   for (int is = 1; is <= 2; is++) {
     for (int ibl = 2; ibl <= nbl.get(is); ibl++) {
-      int i = ipan.get(is)[ibl];
+      int i = ipan.get(is)[ibl] - INDEX_START_WITH;
       qvis[i] = vti.get(is)[ibl] * uedg.get(is)[ibl];
     }
   }
