@@ -1928,25 +1928,20 @@ bool XFoil::ggcalc() {
 
   //---- set up matrix system for  psi = psio  on airfoil surface.
   //-    the unknowns are (dgamma)i and dpsio.
-  for (int i = 1; i <= n; i++) {
+  for (int i = 0; i < n; i++) {
     //------ calculate psi and dpsi/dgamma array for current node
-    PsiResult psi_result = psilin(i, points.col(i), normal_vectors.col(i), true);
+    PsiResult psi_result = psilin(i + INDEX_START_WITH, points.col(i + INDEX_START_WITH), normal_vectors.col(i + INDEX_START_WITH), true);
 
-    const Vector2d res = qinf  * Vector2d {points.col(i).y() , -points.col(i).x()};
+    const Vector2d res = qinf  * Vector2d {points.col(i + INDEX_START_WITH).y() , -points.col(i + INDEX_START_WITH).x()};
 
     //------ dres/dgamma
-    for (int j = 0; j < n; j++) {
-      dpsi_dgam(i - 1, j) = psi_result.dzdg[j];
-    }
-
-    for (int j = 0; j < n; j++) {
-      bij(i - INDEX_START_WITH, j) = -psi_result.dzdm[j];
-    }
+    dpsi_dgam.row(i).head(n)  = psi_result.dzdg.head(n);
+    bij.row(i).head(n) = -psi_result.dzdm.head(n);
 
     //------ dres/dpsio
-    dpsi_dgam(i - 1, n) = -1.0;
+    dpsi_dgam(i, n) = -1.0;
 
-    psi.col(i - 1) = -res;
+    psi.col(i) = -res;
   }
 
   //---- set Kutta condition
@@ -1956,7 +1951,7 @@ bool XFoil::ggcalc() {
   for (int j = 0; j < n + 1; j++) {
     dpsi_dgam(n, j) = 0;
   }
-
+  dpsi_dgam.row(n).head(n + 1) = VectorXd::Zero(n + 1);
   dpsi_dgam(n, 0) = 1;
   dpsi_dgam(n, n - 1) = 1;
 
@@ -1991,12 +1986,9 @@ bool XFoil::ggcalc() {
     PsiResult psi_result = psilin(0, bis, normal_bis, true);
     
     //----- dres/dgamma
-    for (int j = 0; j < n; j++) {
-      dpsi_dgam(n - 1, j) = psi_result.dqdg[j];
-    }
-
+    dpsi_dgam.row(n - 1).head(n) = psi_result.dzdg.head(n);
     //----- -dres/dmass
-    for (int j = 0; j < n; j++) bij(n - 1, j) = -psi_result.dqdm[j];
+    bij.row(n - 1).head(n) = -psi_result.dzdm.head(n);
 
     //----- dres/dpsio
     dpsi_dgam(n - 1, n);

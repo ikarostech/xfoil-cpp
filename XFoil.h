@@ -323,7 +323,6 @@ class XFoil {
   double dste, aste;
   Matrix2Xd qinvu;
   VectorXd qinv, qinv_a, qvis;
-  double dzdg[IQX], dzdm[IZX], dqdg[IQX], dqdm[IZX];
   FullPivLU<MatrixXd> psi_gamma_lu;
   
   MatrixXd bij, dij;
