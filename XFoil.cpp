@@ -1638,24 +1638,24 @@ bool XFoil::clcalc(Vector2d ref) {
   cl_alf = 0.0;
   cl_msq = 0.0;
   
-  double cginc = 1.0 - MathUtil::pow((gam(0, 0 + INDEX_START_WITH) / qinf), 2);
+  double cginc = 1.0 - MathUtil::pow((gam(0, 0) / qinf), 2);
   double cpg1 = cginc / (beta + bfac * cginc);
   double cpg1_msq = -cpg1 / (beta + bfac * cginc) * (beta_msq + bfac_msq * cginc);
 
-  double cpi_gam = -2.0 * gam(0, 0 + INDEX_START_WITH) / qinf / qinf;
+  double cpi_gam = -2.0 * gam(0, 0) / qinf / qinf;
   double cpc_cpi = (1.0 - bfac * cpg1) / (beta + bfac * cginc);
-  double cpg1_alf = cpc_cpi * cpi_gam * gam(1, 0 + INDEX_START_WITH);
+  double cpg1_alf = cpc_cpi * cpi_gam * gam(1, 0);
 
   for (int i = 0; i < n; i++) {
     int ip = (i + 1) % n;
 
-    cginc = 1.0 - MathUtil::pow((gam(0, ip + INDEX_START_WITH) / qinf), 2);
+    cginc = 1.0 - MathUtil::pow((gam(0, ip) / qinf), 2);
     double cpg2 = cginc / (beta + bfac * cginc);
     double cpg2_msq = -cpg2 / (beta + bfac * cginc) * (beta_msq + bfac_msq * cginc);
 
-    cpi_gam = -2.0 * gam(0, ip + INDEX_START_WITH) / qinf / qinf;
+    cpi_gam = -2.0 * gam(0, ip) / qinf / qinf;
     cpc_cpi = (1.0 - bfac * cpg2) / (beta + bfac * cginc);
-    double cpg2_alf = cpc_cpi * cpi_gam * gam(1, ip + INDEX_START_WITH);
+    double cpg2_alf = cpc_cpi * cpi_gam * gam(1, ip);
 
     Matrix2d rotateMatrix = Matrix2d {
       {cos(alfa), sin(alfa)},
@@ -1886,8 +1886,8 @@ bool XFoil::dslim(double &dstr, double thet, double msq, double hklim) {
 
 bool XFoil::gamqv() {
   for (int i = 0; i < n; i++) {
-    gam(0, i + INDEX_START_WITH) = qvis[i];
-    gam(1, i + INDEX_START_WITH) = qinv_a[i];
+    gam(0, i) = qvis[i];
+    gam(1, i) = qinv_a[i];
   }
 
   return true;
@@ -2994,8 +2994,8 @@ PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector, bool 
     Vector2d gsum_vector = gamu.col(jp) + gamu.col(jo);
     Vector2d gdif_vector = gamu.col(jp) - gamu.col(jo);
 
-    double gsum = gam(0, jp + INDEX_START_WITH) + gam(0, jo + INDEX_START_WITH);
-    double gdif = gam(0, jp + INDEX_START_WITH) - gam(0, jo + INDEX_START_WITH);
+    double gsum = gam(0, jp) + gam(0, jo);
+    double gdif = gam(0, jp) - gam(0, jo);
 
     psi_result.psi += (1 / (4 * PI)) * (psis * gsum + psid * gdif);
 
@@ -3249,8 +3249,8 @@ PsiResult XFoil::psi_te(int iNode, Vector2d point, Vector2d normal_vector) {
   Vector2d sigte_vector = 0.5 * scs * (gamu.col(0) - gamu.col(n - 1));
   Vector2d gamte_vector = -0.5 * sds * (gamu.col(0) - gamu.col(n - 1));
 
-  sigte = 0.5 * scs * (gam(0, 0 + INDEX_START_WITH) - gam(0, n - 1 + INDEX_START_WITH));
-  gamte = -0.5 * sds * (gam(0, 0 + INDEX_START_WITH) - gam(0, n - 1 + INDEX_START_WITH));
+  sigte = 0.5 * scs * (gam(0, 0) - gam(0, n - 1));
+  gamte = -0.5 * sds * (gam(0, 0) - gam(0, n - 1));
 
   //---- TE panel contribution to psi
   psi_result.psi += (1 / (2 * PI)) * (psig * sigte + pgam * gamte);
@@ -4098,8 +4098,8 @@ bool XFoil::specal() {
 
   //---- superimpose suitably weighted  alpha = 0, 90  distributions
   for (int i = 0; i < n; i++) {
-    gam(0, i + INDEX_START_WITH) = rotateMatrix.row(0).dot(gamu.col(i));
-    gam(1, i + INDEX_START_WITH) = rotateMatrix.row(1).dot(gamu.col(i));
+    gam(0, i) = rotateMatrix.row(0).dot(gamu.col(i));
+    gam(1, i) = rotateMatrix.row(1).dot(gamu.col(i));
   }
 
   tecalc();
@@ -4166,7 +4166,7 @@ bool XFoil::specal() {
     cpi = cpcalc(n, qinv, qinf, minf);
 
   for (int i = 0; i < n; i++) {
-    qgamm[i + INDEX_START_WITH] = gam(0, i + INDEX_START_WITH);
+    qgamm[i + INDEX_START_WITH] = gam(0, i);
   }
 
   return true;
@@ -4191,9 +4191,9 @@ bool XFoil::speccl() {
   };
 
   //---- superimpose suitably weighted  alpha = 0, 90  distributions
-  for (int i = 1; i <= n; i++) {
-    gam(0, i) = rotateMatrix.row(0).dot(gamu.col(i - INDEX_START_WITH));
-    gam(1, i) = rotateMatrix.row(1).dot(gamu.col(i - INDEX_START_WITH));
+  for (int i = 0; i < n; i++) {
+    gam(0, i) = rotateMatrix.row(0).dot(gamu.col(i));
+    gam(1, i) = rotateMatrix.row(1).dot(gamu.col(i));
   }
 
   //---- get corresponding cl, cl_alpha, cl_mach
@@ -4212,9 +4212,9 @@ bool XFoil::speccl() {
       {cos(alfa), sin(alfa)},
       {-sin(alfa), cos(alfa)}
     };
-    for (int i = 1; i <= n; i++) {
-      gam(0, i) = rotateMatrix.row(0).dot(gamu.col(i - INDEX_START_WITH));
-      gam(1, i) = rotateMatrix.row(1).dot(gamu.col(i - INDEX_START_WITH));
+    for (int i = 0; i < n; i++) {
+      gam(0, i) = rotateMatrix.row(0).dot(gamu.col(i));
+      gam(1, i) = rotateMatrix.row(1).dot(gamu.col(i));
     }
 
     //------ set new cl(alpha)
@@ -4259,7 +4259,7 @@ bool XFoil::stfind() {
   int i;
   bool bFound = false;
   for (i = 0; i < n - 1; i++) {
-    if (gam(0, i + INDEX_START_WITH) >= 0.0 && gam(0, i + 1 + INDEX_START_WITH) < 0.0) {
+    if (gam(0, i) >= 0.0 && gam(0, i + 1) < 0.0) {
       bFound = true;
       break;
     }
@@ -4271,14 +4271,14 @@ bool XFoil::stfind() {
   }
 
   i_stagnation = i + INDEX_START_WITH;
-  const double dgam = gam(0, i + 1 + INDEX_START_WITH) - gam(0, i + INDEX_START_WITH);
+  const double dgam = gam(0, i + 1) - gam(0, i);
   const double ds = spline_length[i + 1 + INDEX_START_WITH] - spline_length[i + INDEX_START_WITH];
 
   //---- evaluate so as to minimize roundoff for very small gam[i] or gam[i+1]
-  if (gam(0, i + INDEX_START_WITH) < -gam(0, i + 1 + INDEX_START_WITH))
-    sst = spline_length[i + INDEX_START_WITH] - ds * (gam(0, i + INDEX_START_WITH) / dgam);
+  if (gam(0, i) < -gam(0, i + 1))
+    sst = spline_length[i + INDEX_START_WITH] - ds * (gam(0, i) / dgam);
   else
-    sst = spline_length[i + 1 + INDEX_START_WITH] - ds * (gam(0, i + 1 + INDEX_START_WITH) / dgam);
+    sst = spline_length[i + 1 + INDEX_START_WITH] - ds * (gam(0, i + 1) / dgam);
 
   //---- tweak stagnation point if it falls right on a node (very unlikely)
   if (sst <= spline_length[i + INDEX_START_WITH]) sst = spline_length[i + INDEX_START_WITH] + 0.0000001;
@@ -4420,8 +4420,8 @@ bool XFoil::tecalc() {
   }
 
   //---- TE panel source and vorticity strengths
-  sigte = 0.5 * (gam(0, 0 + INDEX_START_WITH) - gam(0, n - 1 + INDEX_START_WITH)) * scs;
-  gamte = -.5 * (gam(0, 0 + INDEX_START_WITH) - gam(0, n - 1 + INDEX_START_WITH)) * sds;
+  sigte = 0.5 * (gam(0, 0) - gam(0, n - 1)) * scs;
+  gamte = -.5 * (gam(0, 0) - gam(0, n - 1)) * sds;
 
   return true;
 }
