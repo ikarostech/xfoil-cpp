@@ -4255,13 +4255,11 @@ bool XFoil::stfind() {
   //     locates stagnation point arc length
   //     location sst and panel index ist.
   //-----------------------------------------
-  double dgam, ds;
+  
   int i;
-  bool bFound;
-
-  bFound = false;
-  for (i = 1; i <= n - 1; i++) {
-    if (gam(0, i) >= 0.0 && gam(0, i + 1) < 0.0) {
+  bool bFound = false;
+  for (i = 0; i < n - 1; i++) {
+    if (gam(0, i + INDEX_START_WITH) >= 0.0 && gam(0, i + 1 + INDEX_START_WITH) < 0.0) {
       bFound = true;
       break;
     }
@@ -4272,22 +4270,22 @@ bool XFoil::stfind() {
     i = n / 2;
   }
 
-  i_stagnation = i;
-  dgam = gam(0, i + 1) - gam(0, i);
-  ds = spline_length[i + 1] - spline_length[i];
+  i_stagnation = i + INDEX_START_WITH;
+  const double dgam = gam(0, i + 1 + INDEX_START_WITH) - gam(0, i + INDEX_START_WITH);
+  const double ds = spline_length[i + 1 + INDEX_START_WITH] - spline_length[i + INDEX_START_WITH];
 
   //---- evaluate so as to minimize roundoff for very small gam[i] or gam[i+1]
-  if (gam(0, i) < -gam(0, i + 1))
-    sst = spline_length[i] - ds * (gam(0, i) / dgam);
+  if (gam(0, i + INDEX_START_WITH) < -gam(0, i + 1 + INDEX_START_WITH))
+    sst = spline_length[i + INDEX_START_WITH] - ds * (gam(0, i + INDEX_START_WITH) / dgam);
   else
-    sst = spline_length[i + 1] - ds * (gam(0, i + 1) / dgam);
+    sst = spline_length[i + 1 + INDEX_START_WITH] - ds * (gam(0, i + 1 + INDEX_START_WITH) / dgam);
 
   //---- tweak stagnation point if it falls right on a node (very unlikely)
-  if (sst <= spline_length[i]) sst = spline_length[i] + 0.0000001;
-  if (sst >= spline_length[i + 1]) sst = spline_length[i + 1] - 0.0000001;
+  if (sst <= spline_length[i + INDEX_START_WITH]) sst = spline_length[i + INDEX_START_WITH] + 0.0000001;
+  if (sst >= spline_length[i + 1 + INDEX_START_WITH]) sst = spline_length[i + 1 + INDEX_START_WITH] - 0.0000001;
 
-  sst_go = (sst - spline_length[i + 1]) / dgam;
-  sst_gp = (spline_length[i] - sst) / dgam;
+  sst_go = (sst - spline_length[i + 1 + INDEX_START_WITH]) / dgam;
+  sst_gp = (spline_length[i + INDEX_START_WITH] - sst) / dgam;
 
   return true;
 }
