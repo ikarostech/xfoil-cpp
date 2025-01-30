@@ -1638,44 +1638,43 @@ bool XFoil::clcalc(Vector2d ref) {
   cl_alf = 0.0;
   cl_msq = 0.0;
   
-  double cginc = 1.0 - (gam(0, 1) / qinf) * (gam(0, 1) / qinf);
+  double cginc = 1.0 - MathUtil::pow((gam(0, 0 + INDEX_START_WITH) / qinf), 2);
   double cpg1 = cginc / (beta + bfac * cginc);
   double cpg1_msq = -cpg1 / (beta + bfac * cginc) * (beta_msq + bfac_msq * cginc);
 
-  double cpi_gam = -2.0 * gam(0, 1) / qinf / qinf;
+  double cpi_gam = -2.0 * gam(0, 0 + INDEX_START_WITH) / qinf / qinf;
   double cpc_cpi = (1.0 - bfac * cpg1) / (beta + bfac * cginc);
-  double cpg1_alf = cpc_cpi * cpi_gam * gam(1, 1);
+  double cpg1_alf = cpc_cpi * cpi_gam * gam(1, 0 + INDEX_START_WITH);
 
-  for (int i = 1; i <= n; i++) {
-    int ip = i + 1;
-    if (i == n) ip = 1;
+  for (int i = 0; i < n; i++) {
+    int ip = (i + 1) % n;
 
-    cginc = 1.0 - (gam(0, ip) / qinf) * (gam(0, ip) / qinf);
+    cginc = 1.0 - MathUtil::pow((gam(0, ip + INDEX_START_WITH) / qinf), 2);
     double cpg2 = cginc / (beta + bfac * cginc);
     double cpg2_msq = -cpg2 / (beta + bfac * cginc) * (beta_msq + bfac_msq * cginc);
 
-    cpi_gam = -2.0 * gam(0, ip) / qinf / qinf;
+    cpi_gam = -2.0 * gam(0, ip + INDEX_START_WITH) / qinf / qinf;
     cpc_cpi = (1.0 - bfac * cpg2) / (beta + bfac * cginc);
-    double cpg2_alf = cpc_cpi * cpi_gam * gam(1, ip);
+    double cpg2_alf = cpc_cpi * cpi_gam * gam(1, ip + INDEX_START_WITH);
 
     Matrix2d rotateMatrix = Matrix2d {
       {cos(alfa), sin(alfa)},
       {-sin(alfa), cos(alfa)}
     };
-    const Vector2d dpoint = rotateMatrix * (points.col(ip) - points.col(i));
+    const Vector2d dpoint = rotateMatrix * (points.col(ip + INDEX_START_WITH) - points.col(i + INDEX_START_WITH));
     const double dg = cpg2 - cpg1;
 
-    const Vector2d apoint = rotateMatrix * ((points.col(ip) + points.col(i)) / 2 + ref);
+    const Vector2d apoint = rotateMatrix * ((points.col(ip + INDEX_START_WITH) + points.col(i + INDEX_START_WITH)) / 2 + ref);
     const double ag = 0.5 * (cpg2 + cpg1);
 
-    const double dx_alf = cross2(points.col(ip) - points.col(i), rotateMatrix.row(0));
+    const double dx_alf = cross2(points.col(ip + INDEX_START_WITH) - points.col(i + INDEX_START_WITH), rotateMatrix.row(0));
     const double ag_alf = 0.5 * (cpg2_alf + cpg1_alf);
     const double ag_msq = 0.5 * (cpg2_msq + cpg1_msq);
 
     cl = cl + dpoint.x() * ag;
     cm = cm - dpoint.dot(ag * apoint + dg * dpoint / 12.0);
 
-    xcp += dpoint.x() * ag * (points.col(ip).x() + points.col(i).x()) / 2.0;
+    xcp += dpoint.x() * ag * (points.col(ip + INDEX_START_WITH).x() + points.col(i + INDEX_START_WITH).x()) / 2.0;
 
     cl_alf = cl_alf + dpoint.x() * ag_alf + ag * dx_alf;
     cl_msq = cl_msq + dpoint.x() * ag_msq;
@@ -1699,9 +1698,9 @@ bool XFoil::comset() {
   beta = sqrt(1.0 - minf * minf);
   beta_msq = -0.5 / beta;
 
-  tklam = minf * minf / (1.0 + beta) / (1.0 + beta);
+  tklam = MathUtil::pow(minf / (1.0 + beta), 2);
   tkl_msq =
-      1.0 / (1.0 + beta) / (1.0 + beta) - 2.0 * tklam / (1.0 + beta) * beta_msq;
+      1.0 / MathUtil::pow(1.0 + beta, 2) - 2.0 * tklam / (1.0 + beta) * beta_msq;
   return true;
 }
 
@@ -3243,8 +3242,8 @@ PsiResult XFoil::psi_te(int iNode, Vector2d point, Vector2d normal_vector) {
   Vector2d sigte_vector = 0.5 * scs * (gamu.col(0) - gamu.col(n - 1));
   Vector2d gamte_vector = -0.5 * sds * (gamu.col(0) - gamu.col(n - 1));
 
-  sigte = 0.5 * scs * (gam(0, 1) - gam(0, n));
-  gamte = -0.5 * sds * (gam(0, 1) - gam(0, n));
+  sigte = 0.5 * scs * (gam(0, 0 + INDEX_START_WITH) - gam(0, n - 1 + INDEX_START_WITH));
+  gamte = -0.5 * sds * (gam(0, 0 + INDEX_START_WITH) - gam(0, n - 1 + INDEX_START_WITH));
 
   //---- TE panel contribution to psi
   psi_result.psi += (1 / (2 * PI)) * (psig * sigte + pgam * gamte);
@@ -4091,9 +4090,9 @@ bool XFoil::specal() {
   };
 
   //---- superimpose suitably weighted  alpha = 0, 90  distributions
-  for (int i = 1; i <= n; i++) {
-    gam(0, i) = rotateMatrix.row(0).dot(gamu.col(i - INDEX_START_WITH));
-    gam(1, i) = rotateMatrix.row(1).dot(gamu.col(i - INDEX_START_WITH));
+  for (int i = 0; i < n; i++) {
+    gam(0, i + INDEX_START_WITH) = rotateMatrix.row(0).dot(gamu.col(i));
+    gam(1, i + INDEX_START_WITH) = rotateMatrix.row(1).dot(gamu.col(i));
   }
 
   tecalc();
@@ -4159,8 +4158,8 @@ bool XFoil::specal() {
   } else
     cpi = cpcalc(n, qinv, qinf, minf);
 
-  for (int i = 1; i <= n; i++) {
-    qgamm[i] = gam(0, i);
+  for (int i = 0; i < n; i++) {
+    qgamm[i + INDEX_START_WITH] = gam(0, i + INDEX_START_WITH);
   }
 
   return true;
@@ -4416,8 +4415,8 @@ bool XFoil::tecalc() {
   }
 
   //---- TE panel source and vorticity strengths
-  sigte = 0.5 * (gam(0, 1) - gam(0, n)) * scs;
-  gamte = -.5 * (gam(0, 1) - gam(0, n)) * sds;
+  sigte = 0.5 * (gam(0, 0 + INDEX_START_WITH) - gam(0, n - 1 + INDEX_START_WITH)) * scs;
+  gamte = -.5 * (gam(0, 0 + INDEX_START_WITH) - gam(0, n - 1 + INDEX_START_WITH)) * sds;
 
   return true;
 }
