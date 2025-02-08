@@ -315,7 +315,7 @@ class XFoil {
   double tkl_msq;
 
 
-  Matrix2Xd gam;
+  Matrix2Xd surface_vortex;
   Matrix2Xd gamu;
   VectorXd apanel;
   double sst, sst_go, sst_gp, gamte, sigte;
