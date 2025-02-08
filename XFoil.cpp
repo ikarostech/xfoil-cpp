@@ -94,8 +94,8 @@ bool XFoil::initialize() {
   
   bij = MatrixXd::Zero(IQX, IZX);
   dij = MatrixXd::Zero(IZX, IZX);
-  cpi = VectorXd::Zero(IVX);
-  cpv = VectorXd::Zero(IVX);
+  cpi = VectorXd::Zero(n + nw);
+  cpv = VectorXd::Zero(n + nw);
   ctau.top = VectorXd::Zero(IVX);
   ctau.bottom = VectorXd::Zero(IVX);
   ctq.top = VectorXd::Zero(IVX);
