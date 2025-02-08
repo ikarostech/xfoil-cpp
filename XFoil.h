@@ -263,8 +263,6 @@ class XFoil {
   double minf, reinf;
   bool lalfa, lvisc, lvconv, lwake;
   double qgamm[IBX + 1];
-  double hmom;
-
   double rmxbl;
 
   double amax;  // needed for preprocessing
@@ -319,7 +317,8 @@ class XFoil {
 
   Matrix2Xd gam;
   Matrix2Xd gamu;
-  double apanel[IZX], sst, sst_go, sst_gp, gamte, sigte;
+  VectorXd apanel;
+  double sst, sst_go, sst_gp, gamte, sigte;
   double dste, aste;
   Matrix2Xd qinvu;
   VectorXd qinv, qinv_a, qvis;
