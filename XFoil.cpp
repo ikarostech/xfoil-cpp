@@ -89,7 +89,7 @@ bool XFoil::initialize() {
 
   //n = 0;  // so that current airfoil is not initialized
 
-  apanel = VectorXd::Zero(IZX);
+  apanel = VectorXd::Zero(n + nw);
   memset(blsav, 0, sizeof(blsav));
   
   bij = MatrixXd::Zero(IQX, IZX);
@@ -362,23 +362,23 @@ double XFoil::aint(double number) {
 bool XFoil::apcalc() {
 
   //---- set angles of airfoil panels
-  for (int i = 1; i <= n - 1; i++) {
+  for (int i = 0; i < n - 1; i++) {
     
-    Vector2d s = points.col(i + 1) - points.col(i);
+    Vector2d s = points.col(i + 1 + INDEX_START_WITH) - points.col(i + INDEX_START_WITH);
 
     //FIXME double型の==比較
     if (s.norm() == 0.0)
-      apanel[i] = atan2(-normal_vectors.col(i).y(), -normal_vectors.col(i).x());
+      apanel[i] = atan2(-normal_vectors.col(i + INDEX_START_WITH).y(), -normal_vectors.col(i + INDEX_START_WITH).x());
     else
       apanel[i] = atan2(s.x(), -s.y());
   }
 
   //---- TE panel
   if (sharp)
-    apanel[n] = PI;
+    apanel[n - 1] = PI;
   else {
     Vector2d s = points.col(1) - points.col(n);
-    apanel[n] = atan2(-s.x(), s.y()) + PI;
+    apanel[n - 1] = atan2(-s.x(), s.y()) + PI;
   }
 
   return true;
@@ -3048,7 +3048,7 @@ PsiResult XFoil::psisig(int iNode, int jo, Vector2d point, Vector2d normal_vecto
 
   double dsio = 1.0 / dso;
 
-  double apan = apanel[jo + INDEX_START_WITH];
+  double apan = apanel[jo];
 
   Vector2d r1 = point - points.col(jo + INDEX_START_WITH);
   Vector2d r2 = point - points.col(jp + INDEX_START_WITH);
@@ -3176,7 +3176,7 @@ PsiResult XFoil::psi_te(int iNode, Vector2d point, Vector2d normal_vector) {
   PsiResult psi_result = PsiResult();
 
   //------ skip null panel
-  double apan = apanel[n];
+  double apan = apanel[n - 1];
 
   Vector2d r1 = point - points.col(n);
   Vector2d r2 = point - points.col(1);
@@ -3303,7 +3303,7 @@ PsiResult XFoil::pswlin(int i, Vector2d point, Vector2d normal_vector) {
     const double dso = (points.col(jo + INDEX_START_WITH) - points.col(jp + INDEX_START_WITH)).norm() ;
     const double dsio = 1.0 / dso;
 
-    const double apan = apanel[jo + INDEX_START_WITH];
+    const double apan = apanel[jo];
     
     const Vector2d r1 = point - points.col(jo + INDEX_START_WITH);
     const Vector2d r2 = point - points.col(jp + INDEX_START_WITH);
@@ -3324,7 +3324,7 @@ PsiResult XFoil::pswlin(int i, Vector2d point, Vector2d normal_vector) {
       sgn = sign(1.0, yy);
     }
 
-    if (io != jo + INDEX_START_WITH && rs1 > 0.0) {
+    if (io != jo && rs1 > 0.0) {
       g1 = log(rs1);
       t1 = atan2(sgn * blData1.param.xz, sgn * yy) - (0.5 - 0.5 * sgn) * PI;
     } else {
@@ -3332,7 +3332,7 @@ PsiResult XFoil::pswlin(int i, Vector2d point, Vector2d normal_vector) {
       t1 = 0.0;
     }
 
-    if (io != jp + INDEX_START_WITH && rs2 > 0.0) {
+    if (io != jp && rs2 > 0.0) {
       g2 = log(rs2);
       t2 = atan2(sgn * blData2.param.xz, sgn * yy) - (0.5 - 0.5 * sgn) * PI;
     } else {
@@ -5610,7 +5610,7 @@ bool XFoil::xyWake() {
   normal_vectors.col(n + 2) = -psi.normalized();
 
   //---- set angle of wake panel normal
-  apanel[n + 1] = atan2(psi.y(), psi.x());
+  apanel[n] = atan2(psi.y(), psi.x());
 
   //---- set rest of wake points
   for (int i = n + 2; i <= n + nw; i++) {
@@ -5632,7 +5632,7 @@ bool XFoil::xyWake() {
       normal_vectors.col(i + 1) = -psi.normalized();
 
       //------- set angle of wake panel normal
-      apanel[i] = atan2(psi.y(), psi.x());
+      apanel[i - INDEX_START_WITH] = atan2(psi.y(), psi.x());
     }
   }
 
