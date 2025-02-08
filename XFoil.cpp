@@ -77,8 +77,6 @@ XFoil::XFoil() {
   //---- default viscous parameters
   reynolds_type = ReynoldsType::CONSTANT;
   reinf1 = 0.0;
-
-  initialize();
 }
 
 XFoil::~XFoil() {}
@@ -89,9 +87,9 @@ XFoil::~XFoil() {}
 bool XFoil::initialize() {
   dtor = PI / 180.0;
 
-  n = 0;  // so that current airfoil is not initialized
+  //n = 0;  // so that current airfoil is not initialized
 
-  memset(apanel, 0, sizeof(apanel));
+  apanel = VectorXd::Zero(IZX);
   memset(blsav, 0, sizeof(blsav));
   
   bij = MatrixXd::Zero(IQX, IZX);
@@ -113,17 +111,17 @@ bool XFoil::initialize() {
   itran.bottom = 0;
   mass.top = VectorXd::Zero(IVX);
   mass.bottom = VectorXd::Zero(IVX);
-  normal_vectors = Matrix2Xd::Zero(2, IZX);
-  gamu = Matrix2Xd::Zero(2, IQX);
-  gam = Matrix2Xd::Zero(2, IQX);
+  normal_vectors = Matrix2Xd::Zero(2, n + nw + INDEX_START_WITH);
+  gamu = Matrix2Xd::Zero(2, n + 1); // 境界層条件があるため +1 する
+  gam = Matrix2Xd::Zero(2, n);
   memset(qf0, 0, sizeof(qf0));
   memset(qf1, 0, sizeof(qf1));
   memset(qf2, 0, sizeof(qf2));
   memset(qf3, 0, sizeof(qf3));
-  qinv = VectorXd::Zero(IVX);
-  qinv_a = VectorXd::Zero(IVX);
-  qinvu = Matrix2Xd::Zero(2, IZX);
-  qvis = VectorXd::Zero(IVX);
+  qinv = VectorXd::Zero(n + nw);
+  qinv_a = VectorXd::Zero(n + nw);
+  qinvu = Matrix2Xd::Zero(2, n + nw);
+  qvis = VectorXd::Zero(n + nw);
   spline_length.resize(IZX);
   snew = VectorXd::Zero(4 * IBX);
   thet.top = VectorXd::Zero(IVX);
@@ -136,7 +134,6 @@ bool XFoil::initialize() {
   uinv_a.bottom = VectorXd::Zero(IVX);
   vti.top = VectorXd::Zero(IVX);
   vti.bottom = VectorXd::Zero(IVX);
-  points.resize(2, IZX);
   dpoints_ds.resize(2, IZX);
   
   xssi.top = VectorXd::Zero(IVX);
@@ -220,12 +217,6 @@ bool XFoil::initialize() {
 
   waklen = 1.0;
 
-  // added techwinder : no wake yet
-  nw = 0;
-
-  // added techwinder : no flap yet
-  hmom = 0.0;
-
   // added techwinder : fortran initializes to 0
   i_stagnation = 0;
 
@@ -306,13 +297,10 @@ bool XFoil::initialize() {
 }
 
 bool XFoil::abcopy(Matrix2Xd copyFrom) {
-
+  
   if (n != copyFrom.cols() - 1) lblini = false;
 
   n = copyFrom.cols() - 1;
-  for (int i = 1; i <= n; i++) {
-    points.col(i) = copyFrom.col(i);
-  }
 
   //---- strip out doubled points
   int r = 1;
@@ -320,13 +308,26 @@ bool XFoil::abcopy(Matrix2Xd copyFrom) {
   while (r < n) {
     r++;
     //FIXME double型の==比較
-    if (points.col(r - 1) == points.col(r)) {
+    if (copyFrom.col(r - 1) == copyFrom.col(r)) {
       for (int j = r; j <= n - 1; j++) {
-        points.col(j) = points.col(j + 1);
+        copyFrom.col(j) = copyFrom.col(j + 1);
       }
       n = n - 1;
     }
   }
+  //--- number of wake points
+  nw = n / 8 + 2;
+  if (nw > IWX) {
+    writeString(
+        " XYWake: array size (IWX) too small.\n  Last wake point index reduced.");
+    nw = IWX;
+  }
+  points = Matrix2Xd::Zero(2, IZX);
+  for (int i=1; i<=n; i++) {
+    points.col(i) = copyFrom.col(i);
+  }
+  
+  initialize();
 
   spline_length.segment(1, spline_length.size() - 1) = spline::scalc(points.middleCols(1, points.cols() - 1), n, spline_length.size() - 1);
   dpoints_ds.row(0) = spline::splind(points.row(0), spline_length, n);
@@ -5583,13 +5584,6 @@ bool XFoil::xyWake() {
   //
   writeString("   Calculating wake trajectory ...\n");
   //
-  //--- number of wake points
-  nw = n / 8 + 2;
-  if (nw > IWX) {
-    writeString(
-        " XYWake: array size (IWX) too small.\n  Last wake point index reduced.");
-    nw = IWX;
-  }
 
   ds1 = 0.5 * (spline_length[2] - spline_length[1] + spline_length[n] - spline_length[n - 1]);
   setexp(snew.data() + n, ds1, waklen * chord, nw);
