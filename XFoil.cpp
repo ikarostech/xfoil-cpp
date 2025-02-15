@@ -1900,8 +1900,6 @@ bool XFoil::getxyf(Matrix2Xd points, Matrix2Xd dpoints_ds, VectorXd s,
 
   tops = s[1] + (points.col(1).x() - xf);
   bots = s[n] - (points.col(n).x() - xf);
-  spline::sinvrt(tops, xf, points.row(0), dpoints_ds.row(0), s, n);
-  spline::sinvrt(bots, xf, points.row(0), dpoints_ds.row(0), s, n);
   topy = spline::seval(tops, points.row(1), dpoints_ds.row(1), s, n);
   boty = spline::seval(bots, points.row(1), dpoints_ds.row(1), s, n);
 
