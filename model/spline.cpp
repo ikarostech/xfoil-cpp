@@ -130,11 +130,5 @@ Eigen::VectorXd spline::splind(Eigen::VectorXd x, Eigen::VectorXd s, int n) {
 
   //---- solve for derivative array xs
   Eigen::VectorXd vectorXs = MathUtil::tridiagonalSolve(matrixA, vectorD).x;
-  //FIXME xsの0とn移行が0でないと結果がおかしくなるバグが存在
-  xs[0] = 0;
-  xs[n] = 0;
-  for (int i=0; i<n; i++) {
-    xs[i + 1] = vectorXs(i);
-  }
-  return xs;
+  return vectorXs;
 }
