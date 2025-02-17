@@ -134,7 +134,7 @@ bool XFoil::initialize() {
   uinv_a.bottom = VectorXd::Zero(IVX);
   vti.top = VectorXd::Zero(IVX);
   vti.bottom = VectorXd::Zero(IVX);
-  dpoints_ds.resize(2, IZX);
+  dpoints_ds.resize(2, n);
   
   xssi.top = VectorXd::Zero(IVX);
   xssi.bottom = VectorXd::Zero(IVX);
@@ -330,10 +330,10 @@ bool XFoil::abcopy(Matrix2Xd copyFrom) {
   initialize();
 
   spline_length.segment(1, spline_length.size() - 1) = spline::scalc(points.middleCols(1, points.cols() - 1), n, spline_length.size() - 1);
-  dpoints_ds.row(0).segment(1, n) = spline::splind(points.row(0), spline_length, n).segment(1, n);
-  dpoints_ds.row(1).segment(1, n) = spline::splind(points.row(1), spline_length, n).segment(1, n);
+  dpoints_ds.row(0) = spline::splind(points.row(0), spline_length, n).segment(1, n);
+  dpoints_ds.row(1) = spline::splind(points.row(1), spline_length, n).segment(1, n);
   normal_vectors = ncalc(points, spline_length, n);
-  lefind(sle, points.middleCols(INDEX_START_WITH, n), dpoints_ds.middleCols(INDEX_START_WITH, n), spline_length.segment(INDEX_START_WITH, n), n);
+  lefind(sle, points.middleCols(INDEX_START_WITH, n), dpoints_ds, spline_length.segment(INDEX_START_WITH, n), n);
   point_le.x() = spline::seval(sle, points.row(0), dpoints_ds.row(0), spline_length, n);
   point_le.y() = spline::seval(sle, points.row(1), dpoints_ds.row(1), spline_length, n);
   point_te = 0.5 * (points.col(1) + points.col(n));
@@ -1963,8 +1963,8 @@ bool XFoil::ggcalc() {
     //----- set zero internal velocity in TE corner
 
     //----- set TE bisector angle
-    const double ag1 = atan2(-dpoints_ds.col(1).y(), -dpoints_ds.col(1).x());
-    const double ag2 = atanc(dpoints_ds.col(n).y(), dpoints_ds.col(n).x(), ag1);
+    const double ag1 = atan2(-dpoints_ds.col(0).y(), -dpoints_ds.col(0).x());
+    const double ag2 = atanc(dpoints_ds.col(n - 1).y(), dpoints_ds.col(n - 1).x(), ag1);
     const double abis = 0.5 * (ag1 + ag2);
 
     Vector2d bis_vector {cos(abis), sin(abis)};
@@ -4392,7 +4392,7 @@ bool XFoil::tecalc() {
   //---- set te base vector and te bisector components
   Vector2d point_te = points.col(1) - points.col(n);
   
-  Vector2d dpoint_ds_te = 0.5 * (-dpoints_ds.col(1) + dpoints_ds.col(n));
+  Vector2d dpoint_ds_te = 0.5 * (-dpoints_ds.col(0) + dpoints_ds.col(n - 1));
 
   //---- normal and streamwise projected TE gap areas
   ante = cross2(dpoint_ds_te, point_te);
@@ -5476,7 +5476,7 @@ bool XFoil::xicalc() {
 
   //---- set up parameters for te flap cubics
 
-  const double crosp = cross2(dpoints_ds.col(n).normalized(), dpoints_ds.col(1).normalized());
+  const double crosp = cross2(dpoints_ds.col(n - 1).normalized(), dpoints_ds.col(0).normalized());
   double dwdxte = crosp / sqrt(1.0 - crosp * crosp);
 
   //---- limit cubic to avoid absurd te gap widths
@@ -5570,8 +5570,8 @@ bool XFoil::xyWake() {
   point_te = 0.5 * (points.col(1) + points.col(n));
 
   //-- set first wake point a tiny distance behind te
-  sx = 0.5 * (dpoints_ds.col(n).y() - dpoints_ds.col(1).y());
-  sy = 0.5 * (dpoints_ds.col(1).x() - dpoints_ds.col(n).x());
+  sx = 0.5 * (dpoints_ds.col(n - 1).y() - dpoints_ds.col(0).y());
+  sy = 0.5 * (dpoints_ds.col(0).x() - dpoints_ds.col(n - 1).x());
   smod = sqrt(sx * sx + sy * sy);
   normal_vectors.col(n + 1).x() = sx / smod;
   normal_vectors.col(n + 1).y() = sy / smod;
