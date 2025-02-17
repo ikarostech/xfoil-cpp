@@ -330,8 +330,8 @@ bool XFoil::abcopy(Matrix2Xd copyFrom) {
   initialize();
 
   spline_length.segment(1, spline_length.size() - 1) = spline::scalc(points.middleCols(1, points.cols() - 1), n, spline_length.size() - 1);
-  dpoints_ds.row(0) = spline::splind(points.row(0), spline_length, n).segment(1, n);
-  dpoints_ds.row(1) = spline::splind(points.row(1), spline_length, n).segment(1, n);
+  dpoints_ds.row(0) = spline::splind(points.row(0), spline_length, n);
+  dpoints_ds.row(1) = spline::splind(points.row(1), spline_length, n);
   normal_vectors = ncalc(points, spline_length, n);
   lefind(sle, points.middleCols(INDEX_START_WITH, n), dpoints_ds, spline_length.segment(INDEX_START_WITH, n), n);
   point_le.x() = spline::seval(sle, points.row(0), dpoints_ds.row(0), spline_length, n);
@@ -2874,8 +2874,8 @@ double XFoil::getActualReynolds(double cls, ReynoldsType reynolds_type) {
 Matrix2Xd XFoil::ncalc(Matrix2Xd points, VectorXd spline_length, int n) {
 
   Matrix2Xd normal_vector = Matrix2Xd::Zero(2, IZX);
-  normal_vector.row(0).segment(1,n) = spline::splind(points.row(0), spline_length, n).segment(1,n);
-  normal_vector.row(1).segment(1,n) = spline::splind(points.row(1), spline_length, n).segment(1,n);
+  normal_vector.row(0).segment(1,n) = spline::splind(points.row(0), spline_length, n);
+  normal_vector.row(1).segment(1,n) = spline::splind(points.row(1), spline_length, n);
   for (int i = 1; i <= n; i++) {
     Vector2d temp = normal_vector.col(i);
     normal_vector.col(i).x() = temp.normalized().y();
@@ -5543,8 +5543,8 @@ double XFoil::xifset(int is) {
     w2[i] = cross2(points.col(i) - point_le, point_chord.normalized());
   }
 
-  w3.segment(1, n) = spline::splind(w1, spline_length, n).segment(1, n);
-  w4.segment(1, n) = spline::splind(w2, spline_length, n).segment(1, n);
+  w3.segment(1, n) = spline::splind(w1, spline_length, n);
+  w4.segment(1, n) = spline::splind(w2, spline_length, n);
 
   if (is == 1) {
     //----- set approximate arc length of forced transition point for sinvrt
