@@ -110,8 +110,8 @@ Eigen::VectorXd spline::splind(Eigen::VectorXd x, Eigen::VectorXd s, int n) {
   Eigen::VectorXd vectorD = Eigen::VectorXd(n);
 
   for (int i = 1; i < n - 1; i++) {
-    const double dsm = s[i + INDEX_START_WITH] - s[i - 1 + INDEX_START_WITH];
-    const double dsp = s[i + 1 + INDEX_START_WITH] - s[i + INDEX_START_WITH];
+    const double dsm = s[i] - s[i - 1];
+    const double dsp = s[i + 1] - s[i];
     matrixA(i, i - 1) = dsp;
     matrixA(i, i) = 2.0 * (dsm + dsp);
     matrixA(i, i + 1) = dsm;
@@ -122,11 +122,11 @@ Eigen::VectorXd spline::splind(Eigen::VectorXd x, Eigen::VectorXd s, int n) {
   //----- set zero third derivative end condition
   matrixA(0, 0) = 1.0;
   matrixA(0, 1) = 1.0;
-  vectorD(0) = 2.0 * (x[1 + INDEX_START_WITH] - x[0 + INDEX_START_WITH]) / (s[1 + INDEX_START_WITH] - s[0 + INDEX_START_WITH]);
+  vectorD(0) = 2.0 * (x[1 + INDEX_START_WITH] - x[0 + INDEX_START_WITH]) / (s[1] - s[0]);
 
   matrixA(n - 1, n - 2) = 1.0;
   matrixA(n - 1, n - 1) = 1.0;
-  vectorD(n - 1) = 2.0 * (x[n - 1 + INDEX_START_WITH] - x[n - 2 + INDEX_START_WITH]) / (s[n - 1  + INDEX_START_WITH] - s[n - 2 + INDEX_START_WITH]);
+  vectorD(n - 1) = 2.0 * (x[n - 1 + INDEX_START_WITH] - x[n - 2 + INDEX_START_WITH]) / (s[n - 1] - s[n - 2]);
 
   //---- solve for derivative array xs
   Eigen::VectorXd vectorXs = MathUtil::tridiagonalSolve(matrixA, vectorD).x;
