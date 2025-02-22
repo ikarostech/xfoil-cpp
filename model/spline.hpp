@@ -14,7 +14,7 @@ class spline {
      * @param n @deprecated データ数
      * @return std::vector<double> 始点からの累計長さのデータ
      */
-    static Eigen::VectorXd scalc(const Eigen::Matrix2Xd points, int n, const int s_size);
+    static Eigen::VectorXd scalc(const Eigen::Matrix2Xd points, int n);
     static double seval(double ss, Eigen::VectorXd x, Eigen::VectorXd xs, Eigen::VectorXd s, int n);
 
     /** --------------------------------------------------
