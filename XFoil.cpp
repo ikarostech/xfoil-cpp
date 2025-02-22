@@ -329,7 +329,7 @@ bool XFoil::abcopy(Matrix2Xd copyFrom) {
   
   initialize();
 
-  spline_length.segment(1, spline_length.size() - 1) = spline::scalc(points.middleCols(1, points.cols() - 1), n, spline_length.size() - 1);
+  spline_length.segment(1, n) = spline::scalc(points.middleCols(1, points.cols() - 1), n);
   dpoints_ds.row(0) = spline::splind(points.row(0), spline_length, n);
   dpoints_ds.row(1) = spline::splind(points.row(1), spline_length, n);
   normal_vectors = ncalc(points, spline_length, n);
