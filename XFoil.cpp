@@ -122,7 +122,7 @@ bool XFoil::initialize() {
   qinv_a = VectorXd::Zero(n + nw);
   qinvu = Matrix2Xd::Zero(2, n + nw);
   qvis = VectorXd::Zero(n + nw);
-  spline_length.resize(IZX);
+  spline_length.resize(n + nw + 1);
   snew = VectorXd::Zero(4 * IBX);
   thet.top = VectorXd::Zero(IVX);
   thet.bottom = VectorXd::Zero(IVX);
@@ -329,13 +329,13 @@ bool XFoil::abcopy(Matrix2Xd copyFrom) {
   
   initialize();
 
-  spline_length.segment(1, n) = spline::scalc(points.middleCols(1, points.cols() - 1), n);
-  dpoints_ds.row(0) = spline::splind(points.row(0), spline_length.segment(1, n), n);
-  dpoints_ds.row(1) = spline::splind(points.row(1), spline_length.segment(1, n), n);
-  normal_vectors = ncalc(points, spline_length, n);
-  lefind(sle, points.middleCols(INDEX_START_WITH, n), dpoints_ds, spline_length.segment(INDEX_START_WITH, n), n);
-  point_le.x() = spline::seval(sle, points.row(0), dpoints_ds.row(0), spline_length, n);
-  point_le.y() = spline::seval(sle, points.row(1), dpoints_ds.row(1), spline_length, n);
+  spline_length.head(n) = spline::scalc(points.middleCols(1, points.cols() - 1), n);
+  dpoints_ds.row(0) = spline::splind(points.row(0), spline_length.head(n), n);
+  dpoints_ds.row(1) = spline::splind(points.row(1), spline_length.head(n), n);
+  normal_vectors = ncalc(points, spline_length.head(n), n);
+  lefind(sle, points.middleCols(INDEX_START_WITH, n), dpoints_ds, spline_length.head(n), n);
+  point_le.x() = spline::seval(sle, points.row(0), dpoints_ds.row(0), spline_length.head(n), n);
+  point_le.y() = spline::seval(sle, points.row(1), dpoints_ds.row(1), spline_length.head(n), n);
   point_te = 0.5 * (points.col(1) + points.col(n));
   chord = (point_le - point_te).norm();
   tecalc();
@@ -2874,8 +2874,8 @@ double XFoil::getActualReynolds(double cls, ReynoldsType reynolds_type) {
 Matrix2Xd XFoil::ncalc(Matrix2Xd points, VectorXd spline_length, int n) {
 
   Matrix2Xd normal_vector = Matrix2Xd::Zero(2, IZX);
-  normal_vector.row(0).segment(1,n) = spline::splind(points.row(0), spline_length.segment(1, n), n);
-  normal_vector.row(1).segment(1,n) = spline::splind(points.row(1), spline_length.segment(1, n), n);
+  normal_vector.row(0).segment(1,n) = spline::splind(points.row(0), spline_length, n);
+  normal_vector.row(1).segment(1,n) = spline::splind(points.row(1), spline_length, n);
   for (int i = 1; i <= n; i++) {
     Vector2d temp = normal_vector.col(i);
     normal_vector.col(i).x() = temp.normalized().y();
@@ -2903,7 +2903,7 @@ PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector, bool 
   PsiResult psi_result;
   
   //---- distance tolerance for determining if two points are the same
-  const double seps = (spline_length[n] - spline_length[1]) * 0.00001;
+  const double seps = (spline_length[n - 1] - spline_length[0]) * 0.00001;
 
   psi_result.psi = 0.0;
   psi_result.psi_ni = 0.0;
@@ -4271,20 +4271,20 @@ bool XFoil::stfind() {
 
   i_stagnation = i + INDEX_START_WITH;
   const double dgam = surface_vortex(0, i + 1) - surface_vortex(0, i);
-  const double ds = spline_length[i + 1 + INDEX_START_WITH] - spline_length[i + INDEX_START_WITH];
+  const double ds = spline_length[i + 1] - spline_length[i];
 
   //---- evaluate so as to minimize roundoff for very small gam[i] or gam[i+1]
   if (surface_vortex(0, i) < -surface_vortex(0, i + 1))
-    sst = spline_length[i + INDEX_START_WITH] - ds * (surface_vortex(0, i) / dgam);
+    sst = spline_length[i] - ds * (surface_vortex(0, i) / dgam);
   else
-    sst = spline_length[i + 1 + INDEX_START_WITH] - ds * (surface_vortex(0, i + 1) / dgam);
+    sst = spline_length[i + 1] - ds * (surface_vortex(0, i + 1) / dgam);
 
   //---- tweak stagnation point if it falls right on a node (very unlikely)
-  if (sst <= spline_length[i + INDEX_START_WITH]) sst = spline_length[i + INDEX_START_WITH] + 0.0000001;
-  if (sst >= spline_length[i + 1 + INDEX_START_WITH]) sst = spline_length[i + 1 + INDEX_START_WITH] - 0.0000001;
+  if (sst <= spline_length[i]) sst = spline_length[i] + 0.0000001;
+  if (sst >= spline_length[i + 1]) sst = spline_length[i + 1] - 0.0000001;
 
-  sst_go = (sst - spline_length[i + 1 + INDEX_START_WITH]) / dgam;
-  sst_gp = (spline_length[i + INDEX_START_WITH] - sst) / dgam;
+  sst_go = (sst - spline_length[i + 1]) / dgam;
+  sst_gp = (spline_length[i] - sst) / dgam;
 
   return true;
 }
@@ -5476,12 +5476,12 @@ bool XFoil::xicalc() {
 
   xssi.top[1] = 0.0;
   for (int ibl = 2; ibl <= iblte.top; ibl++) {
-    xssi.top[ibl] = sst - spline_length[ipan.top[ibl]];
+    xssi.top[ibl] = sst - spline_length[ipan.top[ibl] - INDEX_START_WITH];
   }
 
   xssi.bottom[1] = 0.0;
   for (int ibl = 2; ibl <= iblte.bottom; ibl++) {
-    xssi.bottom[ibl] = spline_length[ipan.bottom[ibl]] - sst;
+    xssi.bottom[ibl] = spline_length[ipan.bottom[ibl] - INDEX_START_WITH] - sst;
   }
 
   xssi.bottom[iblte.bottom + 1] = xssi.bottom[iblte.bottom];
@@ -5543,23 +5543,23 @@ double XFoil::xifset(int is) {
     w2[i] = cross2(points.col(i) - point_le, point_chord.normalized());
   }
 
-  w3.segment(1, n) = spline::splind(w1, spline_length.segment(1, n), n);
-  w4.segment(1, n) = spline::splind(w2, spline_length.segment(1, n), n);
+  w3.segment(1, n) = spline::splind(w1, spline_length.head(n), n);
+  w4.segment(1, n) = spline::splind(w2, spline_length.head(n), n);
 
   if (is == 1) {
     //----- set approximate arc length of forced transition point for sinvrt
-    str = sle + (spline_length[1] - sle) * xstrip.top;
+    str = sle + (spline_length[0] - sle) * xstrip.top;
 
     //----- calculate actual arc length
-    str = spline::sinvrt(str, xstrip.top, w1, w3, spline_length, n);
+    str = spline::sinvrt(str, xstrip.top, w1, w3, spline_length.head(n), n);
 
     //----- set bl coordinate value
     xiforc = std::min((sst - str), xssi.get(is)[iblte.get(is)]);
   } else {
     //----- same for bottom side
 
-    str = sle + (spline_length[n] - sle) * xstrip.bottom;
-    str = spline::sinvrt(str, xstrip.bottom, w1, w3, spline_length, n);
+    str = sle + (spline_length[n - 1] - sle) * xstrip.bottom;
+    str = spline::sinvrt(str, xstrip.bottom, w1, w3, spline_length.head(n), n);
     xiforc = std::min((str - sst), xssi.get(is)[iblte.get(is)]);
   }
 
@@ -5583,7 +5583,7 @@ bool XFoil::xyWake() {
   writeString("   Calculating wake trajectory ...\n");
   //
 
-  ds1 = 0.5 * (spline_length[2] - spline_length[1] + spline_length[n] - spline_length[n - 1]);
+  ds1 = 0.5 * (spline_length[1] - spline_length[0] + spline_length[n - 1] - spline_length[n - 2]);
   setexp(snew.data() + n, ds1, waklen * chord, nw);
 
   point_te = 0.5 * (points.col(1) + points.col(n));
@@ -5596,7 +5596,7 @@ bool XFoil::xyWake() {
   normal_vectors.col(n + 1).y() = sy / smod;
   points.col(n + 1).x() = point_te.x() - 0.0001 * normal_vectors.col(n + 1).y();
   points.col(n + 1).y() = point_te.y() + 0.0001 * normal_vectors.col(n + 1).x();
-  spline_length[n + 1] = spline_length[n];
+  spline_length[n] = spline_length[n - 1];
 
   //---- calculate streamfunction gradient components at first point
   Vector2d psi = {
