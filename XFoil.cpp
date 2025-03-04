@@ -2258,11 +2258,11 @@ bool XFoil::mrchdu() {
     bule = 1.0;
 
     //---- old transition station
-    itrold = itran.get(is);
+    itrold = itran.get(is) + INDEX_START_WITH;
 
     tran = false;
     turb = false;
-    itran.get(is) = iblte.get(is);
+    itran.get(is) = iblte.get(is) - INDEX_START_WITH;
     //---- march downstream
     for (ibl = 2; ibl <= nbl.get(is); ibl++) {
       ibm = ibl - 1;
@@ -2310,8 +2310,8 @@ bool XFoil::mrchdu() {
         if ((!simi) && (!turb)) {
           trchek();
           ami = blData2.param.amplz;
-          if (tran) itran.get(is) = ibl;
-          if (!tran) itran.get(is) = ibl + 2;
+          if (tran) itran.get(is) = ibl - INDEX_START_WITH;
+          if (!tran) itran.get(is) = ibl + 2 - INDEX_START_WITH;
         }
         if (ibl == iblte.get(is) + 1) {
           tte = thet.top[iblte.top] + thet.bottom[iblte.bottom];
@@ -2332,7 +2332,7 @@ bool XFoil::mrchdu() {
 
           //--------- if current point ibl was turbulent and is now laminar,
           // then...
-          if (ibl < itran.get(is) && ibl >= itrold) {
+          if (ibl < itran.get(is) + INDEX_START_WITH && ibl >= itrold) {
             //---------- extrapolate baseline hk
             uem = uedg.get(is)[ibl - 1];
             dsm = dstr.get(is)[ibl - 1];
@@ -2396,21 +2396,21 @@ bool XFoil::mrchdu() {
 
         //-------- determine max changes and underrelax if necessary
         dmax = std::max(fabs(vsrez[1] / thi), fabs(vsrez[2] / dsi));
-        if (ibl >= itran.get(is))
+        if (ibl >= itran.get(is) + INDEX_START_WITH)
           dmax = std::max(dmax, fabs(vsrez[0] / (10.0 * cti)));
 
         rlx = 1.0;
         if (dmax > 0.3) rlx = 0.3 / dmax;
 
         //-------- update as usual
-        if (ibl < itran.get(is)) ami = ami + rlx * vsrez[0];
-        if (ibl >= itran.get(is)) cti = cti + rlx * vsrez[0];
+        if (ibl < itran.get(is) + INDEX_START_WITH) ami = ami + rlx * vsrez[0];
+        if (ibl >= itran.get(is) + INDEX_START_WITH) cti = cti + rlx * vsrez[0];
         thi = thi + rlx * vsrez[1];
         dsi = dsi + rlx * vsrez[2];
         uei = uei + rlx * vsrez[3];
 
         //-------- eliminate absurd transients
-        if (ibl >= itran.get(is)) {
+        if (ibl >= itran.get(is) + INDEX_START_WITH) {
           cti = std::min(cti, 0.30);
           cti = std::max(cti, 0.0000001);
         }
@@ -2457,8 +2457,8 @@ bool XFoil::mrchdu() {
               uei = uedg.get(is)[ibm];
             }
           }
-          if (ibl == itran.get(is)) cti = 0.05;
-          if (ibl > itran.get(is)) cti = ctau.get(is)[ibm];
+          if (ibl == itran.get(is) + INDEX_START_WITH) cti = 0.05;
+          if (ibl > itran.get(is) + INDEX_START_WITH) cti = ctau.get(is)[ibm];
         }
       }
 
@@ -2470,17 +2470,17 @@ bool XFoil::mrchdu() {
       if ((!simi) && (!turb)) {
         trchek();
         ami = blData2.param.amplz;
-        if (tran) itran.get(is) = ibl;
-        if (!tran) itran.get(is) = ibl + 2;
+        if (tran) itran.get(is) = ibl - INDEX_START_WITH;
+        if (!tran) itran.get(is) = ibl + 2 - INDEX_START_WITH;
       }
 
       //------- set all other extrapolated values for current station
-      if (ibl < itran.get(is)) blvar(blData2, 1);
-      if (ibl >= itran.get(is)) blvar(blData2, 2);
+      if (ibl < itran.get(is) + INDEX_START_WITH) blvar(blData2, 1);
+      if (ibl >= itran.get(is) + INDEX_START_WITH) blvar(blData2, 2);
       if (wake) blvar(blData2, 3);
 
-      if (ibl < itran.get(is)) blmid(1);
-      if (ibl >= itran.get(is)) blmid(2);
+      if (ibl < itran.get(is) + INDEX_START_WITH) blmid(1);
+      if (ibl >= itran.get(is) + INDEX_START_WITH) blmid(2);
       if (wake) blmid(3);
 
       //------ pick up here after the newton iterations
@@ -2488,7 +2488,7 @@ bool XFoil::mrchdu() {
       sens = sennew;
 
       //------ store primary variables
-      if (ibl < itran.get(is))
+      if (ibl < itran.get(is) + INDEX_START_WITH)
         ctau.get(is)[ibl] = ami;
       else
         ctau.get(is)[ibl] = cti;
@@ -2566,7 +2566,7 @@ bool XFoil::mrchue() {
 
     tran = false;
     turb = false;
-    itran.get(is) = iblte.get(is);
+    itran.get(is) = iblte.get(is) - INDEX_START_WITH;
 
     //---- march downstream
     for (int ibl = 2; ibl <= nbl.get(is); ibl++) {  // 1000
@@ -2604,13 +2604,13 @@ bool XFoil::mrchue() {
 
           //--------- fixed bug   md 7 jun 99
           if (tran) {
-            itran.get(is) = ibl;
+            itran.get(is) = ibl - INDEX_START_WITH;
             if (cti <= 0.0) {
               cti = 0.03;
               blData2.param.sz = cti;
             }
           } else
-            itran.get(is) = ibl + 2;
+            itran.get(is) = ibl + 2 - INDEX_START_WITH;
         }
 
         if (ibl == iblte.get(is) + 1) {
@@ -2634,8 +2634,8 @@ bool XFoil::mrchue() {
           vsrez = vs2.block(0, 0, 4, 4).fullPivLu().solve(vsrez);
           //--------- determine max changes and underrelax if necessary
           dmax = std::max(fabs(vsrez[1] / thi), fabs(vsrez[2] / dsi));
-          if (ibl < itran.get(is)) dmax = std::max(dmax, fabs(vsrez[0] / 10.0));
-          if (ibl >= itran.get(is)) dmax = std::max(dmax, fabs(vsrez[0] / cti));
+          if (ibl < itran.get(is) + INDEX_START_WITH) dmax = std::max(dmax, fabs(vsrez[0] / 10.0));
+          if (ibl >= itran.get(is) + INDEX_START_WITH) dmax = std::max(dmax, fabs(vsrez[0] / cti));
 
           rlx = 1.0;
           if (dmax > 0.3) rlx = 0.3 / dmax;
@@ -2650,23 +2650,23 @@ bool XFoil::mrchue() {
 
             //---------- decide whether to do direct or inverse problem based on
             // hk
-            if (ibl < itran.get(is)) hmax = hlmax;
-            if (ibl >= itran.get(is)) hmax = htmax;
+            if (ibl < itran.get(is) + INDEX_START_WITH) hmax = hlmax;
+            if (ibl >= itran.get(is) + INDEX_START_WITH) hmax = htmax;
             direct = (hktest < hmax);
           }
           if (direct) {
             //---------- update as usual
-            if (ibl >= itran.get(is)) cti = cti + rlx * vsrez[0];
+            if (ibl >= itran.get(is) + INDEX_START_WITH) cti = cti + rlx * vsrez[0];
             thi = thi + rlx * vsrez[1];
             dsi = dsi + rlx * vsrez[2];
           } else {
             //---------- set prescribed hk for inverse calculation at the
             // current station
-            if (ibl < itran.get(is))
+            if (ibl < itran.get(is) + INDEX_START_WITH)
               //----------- laminar case: relatively slow increase in hk
               // downstream
               htarg = blData1.hkz.scalar + 0.03 * (blData2.param.xz - blData1.param.xz) / blData1.param.tz;
-            else if (ibl == itran.get(is)) {
+            else if (ibl == itran.get(is) + INDEX_START_WITH) {
               //----------- transition interval: weighted laminar and turbulent
               // case
               htarg = blData1.hkz.scalar + (0.03 * (xt - blData1.param.xz) - 0.15 * (blData2.param.xz - xt)) / blData1.param.tz;
@@ -2718,18 +2718,18 @@ bool XFoil::mrchue() {
           vsrez = vs2.block(0, 0, 4, 4).fullPivLu().solve(vsrez);
 
           dmax = std::max(fabs(vsrez[1] / thi), fabs(vsrez[2] / dsi));
-          if (ibl >= itran.get(is)) dmax = std::max(dmax, fabs(vsrez[0] / cti));
+          if (ibl >= itran.get(is) + INDEX_START_WITH) dmax = std::max(dmax, fabs(vsrez[0] / cti));
           rlx = 1.0;
           if (dmax > 0.3) rlx = 0.3 / dmax;
           //--------- update variables
-          if (ibl >= itran.get(is)) cti = cti + rlx * vsrez[0];
+          if (ibl >= itran.get(is) + INDEX_START_WITH) cti = cti + rlx * vsrez[0];
           thi = thi + rlx * vsrez[1];
           dsi = dsi + rlx * vsrez[2];
           uei = uei + rlx * vsrez[3];
         }
         //-------- eliminate absurd transients
 
-        if (ibl >= itran.get(is)) {
+        if (ibl >= itran.get(is) + INDEX_START_WITH) {
           cti = std::min(cti, 0.30);
           cti = std::max(cti, 0.0000001);
         }
@@ -2768,8 +2768,8 @@ bool XFoil::mrchue() {
               dsi = (dstr.get(is)[ibm] + thi * ratlen) / (1.0 + ratlen);
             }
           }
-          if (ibl == itran.get(is)) cti = 0.05;
-          if (ibl > itran.get(is)) cti = ctau.get(is)[ibm];
+          if (ibl == itran.get(is) + INDEX_START_WITH) cti = 0.05;
+          if (ibl > itran.get(is) + INDEX_START_WITH) cti = ctau.get(is)[ibm];
 
           uei = uedg.get(is)[ibl];
 
@@ -2784,21 +2784,21 @@ bool XFoil::mrchue() {
       if ((!simi) && (!turb)) {
         trchek();
         ami = blData2.param.amplz;
-        if (tran) itran.get(is) = ibl;
-        if (!tran) itran.get(is) = ibl + 2;
+        if (tran) itran.get(is) = ibl - INDEX_START_WITH;
+        if (!tran) itran.get(is) = ibl + 2 - INDEX_START_WITH;
       }
       //------- set all other extrapolated values for current station
-      if (ibl < itran.get(is)) blvar(blData2, 1);
-      if (ibl >= itran.get(is)) blvar(blData2, 2);
+      if (ibl < itran.get(is) + INDEX_START_WITH) blvar(blData2, 1);
+      if (ibl >= itran.get(is) + INDEX_START_WITH) blvar(blData2, 2);
       if (wake) blvar(blData2, 3);
-      if (ibl < itran.get(is)) blmid(1);
-      if (ibl >= itran.get(is)) blmid(2);
+      if (ibl < itran.get(is) + INDEX_START_WITH) blmid(1);
+      if (ibl >= itran.get(is) + INDEX_START_WITH) blmid(2);
       if (wake) blmid(3);
       //------ pick up here after the newton iterations
     stop110:
       //------ store primary variables
-      if (ibl < itran.get(is)) ctau.get(is)[ibl] = ami;
-      if (ibl >= itran.get(is)) ctau.get(is)[ibl] = cti;
+      if (ibl < itran.get(is) + INDEX_START_WITH) ctau.get(is)[ibl] = ami;
+      if (ibl >= itran.get(is) + INDEX_START_WITH) ctau.get(is)[ibl] = cti;
       thet.get(is)[ibl] = thi;
       dstr.get(is)[ibl] = dsi;
       uedg.get(is)[ibl] = uei;
@@ -3730,14 +3730,14 @@ bool XFoil::setbl() {
 
       simi = (ibl == 2);
       wake = (ibl > iblte.get(is));
-      tran = (ibl == itran.get(is));
-      turb = (ibl > itran.get(is));
+      tran = (ibl == itran.get(is) + INDEX_START_WITH);
+      turb = (ibl > itran.get(is) + INDEX_START_WITH);
 
       int i = ipan.get(is)[ibl];
 
       //---- set primary variables for current station
       xsi = xssi.get(is)[ibl];
-      if (ibl < itran.get(is))
+      if (ibl < itran.get(is) + INDEX_START_WITH)
         ami = ctau.get(is)[ibl];
       else
         cti = ctau.get(is)[ibl];
@@ -3784,7 +3784,7 @@ bool XFoil::setbl() {
         ami = blData2.param.amplz;
       }
 
-      if (ibl == itran.get(is) && !tran) {
+      if (ibl == itran.get(is) + INDEX_START_WITH && !tran) {
         // TRACE("setbl: xtr???  n1=%d n2=%d: \n", ampl1, ampl2);
 
         ss << "setbl: xtr???  n1=" << blData1.param.amplz << " n2=" << blData2.param.amplz << ":\n";
@@ -3951,7 +3951,7 @@ bool XFoil::setbl() {
         turb = true;
 
         //------ save transition location
-        itran.get(is) = ibl;
+        itran.get(is) = ibl - INDEX_START_WITH;
 
       }
 
@@ -4319,8 +4319,8 @@ bool XFoil::stmove() {
       //---- increase in number of points on top side (is=1)
       int idif = i_stagnation - istold;
 
-      itran.top = itran.top + idif;
-      itran.bottom = itran.bottom - idif;
+      itran.top += idif;
+      itran.bottom -= idif;
 
       //---- move top side bl variables downstream
       for (int ibl = nbl.top; ibl >= idif + 2; ibl--) {
@@ -5250,7 +5250,7 @@ bool XFoil::update() {
       duedg = unew.get(is)[ibl] + dac * u_ac.get(is)[ibl] - uedg.get(is)[ibl];
       ddstr = (dmass - dstr.get(is)[ibl] * duedg) / uedg.get(is)[ibl];
       //------- normalize changes
-      if (ibl < itran.get(is))
+      if (ibl < itran.get(is) + INDEX_START_WITH)
         dn1 = dctau / 10.0;
       else
         dn1 = dctau / ctau.get(is)[ibl];
@@ -5263,8 +5263,8 @@ bool XFoil::update() {
       rdn1 = rlx * dn1;
       if (fabs(dn1) > fabs(rmxbl)) {
         rmxbl = dn1;
-        if (ibl < itran.get(is)) vmxbl = "n";
-        if (ibl >= itran.get(is)) vmxbl = "c";
+        if (ibl < itran.get(is) + INDEX_START_WITH) vmxbl = "n";
+        if (ibl >= itran.get(is) + INDEX_START_WITH) vmxbl = "c";
       }
       if (rdn1 > dhi) rlx = dhi / dn1;
       if (rdn1 < dlo) rlx = dlo / dn1;
@@ -5328,7 +5328,7 @@ bool XFoil::update() {
       } else
         dswaki = 0.0;
       //------- eliminate absurd transients
-      if (ibl >= itran.get(is)) ctau.get(is)[ibl] = std::min(ctau.get(is)[ibl], 0.25);
+      if (ibl >= itran.get(is) + INDEX_START_WITH) ctau.get(is)[ibl] = std::min(ctau.get(is)[ibl], 0.25);
 
       if (ibl <= iblte.get(is))
         hklim = 1.02;
