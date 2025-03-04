@@ -95,17 +95,11 @@ double spline::sinvrt(double si, double xi, Eigen::VectorXd x, Eigen::VectorXd x
  *                                                        |
  *      s        independent variable array (input)       |
  *      x        dependent variable array   (input)       |
- *      xs       dx/ds array                (calculated)  |
- *      n        number of points           (input)       |
- *      xs1,xs2  endpoint derivatives       (input)       |
- *               if = 999.0, then usual zero second       |
- *               derivative end condition(s) are used     |
- *               if = -999.0, then zero third             |
- *               derivative end condition(s) are used     |
  *                                                        |
  * ------------------------------------------------------- */
-Eigen::VectorXd spline::splind(Eigen::VectorXd x, Eigen::VectorXd s, int n) {
+Eigen::VectorXd spline::splind(Eigen::VectorXd x, Eigen::VectorXd s) {
   Eigen::VectorXd xs = Eigen::VectorXd::Zero(x.size());
+  int n = s.size();
   Eigen::MatrixXd matrixA = Eigen::MatrixXd(n, n);
   Eigen::VectorXd vectorD = Eigen::VectorXd(n);
 
