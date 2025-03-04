@@ -284,7 +284,7 @@ class XFoil {
 
   SidePair<VectorXd> thet, ctau, dstr, uedg, ctq;
   SidePair<VectorXd> xssi, uinv, uinv_a, mass, vti;  
-  SidePair<int> itran;
+  SidePair<int> itran; // bl array index of transition interval
 
  public: //private:
   double qf0[IQX + 1], qf1[IQX + 1], qf2[IQX + 1], qf3[IQX + 1];
