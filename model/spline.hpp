@@ -41,9 +41,7 @@ class spline {
      *                                                        |
      *      s        independent variable array (input)       |
      *      x        dependent variable array   (input)       |
-     *      xs       dx/ds array                (calculated)  |
-     *      n        number of points           (input)       |
      *                                                        |
      * ------------------------------------------------------- */
-    static Eigen::VectorXd splind(Eigen::VectorXd x, Eigen::VectorXd s, int n);
+    static Eigen::VectorXd splind(Eigen::VectorXd x, Eigen::VectorXd s);
 };
