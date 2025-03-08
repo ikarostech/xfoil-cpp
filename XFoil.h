@@ -233,7 +233,7 @@ class XFoil {
     public:
     double psi;
     double psi_ni;
-    Vector2d qtan;
+    Vector2d qtan = Vector2d::Zero();
     static PsiResult sum(PsiResult a, PsiResult b) {
       PsiResult result;
       result.psi = a.psi + b.psi;
