@@ -1703,7 +1703,7 @@ bool XFoil::clcalc(double xref, double yref) {
   double beta, beta_msq, bfac, bfac_msq, cginc;
   double cpi_gam, cpc_cpi;
   double cpg1, cpg1_msq, cpg1_alf;
-
+  
   xcp = 0.0;
 
   beta = sqrt(1.0 - minf * minf);
@@ -1717,7 +1717,7 @@ bool XFoil::clcalc(double xref, double yref) {
 
   cl_alf = 0.0;
   cl_msq = 0.0;
-  
+
   cginc = 1.0 - (gam[1] / qinf) * (gam[1] / qinf);
   cpg1 = cginc / (beta + bfac * cginc);
   cpg1_msq = -cpg1 / (beta + bfac * cginc) * (beta_msq + bfac_msq * cginc);
@@ -1745,7 +1745,7 @@ bool XFoil::clcalc(double xref, double yref) {
     const Vector2d dpoint = rotateMatrix * (points.col(ip) - points.col(i));
     const double dg = cpg2 - cpg1;
 
-    const Vector2d apoint = rotateMatrix * ((points.col(ip) + points.col(i)) / 2 + ref);
+    const Vector2d apoint = rotateMatrix * ((points.col(ip) + points.col(i)) / 2 - ref);
     const double ag = 0.5 * (cpg2 + cpg1);
 
     const double dx_alf = cross2(points.col(ip) - points.col(i), rotateMatrix.row(0));
@@ -3591,7 +3591,7 @@ bool XFoil::pswlin(int i, Vector2d point, Vector2d normal_vector,
     const double dsio = 1.0 / dso;
 
     const double apan = apanel[jo];
-    
+
     const Vector2d r1 = point - points.col(jo);
     const Vector2d r2 = point - points.col(jp);
 
