@@ -1665,7 +1665,7 @@ bool XFoil::clcalc(Vector2d ref) {
     const Vector2d dpoint = rotateMatrix * (points.col(ip + INDEX_START_WITH) - points.col(i + INDEX_START_WITH));
     const double dg = cpg2 - cpg1;
 
-    const Vector2d apoint = rotateMatrix * ((points.col(ip + INDEX_START_WITH) + points.col(i + INDEX_START_WITH)) / 2 + ref);
+    const Vector2d apoint = rotateMatrix * ((points.col(ip + INDEX_START_WITH) + points.col(i + INDEX_START_WITH)) / 2 - ref);
     const double ag = 0.5 * (cpg2 + cpg1);
 
     const double dx_alf = cross2(points.col(ip + INDEX_START_WITH) - points.col(i + INDEX_START_WITH), rotateMatrix.row(0));
@@ -2909,7 +2909,7 @@ PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector, bool 
   psi_result.psi_ni = 0.0;
 
   psi_result.qtan = Vector2d::Zero();
-
+  
   for (int jo = 0; jo < n; jo++) {
     int jp = (jo + 1) % n;
     double dso = (points.col(jo + INDEX_START_WITH) - points.col(jp + INDEX_START_WITH)).norm();
@@ -3036,7 +3036,6 @@ PsiResult XFoil::psisig(int iNode, int jo, Vector2d point, Vector2d normal_vecto
 
   double dso = (points.col(jo + INDEX_START_WITH) - points.col(jp + INDEX_START_WITH)).norm();
 
-
   double dsio = 1.0 / dso;
 
   double apan = apanel[jo];
@@ -3064,7 +3063,7 @@ PsiResult XFoil::psisig(int iNode, int jo, Vector2d point, Vector2d normal_vecto
   }
   double logr12, t1;
   //------ set log(r^2) and arctan(x/y), correcting for reflection if any
-  if (io != jo && rs1 > 0.0) {
+  if (io != jo + INDEX_START_WITH && rs1 > 0.0) {
     logr12 = log(rs1);
     t1 = atan2(sgn * x1, sgn * yy) + (0.5 - 0.5 * sgn) * PI;
   } else {
@@ -3072,7 +3071,7 @@ PsiResult XFoil::psisig(int iNode, int jo, Vector2d point, Vector2d normal_vecto
     t1 = 0.0;
   }
   double logr22, t2;
-  if (io != jp && rs2 > 0.0) {
+  if (io != jp + INDEX_START_WITH && rs2 > 0.0) {
     logr22 = log(rs2);
     t2 = atan2(sgn * x2, sgn * yy) + (0.5 - 0.5 * sgn) * PI;
   } else {
@@ -3144,7 +3143,7 @@ PsiResult XFoil::psisig(int iNode, int jo, Vector2d point, Vector2d normal_vecto
   pdyy =
       ((x0 + x2) * psyy + 2.0 * (x2 - x0 + yy * (theta0 - t2))) * dxinv;
 
-  double dsp = (points.col(jq) - points.col(jo)).norm();
+  double dsp = (points.col(jq + INDEX_START_WITH) - points.col(jo + INDEX_START_WITH)).norm();
   double dsip = 1.0 / dsp;
 
   //------- dpsi/dm
@@ -4798,66 +4797,78 @@ bool XFoil::trdif() {
   saveblData(2);
 
   //---- weighting factors for linear interpolation to transition point
-  double wf = (xt - blData1.param.xz) / (blData2.param.xz - blData1.param.xz);
-  double wf_xt = 1.0 / (blData2.param.xz - blData1.param.xz);
+  double wf2 = (xt - blData1.param.xz) / (blData2.param.xz - blData1.param.xz);
+  double wf2_xt = 1.0 / (blData2.param.xz - blData1.param.xz);
 
-  double wf_a1 = wf_xt * xt_a1;
-  double wf_x1 = wf_xt * xt_x1 + (wf - 1.0) / (blData2.param.xz - blData1.param.xz);
-  double wf_x2 = wf_xt * xt_x2 - wf / (blData2.param.xz - blData1.param.xz);
-  double wf_t1 = wf_xt * xt_t1;
-  double wf_t2 = wf_xt * xt_t2;
-  double wf_d1 = wf_xt * xt_d1;
-  double wf_d2 = wf_xt * xt_d2;
-  double wf_u1 = wf_xt * xt_u1;
-  double wf_u2 = wf_xt * xt_u2;
-  double wf_ms = wf_xt * xt_ms;
-  double wf_re = wf_xt * xt_re;
-  double wf_xf = wf_xt * xt_xf;
+  double wf2_a1 = wf2_xt * xt_a1;
+  double wf2_x1 = wf2_xt * xt_x1 + (wf2 - 1.0) / (blData2.param.xz - blData1.param.xz);
+  double wf2_x2 = wf2_xt * xt_x2 - wf2 / (blData2.param.xz - blData1.param.xz);
+  double wf2_t1 = wf2_xt * xt_t1;
+  double wf2_t2 = wf2_xt * xt_t2;
+  double wf2_d1 = wf2_xt * xt_d1;
+  double wf2_d2 = wf2_xt * xt_d2;
+  double wf2_u1 = wf2_xt * xt_u1;
+  double wf2_u2 = wf2_xt * xt_u2;
+  double wf2_ms = wf2_xt * xt_ms;
+  double wf2_re = wf2_xt * xt_re;
+  double wf2_xf = wf2_xt * xt_xf;
 
-  //**** first,  do laminar part between x1 and xt
+  double wf1 = 1.0 - wf2;
+  double wf1_a1 = -wf2_a1;
+  double wf1_x1 = -wf2_x1;
+  double wf1_x2 = -wf2_x2;
+  double wf1_t1 = -wf2_t1;
+  double wf1_t2 = -wf2_t2;
+  double wf1_d1 = -wf2_d1;
+  double wf1_d2 = -wf2_d2;
+  double wf1_u1 = -wf2_u1;
+  double wf1_u2 = -wf2_u2;
+  double wf1_ms = -wf2_ms;
+  double wf1_re = -wf2_re;
+  double wf1_xf = -wf2_xf;
 
   //-----interpolate primary variables to transition point
-  tt = blData1.param.tz * (1 - wf) + blData2.param.tz * wf;
-  tt_a1 = (blData2.param.tz - blData1.param.tz) * wf_a1;
-  tt_x1 = (blData2.param.tz - blData1.param.tz) * wf_x1;
-  tt_x2 = (blData2.param.tz - blData1.param.tz) * wf_x2;
-  tt_t1 = (blData2.param.tz - blData1.param.tz) * wf_t1 + (1 - wf);
-  tt_t2 = (blData2.param.tz - blData1.param.tz) * wf_t2 + wf;
-  tt_d1 = (blData2.param.tz - blData1.param.tz) * wf_d1;
-  tt_d2 = (blData2.param.tz - blData1.param.tz) * wf_d2 ;
-  tt_u1 = (blData2.param.tz - blData1.param.tz) * wf_u1;
-  tt_u2 = (blData2.param.tz - blData1.param.tz) * wf_u2;
-  tt_ms = (blData2.param.tz - blData1.param.tz) * wf_ms;
-  tt_re = (blData2.param.tz - blData1.param.tz) * wf_re;
-  tt_xf = (blData2.param.tz - blData1.param.tz) * wf_xf;
+  tt = blData1.param.tz * wf1 + blData2.param.tz * wf2;
+  tt_a1 = blData1.param.tz * wf1_a1 + blData2.param.tz * wf2_a1;
+  tt_x1 = blData1.param.tz * wf1_x1 + blData2.param.tz * wf2_x1;
+  tt_x2 = blData1.param.tz * wf1_x2 + blData2.param.tz * wf2_x2;
+  tt_t1 = blData1.param.tz * wf1_t1 + blData2.param.tz * wf2_t1 + wf1;
+  tt_t2 = blData1.param.tz * wf1_t2 + blData2.param.tz * wf2_t2 + wf2;
+  tt_d1 = blData1.param.tz * wf1_d1 + blData2.param.tz * wf2_d1;
+  tt_d2 = blData1.param.tz * wf1_d2 + blData2.param.tz * wf2_d2;
+  tt_u1 = blData1.param.tz * wf1_u1 + blData2.param.tz * wf2_u1;
+  tt_u2 = blData1.param.tz * wf1_u2 + blData2.param.tz * wf2_u2;
+  tt_ms = blData1.param.tz * wf1_ms + blData2.param.tz * wf2_ms;
+  tt_re = blData1.param.tz * wf1_re + blData2.param.tz * wf2_re;
+  tt_xf = blData1.param.tz * wf1_xf + blData2.param.tz * wf2_xf;
 
-  dt = blData1.param.dz * (1 - wf) + blData2.param.dz * wf;
-  dt_a1 = (blData2.param.dz - blData1.param.dz) * wf_a1;
-  dt_x1 = (blData2.param.dz - blData1.param.dz) * wf_x1;
-  dt_x2 = (blData2.param.dz - blData1.param.dz) * wf_x2;
-  dt_t1 = (blData2.param.dz - blData1.param.dz) * wf_t1;
-  dt_t2 = (blData2.param.dz - blData1.param.dz) * wf_t2;
-  dt_d1 = (blData2.param.dz - blData1.param.dz) * wf_d1 + (1 - wf);
-  dt_d2 = (blData2.param.dz - blData1.param.dz) * wf_d2 + wf;
-  dt_u1 = (blData2.param.dz - blData1.param.dz) * wf_u1;
-  dt_u2 = (blData2.param.dz - blData1.param.dz) * wf_u2;
-  dt_ms = (blData2.param.dz - blData1.param.dz) * wf_ms;
-  dt_re = (blData2.param.dz - blData1.param.dz) * wf_re;
-  dt_xf = (blData2.param.dz - blData1.param.dz) * wf_xf;
+  dt = blData1.param.dz * wf1 + blData2.param.dz * wf2;
+  dt_a1 = blData1.param.dz * wf1_a1 + blData2.param.dz * wf2_a1;
+  dt_x1 = blData1.param.dz * wf1_x1 + blData2.param.dz * wf2_x1;
+  dt_x2 = blData1.param.dz * wf1_x2 + blData2.param.dz * wf2_x2;
+  dt_t1 = blData1.param.dz * wf1_t1 + blData2.param.dz * wf2_t1;
+  dt_t2 = blData1.param.dz * wf1_t2 + blData2.param.dz * wf2_t2;
+  dt_d1 = blData1.param.dz * wf1_d1 + blData2.param.dz * wf2_d1 + wf1;
+  dt_d2 = blData1.param.dz * wf1_d2 + blData2.param.dz * wf2_d2 + wf2;
+  dt_u1 = blData1.param.dz * wf1_u1 + blData2.param.dz * wf2_u1;
+  dt_u2 = blData1.param.dz * wf1_u2 + blData2.param.dz * wf2_u2;
+  dt_ms = blData1.param.dz * wf1_ms + blData2.param.dz * wf2_ms;
+  dt_re = blData1.param.dz * wf1_re + blData2.param.dz * wf2_re;
+  dt_xf = blData1.param.dz * wf1_xf + blData2.param.dz * wf2_xf;
 
-  ut = blData1.param.uz * (1 - wf) + blData2.param.uz * wf;
-  ut_a1 = (blData2.param.uz - blData1.param.uz) * wf_a1;
-  ut_x1 = (blData2.param.uz - blData1.param.uz) * wf_x1;
-  ut_x2 = (blData2.param.uz - blData1.param.uz) * wf_x2;
-  ut_t1 = (blData2.param.uz - blData1.param.uz) * wf_t1;
-  ut_t2 = (blData2.param.uz - blData1.param.uz) * wf_t2;
-  ut_d1 = (blData2.param.uz - blData1.param.uz) * wf_d1;
-  ut_d2 = (blData2.param.uz - blData1.param.uz) * wf_d2;
-  ut_u1 = (blData2.param.uz - blData1.param.uz) * wf_u1 + (1 - wf);
-  ut_u2 = (blData2.param.uz - blData1.param.uz) * wf_u2 + wf;
-  ut_ms = (blData2.param.uz - blData1.param.uz) * wf_ms;
-  ut_re = (blData2.param.uz - blData1.param.uz) * wf_re;
-  ut_xf = (blData2.param.uz - blData1.param.uz) * wf_xf;
+  ut = blData1.param.uz * wf1 + blData2.param.uz * wf2;
+  ut_a1 = blData1.param.uz * wf1_a1 + blData2.param.uz * wf2_a1;
+  ut_x1 = blData1.param.uz * wf1_x1 + blData2.param.uz * wf2_x1;
+  ut_x2 = blData1.param.uz * wf1_x2 + blData2.param.uz * wf2_x2;
+  ut_t1 = blData1.param.uz * wf1_t1 + blData2.param.uz * wf2_t1;
+  ut_t2 = blData1.param.uz * wf1_t2 + blData2.param.uz * wf2_t2;
+  ut_d1 = blData1.param.uz * wf1_d1 + blData2.param.uz * wf2_d1;
+  ut_d2 = blData1.param.uz * wf1_d2 + blData2.param.uz * wf2_d2;
+  ut_u1 = blData1.param.uz * wf1_u1 + blData2.param.uz * wf2_u1 + wf1;
+  ut_u2 = blData1.param.uz * wf1_u2 + blData2.param.uz * wf2_u2 + wf2;
+  ut_ms = blData1.param.uz * wf1_ms + blData2.param.uz * wf2_ms;
+  ut_re = blData1.param.uz * wf1_re + blData2.param.uz * wf2_re;
+  ut_xf = blData1.param.uz * wf1_xf + blData2.param.uz * wf2_xf;
 
   //---- set primary "t" variables at xt  (really placed into "2" variables)
   blData2.param.xz = xt;

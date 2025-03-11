@@ -14,6 +14,7 @@ public:
     PsiResult() {
         psi = 0;
         psi_ni = 0;
+        qtan = Vector2d::Zero();
         dzdg = Vector<double, IQX>::Zero();
         dqdg = Vector<double, IQX>::Zero();
         dzdm = Vector<double, IZX>::Zero();
