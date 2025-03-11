@@ -2909,15 +2909,7 @@ PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector, bool 
   psi_result.psi_ni = 0.0;
 
   psi_result.qtan = Vector2d::Zero();
-  /*
-  if (sharp) {
-    scs = 1.0;
-    sds = 0.0;
-  } else {
-    scs = ante / dste;
-    sds = aste / dste;
-  }
-  */
+  
   for (int jo = 0; jo < n; jo++) {
     int jp = (jo + 1) % n;
     double dso = (points.col(jo + INDEX_START_WITH) - points.col(jp + INDEX_START_WITH)).norm();
