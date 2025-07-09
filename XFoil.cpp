@@ -231,7 +231,6 @@ bool XFoil::initialize() {
   reybl_ms = 0.0;
   reybl_re = 0.0;
   gm1bl = 0.0;
-  bule = 0.0;
   xiforc = 0.0;
   amcrit = 0.0;
 
@@ -527,8 +526,8 @@ bool XFoil::bldif(int ityp) {
   if (ityp == 0) {
     //----- similarity logarithmic differences  (prescribed)
     xlog = 1.0;
-    ulog = bule;
-    tlog = 0.5 * (1.0 - bule);
+    ulog = 1.0;
+    tlog = 0.0;
     hlog = 0.0;
     ddlog = 0.0;
   } else {
@@ -2255,7 +2254,6 @@ bool XFoil::mrchdu() {
 
     //---- set leading edge pressure gradient parameter  x/u du/dx
     ibl = 2;
-    bule = 1.0;
 
     //---- old transition station
     itrold = itran.get(is) + INDEX_START_WITH;
@@ -2552,11 +2550,8 @@ bool XFoil::mrchue() {
     xsi = xssi.get(is)[2];
     uei = uedg.get(is)[2];
 
-    //      bule = log(uedg(ibl+1,is)/uei) / log(xssi(ibl+1,is)/xsi)
-    //      bule = std::max( -.08 , bule )
-    bule = 1.0;
-    ucon = uei / pow(xsi, bule);
-    tsq = 0.45 / (ucon * (5.0 * bule + 1.0) * reybl) * pow(xsi, (1.0 - bule));
+    ucon = uei / xsi;
+    tsq = 0.45 / (ucon * 6.0 * reybl);
     thi = sqrt(tsq);
     dsi = 2.2 * thi;
     ami = 0.0;
@@ -3700,9 +3695,6 @@ bool XFoil::setbl() {
 
     double due1 = 0.0;
     double dds1 = 0.0;
-
-    //---- similarity station pressure gradient parameter  x/u du/dx
-    bule = 1.0;
 
     //---- set forced transition arc length position
     xiforc = xifset(is);
