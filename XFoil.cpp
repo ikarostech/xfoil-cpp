@@ -3568,21 +3568,15 @@ bool XFoil::setbl() {
   //-------------------------------------------------
 
   std::stringstream ss;
-  //int i, ibl, iv, iw, j, js = 0, jv, jbl, is = 0;
   int ile1 = 0, ile2 = 0, ite1 = 0, ite2 = 0, jvte1 = 0, jvte2 = 0;
-  double u1_m[2 * IVX + 1], u2_m[2 * IVX + 1];
-  double d1_m[2 * IVX + 1], d2_m[2 * IVX + 1];
-  double ule1_m[2 * IVX + 1], ule2_m[2 * IVX + 1];
-  double ute1_m[2 * IVX + 1], ute2_m[2 * IVX + 1];
-
-  memset(u1_m, 0, (2 * IVX + 1) * sizeof(double));
-  memset(u2_m, 0, (2 * IVX + 1) * sizeof(double));
-  memset(d1_m, 0, (2 * IVX + 1) * sizeof(double));
-  memset(d2_m, 0, (2 * IVX + 1) * sizeof(double));
-  memset(ule1_m, 0, (2 * IVX + 1) * sizeof(double));
-  memset(ule2_m, 0, (2 * IVX + 1) * sizeof(double));
-  memset(ute1_m, 0, (2 * IVX + 1) * sizeof(double));
-  memset(ute2_m, 0, (2 * IVX + 1) * sizeof(double));
+  VectorXd u1_m = VectorXd::Zero(2 * IVX + 1);
+  VectorXd u2_m = VectorXd::Zero(2 * IVX + 1);
+  VectorXd d1_m = VectorXd::Zero(2 * IVX + 1);
+  VectorXd d2_m = VectorXd::Zero(2 * IVX + 1);
+  VectorXd ule1_m = VectorXd::Zero(2 * IVX + 1);
+  VectorXd ule2_m = VectorXd::Zero(2 * IVX + 1);
+  VectorXd ute1_m = VectorXd::Zero(2 * IVX + 1);
+  VectorXd ute2_m = VectorXd::Zero(2 * IVX + 1);
 
   double msq_clmr = 0.0, mdi;
   double herat = 0.0, herat_ms = 0.0;
@@ -3957,14 +3951,8 @@ bool XFoil::setbl() {
         blvar(blData2, 3);
         blmid(3);
       }
-
-      for (int js = 1; js <= 2; js++) {
-        for (int jbl = 2; jbl <= nbl.get(js); jbl++) {
-          int jv = isys.get(js)[jbl];
-          u1_m[jv] = u2_m[jv];
-          d1_m[jv] = d2_m[jv];
-        }
-      }
+      u1_m = u2_m;
+      d1_m = d2_m;
 
       u1_a = u2_a;
       d1_a = d2_a;
