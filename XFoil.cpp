@@ -194,22 +194,11 @@ bool XFoil::initialize() {
 
   //---- circle plane array size (largest 2  + 1 that will fit array size)
   double ann = log(double((2 * IQX) - 1)) / log(2.0);
-  int nn = int(ann + 0.00001);
-  int tmp = 1;
-  int nc1 = 0;
-  for (int l = 0; l < nn; l++) {
-    tmp = 2 * tmp;
-  }
-  nc1 = tmp + 1;
-  //	nc1 = (int)pow(2,nn) + 1;
+  // Calculate nc1 as the largest power of 2 plus 1 that does not exceed ICX
+  int nn = static_cast<int>(ann + 0.00001);
+  int nc1 = (1 << nn) + 1;
   if (nc1 > ICX) {
-    tmp = 1;
-    for (int l = 0; l < nn - 1; l++) {
-      tmp = 2 * tmp;
-    }
-    nc1 = tmp + 1;
-    //		nc1 = pow(2,(nn-1)) + 1; //257 instead of ICX in original source
-    // code
+    nc1 = (1 << (nn - 1)) + 1;
   }
 
   //---- default cm reference location
