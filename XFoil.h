@@ -146,6 +146,9 @@ class XFoil {
   bool blsolve();
   bool blsys();
   bool blvar(blData& ref, int ityp);
+  void computeShapeParameters(blData& ref, int ityp);
+  void computeCoefficients(blData& ref, int ityp);
+  void computeDissipationAndThickness(blData& ref, int ityp);
   double cang(Matrix2Xd points);
   bool cdcalc();
 
