@@ -146,6 +146,20 @@ class XFoil {
   bool blsolve();
   bool blsys();
   bool blvar(blData& ref, int ityp);
+  /**
+   * @brief Calculate shape parameters and slip velocity.
+   */
+  void computeShapeParameters(blData& ref, int ityp);
+
+  /**
+   * @brief Determine shear and skin friction coefficients.
+   */
+  void computeCoefficients(blData& ref, int ityp);
+
+  /**
+   * @brief Compute dissipation and boundary-layer thickness.
+   */
+  void computeDissipationAndThickness(blData& ref, int ityp);
   double cang(Matrix2Xd points);
   bool cdcalc();
 
