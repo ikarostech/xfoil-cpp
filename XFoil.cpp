@@ -285,6 +285,17 @@ bool XFoil::initialize() {
 }
 
 
+/**
+ * @brief Compute shape-related boundary layer parameters.
+ *
+ * Calculates density thickness (@f$h^*@f$), kinetic energy shape
+ * parameter (@f$h^{**}@f$) and the normalized slip velocity @f$u^*@f$.
+ * The derivatives with respect to the primary variables are stored in
+ * the provided @p ref structure.
+ *
+ * @param ref  Boundary layer data container updated with the results.
+ * @param ityp Flow regime type (1=laminar, 2=turbulent, 3=wake).
+ */
 void XFoil::computeShapeParameters(blData& ref, int ityp) {
   if (ityp == 3) ref.hkz.scalar = std::max(ref.hkz.scalar, 1.00005);
   if (ityp != 3) ref.hkz.scalar = std::max(ref.hkz.scalar, 1.05000);
@@ -339,6 +350,17 @@ void XFoil::computeShapeParameters(blData& ref, int ityp) {
   }
 }
 
+/**
+ * @brief Compute shear and skin friction coefficients.
+ *
+ * Determines the equilibrium shear coefficient (cq) and the
+ * skin friction coefficient (cf) for the current flow regime.
+ * Sensitivities with respect to the primary variables are also
+ * accumulated in @p ref.
+ *
+ * @param ref  Boundary layer data container updated with the results.
+ * @param ityp Flow regime type (1=laminar, 2=turbulent, 3=wake).
+ */
 void XFoil::computeCoefficients(blData& ref, int ityp) {
   double hkc = ref.hkz.scalar - 1.0;
   double hkc_hk2 = 1.0;
@@ -429,6 +451,17 @@ void XFoil::computeCoefficients(blData& ref, int ityp) {
   ref.cfz.ms() += cf2_m2 * ref.param.mz_ms;
 }
 
+/**
+ * @brief Compute dissipation and boundary-layer thickness.
+ *
+ * Calculates the dissipation coefficient and boundary-layer thickness
+ * based on the current flow regime.  This routine also accounts for
+ * wake modifications and adds turbulent outer-layer contributions when
+ * applicable.  Resulting derivatives are stored in @p ref.
+ *
+ * @param ref  Boundary layer data container updated with the results.
+ * @param ityp Flow regime type (1=laminar, 2=turbulent, 3=wake).
+ */
 void XFoil::computeDissipationAndThickness(blData& ref, int ityp) {
   double di2l;
   if (ityp == 1) {
@@ -1440,6 +1473,8 @@ bool XFoil::blsolve() {
  *       ityp = 3 :  turbulent wake
  * ---------------------------------------------------- */
 bool XFoil::blvar(blData& ref, int ityp) {
+  // This routine is now decomposed into helper functions to simplify
+  // the original Fortran translation.
   computeShapeParameters(ref, ityp);
   computeCoefficients(ref, ityp);
   computeDissipationAndThickness(ref, ityp);
