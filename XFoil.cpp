@@ -284,6 +284,273 @@ bool XFoil::initialize() {
   return true;
 }
 
+
+void XFoil::computeShapeParameters(blData& ref, int ityp) {
+  if (ityp == 3) ref.hkz.scalar = std::max(ref.hkz.scalar, 1.00005);
+  if (ityp != 3) ref.hkz.scalar = std::max(ref.hkz.scalar, 1.05000);
+
+  auto hct_result = boundary_layer::hct(ref.hkz.scalar, ref.param.mz);
+  ref.hcz.scalar = hct_result.hc;
+  ref.hcz.pos_vector() = hct_result.hc_hk * ref.hkz.pos_vector();
+  ref.hcz.u() += hct_result.hc_msq * ref.param.mz_uz;
+  ref.hcz.ms() += hct_result.hc_msq * ref.param.mz_ms;
+
+  double hs2_hk2, hs2_rt2, hs2_m2;
+  if (ityp == 1) {
+    auto hsl_result = boundary_layer::hsl(ref.hkz.scalar);
+    ref.hsz.scalar = hsl_result.hs;
+    hs2_hk2 = hsl_result.hs_hk;
+    hs2_rt2 = hsl_result.hs_rt;
+    hs2_m2 = hsl_result.hs_msq;
+  } else {
+    auto hst_result =
+        boundary_layer::hst(ref.hkz.scalar, ref.rtz.scalar, ref.param.mz);
+    ref.hsz.scalar = hst_result.hs;
+    hs2_hk2 = hst_result.hs_hk;
+    hs2_rt2 = hst_result.hs_rt;
+    hs2_m2 = hst_result.hs_msq;
+  }
+
+  ref.hsz.vector = hs2_hk2 * ref.hkz.vector + hs2_rt2 * ref.rtz.vector;
+  ref.hsz.u() += hs2_m2 * ref.param.mz_uz;
+  ref.hsz.ms() += hs2_m2 * ref.param.mz_ms;
+
+  double us2_hs2 =
+      0.5 * (1.0 - (ref.hkz.scalar - 1.0) / (gbcon * ref.param.hz));
+  double us2_hk2 = 0.5 * ref.hsz.scalar * (-1.0 / (gbcon * ref.param.hz));
+  double us2_h2 = 0.5 * ref.hsz.scalar * (ref.hkz.scalar - 1.0) /
+                  (gbcon * ref.param.hz * ref.param.hz);
+
+  ref.usz.scalar =
+      0.5 * ref.hsz.scalar *
+      (1.0 - (ref.hkz.scalar - 1.0) / (gbcon * ref.param.hz));
+  ref.usz.vector = us2_hs2 * ref.hsz.vector + us2_hk2 * ref.hkz.vector;
+  ref.usz.t() += us2_h2 * ref.param.hz_tz;
+  ref.usz.d() += us2_h2 * ref.param.hz_dz;
+
+  if (ityp <= 2 && ref.usz.scalar > 0.95) {
+    ref.usz.scalar = 0.98;
+    ref.usz.vector = Vector<double, 6>::Zero();
+  }
+
+  if (ityp == 3 && ref.usz.scalar > 0.99995) {
+    ref.usz.scalar = 0.99995;
+    ref.usz.vector = Vector<double, 6>::Zero();
+  }
+}
+
+void XFoil::computeCoefficients(blData& ref, int ityp) {
+  double hkc = ref.hkz.scalar - 1.0;
+  double hkc_hk2 = 1.0;
+  double hkc_rt2 = 0.0;
+  if (ityp == 2) {
+    const double gcc = gccon;
+    hkc = ref.hkz.scalar - 1.0 - gcc / ref.rtz.scalar;
+    hkc_hk2 = 1.0;
+    hkc_rt2 = gcc / ref.rtz.scalar / ref.rtz.scalar;
+    if (hkc < 0.01) {
+      hkc = 0.01;
+      hkc_hk2 = 0.0;
+      hkc_rt2 = 0.0;
+    }
+  }
+
+  double hkb = ref.hkz.scalar - 1.0;
+  double usb = 1.0 - ref.usz.scalar;
+  ref.cqz.scalar =
+      sqrt(ctcon * ref.hsz.scalar * hkb * hkc * hkc /
+           (usb * ref.param.hz * ref.hkz.scalar * ref.hkz.scalar));
+  double cq2_hs2 =
+      ctcon * hkb * hkc * hkc /
+          (usb * ref.param.hz * ref.hkz.scalar * ref.hkz.scalar) * 0.5 /
+      ref.cqz.scalar;
+  double cq2_us2 =
+      ctcon * ref.hsz.scalar * hkb * hkc * hkc /
+          (usb * ref.param.hz * ref.hkz.scalar * ref.hkz.scalar) / usb * 0.5 /
+      ref.cqz.scalar;
+  double cq2_hk2 =
+      ctcon * ref.hsz.scalar * hkc * hkc /
+          (usb * ref.param.hz * ref.hkz.scalar * ref.hkz.scalar) * 0.5 /
+          ref.cqz.scalar -
+      ctcon * ref.hsz.scalar * hkb * hkc * hkc /
+          (usb * ref.param.hz * ref.hkz.scalar * ref.hkz.scalar * ref.hkz.scalar) *
+          2.0 * 0.5 / ref.cqz.scalar +
+      ctcon * ref.hsz.scalar * hkb * hkc /
+          (usb * ref.param.hz * ref.hkz.scalar * ref.hkz.scalar) * 2.0 * 0.5 /
+          ref.cqz.scalar * hkc_hk2;
+  double cq2_rt2 =
+      ctcon * ref.hsz.scalar * hkb * hkc /
+          (usb * ref.param.hz * ref.hkz.scalar * ref.hkz.scalar) * 2.0 * 0.5 /
+          ref.cqz.scalar * hkc_rt2;
+  double cq2_h2 =
+      -ctcon * ref.hsz.scalar * hkb * hkc * hkc /
+          (usb * ref.param.hz * ref.hkz.scalar * ref.hkz.scalar) /
+          ref.param.hz * 0.5 / ref.cqz.scalar;
+
+  ref.cqz.vector = cq2_hs2 * ref.hsz.vector + cq2_us2 * ref.usz.vector +
+                   cq2_hk2 * ref.hkz.vector + cq2_rt2 * ref.rtz.vector;
+  ref.cqz.t() += cq2_h2 * ref.param.hz_tz;
+  ref.cqz.d() += cq2_h2 * ref.param.hz_dz;
+
+  double cf2_hk2, cf2_rt2, cf2_m2;
+  if (ityp == 3) {
+    ref.cfz.scalar = 0.0;
+    cf2_hk2 = 0.0;
+    cf2_rt2 = 0.0;
+    cf2_m2 = 0.0;
+  } else {
+    if (ityp == 1) {
+      C_f c_f = cfl(ref.hkz.scalar, ref.rtz.scalar);
+      ref.cfz.scalar = c_f.cf;
+      cf2_hk2 = c_f.hk;
+      cf2_rt2 = c_f.rt;
+      cf2_m2 = c_f.msq;
+    } else {
+      C_f c_fl = cfl(ref.hkz.scalar, ref.rtz.scalar);
+      double cf2l = c_fl.cf;
+      double cf2l_hk2 = c_fl.hk;
+      double cf2l_rt2 = c_fl.rt;
+      double cf2l_m2 = c_fl.msq;
+      C_f c_ft = cft(ref.hkz.scalar, ref.rtz.scalar, ref.param.mz);
+      ref.cfz.scalar = c_ft.cf;
+      cf2_hk2 = c_ft.hk;
+      cf2_rt2 = c_ft.rt;
+      cf2_m2 = c_ft.msq;
+      if (cf2l > ref.cfz.scalar) {
+        ref.cfz.scalar = cf2l;
+        cf2_hk2 = cf2l_hk2;
+        cf2_rt2 = cf2l_rt2;
+        cf2_m2 = cf2l_m2;
+      }
+    }
+  }
+  ref.cfz.vector = cf2_hk2 * ref.hkz.vector + cf2_rt2 * ref.rtz.vector;
+  ref.cfz.u() += cf2_m2 * ref.param.mz_uz;
+  ref.cfz.ms() += cf2_m2 * ref.param.mz_ms;
+}
+
+void XFoil::computeDissipationAndThickness(blData& ref, int ityp) {
+  double di2l;
+  if (ityp == 1) {
+    auto dissipation_result = dil(ref.hkz.scalar, ref.rtz.scalar);
+    ref.diz.scalar = dissipation_result.di;
+    ref.diz.vector =
+        dissipation_result.di_hk * ref.hkz.vector +
+        dissipation_result.di_rt * ref.rtz.vector;
+  } else {
+    if (ityp == 2) {
+      C_f c_ft = cft(ref.hkz.scalar, ref.rtz.scalar, ref.param.mz);
+      double cf2t = c_ft.cf;
+      double cf2t_hk2 = c_ft.hk;
+      double cf2t_rt2 = c_ft.rt;
+      double cf2t_m2 = c_ft.msq;
+      Vector<double, 6> cf2t_vector =
+          cf2t_hk2 * ref.hkz.vector + cf2t_rt2 * ref.rtz.vector +
+          Vector<double, 6>{cf2t_m2 * ref.param.mz_uz, 0, 0, 0,
+                            cf2t_m2 * ref.param.mz_ms, 0};
+
+      ref.diz.scalar = (0.5 * cf2t * ref.usz.scalar) * 2.0 / ref.hsz.scalar;
+      double di2_hs2 =
+          -(0.5 * cf2t * ref.usz.scalar) * 2.0 / ref.hsz.scalar /
+          ref.hsz.scalar;
+      double di2_us2 = (0.5 * cf2t) * 2.0 / ref.hsz.scalar;
+      double di2_cf2t = (0.5 * ref.usz.scalar) * 2.0 / ref.hsz.scalar;
+
+      ref.diz.vector = di2_hs2 * ref.hsz.vector + di2_us2 * ref.usz.vector +
+                       di2_cf2t * cf2t_vector;
+
+      double grt = log(ref.rtz.scalar);
+      double hmin = 1.0 + 2.1 / grt;
+      double hm_rt2 = -(2.1 / grt / grt) / ref.rtz.scalar;
+
+      double fl = (ref.hkz.scalar - 1.0) / (hmin - 1.0);
+      double fl_hk2 = 1.0 / (hmin - 1.0);
+      double fl_rt2 = (-fl / (hmin - 1.0)) * hm_rt2;
+
+      double tfl = tanh(fl);
+      double dfac = 0.5 + 0.5 * tfl;
+      double df_fl = 0.5 * (1.0 - tfl * tfl);
+
+      double df_hk2 = df_fl * fl_hk2;
+      double df_rt2 = df_fl * fl_rt2;
+
+      ref.diz.vector =
+          dfac * ref.diz.vector +
+          ref.diz.scalar * (df_hk2 * ref.hkz.vector + df_rt2 * ref.rtz.vector);
+      ref.diz.re() -= df_rt2 * ref.rtz.re();
+
+      ref.diz.scalar = ref.diz.scalar * dfac;
+    } else {
+      ref.diz.scalar = 0.0;
+      ref.diz.vector = Vector<double, 6>::Zero();
+    }
+  }
+
+  if (ityp != 1) {
+    double dd = ref.param.sz * ref.param.sz * (0.995 - ref.usz.scalar) * 2.0 /
+                ref.hsz.scalar;
+    double dd_hs2 =
+        -ref.param.sz * ref.param.sz * (0.995 - ref.usz.scalar) * 2.0 /
+        ref.hsz.scalar / ref.hsz.scalar;
+    double dd_us2 = -ref.param.sz * ref.param.sz * 2.0 / ref.hsz.scalar;
+    const double dd_s2 =
+        ref.param.sz * 2.0 * (0.995 - ref.usz.scalar) * 2.0 / ref.hsz.scalar;
+
+    ref.diz.scalar = ref.diz.scalar + dd;
+    ref.diz.s() = dd_s2;
+    ref.diz.vector =
+        ref.diz.vector + dd_hs2 * ref.hsz.vector + dd_us2 * ref.usz.vector;
+
+    dd = 0.15 * (0.995 - ref.usz.scalar) * (0.995 - ref.usz.scalar) /
+         ref.rtz.scalar * 2.0 / ref.hsz.scalar;
+    dd_us2 = -0.15 * (0.995 - ref.usz.scalar) * 2.0 / ref.rtz.scalar * 2.0 /
+             ref.hsz.scalar;
+    dd_hs2 = -dd / ref.hsz.scalar;
+    const double dd_rt2 = -dd / ref.rtz.scalar;
+
+    ref.diz.scalar = ref.diz.scalar + dd;
+    ref.diz.vector = ref.diz.vector + dd_hs2 * ref.hsz.vector +
+                    dd_us2 * ref.usz.vector + dd_rt2 * ref.rtz.vector;
+  }
+
+  if (ityp == 2) {
+    auto dissipation_result = dil(ref.hkz.scalar, ref.rtz.scalar);
+    if (dissipation_result.di > ref.diz.scalar) {
+      ref.diz.scalar = dissipation_result.di;
+      ref.diz.vector = dissipation_result.di_hk * ref.hkz.vector +
+                       dissipation_result.di_rt * ref.rtz.vector;
+    }
+  }
+
+  if (ityp == 3) {
+    auto dissipation_result = dilw(ref.hkz.scalar, ref.rtz.scalar);
+    di2l = dissipation_result.di;
+    if (di2l > ref.diz.scalar) {
+      ref.diz.scalar = dissipation_result.di;
+      ref.diz.vector = dissipation_result.di_hk * ref.hkz.vector +
+                       dissipation_result.di_rt * ref.rtz.vector;
+    }
+
+    ref.diz.scalar = ref.diz.scalar * 2.0;
+    ref.diz.vector *= 2;
+  }
+
+  ref.dez.scalar =
+      (3.15 + 1.72 / (ref.hkz.scalar - 1.0)) * ref.param.tz + ref.param.dz;
+  double de2_hk2 = (-1.72 / (ref.hkz.scalar - 1.0) / (ref.hkz.scalar - 1.0)) *
+                   ref.param.tz;
+  ref.dez.vector = de2_hk2 * ref.hkz.vector;
+  ref.dez.t() += (3.15 + 1.72 / (ref.hkz.scalar - 1.0));
+  ref.dez.d() += 1.0;
+
+  double hdmax = 12.0;
+  if (ref.dez.scalar > hdmax * ref.param.tz) {
+    ref.dez.scalar = hdmax * ref.param.tz;
+    ref.dez.vector = Vector<double, 6>::Zero();
+    ref.dez.t() = hdmax;
+  }
+}
+
 bool XFoil::abcopy(Matrix2Xd copyFrom) {
   
   if (n != copyFrom.cols() - 1) lblini = false;
@@ -1173,271 +1440,9 @@ bool XFoil::blsolve() {
  *       ityp = 3 :  turbulent wake
  * ---------------------------------------------------- */
 bool XFoil::blvar(blData& ref, int ityp) {
-  double hs2_hk2, hs2_rt2, hs2_m2;
-  double us2_hs2, us2_hk2, us2_h2;
-  double hkc, hkc_hk2, hkc_rt2, hkb, usb;
-  double cq2_hs2, cq2_us2, cq2_hk2;
-  double cq2_rt2, cq2_h2, cf2_hk2, cf2_rt2, cf2_m2;
-  double cf2l, cf2l_hk2, cf2l_rt2, cf2l_m2;
-  double cf2t, cf2t_hk2;
-  double di2_hs2;
-  double di2_us2, di2_cf2t, hmin, hm_rt2;
-  double grt, fl, fl_hk2, fl_rt2, tfl;
-  double dfac, df_fl, df_hk2, df_rt2;
-  double di2l, de2_hk2, hdmax;
-
-  //	double gbcon, gccon, ctcon, hkc2;//were are they initialized?
-  if (ityp == 3) ref.hkz.scalar = std::max(ref.hkz.scalar, 1.00005);
-  if (ityp != 3) ref.hkz.scalar = std::max(ref.hkz.scalar, 1.05000);
-
-  //---- density thickness shape parameter     ( h** )
-  boundary_layer::DensityShapeParameterResult hct_result = boundary_layer::hct(ref.hkz.scalar, ref.param.mz);
-  ref.hcz.scalar = hct_result.hc;
-  ref.hcz.pos_vector() = hct_result.hc_hk * ref.hkz.pos_vector();
-  ref.hcz.u() += hct_result.hc_msq * ref.param.mz_uz;
-  ref.hcz.ms()+= hct_result.hc_msq * ref.param.mz_ms;
-
-  //---- set ke thickness shape parameter from  h - h*  correlations
-  if (ityp == 1) {
-    boundary_layer::ThicknessShapeParameterResult hsl_result = boundary_layer::hsl(ref.hkz.scalar);
-    ref.hsz.scalar = hsl_result.hs;
-    hs2_hk2 = hsl_result.hs_hk;
-    hs2_rt2 = hsl_result.hs_rt;
-    hs2_m2 = hsl_result.hs_msq;
-  }
-  else {
-    boundary_layer::ThicknessShapeParameterResult hst_result = boundary_layer::hst(ref.hkz.scalar, ref.rtz.scalar, ref.param.mz);
-    ref.hsz.scalar = hst_result.hs;
-    hs2_hk2 = hst_result.hs_hk;
-    hs2_rt2 = hst_result.hs_rt;
-    hs2_m2 = hst_result.hs_msq;
-  }
-
-  ref.hsz.vector = hs2_hk2 * ref.hkz.vector + hs2_rt2 * ref.rtz.vector;
-  ref.hsz.u() = ref.hsz.u() + hs2_m2 * ref.param.mz_uz;
-  ref.hsz.ms() = ref.hsz.ms() + hs2_m2 * ref.param.mz_uz;
-
-  //---- normalized slip velocity  us
-  ref.usz.scalar = 0.5 * ref.hsz.scalar * (1.0 - (ref.hkz.scalar - 1.0) / (gbcon * ref.param.hz));
-  us2_hs2 = 0.5 * (1.0 - (ref.hkz.scalar - 1.0) / (gbcon * ref.param.hz));
-  us2_hk2 = 0.5 * ref.hsz.scalar * (-1.0 / (gbcon * ref.param.hz));
-  us2_h2 = 0.5 * ref.hsz.scalar * (ref.hkz.scalar - 1.0) / (gbcon * ref.param.hz * ref.param.hz);
-
-  ref.usz.vector = us2_hs2 * ref.hsz.vector + us2_hk2 * ref.hkz.vector;
-
-  ref.usz.t() = ref.usz.t() + us2_h2 * ref.param.hz_tz;
-  ref.usz.d() = ref.usz.d() + us2_h2 * ref.param.hz_dz;
-
-  if (ityp <= 2 && ref.usz.scalar > 0.95) {
-    //       write(*,*) 'blvar: us clamped:', us2
-    ref.usz.scalar = 0.98;
-    ref.usz.vector = Vector<double , 6>::Zero();
-  }
-
-  if (ityp == 3 && ref.usz.scalar > 0.99995) {
-    //       write(*,*) 'blvar: wake us clamped:', us2
-    ref.usz.scalar = 0.99995;
-    ref.usz.vector = Vector<double , 6>::Zero();
-  }
-
-  //---- equilibrium wake layer shear coefficient (ctau)eq ** 1/2
-  //   ...  new  12 oct 94
-  hkc = ref.hkz.scalar - 1.0;
-  hkc_hk2 = 1.0;
-  hkc_rt2 = 0.0;
-  if (ityp == 2) {
-    const double gcc = gccon;
-    hkc = ref.hkz.scalar - 1.0 - gcc / ref.rtz.scalar;
-    hkc_hk2 = 1.0;
-    hkc_rt2 = gcc / ref.rtz.scalar / ref.rtz.scalar;
-    if (hkc < 0.01) {
-      hkc = 0.01;
-      hkc_hk2 = 0.0;
-      hkc_rt2 = 0.0;
-    }
-  }
-
-  hkb = ref.hkz.scalar - 1.0;
-  usb = 1.0 - ref.usz.scalar;
-  ref.cqz.scalar = sqrt(ctcon * ref.hsz.scalar * hkb * hkc * hkc / (usb * ref.param.hz * ref.hkz.scalar * ref.hkz.scalar));
-  cq2_hs2 = ctcon * hkb * hkc * hkc / (usb * ref.param.hz * ref.hkz.scalar * ref.hkz.scalar) * 0.5 / ref.cqz.scalar;
-  cq2_us2 =
-      ctcon * ref.hsz.scalar * hkb * hkc * hkc / (usb * ref.param.hz * ref.hkz.scalar * ref.hkz.scalar) / usb * 0.5 / ref.cqz.scalar;
-  cq2_hk2 = ctcon * ref.hsz.scalar * hkc * hkc / (usb * ref.param.hz * ref.hkz.scalar * ref.hkz.scalar) * 0.5 / ref.cqz.scalar -
-            ctcon * ref.hsz.scalar * hkb * hkc * hkc / (usb * ref.param.hz * ref.hkz.scalar * ref.hkz.scalar * ref.hkz.scalar) * 2.0 *
-                0.5 / ref.cqz.scalar +
-            ctcon * ref.hsz.scalar * hkb * hkc / (usb * ref.param.hz * ref.hkz.scalar * ref.hkz.scalar) * 2.0 * 0.5 / ref.cqz.scalar *
-                hkc_hk2;
-  cq2_rt2 = ctcon * ref.hsz.scalar * hkb * hkc / (usb * ref.param.hz * ref.hkz.scalar * ref.hkz.scalar) * 2.0 * 0.5 / ref.cqz.scalar *
-            hkc_rt2;
-  cq2_h2 =
-      -ctcon * ref.hsz.scalar * hkb * hkc * hkc / (usb * ref.param.hz * ref.hkz.scalar * ref.hkz.scalar) / ref.param.hz * 0.5 / ref.cqz.scalar;
-
-  ref.cqz.vector = cq2_hs2 * ref.hsz.vector + cq2_us2 * ref.usz.vector + cq2_hk2 * ref.hkz.vector + cq2_rt2 * ref.rtz.vector;
-  ref.cqz.t() = ref.cqz.t() + cq2_h2 * ref.param.hz_tz;
-  ref.cqz.d() = ref.cqz.d() + cq2_h2 * ref.param.hz_dz;
-
-
-  //---- set skin friction coefficient
-  if (ityp == 3) {
-    //----- wake
-    ref.cfz.scalar = 0.0;
-    cf2_hk2 = 0.0;
-    cf2_rt2 = 0.0;
-    cf2_m2 = 0.0;
-  } else {
-    if (ityp == 1) {
-      //----- laminar
-      C_f c_f = cfl(ref.hkz.scalar, ref.rtz.scalar);
-      ref.cfz.scalar = c_f.cf;
-      cf2_hk2 = c_f.hk;
-      cf2_rt2 = c_f.rt;
-      cf2_m2 = c_f.msq;
-    }
-    else {
-      //----- turbulent
-      C_f c_fl = cfl(ref.hkz.scalar, ref.rtz.scalar);
-      cf2l = c_fl.cf;
-      cf2l_hk2 = c_fl.hk;
-      cf2l_rt2 = c_fl.rt;
-      cf2l_m2 = c_fl.msq;
-      C_f c_ft = cft(ref.hkz.scalar, ref.rtz.scalar, ref.param.mz);
-      ref.cfz.scalar = c_ft.cf;
-      cf2_hk2 = c_ft.hk;
-      cf2_rt2 = c_ft.rt;
-      cf2_m2 = c_ft.msq;
-      if (cf2l > ref.cfz.scalar) {
-        //------- laminar cf is greater than turbulent cf -- use laminar
-        //-       (this will only occur for unreasonably small rtheta)
-        ref.cfz.scalar = cf2l;
-        cf2_hk2 = cf2l_hk2;
-        cf2_rt2 = cf2l_rt2;
-        cf2_m2 = cf2l_m2;
-      }
-    }
-  }
-  ref.cfz.vector = cf2_hk2 * ref.hkz.vector + cf2_rt2 * ref.rtz.vector;
-  ref.cfz.u() += cf2_m2 * ref.param.mz_uz;
-  ref.cfz.ms() += cf2_m2 * ref.param.mz_ms;
-
-  //---- dissipation function    2 cd / h*
-  if (ityp == 1) {
-    //----- laminar
-    DissipationResult dissipation_result = dil(ref.hkz.scalar, ref.rtz.scalar);
-    ref.diz.scalar = dissipation_result.di;
-    ref.diz.vector = dissipation_result.di_hk * ref.hkz.vector + dissipation_result.di_rt * ref.rtz.vector;
-  } else {
-    if (ityp == 2) {
-      //----- turbulent wall contribution
-      C_f c_ft = cft(ref.hkz.scalar, ref.rtz.scalar, ref.param.mz);
-      cf2t = c_ft.cf;
-      cf2t_hk2 = c_ft.hk;
-      double cf2t_rt2 = c_ft.rt;
-      double cf2t_m2 = c_ft.msq;
-      Vector<double, 6> cf2t_vector = cf2t_hk2 * ref.hkz.vector + cf2t_rt2 * ref.rtz.vector + Vector<double, 6> {
-        cf2t_m2 * ref.param.mz_uz,
-        0,
-        0,
-        0,
-        cf2t_m2 * ref.param.mz_ms,
-        0
-      };
-
-      ref.diz.scalar = (0.5 * cf2t * ref.usz.scalar) * 2.0 / ref.hsz.scalar;
-      di2_hs2 = -(0.5 * cf2t * ref.usz.scalar) * 2.0 / ref.hsz.scalar / ref.hsz.scalar;
-      di2_us2 = (0.5 * cf2t) * 2.0 / ref.hsz.scalar;
-      di2_cf2t = (0.5 * ref.usz.scalar) * 2.0 / ref.hsz.scalar;
-
-      ref.diz.vector = di2_hs2 * ref.hsz.vector + di2_us2 * ref.usz.vector + di2_cf2t * cf2t_vector;
-
-      //----- set minimum hk for wake layer to still exist
-      grt = log(ref.rtz.scalar);
-      hmin = 1.0 + 2.1 / grt;
-      hm_rt2 = -(2.1 / grt / grt) / ref.rtz.scalar;
-
-      //----- set factor dfac for correcting wall dissipation for very low hk
-      fl = (ref.hkz.scalar - 1.0) / (hmin - 1.0);
-      fl_hk2 = 1.0 / (hmin - 1.0);
-      fl_rt2 = (-fl / (hmin - 1.0)) * hm_rt2;
-
-      tfl = tanh(fl);
-      dfac = 0.5 + 0.5 * tfl;
-      df_fl = 0.5 * (1.0 - tfl * tfl);
-
-      df_hk2 = df_fl * fl_hk2;
-      df_rt2 = df_fl * fl_rt2;
-
-      ref.diz.vector = dfac * ref.diz.vector + ref.diz.scalar * (df_hk2 * ref.hkz.vector + df_rt2 * ref.rtz.vector);
-      ref.diz.re() -= df_rt2 * ref.rtz.re();
-
-      ref.diz.scalar = ref.diz.scalar * dfac;
-    } else {
-      //----- zero wall contribution for wake
-      ref.diz.scalar = 0.0;
-      ref.diz.vector = Vector<double, 6>::Zero();
-    }
-  }
-  //---- add on turbulent outer layer contribution
-  if (ityp != 1) {
-    double dd = ref.param.sz * ref.param.sz * (0.995 - ref.usz.scalar) * 2.0 / ref.hsz.scalar;
-    double dd_hs2 = -ref.param.sz * ref.param.sz * (0.995 - ref.usz.scalar) * 2.0 / ref.hsz.scalar / ref.hsz.scalar;
-    double dd_us2 = -ref.param.sz * ref.param.sz * 2.0 / ref.hsz.scalar;
-    const double dd_s2 = ref.param.sz * 2.0 * (0.995 - ref.usz.scalar) * 2.0 / ref.hsz.scalar;
-
-    ref.diz.scalar = ref.diz.scalar + dd;
-    ref.diz.s() = dd_s2;
-    ref.diz.vector = ref.diz.vector + dd_hs2 * ref.hsz.vector + dd_us2 * ref.usz.vector;
-
-    //----- add laminar stress contribution to outer layer cd
-    dd = 0.15 * (0.995 - ref.usz.scalar) * (0.995 - ref.usz.scalar) / ref.rtz.scalar * 2.0 / ref.hsz.scalar;
-    dd_us2 = -0.15 * (0.995 - ref.usz.scalar) * 2.0 / ref.rtz.scalar * 2.0 / ref.hsz.scalar;
-    dd_hs2 = -dd / ref.hsz.scalar;
-    const double dd_rt2 = -dd / ref.rtz.scalar;
-
-    ref.diz.scalar = ref.diz.scalar + dd;
-    ref.diz.vector = ref.diz.vector + dd_hs2 * ref.hsz.vector + dd_us2 * ref.usz.vector + dd_rt2 * ref.rtz.vector;    
-  }
-
-  if (ityp == 2) {
-    DissipationResult dissipation_result = dil(ref.hkz.scalar, ref.rtz.scalar);
-    if (dissipation_result.di > ref.diz.scalar) {
-      //------- laminar cd is greater than turbulent cd -- use laminar
-      //-       (this will only occur for unreasonably small rtheta)
-      ref.diz.scalar = dissipation_result.di;
-      ref.diz.vector = dissipation_result.di_hk * ref.hkz.vector + dissipation_result.di_rt * ref.rtz.vector;
-    }
-  }
-
-  if (ityp == 3) {
-    //------ laminar wake cd
-    DissipationResult dissipation_result = dilw(ref.hkz.scalar, ref.rtz.scalar);
-    if (di2l > ref.diz.scalar) {
-      //------- laminar wake cd is greater than turbulent cd -- use laminar
-      //-       (this will only occur for unreasonably small rtheta)
-      ref.diz.scalar = dissipation_result.di;
-      ref.diz.vector = dissipation_result.di_hk * ref.hkz.vector + dissipation_result.di_rt * ref.rtz.vector;
-    }
-
-    //----- double dissipation for the wake (two wake halves)
-    ref.diz.scalar = ref.diz.scalar * 2.0;
-    ref.diz.vector *= 2;
-  }
-
-  //---- bl thickness (delta) from simplified green's correlation
-  ref.dez.scalar = (3.15 + 1.72 / (ref.hkz.scalar - 1.0)) * ref.param.tz + ref.param.dz;
-  de2_hk2 = (-1.72 / (ref.hkz.scalar - 1.0) / (ref.hkz.scalar - 1.0)) * ref.param.tz;
-  ref.dez.vector = de2_hk2 * ref.hkz.vector;
-  ref.dez.t() += (3.15 + 1.72 / (ref.hkz.scalar - 1.0));
-  ref.dez.d() += 1.0;
-  
-
-  hdmax = 12.0;
-  if (ref.dez.scalar > hdmax * ref.param.tz) {
-    ref.dez.scalar = hdmax * ref.param.tz;
-    ref.dez.vector = Vector<double, 6>::Zero();
-    ref.dez.t() = hdmax;
-  }
-
+  computeShapeParameters(ref, ityp);
+  computeCoefficients(ref, ityp);
+  computeDissipationAndThickness(ref, ityp);
   return true;
 }
 
