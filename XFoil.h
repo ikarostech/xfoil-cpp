@@ -139,6 +139,15 @@ class XFoil {
   AxResult axset(double hk1, double thet1, double rt1, double a1, double hk2,
     double thet2, double rt2, double a2, double acrit);
   bool bldif(int ityp);
+  // ---- Helper routines used by bldif ----
+  void bldifLaminar();
+  void bldifTurbulent(int ityp, double upw, const Vector3d &upw1,
+                      const Vector3d &upw2, double upw_ms, double ulog);
+  void bldifMomentum(double upw, double xlog, double ulog, double tlog,
+                     double hlog, double ddlog);
+  void bldifShape(double upw, double xlog, double ulog, double hlog,
+                  double ddlog, const Vector3d &upw1, const Vector3d &upw2,
+                  double upw_ms);
   bool blkin();
   bool blmid(int ityp);
   bool blprv(double xsi, double ami, double cti, double thi, double dsi,
