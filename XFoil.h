@@ -265,7 +265,10 @@ class XFoil {
   bool xicalc();
   double xifset(int is);
   bool xyWake();
-  double aint(double number);
+  // Helper routines used during initialization
+  void initializeDataStructures();
+  void resetFlags();
+  void resetVariables();
   double atanc(double y, double x, double thold);
 
   double sign(double a, double b);

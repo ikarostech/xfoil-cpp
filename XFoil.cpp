@@ -87,11 +87,33 @@ XFoil::~XFoil() {}
 bool XFoil::initialize() {
   dtor = PI / 180.0;
 
-  //n = 0;  // so that current airfoil is not initialized
+  // allocate arrays and clear containers
+  initializeDataStructures();
 
+  // reset numerical and physical variables
+  resetVariables();
+
+
+  //---- drop tolerance for bl system solver
+  vaccel = 0.01;
+
+  //---- set minf, reinf, based on current cl-dependence
+  minf_cl = getActualMach(1.0, mach_type);
+  reinf_cl = getActualReynolds(1.0, reynolds_type);
+
+  //---- set various compressibility parameters from minf
+  comset();
+
+  return true;
+}
+
+/** -------------------------------------------------------
+ * @brief Allocate and zero out large data containers.
+ * ------------------------------------------------------- */
+void XFoil::initializeDataStructures() {
   apanel = VectorXd::Zero(n + nw);
   memset(blsav, 0, sizeof(blsav));
-  
+
   bij = MatrixXd::Zero(IQX, IZX);
   dij = MatrixXd::Zero(IZX, IZX);
   cpi = VectorXd::Zero(n + nw);
@@ -102,7 +124,7 @@ bool XFoil::initialize() {
   ctq.bottom = VectorXd::Zero(IVX);
   dstr.top = VectorXd::Zero(IVX);
   dstr.bottom = VectorXd::Zero(IVX);
-  
+
   ipan.top = VectorXi::Zero(IVX);
   ipan.bottom = VectorXi::Zero(IVX);
   isys.top = VectorXi::Zero(IVX);
@@ -135,7 +157,7 @@ bool XFoil::initialize() {
   vti.top = VectorXd::Zero(IVX);
   vti.bottom = VectorXd::Zero(IVX);
   dpoints_ds.resize(2, n);
-  
+
   xssi.top = VectorXd::Zero(IVX);
   xssi.bottom = VectorXd::Zero(IVX);
 
@@ -151,137 +173,70 @@ bool XFoil::initialize() {
   vsm = Vector<double, 4>::Zero();
   vsx = Vector<double, 4>::Zero();
   memset(vz, 0, sizeof(vz));
-  
-  // mdes
-  memset(qgamm, 0, sizeof(qgamm));
 
-  //---- default cp/cv (air)
+  memset(qgamm, 0, sizeof(qgamm));
+}
+
+/** -------------------------------------------------------
+ * @brief Reset boolean state flags to defaults.
+ * ------------------------------------------------------- */
+void XFoil::resetFlags() {
+  lgamu = lvisc = lwake = lblini = lipan = false;
+  lqaij = ladij = lwdij = lvconv = false;
+  sharp = lalfa = false;
+  trforc = simi = tran = turb = wake = trfree = false;
+}
+
+/** -------------------------------------------------------
+ * @brief Reset scalar state variables to default values.
+ * ------------------------------------------------------- */
+void XFoil::resetVariables() {
+  // basic gas constants
   gamma = 1.4;
   gamm1 = gamma - 1.0;
 
-  //---- set unity freestream speed
+  // unity freestream speed
   qinf = 1.0;
 
-  cl = 0.0;
-  cm = 0.0;
-  cd = 0.0;
+  cl = cm = cd = 0.0;
 
-  sigte = 0.0;
-  gamte = 0.0;
+  sigte = gamte = 0.0;
 
-  awake = 0.0;
-  avisc = 0.0;
+  awake = avisc = 0.0;
 
-  lgamu = false;
-  lvisc = false;
-  lwake = false;
-  lblini = false;
-  lipan = false;
-  lqaij = false;
-  ladij = false;
-  lwdij = false;
-  lvconv = false;
+  resetFlags();
 
-  sharp = false;
-  lalfa = false;
-  
-  trforc = false;
-  simi = false;
-  tran = false;
-  turb = false;
-  wake = false;
-  trfree = false;
-
-  //---- circle plane array size (largest 2  + 1 that will fit array size)
-  double ann = log(double((2 * IQX) - 1)) / log(2.0);
-  // Calculate nc1 as the largest power of 2 plus 1 that does not exceed ICX
-  int nn = static_cast<int>(ann + 0.00001);
-  int nc1 = (1 << nn) + 1;
-  if (nc1 > ICX) {
-    nc1 = (1 << (nn - 1)) + 1;
-  }
-
-  //---- default cm reference location
-  cmref = Vector2d {0.25, 0.0};
-
+  // default reference location and wake length
+  cmref = Vector2d{0.25, 0.0};
   waklen = 1.0;
 
-  // added techwinder : fortran initializes to 0
   i_stagnation = 0;
 
-  qinfbl = 0.0;
-  tkbl = 0.0;
-  tkbl_ms = 0.0;
-  rstbl = 0.0;
-  rstbl_ms = 0.0;
-  hstinv = 0.0;
-  hstinv_ms = 0.0;
-  reybl = 0.0;
-  reybl_ms = 0.0;
-  reybl_re = 0.0;
+  qinfbl = tkbl = tkbl_ms = 0.0;
+  rstbl = rstbl_ms = 0.0;
+  hstinv = hstinv_ms = 0.0;
+  reybl = reybl_ms = reybl_re = 0.0;
   gm1bl = 0.0;
   xiforc = 0.0;
   amcrit = 0.0;
 
-  alfa = 0.0;
-  amax = 0.0;
-  rmxbl = 0.0;
-  rmsbl = 0.0;
-  rlx = 0.0;
-  ante = 0.0;
-  clspec = 0.0;
-  minf = 0.0;
-  reinf = 0.0;
-  minf_cl = 0.0;
-  reinf_cl = 0.0;
+  alfa = amax = rmxbl = rmsbl = rlx = ante = clspec = 0.0;
+  minf = reinf = 0.0;
+  minf_cl = reinf_cl = 0.0;
 
-  sle = 0.0;
+  sle = chord = 0.0;
+  cl_alf = cl_msq = 0.0;
+  tklam = tkl_msq = 0.0;
+  sst = sst_go = sst_gp = 0.0;
+  dste = aste = 0.0;
 
-  chord = 0.0;
-  cl_alf = 0.0;
-  cl_msq = 0.0;
-  tklam = 0.0;
-  tkl_msq = 0.0;
-  sst = 0.0;
-  sst_go = 0.0;
-  sst_gp = 0.0;
-  dste = 0.0;
-  aste = 0.0;
+  cfm = cfm_ms = cfm_re = 0.0;
+  cfm_u1 = cfm_t1 = cfm_d1 = 0.0;
+  cfm_u2 = cfm_t2 = cfm_d2 = 0.0;
 
-  cfm = 0.0;
-  cfm_ms = 0.0;
-  cfm_re = 0.0;
-  cfm_u1 = 0.0;
-  cfm_t1 = 0.0;
-  cfm_d1 = 0.0;
-  cfm_u2 = 0.0;
-  cfm_t2 = 0.0;
-  cfm_d2 = 0.0;
-  xt = 0.0;
-  xt_a1 = 0.0;
-  xt_ms = 0.0;
-  xt_re = 0.0;
-  xt_xf = 0.0;
-  xt_x1 = 0.0;
-  xt_t1 = 0.0;
-  xt_d1 = 0.0;
-  xt_u1 = 0.0;
-  xt_x2 = 0.0;
-  xt_t2 = 0.0;
-  xt_d2 = 0.0;
-  xt_u2 = 0.0;
-
-  //---- drop tolerance for bl system solver
-  vaccel = 0.01;
-
-  //---- set minf, reinf, based on current cl-dependence
-  minf_cl = getActualMach(1.0, mach_type);
-  reinf_cl = getActualReynolds(1.0, reynolds_type);
-
-  //---- set various compressibility parameters from minf
-  comset();
-
-  return true;
+  xt = xt_a1 = xt_ms = xt_re = xt_xf = 0.0;
+  xt_x1 = xt_t1 = xt_d1 = xt_u1 = 0.0;
+  xt_x2 = xt_t2 = xt_d2 = xt_u2 = 0.0;
 }
 
 
@@ -640,12 +595,6 @@ bool XFoil::abcopy(Matrix2Xd copyFrom) {
   return true;
 }
 
-double XFoil::aint(double number) {
-  if (number >= 0)
-    return (double)(int(number));
-  else
-    return (double)(-int(-number));
-}
 
 bool XFoil::apcalc() {
 
