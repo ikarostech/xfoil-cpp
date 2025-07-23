@@ -957,38 +957,38 @@ void XFoil::bldifTurbulent(int ityp, double upw, const Vector3d &upw1,
   double z_hk1 = (1.0 - upw) * z_hka;
   double z_hk2 = upw * z_hka;
 
-  vs1(0, 0) = z_s1;
-  vs1(0, 2) = z_d;
-  vs1(0, 3) = z_u1;
-  vs1(0, 4) = z_x1;
-  vs2(0, 0) = z_s2;
-  vs2(0, 2) = z_d;
-  vs2(0, 3) = z_u2;
-  vs2.col(0).segment(1, 3) +=
-      (z_upw * upw2) + (z_de * blData2.dez.pos_vector()) +
-      (z_us * blData2.usz.pos_vector());
-  vs2(0, 4) = z_x2;
+  RowVector<double, 5> vs1_row;
+  RowVector<double, 5> vs2_row;
+
+  vs1_row << z_s1, 0.0, z_d, z_u1, z_x1;
+  vs2_row << z_s2, 0.0, z_d, z_u2, z_x2;
+
+  Vector3d vs1_vec = z_upw * upw1 +
+                      z_de * blData1.dez.pos_vector() +
+                      z_us * blData1.usz.pos_vector() +
+                      z_cq1 * blData1.cqz.pos_vector() +
+                      z_cf1 * blData1.cfz.pos_vector() +
+                      z_hk1 * blData1.hkz.pos_vector();
+
+  Vector3d vs2_vec = z_upw * upw2 +
+                      z_de * blData2.dez.pos_vector() +
+                      z_us * blData2.usz.pos_vector() +
+                      z_cq2 * blData2.cqz.pos_vector() +
+                      z_cf2 * blData2.cfz.pos_vector() +
+                      z_hk2 * blData2.hkz.pos_vector();
+
+  vs1_row.segment<3>(1) += vs1_vec;
+  vs2_row.segment<3>(1) += vs2_vec;
+
+  vs1.row(0) = vs1_row;
+  vs2.row(0) = vs2_row;
+
   vsm[0] = z_upw * upw_ms + z_de * blData1.dez.ms() + z_us * blData1.usz.ms() +
-           z_de * blData2.dez.ms() + z_us * blData2.usz.ms();
+           z_de * blData2.dez.ms() + z_us * blData2.usz.ms() +
+           z_cq1 * blData1.cqz.ms() + z_cf1 * blData1.cfz.ms() +
+           z_hk1 * blData1.hkz.ms() + z_cq2 * blData2.cqz.ms() +
+           z_cf2 * blData2.cfz.ms() + z_hk2 * blData2.hkz.ms();
 
-  Vector3d vs1_vector = z_upw * upw1 +
-                        z_de * blData1.dez.pos_vector() +
-                        z_us * blData1.usz.pos_vector() +
-                        z_cq1 * blData1.cqz.pos_vector() +
-                        z_cf1 * blData1.cfz.pos_vector() +
-                        z_hk1 * blData1.hkz.pos_vector();
-  vs1.col(0).segment(1, 3) += vs1_vector;
-
-  vs2(0, 1) += z_cq2 * blData2.cqz.t() + z_cf2 * blData2.cfz.t() +
-               z_hk2 * blData2.hkz.t();
-  vs2(0, 2) += z_cq2 * blData2.cqz.d() + z_cf2 * blData2.cfz.d() +
-               z_hk2 * blData2.hkz.d();
-  vs2(0, 3) += z_cq2 * blData2.cqz.u() + z_cf2 * blData2.cfz.u() +
-               z_hk2 * blData2.hkz.u();
-
-  vsm[0] += z_cq1 * blData1.cqz.ms() + z_cf1 * blData1.cfz.ms() +
-            z_hk1 * blData1.hkz.ms() + z_cq2 * blData2.cqz.ms() +
-            z_cf2 * blData2.cfz.ms() + z_hk2 * blData2.hkz.ms();
   vsr[0] = z_cq1 * blData1.cqz.re() + z_cf1 * blData1.cfz.re() +
            z_cq2 * blData2.cqz.re() + z_cf2 * blData2.cfz.re();
   vsx[0] = 0.0;
