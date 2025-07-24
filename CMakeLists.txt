@@ -10,8 +10,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 #     確実に指定したい場合は以下のように書くこともできます。
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
 
-# (3) Eigen のヘッダパスを追加 (-I/usr/include/eigen3 と同等)
-include_directories("/usr/include/eigen3")
+find_package(Eigen3 3.4 REQUIRED NO_MODULE)
 
 # (4) 実行ファイルにするソースをまとめて指定
 add_executable(testExe
@@ -21,6 +20,7 @@ add_executable(testExe
     ./XFoil.cpp
     ./main.cpp
 )
+target_link_libraries(testExe PRIVATE Eigen3::Eigen)
 
 file(COPY sample/ DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/sample)
 
