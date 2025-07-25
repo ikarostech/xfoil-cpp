@@ -1236,8 +1236,7 @@ bool XFoil::blmid(int ityp) {
   //      ityp = 3 :  turbulent wake
   //----------------------------------------------------
   //
-  double hka, rta, ma, cfm_rta, cfm_ma;
-  double cfml, cfml_hka, cfml_rta, cfml_ma, cfm_hka;
+
   //---- set similarity variables if not defined
   if (simi) {
     blData1.hkz = blData2.hkz;
@@ -1248,54 +1247,47 @@ bool XFoil::blmid(int ityp) {
   }
 
   //---- define stuff for midpoint cf
-  hka = 0.5 * (blData1.hkz.scalar + blData2.hkz.scalar);
-  rta = 0.5 * (blData1.rtz.scalar + blData2.rtz.scalar);
-  ma = 0.5 * (blData1.param.mz + blData2.param.mz);
+  double hka = 0.5 * (blData1.hkz.scalar + blData2.hkz.scalar);
+  double rta = 0.5 * (blData1.rtz.scalar + blData2.rtz.scalar);
+  double ma = 0.5 * (blData1.param.mz + blData2.param.mz);
 
-  //---- midpoint skin friction coefficient  (zero in wake)
-  if (ityp == 3) {
-    cfm = 0.0;
-    cfm_hka = 0.0;
-    cfm_rta = 0.0;
-    cfm_ma = 0.0;
-    cfm_ms = 0.0;
-  } else {
-     
-    if (ityp == 1) {
-      C_f c_f = cfl(hka, rta);
-      cfm = c_f.cf;
-      cfm_hka = c_f.hk;
-      cfm_rta = c_f.rt;
-      cfm_ma = c_f.msq;
-    } else {
-      C_f c_fl = cfl(hka, rta);
-      cfml = c_fl.cf;
-      cfml_hka = c_fl.hk;
-      cfml_rta = c_fl.rt;
-      cfml_ma = c_fl.msq;
-      C_f c_ft = cft(hka, rta, ma);
-      cfm = c_ft.cf;
-      cfm_hka = c_ft.hk;
-      cfm_rta = c_ft.rt;
-      cfm_ma = c_ft.msq;
-      if (cfml > cfm) {
-        cfm = cfml;
-        cfm_hka = cfml_hka;
-        cfm_rta = cfml_rta;
-        cfm_ma = cfml_ma;
-      }
+  //---- compute midpoint skin friction coefficient
+  C_f cf_res{};
+  switch (ityp) {
+    case 1:
+      cf_res = cfl(hka, rta);
+      break;
+    case 2: {
+      C_f lam = cfl(hka, rta);
+      C_f tur = cft(hka, rta, ma);
+      cf_res = (lam.cf > tur.cf) ? lam : tur;
+      break;
     }
+    case 3:
+      cf_res = C_f();  // zero initialized
+      break;
+    default:
+      return false;
   }
-  cfm_u1 = 0.5 * (cfm_hka * blData1.hkz.u() + cfm_ma * blData1.param.mz_uz + cfm_rta * blData1.rtz.u());
+
+  cfm = cf_res.cf;
+  double cfm_hka = cf_res.hk;
+  double cfm_rta = cf_res.rt;
+  double cfm_ma = cf_res.msq;
+
+  cfm_u1 = 0.5 * (cfm_hka * blData1.hkz.u() + cfm_ma * blData1.param.mz_uz +
+                   cfm_rta * blData1.rtz.u());
   cfm_t1 = 0.5 * (cfm_hka * blData1.hkz.t() + cfm_rta * blData1.rtz.t());
   cfm_d1 = 0.5 * (cfm_hka * blData1.hkz.d());
 
-  cfm_u2 = 0.5 * (cfm_hka * blData2.hkz.u() + cfm_ma * blData2.param.mz_uz + cfm_rta * blData2.rtz.u());
+  cfm_u2 = 0.5 * (cfm_hka * blData2.hkz.u() + cfm_ma * blData2.param.mz_uz +
+                   cfm_rta * blData2.rtz.u());
   cfm_t2 = 0.5 * (cfm_hka * blData2.hkz.t() + cfm_rta * blData2.rtz.t());
   cfm_d2 = 0.5 * (cfm_hka * blData2.hkz.d());
 
-  cfm_ms = 0.5 * (cfm_hka * blData1.hkz.ms() + cfm_ma * blData1.param.mz_ms + cfm_rta * blData1.rtz.ms() +
-                  cfm_hka * blData2.hkz.ms() + cfm_ma * blData2.param.mz_ms + cfm_rta * blData2.rtz.ms());
+  cfm_ms = 0.5 * (cfm_hka * blData1.hkz.ms() + cfm_ma * blData1.param.mz_ms +
+                   cfm_rta * blData1.rtz.ms() + cfm_hka * blData2.hkz.ms() +
+                   cfm_ma * blData2.param.mz_ms + cfm_rta * blData2.rtz.ms());
   cfm_re = 0.5 * (cfm_rta * blData1.rtz.re() + cfm_rta * blData2.rtz.re());
 
   return true;
