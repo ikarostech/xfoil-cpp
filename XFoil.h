@@ -143,8 +143,7 @@ class XFoil {
   void bldifLaminar();
   void bldifTurbulent(int ityp, double upw, const Vector3d &upw1,
                       const Vector3d &upw2, double upw_ms, double ulog);
-  void bldifMomentum(double upw, double xlog, double ulog, double tlog,
-                     double hlog, double ddlog);
+  void bldifMomentum(double xlog, double ulog, double tlog, double ddlog);
   void bldifShape(double upw, double xlog, double ulog, double hlog,
                   double ddlog, const Vector3d &upw1, const Vector3d &upw2,
                   double upw_ms);

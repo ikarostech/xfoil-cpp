@@ -744,20 +744,9 @@ bool XFoil::bldif(int ityp) {
 
   double hupwt, hdcon, hl, hd_hk1, hd_hk2, hlsq, ehh;
   double upw, upw_hl, upw_hd, upw_hk1, upw_hk2;
-  double dxi, slog, scc, scc_usa;
-  double rezc, z_ax, hr, hr_hka;
-  double hl_hk1, hl_hk2, sa, cqa, cfa, hka, usa, rta, dea, da, ald;
-  double gcc, hkc, hkc_hka, rezt, rezh;
-  double btmp, hwa, ha, ma, xa, ta, xlog, ulog, tlog, hlog, ddlog;
-  double z_cfx, z_ha, z_hwa, z_ma, z_xl, z_tl, z_cfm, z_t1, z_t2;
-  double z_dix, z_hca, z_hl, z_hs1, z_hs2, z_di1, z_di2;
-  double z_cfa, z_hka, z_da, z_sl, z_ul, z_dxi, z_usa, z_cqa, z_sa, z_dea;
-  double z_upw, z_u1, z_u2, z_x1, z_x2;
-  double z_s1, z_s2, z_cq1, z_cq2, z_cf1, z_cf2, z_hk1, z_hk2;
-  double cfx, cfx_xa, cfx_ta, cfx_x1, cfx_x2, cfx_t1, cfx_t2, cfx_cf1, cfx_cf2,
-      cfx_cfm;
-  double xot1, xot2, hca, hsa, dix, dix_upw, cfx_upw;
-  double uq, uq_hka, uq_cfa, uq_da;
+
+  double hl_hk1, hl_hk2;
+  double xlog, ulog, tlog, hlog, ddlog;
   double f_arg;  // ex arg
                  //	double scc_us1, scc_us2;
 
@@ -832,7 +821,7 @@ bool XFoil::bldif(int ityp) {
   }
 
   //**** set up momentum equation
-  bldifMomentum(upw, xlog, ulog, tlog, hlog, ddlog);
+  bldifMomentum(xlog, ulog, tlog, ddlog);
 
   //**** set up shape parameter equation
   bldifShape(upw, xlog, ulog, hlog, ddlog, upw1, upw2, upw_ms);
@@ -998,8 +987,7 @@ void XFoil::bldifTurbulent(int ityp, double upw, const Vector3d &upw1,
 /**
  * @brief Build momentum equation coefficients.
  */
-void XFoil::bldifMomentum(double upw, double xlog, double ulog, double tlog,
-                          double hlog, double ddlog) {
+void XFoil::bldifMomentum(double xlog, double ulog, double tlog, double ddlog) {
   double ha = 0.5 * (blData1.param.hz + blData2.param.hz);
   double ma = 0.5 * (blData1.param.mz + blData2.param.mz);
   double xa = 0.5 * (blData1.param.xz + blData2.param.xz);
