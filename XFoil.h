@@ -261,6 +261,14 @@ class XFoil {
   bool ueset();
   bool uicalc();
   bool update();
+  void computeNewUeDistribution(SidePair<VectorXd>& unew,
+                                SidePair<VectorXd>& u_ac);
+  void computeQtan(const SidePair<VectorXd>& unew,
+                   const SidePair<VectorXd>& u_ac,
+                   double qnew[], double q_ac[]);
+  void computeClFromQtan(const double qnew[], const double q_ac[],
+                         double& clnew, double& cl_a,
+                         double& cl_ms, double& cl_ac);
   bool xicalc();
   double xifset(int is);
   bool xyWake();
