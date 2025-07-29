@@ -331,7 +331,7 @@ class XFoil {
 
   bool lgamu, sharp, lqaij, ladij, lwdij;
 
-  double sccon, gacon, gbcon, gbc0, gbc1, gccon, dlcon, ctcon;
+  const double sccon = 5.6, gacon = 6.70, gbcon = 0.75, gbc0 = 0.60, gbc1 = 0.40, gccon = 18.0, dlcon = 0.9, ctcon = 0.5/(gacon*gacon * gbcon);
 
   int nsys;
   VectorXd snew;

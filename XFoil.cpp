@@ -39,25 +39,7 @@ double XFoil::vaccel = 0.01;
 const int INDEX_START_WITH = 1;
 
 XFoil::XFoil() {
-  m_pOutStream = NULL;
-  //------ primary dimensioning limit parameters
-
-  //------ derived dimensioning limit parameters
-  //	nax=800;//number of points in stored polar
-  //	npx=8;//number of polars and reference polars
-  //	nfx=128;// number of points in one reference polar
-  //	ncom = 73;
-
-  // imx   number of complex mapping coefficients  cn
-
-  sccon = 5.6;
-  gacon = 6.70;
-  gbcon = 0.75;
-  gbc0 = 0.60;
-  gbc1 = 0.40;
-  gccon = 18.0;
-  dlcon = 0.9;
-  ctcon = 0.01485111754659538130244;  //(ctcon = 0.5/(gacon**2 * gbcon))
+  m_pOutStream = nullptr;
 
   // fortran seems to initializes variables to 0
   mvisc = 0.0;
