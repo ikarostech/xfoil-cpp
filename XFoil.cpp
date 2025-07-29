@@ -24,9 +24,9 @@
 #include "Eigen/Core"
 #include "Eigen/Dense"
 #include "Eigen/StdVector"
+#include "XFoil.h"
 using namespace Eigen;
 
-#include "XFoil.h"
 // determinant
 double cross2(const Eigen::Vector2d& a, const Eigen::Vector2d& b)
 {
