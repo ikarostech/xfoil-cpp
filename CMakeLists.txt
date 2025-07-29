@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 project(XFoil)
 
 # (1) C++の標準指定（必要に応じて変更）
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # (2) 最適化フラグ -O2 の付与

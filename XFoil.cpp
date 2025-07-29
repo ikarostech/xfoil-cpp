@@ -21,6 +21,7 @@
 *****************************************************************************/
 
 #include <cstring>
+#include <numbers>
 #include "Eigen/Core"
 #include "Eigen/Dense"
 #include "Eigen/StdVector"
@@ -32,8 +33,6 @@ double cross2(const Eigen::Vector2d& a, const Eigen::Vector2d& b)
 {
   return a[0]*b[1] - a[1]*b[0];
 }
-
-#define PI 3.141592654
 
 bool XFoil::s_bCancel = false;
 double XFoil::vaccel = 0.01;
@@ -85,7 +84,7 @@ XFoil::~XFoil() {}
  *      variable initialization/default routine.
  * --------------------------------------------------- */
 bool XFoil::initialize() {
-  dtor = PI / 180.0;
+  dtor = std::numbers::pi / 180.0;
 
   // allocate arrays and clear containers
   initializeDataStructures();
@@ -612,10 +611,10 @@ bool XFoil::apcalc() {
 
   //---- TE panel
   if (sharp)
-    apanel[n - 1] = PI;
+    apanel[n - 1] = std::numbers::pi;
   else {
     Vector2d s = points.col(1) - points.col(n);
-    apanel[n - 1] = atan2(-s.x(), s.y()) + PI;
+    apanel[n - 1] = atan2(-s.x(), s.y()) + std::numbers::pi;
   }
 
   return true;
@@ -659,7 +658,7 @@ double XFoil::atanc(double y, double x, double thold) {
   dthet = thnew - thold;
 
   //---- angle change cannot exceed +/- pi, so get rid of any multiples of 2 pi
-  dtcorr = dthet - tpi * int((dthet + sign(PI, dthet)) / tpi);
+  dtcorr = dthet - tpi * int((dthet + sign(std::numbers::pi, dthet)) / tpi);
 
   //---- set correct new angle
   return thold + dtcorr;
@@ -1561,7 +1560,7 @@ double XFoil::cang(Matrix2Xd points) {
     Vector2d delta_later =  points.col(i) - points.col(i + 1);
 
     double sin = cross2(delta_later, delta_former) / delta_former.norm() / delta_later.norm();
-    double delta_angle = asin(sin) * 180.0 / PI;
+    double delta_angle = asin(sin) * 180.0 / std::numbers::pi;
 
     max_angle = max(fabs(delta_angle), max_angle);
   }
@@ -2149,7 +2148,7 @@ bool XFoil::initXFoilAnalysis(double Re, double alpha, double Mach,
   lipan = false;
 
   reinf1 = Re;
-  alfa = alpha * PI / 180.0;
+  alfa = alpha * std::numbers::pi / 180.0;
 
   minf1 = Mach;
   reynolds_type = reType;
@@ -2958,7 +2957,7 @@ PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector, bool 
     double logr12;
     if (iNode != jo + INDEX_START_WITH && rs1 > 0.0) {
       logr12 = log(rs1);
-      blData1.param.tz = atan2(sgn * blData1.param.xz, sgn * yy) + (0.5 - 0.5 * sgn) * PI;
+      blData1.param.tz = atan2(sgn * blData1.param.xz, sgn * yy) + (0.5 - 0.5 * sgn) * std::numbers::pi;
     } else {
       logr12 = 0.0;
       blData1.param.tz = 0.0;
@@ -2966,7 +2965,7 @@ PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector, bool 
     double logr22;
     if (iNode != jp + INDEX_START_WITH && rs2 > 0.0) {
       logr22 = log(rs2);
-      blData2.param.tz = atan2(sgn * blData2.param.xz, sgn * yy) + (0.5 - 0.5 * sgn) * PI;
+      blData2.param.tz = atan2(sgn * blData2.param.xz, sgn * yy) + (0.5 - 0.5 * sgn) * std::numbers::pi;
     } else {
       logr22 = 0.0;
       blData2.param.tz = 0.0;
@@ -3003,21 +3002,21 @@ PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector, bool 
     double gsum = surface_vortex(0, jp) + surface_vortex(0, jo);
     double gdif = surface_vortex(0, jp) - surface_vortex(0, jo);
 
-    psi_result.psi += (1 / (4 * PI)) * (psis * gsum + psid * gdif);
+    psi_result.psi += (1 / (4 * std::numbers::pi)) * (psis * gsum + psid * gdif);
 
     //------ dpsi/dgam
-    psi_result.dzdg[jo] += (1 / (4 * PI)) * (psis - psid);
-    psi_result.dzdg[jp] += (1 / (4 * PI)) * (psis + psid);
+    psi_result.dzdg[jo] += (1 / (4 * std::numbers::pi)) * (psis - psid);
+    psi_result.dzdg[jp] += (1 / (4 * std::numbers::pi)) * (psis + psid);
 
     //------ dpsi/dni
     double psni = psx1 * x1i + psx2 * x2i + psyy * yyi;
     double pdni = pdx1 * x1i + pdx2 * x2i + pdyy * yyi;
-    psi_result.psi_ni += (1 / (4 * PI)) * (gsum * psni + gdif * pdni);
+    psi_result.psi_ni += (1 / (4 * std::numbers::pi)) * (gsum * psni + gdif * pdni);
 
-    psi_result.qtan += (1 / (4 * PI)) * (psni * gsum_vector + pdni * gdif_vector);
+    psi_result.qtan += (1 / (4 * std::numbers::pi)) * (psni * gsum_vector + pdni * gdif_vector);
 
-    psi_result.dqdg[jo] += (1 / (4 * PI)) * (psni - pdni);
-    psi_result.dqdg[jp] += (1 / (4 * PI)) * (psni + pdni);
+    psi_result.dqdg[jo] += (1 / (4 * std::numbers::pi)) * (psni - pdni);
+    psi_result.dqdg[jp] += (1 / (4 * std::numbers::pi)) * (psni + pdni);
   
   }
   if ((points.col(n) - points.col(1)).norm() > seps) {
@@ -3080,7 +3079,7 @@ PsiResult XFoil::psisig(int iNode, int jo, Vector2d point, Vector2d normal_vecto
   //------ set log(r^2) and arctan(x/y), correcting for reflection if any
   if (io != jo + INDEX_START_WITH && rs1 > 0.0) {
     logr12 = log(rs1);
-    t1 = atan2(sgn * x1, sgn * yy) + (0.5 - 0.5 * sgn) * PI;
+    t1 = atan2(sgn * x1, sgn * yy) + (0.5 - 0.5 * sgn) * std::numbers::pi;
   } else {
     logr12 = 0.0;
     t1 = 0.0;
@@ -3088,7 +3087,7 @@ PsiResult XFoil::psisig(int iNode, int jo, Vector2d point, Vector2d normal_vecto
   double logr22, t2;
   if (io != jp + INDEX_START_WITH && rs2 > 0.0) {
     logr22 = log(rs2);
-    t2 = atan2(sgn * x2, sgn * yy) + (0.5 - 0.5 * sgn) * PI;
+    t2 = atan2(sgn * x2, sgn * yy) + (0.5 - 0.5 * sgn) * std::numbers::pi;
   } else {
     logr22 = 0.0;
     t2 = 0.0;
@@ -3102,7 +3101,7 @@ PsiResult XFoil::psisig(int iNode, int jo, Vector2d point, Vector2d normal_vecto
   double x0 = 0.5 * (x1 + x2);
   double rs0 = x0 * x0 + yy * yy;
   double logr0 = log(rs0);
-  double theta0 = atan2(sgn * x0, sgn * yy) + (0.5 - 0.5 * sgn) * PI;
+  double theta0 = atan2(sgn * x0, sgn * yy) + (0.5 - 0.5 * sgn) * std::numbers::pi;
 
   //------- calculate source contribution to psi	for  1-0  half-panel
   double dxinv = 1.0 / (x1 - x0);
@@ -3127,17 +3126,17 @@ PsiResult XFoil::psisig(int iNode, int jo, Vector2d point, Vector2d normal_vecto
   double dsim = 1.0 / dsm;
 
   //------- dpsi/dm
-  psi_result.dzdm[jm] += (1 / (4 * PI)) * (-psum * dsim + pdif * dsim);
-  psi_result.dzdm[jo] += (1 / (4 * PI)) * (-psum / dso - pdif / dso);
-  psi_result.dzdm[jp] += (1 / (4 * PI)) * (psum * (dsio + dsim) + pdif * (dsio - dsim));
+  psi_result.dzdm[jm] += (1 / (4 * std::numbers::pi)) * (-psum * dsim + pdif * dsim);
+  psi_result.dzdm[jo] += (1 / (4 * std::numbers::pi)) * (-psum / dso - pdif / dso);
+  psi_result.dzdm[jp] += (1 / (4 * std::numbers::pi)) * (psum * (dsio + dsim) + pdif * (dsio - dsim));
 
   //------- dpsi/dni
   double psni = psx1 * x1i + psx0 * (x1i + x2i) * 0.5 + psyy * yyi;
   double pdni = pdx1 * x1i + pdx0 * (x1i + x2i) * 0.5 + pdyy * yyi;
 
-  psi_result.dqdm[jm] += (1 / (4 * PI)) * (-psni * dsim + pdni * dsim);
-  psi_result.dqdm[jo] += (1 / (4 * PI)) * (-psni / dso - pdni / dso);
-  psi_result.dqdm[jp] += (1 / (4 * PI)) * (psni * (dsio + dsim) + pdni * (dsio - dsim));
+  psi_result.dqdm[jm] += (1 / (4 * std::numbers::pi)) * (-psni * dsim + pdni * dsim);
+  psi_result.dqdm[jo] += (1 / (4 * std::numbers::pi)) * (-psni / dso - pdni / dso);
+  psi_result.dqdm[jp] += (1 / (4 * std::numbers::pi)) * (psni * (dsio + dsim) + pdni * (dsio - dsim));
 
   //------- calculate source contribution to psi	for  0-2  half-panel
   dxinv = 1.0 / (x0 - x2);
@@ -3162,17 +3161,17 @@ PsiResult XFoil::psisig(int iNode, int jo, Vector2d point, Vector2d normal_vecto
   double dsip = 1.0 / dsp;
 
   //------- dpsi/dm
-  psi_result.dzdm[jo] += (1 / (4 * PI)) * (-psum * (dsip + dsio) - pdif * (dsip - dsio));
-  psi_result.dzdm[jp] += (1 / (4 * PI)) * (psum / dso - pdif / dso);
-  psi_result.dzdm[jq] += (1 / (4 * PI)) * (psum * dsip + pdif * dsip);
+  psi_result.dzdm[jo] += (1 / (4 * std::numbers::pi)) * (-psum * (dsip + dsio) - pdif * (dsip - dsio));
+  psi_result.dzdm[jp] += (1 / (4 * std::numbers::pi)) * (psum / dso - pdif / dso);
+  psi_result.dzdm[jq] += (1 / (4 * std::numbers::pi)) * (psum * dsip + pdif * dsip);
 
   //------- dpsi/dni
   psni = psx0 * (x1i + x2i) * 0.5 + psx2 * x2i + psyy * yyi;
   pdni = pdx0 * (x1i + x2i) * 0.5 + pdx2 * x2i + pdyy * yyi;
 
-  psi_result.dqdm[jo] += (1 / (4 * PI)) * (-psni * (dsip + dsio) - pdni * (dsip - dsio));
-  psi_result.dqdm[jp] += (1 / (4 * PI)) * (psni / dso - pdni / dso);
-  psi_result.dqdm[jq] += (1 / (4 * PI)) * (psni * dsip + pdni * dsip);
+  psi_result.dqdm[jo] += (1 / (4 * std::numbers::pi)) * (-psni * (dsip + dsio) - pdni * (dsip - dsio));
+  psi_result.dqdm[jp] += (1 / (4 * std::numbers::pi)) * (psni / dso - pdni / dso);
+  psi_result.dqdm[jq] += (1 / (4 * std::numbers::pi)) * (psni * dsip + pdni * dsip);
 
   return psi_result;
 }
@@ -3209,7 +3208,7 @@ PsiResult XFoil::psi_te(int iNode, Vector2d point, Vector2d normal_vector) {
   double logr12, logr22;
   if (iNode != n && rs1 > 0.0) {
     logr12 = log(rs1);
-    blData1.param.tz = atan2(sgn * blData1.param.xz, sgn * yy) + (0.5 - 0.5 * sgn) * PI;
+    blData1.param.tz = atan2(sgn * blData1.param.xz, sgn * yy) + (0.5 - 0.5 * sgn) * std::numbers::pi;
   } else {
     logr12 = 0.0;
     blData1.param.tz = 0.0;
@@ -3217,7 +3216,7 @@ PsiResult XFoil::psi_te(int iNode, Vector2d point, Vector2d normal_vector) {
   
   if (iNode != 1 && rs2 > 0.0) {
     logr22 = log(rs2);
-    blData2.param.tz = atan2(sgn * blData2.param.xz, sgn * yy) + (0.5 - 0.5 * sgn) * PI;
+    blData2.param.tz = atan2(sgn * blData2.param.xz, sgn * yy) + (0.5 - 0.5 * sgn) * std::numbers::pi;
   } else {
     logr22 = 0.0;
     blData2.param.tz = 0.0;
@@ -3259,22 +3258,22 @@ PsiResult XFoil::psi_te(int iNode, Vector2d point, Vector2d normal_vector) {
   gamte = -0.5 * sds * (surface_vortex(0, 0) - surface_vortex(0, n - 1));
 
   //---- TE panel contribution to psi
-  psi_result.psi += (1 / (2 * PI)) * (psig * sigte + pgam * gamte);
+  psi_result.psi += (1 / (2 * std::numbers::pi)) * (psig * sigte + pgam * gamte);
 
   //---- dpsi/dgam
-  psi_result.dzdg[n - 1] += -(1 / (2 * PI)) * psig * scs * 0.5;
-  psi_result.dzdg[0] += +(1 / (2 * PI)) * psig * scs * 0.5;
+  psi_result.dzdg[n - 1] += -(1 / (2 * std::numbers::pi)) * psig * scs * 0.5;
+  psi_result.dzdg[0] += +(1 / (2 * std::numbers::pi)) * psig * scs * 0.5;
 
-  psi_result.dzdg[n - 1] += +(1 / (2 * PI)) * pgam * sds * 0.5;
-  psi_result.dzdg[0] += -(1 / (2 * PI)) * pgam * sds * 0.5;
+  psi_result.dzdg[n - 1] += +(1 / (2 * std::numbers::pi)) * pgam * sds * 0.5;
+  psi_result.dzdg[0] += -(1 / (2 * std::numbers::pi)) * pgam * sds * 0.5;
 
   //---- dpsi/dni
-  psi_result.psi_ni += (1 / (2 * PI)) * (psigni * sigte + pgamni * gamte);
+  psi_result.psi_ni += (1 / (2 * std::numbers::pi)) * (psigni * sigte + pgamni * gamte);
 
-  psi_result.qtan += (1 / (2 * PI)) * (psigni * sigte_vector + pgamni * gamte_vector);
+  psi_result.qtan += (1 / (2 * std::numbers::pi)) * (psigni * sigte_vector + pgamni * gamte_vector);
 
-  psi_result.dqdg[n - 1] += -(1 / (2 * PI)) * (psigni * 0.5 * scs - pgamni * 0.5 * sds);
-  psi_result.dqdg[0] += +(1 / (2 * PI)) * (psigni * 0.5 * scs - pgamni * 0.5 * sds);
+  psi_result.dqdg[n - 1] += -(1 / (2 * std::numbers::pi)) * (psigni * 0.5 * scs - pgamni * 0.5 * sds);
+  psi_result.dqdg[0] += +(1 / (2 * std::numbers::pi)) * (psigni * 0.5 * scs - pgamni * 0.5 * sds);
 
   return psi_result;
 }
@@ -3331,7 +3330,7 @@ PsiResult XFoil::pswlin(int i, Vector2d point, Vector2d normal_vector) {
 
     if (io != jo && rs1 > 0.0) {
       g1 = log(rs1);
-      t1 = atan2(sgn * blData1.param.xz, sgn * yy) - (0.5 - 0.5 * sgn) * PI;
+      t1 = atan2(sgn * blData1.param.xz, sgn * yy) - (0.5 - 0.5 * sgn) * std::numbers::pi;
     } else {
       g1 = 0.0;
       t1 = 0.0;
@@ -3339,7 +3338,7 @@ PsiResult XFoil::pswlin(int i, Vector2d point, Vector2d normal_vector) {
 
     if (io != jp && rs2 > 0.0) {
       g2 = log(rs2);
-      t2 = atan2(sgn * blData2.param.xz, sgn * yy) - (0.5 - 0.5 * sgn) * PI;
+      t2 = atan2(sgn * blData2.param.xz, sgn * yy) - (0.5 - 0.5 * sgn) * std::numbers::pi;
     } else {
       g2 = 0.0;
       t2 = 0.0;
@@ -3351,7 +3350,7 @@ PsiResult XFoil::pswlin(int i, Vector2d point, Vector2d normal_vector) {
     const double x0 = 0.5 * (blData1.param.xz + blData2.param.xz);
     const double rs0 = x0 * x0 + yy * yy;
     const double g0 = log(rs0);
-    const double t0 = atan2(sgn * x0, sgn * yy) - (0.5 - 0.5 * sgn) * PI;
+    const double t0 = atan2(sgn * x0, sgn * yy) - (0.5 - 0.5 * sgn) * std::numbers::pi;
 
     //------- calculate source contribution to psi	for  1-0  half-panel
     double dxinv = 1.0 / (blData1.param.xz - x0);
@@ -3372,17 +3371,17 @@ PsiResult XFoil::pswlin(int i, Vector2d point, Vector2d normal_vector) {
     const double dsim = 1.0 / dsm;
 
     //------- dpsi/dm
-    psi_result.dzdm[jm] += (1 / (4 * PI)) * (-psum * dsim + pdif * dsim);
-    psi_result.dzdm[jo] += (1 / (4 * PI)) * (-psum / dso - pdif / dso);
-    psi_result.dzdm[jp] += (1 / (4 * PI)) * (psum * (dsio + dsim) + pdif * (dsio - dsim));
+    psi_result.dzdm[jm] += (1 / (4 * std::numbers::pi)) * (-psum * dsim + pdif * dsim);
+    psi_result.dzdm[jo] += (1 / (4 * std::numbers::pi)) * (-psum / dso - pdif / dso);
+    psi_result.dzdm[jp] += (1 / (4 * std::numbers::pi)) * (psum * (dsio + dsim) + pdif * (dsio - dsim));
 
     //------- dpsi/dni
     double psni = psx1 * x1i + psx0 * (x1i + x2i) * 0.5 + psyy * yyi;
     double pdni = pdx1 * x1i + pdx0 * (x1i + x2i) * 0.5 + pdyy * yyi;
 
-    psi_result.dqdm[jm] += (1 / (4 * PI)) * (-psni * dsim + pdni * dsim);
-    psi_result.dqdm[jo] += (1 / (4 * PI)) * (-psni / dso - pdni / dso);
-    psi_result.dqdm[jp] += (1 / (4 * PI)) * (psni * (dsio + dsim) + pdni * (dsio - dsim));
+    psi_result.dqdm[jm] += (1 / (4 * std::numbers::pi)) * (-psni * dsim + pdni * dsim);
+    psi_result.dqdm[jo] += (1 / (4 * std::numbers::pi)) * (-psni / dso - pdni / dso);
+    psi_result.dqdm[jp] += (1 / (4 * std::numbers::pi)) * (psni * (dsio + dsim) + pdni * (dsio - dsim));
 
     //------- calculate source contribution to psi	for  0-2  half-panel
     dxinv = 1.0 / (x0 - blData2.param.xz);
@@ -3403,17 +3402,17 @@ PsiResult XFoil::pswlin(int i, Vector2d point, Vector2d normal_vector) {
     const double dsip = 1.0 / dsp;
 
     //------- dpsi/dm
-    psi_result.dzdm[jo] += (1 / (4 * PI)) * (-psum * (dsip + dsio) - pdif * (dsip - dsio));
-    psi_result.dzdm[jp] += (1 / (4 * PI)) * (psum / dso - pdif / dso);
-    psi_result.dzdm[jq] += (1 / (4 * PI)) * (psum * dsip + pdif * dsip);
+    psi_result.dzdm[jo] += (1 / (4 * std::numbers::pi)) * (-psum * (dsip + dsio) - pdif * (dsip - dsio));
+    psi_result.dzdm[jp] += (1 / (4 * std::numbers::pi)) * (psum / dso - pdif / dso);
+    psi_result.dzdm[jq] += (1 / (4 * std::numbers::pi)) * (psum * dsip + pdif * dsip);
 
     //------- dpsi/dni
     psni = psx0 * (x1i + x2i) * 0.5 + psx2 * x2i + psyy * yyi;
     pdni = pdx0 * (x1i + x2i) * 0.5 + pdx2 * x2i + pdyy * yyi;
 
-    psi_result.dqdm[jo] += (1 / (4 * PI)) * (-psni * (dsip + dsio) - pdni * (dsip - dsio));
-    psi_result.dqdm[jp] += (1 / (4 * PI)) * (psni / dso - pdni / dso);
-    psi_result.dqdm[jq] += (1 / (4 * PI)) * (psni * dsip + pdni * dsip);
+    psi_result.dqdm[jo] += (1 / (4 * std::numbers::pi)) * (-psni * (dsip + dsio) - pdni * (dsip - dsio));
+    psi_result.dqdm[jp] += (1 / (4 * std::numbers::pi)) * (psni / dso - pdni / dso);
+    psi_result.dqdm[jq] += (1 / (4 * std::numbers::pi)) * (psni * dsip + pdni * dsip);
   }
 
   return psi_result;
