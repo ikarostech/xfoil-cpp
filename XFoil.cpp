@@ -5072,6 +5072,108 @@ bool XFoil::uicalc() {
   return true;
 }
 
+/**
+ * @brief Compute new edge velocities and their sensitivities.
+ */
+void XFoil::computeNewUeDistribution(SidePair<VectorXd>& unew,
+                                     SidePair<VectorXd>& u_ac) {
+  for (int is = 1; is <= 2; is++) {
+    for (int ibl = 2; ibl <= nbl.get(is); ibl++) {
+      int i = ipan.get(is)[ibl];
+      double dui = 0.0;
+      double dui_ac = 0.0;
+      for (int js = 1; js <= 2; js++) {
+        for (int jbl = 2; jbl <= nbl.get(js); jbl++) {
+          int j = ipan.get(js)[jbl];
+          int jv = isys.get(js)[jbl];
+          double ue_m = -vti.get(is)[ibl] * vti.get(js)[jbl] *
+                        dij(i - INDEX_START_WITH, j - INDEX_START_WITH);
+          dui += ue_m * (mass.get(js)[jbl] + vdel[jv](2, 0));
+          dui_ac += ue_m * (-vdel[jv](2, 1));
+        }
+      }
+
+      double uinv_ac = lalfa ? 0.0 : uinv_a.get(is)[ibl];
+      unew.get(is)[ibl] = uinv.get(is)[ibl] + dui;
+      u_ac.get(is)[ibl] = uinv_ac + dui_ac;
+    }
+  }
+}
+
+/**
+ * @brief Convert edge velocities to tangential velocities.
+ */
+void XFoil::computeQtan(const SidePair<VectorXd>& unew,
+                        const SidePair<VectorXd>& u_ac,
+                        double qnew[], double q_ac[]) {
+  for (int is = 1; is <= 2; is++) {
+    for (int ibl = 2; ibl <= iblte.get(is); ibl++) {
+      int i = ipan.get(is)[ibl];
+      const VectorXd& unew_vec = (is == 1) ? unew.top : unew.bottom;
+      const VectorXd& uac_vec = (is == 1) ? u_ac.top : u_ac.bottom;
+      qnew[i] = vti.get(is)[ibl] * unew_vec[ibl];
+      q_ac[i] = vti.get(is)[ibl] * uac_vec[ibl];
+    }
+  }
+}
+
+/**
+ * @brief Calculate lift coefficient contributions from tangential velocity.
+ */
+void XFoil::computeClFromQtan(const double qnew[], const double q_ac[],
+                              double& clnew, double& cl_a,
+                              double& cl_ms, double& cl_ac) {
+  double beta = sqrt(1.0 - minf * minf);
+  double beta_msq = -0.5 / beta;
+
+  double bfac = 0.5 * minf * minf / (1.0 + beta);
+  double bfac_msq = 0.5 / (1.0 + beta) - bfac / (1.0 + beta) * beta_msq;
+
+  clnew = 0.0;
+  cl_a = 0.0;
+  cl_ms = 0.0;
+  cl_ac = 0.0;
+
+  double cginc = 1.0 - (qnew[1] / qinf) * (qnew[1] / qinf);
+  double cpg1 = cginc / (beta + bfac * cginc);
+  double cpg1_ms = -cpg1 / (beta + bfac * cginc) * (beta_msq + bfac_msq * cginc);
+
+  double cpi_q = -2.0 * qnew[1] / qinf / qinf;
+  double cpc_cpi = (1.0 - bfac * cpg1) / (beta + bfac * cginc);
+  double cpg1_ac = cpc_cpi * cpi_q * q_ac[1];
+
+  for (int i = 1; i <= n; i++) {
+    int ip = i + 1;
+    if (i == n) ip = 1;
+
+    cginc = 1.0 - (qnew[ip] / qinf) * (qnew[ip] / qinf);
+    double cpg2 = cginc / (beta + bfac * cginc);
+    double cpg2_ms = -cpg2 / (beta + bfac * cginc) *
+                     (beta_msq + bfac_msq * cginc);
+
+    cpi_q = -2.0 * qnew[ip] / qinf / qinf;
+    cpc_cpi = (1.0 - bfac * cpg2) / (beta + bfac * cginc);
+    double cpg2_ac = cpc_cpi * cpi_q * q_ac[ip];
+
+    Matrix2d rotateMatrix = Matrix2d{{cos(alfa), sin(alfa)},
+                                     {-sin(alfa), cos(alfa)}};
+    Vector2d dpoint = rotateMatrix * (points.col(ip) - points.col(i));
+
+    const double ag = 0.5 * (cpg2 + cpg1);
+    const double ag_ms = 0.5 * (cpg2_ms + cpg1_ms);
+    const double ag_ac = 0.5 * (cpg2_ac + cpg1_ac);
+
+    clnew += dpoint.x() * ag;
+    cl_a += dpoint.y() * ag;
+    cl_ms += dpoint.x() * ag_ms;
+    cl_ac += dpoint.x() * ag_ac;
+
+    cpg1 = cpg2;
+    cpg1_ms = cpg2_ms;
+    cpg1_ac = cpg2_ac;
+  }
+}
+
 bool XFoil::update() {
   //------------------------------------------------------------------
   //      adds on newton deltas to boundary layer variables.
@@ -5097,10 +5199,7 @@ bool XFoil::update() {
   double dac = 0.0, dhi = 0.0, dlo = 0.0, dctau, dthet, dmass, duedg, ddstr;
   double dn1, dn2, dn3, dn4, rdn1, rdn2, rdn3, rdn4;
   double dswaki, hklim, msq, dsw;
-  double dui, dui_ac, ue_m , uinv_ac,
-         beta = 0.0, beta_msq = 0.0, bfac = 0.0, bfac_msq = 0.0;
-  double clnew = 0.0, cl_a = 0.0, cl_ms = 0.0, cl_ac = 0.0, cginc = 0.0;
-  double cpg1 = 0.0, cpg1_ms = 0.0, cpi_q = 0.0, cpc_cpi = 0.0, cpg1_ac = 0.0;
+  double clnew = 0.0, cl_a = 0.0, cl_ms = 0.0, cl_ac = 0.0;
   std::string vmxbl;
 
   //---- max allowable alpha changes per iteration
@@ -5113,96 +5212,10 @@ bool XFoil::update() {
   hstinv =
       gamm1 * (minf / qinf) * (minf / qinf) / (1.0 + 0.5 * gamm1 * minf * minf);
 
-  //--- calculate new ue distribution assuming no under-relaxation
-  //--- also set the sensitivity of ue wrt to alpha or re
-  for (int is = 1; is <= 2; is++) {
-    for (int ibl = 2; ibl <= nbl.get(is); ibl++) {
-      int i = ipan.get(is)[ibl];
-      dui = 0.0;
-      dui_ac = 0.0;
-      for (int js = 1; js <= 2; js++) {
-        for (int jbl = 2; jbl <= nbl.get(js); jbl++) {
-          int j = ipan.get(js)[jbl];
-          int jv = isys.get(js)[jbl];
-          ue_m = -vti.get(is)[ibl] * vti.get(js)[jbl] * dij(i - INDEX_START_WITH, j - INDEX_START_WITH);
-          dui = dui + ue_m * (mass.get(js)[jbl] + vdel[jv](2, 0));
-          dui_ac = dui_ac + ue_m * (-vdel[jv](2, 1));
-        }
-      }
-
-      //------- uinv depends on "ac" only if "ac" is alpha
-      if (lalfa)
-        uinv_ac = 0.0;
-      else
-        uinv_ac = uinv_a.get(is)[ibl];
-
-      unew.get(is)[ibl] = uinv.get(is)[ibl] + dui;
-      u_ac.get(is)[ibl] = uinv_ac + dui_ac;
-    }
-  }
-
-  //--- set new qtan from new ue with appropriate sign change
-
-  for (int is = 1; is <= 2; is++) {
-    for (int ibl = 2; ibl <= iblte.get(is); ibl++) {
-      int i = ipan.get(is)[ibl];
-      qnew[i] = vti.get(is)[ibl] * unew.get(is)[ibl];
-      q_ac[i] = vti.get(is)[ibl] * u_ac.get(is)[ibl];
-    }
-  }
-
-  //--- calculate new cl from this new qtan
-  beta = sqrt(1.0 - minf * minf);
-  beta_msq = -0.5 / beta;
-
-  bfac = 0.5 * minf * minf / (1.0 + beta);
-  bfac_msq = 0.5 / (1.0 + beta) - bfac / (1.0 + beta) * beta_msq;
-
-  clnew = 0.0;
-  cl_a = 0.0;
-  cl_ms = 0.0;
-  cl_ac = 0.0;
-
-  cginc = 1.0 - (qnew[1] / qinf) * (qnew[1] / qinf);
-  cpg1 = cginc / (beta + bfac * cginc);
-  cpg1_ms = -cpg1 / (beta + bfac * cginc) * (beta_msq + bfac_msq * cginc);
-
-  cpi_q = -2.0 * qnew[1] / qinf / qinf;
-  cpc_cpi = (1.0 - bfac * cpg1) / (beta + bfac * cginc);
-  cpg1_ac = cpc_cpi * cpi_q * q_ac[1];
-
-  for (int i = 1; i <= n; i++) {
-    int ip = i + 1;
-    if (i == n) ip = 1;
-
-    cginc = 1.0 - (qnew[ip] / qinf) * (qnew[ip] / qinf);
-    const double cpg2 = cginc / (beta + bfac * cginc);
-    const double cpg2_ms = -cpg2 / (beta + bfac * cginc) * (beta_msq + bfac_msq * cginc);
-
-    cpi_q = -2.0 * qnew[ip] / qinf / qinf;
-    cpc_cpi = (1.0 - bfac * cpg2) / (beta + bfac * cginc);
-    const double cpg2_ac = cpc_cpi * cpi_q * q_ac[ip];
-
-    Matrix2d rotateMatrix = Matrix2d {
-      {cos(alfa), sin(alfa)},
-      {-sin(alfa), cos(alfa)}
-    };
-
-    Vector2d dpoint = rotateMatrix * (points.col(ip) - points.col(i));
-
-    const double ag = 0.5 * (cpg2 + cpg1);
-    const double ag_ms = 0.5 * (cpg2_ms + cpg1_ms);
-    const double ag_ac = 0.5 * (cpg2_ac + cpg1_ac);
-
-    clnew = clnew + dpoint.x() * ag;
-    cl_a = cl_a + dpoint.y() * ag;
-    cl_ms = cl_ms + dpoint.x() * ag_ms;
-    cl_ac = cl_ac + dpoint.x() * ag_ac;
-
-    cpg1 = cpg2;
-    cpg1_ms = cpg2_ms;
-    cpg1_ac = cpg2_ac;
-  }
+  //--- calculate new ue distribution and tangential velocities
+  computeNewUeDistribution(unew, u_ac);
+  computeQtan(unew, u_ac, qnew, q_ac);
+  computeClFromQtan(qnew, q_ac, clnew, cl_a, cl_ms, cl_ac);
 
   //--- initialize under-relaxation factor
   rlx = 1.0;
