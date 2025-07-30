@@ -242,25 +242,18 @@ void XFoil::computeShapeParameters(blData& ref, int ityp) {
   ref.hcz.u() += hct_result.hc_msq * ref.param.mz_uz;
   ref.hcz.ms() += hct_result.hc_msq * ref.param.mz_ms;
 
-  double hs2_hk2, hs2_rt2, hs2_m2;
+  boundary_layer::ThicknessShapeParameterResult hs_result;
   if (ityp == 1) {
-    auto hsl_result = boundary_layer::hsl(ref.hkz.scalar);
-    ref.hsz.scalar = hsl_result.hs;
-    hs2_hk2 = hsl_result.hs_hk;
-    hs2_rt2 = hsl_result.hs_rt;
-    hs2_m2 = hsl_result.hs_msq;
+    hs_result = boundary_layer::hsl(ref.hkz.scalar);
+    ref.hsz.scalar = hs_result.hs;
   } else {
-    auto hst_result =
-        boundary_layer::hst(ref.hkz.scalar, ref.rtz.scalar, ref.param.mz);
-    ref.hsz.scalar = hst_result.hs;
-    hs2_hk2 = hst_result.hs_hk;
-    hs2_rt2 = hst_result.hs_rt;
-    hs2_m2 = hst_result.hs_msq;
+    hs_result = boundary_layer::hst(ref.hkz.scalar, ref.rtz.scalar, ref.param.mz);
+    ref.hsz.scalar = hs_result.hs;
   }
 
-  ref.hsz.vector = hs2_hk2 * ref.hkz.vector + hs2_rt2 * ref.rtz.vector;
-  ref.hsz.u() += hs2_m2 * ref.param.mz_uz;
-  ref.hsz.ms() += hs2_m2 * ref.param.mz_ms;
+  ref.hsz.vector = hs_result.hs_hk * ref.hkz.vector + hs_result.hs_rt * ref.rtz.vector;
+  ref.hsz.u() += hs_result.hs_msq * ref.param.mz_uz;
+  ref.hsz.ms() += hs_result.hs_msq * ref.param.mz_ms;
 
   double us2_hs2 =
       0.5 * (1.0 - (ref.hkz.scalar - 1.0) / (gbcon * ref.param.hz));
