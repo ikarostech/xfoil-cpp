@@ -3565,6 +3565,45 @@ bool XFoil::saveblData(int icom) {
   return true;
 }
 
+void XFoil::swapEdgeVelocities(SidePair<VectorXd>& usav) {
+  for (int is = 1; is <= 2; ++is) {
+    for (int ibl = 2; ibl <= nbl.get(is); ++ibl) {
+      double temp = usav.get(is)[ibl];
+      usav.get(is)[ibl] = uedg.get(is)[ibl];
+      uedg.get(is)[ibl] = temp;
+    }
+  }
+}
+
+void XFoil::computeLeTeSensitivities(int ile1, int ile2, int ite1, int ite2,
+                                     VectorXd& ule1_m, VectorXd& ule2_m,
+                                     VectorXd& ute1_m, VectorXd& ute2_m) {
+  for (int js = 1; js <= 2; ++js) {
+    for (int jbl = 2; jbl <= nbl.get(js); ++jbl) {
+      int j = ipan.get(js)[jbl];
+      int jv = isys.get(js)[jbl];
+      ule1_m[jv] = -vti.top[2] * vti.get(js)[jbl] *
+                   dij(ile1 - INDEX_START_WITH, j - INDEX_START_WITH);
+      ule2_m[jv] = -vti.bottom[2] * vti.get(js)[jbl] *
+                   dij(ile2 - INDEX_START_WITH, j - INDEX_START_WITH);
+      ute1_m[jv] = -vti.top[iblte.top] * vti.get(js)[jbl] *
+                   dij(ite1 - INDEX_START_WITH, j - INDEX_START_WITH);
+      ute2_m[jv] = -vti.bottom[iblte.bottom] * vti.get(js)[jbl] *
+                   dij(ite2 - INDEX_START_WITH, j - INDEX_START_WITH);
+    }
+  }
+}
+
+void XFoil::clearDerivativeVectors(VectorXd& u_m, VectorXd& d_m) {
+  for (int js = 1; js <= 2; ++js) {
+    for (int jbl = 2; jbl <= nbl.get(js); ++jbl) {
+      int jv = isys.get(js)[jbl];
+      u_m[jv] = 0.0;
+      d_m[jv] = 0.0;
+    }
+  }
+}
+
 bool XFoil::setbl() {
   //-------------------------------------------------
   //	   sets up the bl newton system coefficients for the current bl
@@ -3655,14 +3694,7 @@ bool XFoil::setbl() {
   SidePair<VectorXd> usav = uedg;
 
   ueset();
-
-  for (int is = 1; is <= 2; is++) {
-    for (int ibl = 2; ibl <= nbl.get(is); ibl++) {
-      double temp = usav.get(is)[ibl];
-      usav.get(is)[ibl] = uedg.get(is)[ibl];
-      uedg.get(is)[ibl] = temp;
-    }
-  }
+  swapEdgeVelocities(usav);
   ile1 = ipan.top[2];
   ile2 = ipan.bottom[2];
   ite1 = ipan.top[iblte.top];
@@ -3675,16 +3707,8 @@ bool XFoil::setbl() {
   dule2 = uedg.bottom[2] - usav.bottom[2];
 
   //---- set le and te ue sensitivities wrt all m values
-  for (int js = 1; js <= 2; js++) {
-    for (int jbl = 2; jbl <= nbl.get(js); jbl++) {
-      int j = ipan.get(js)[jbl];
-      int jv = isys.get(js)[jbl];
-      ule1_m[jv] = -vti.top[2] * vti.get(js)[jbl] * dij(ile1 - INDEX_START_WITH, j - INDEX_START_WITH);
-      ule2_m[jv] = -vti.bottom[2] * vti.get(js)[jbl] * dij(ile2 - INDEX_START_WITH, j - INDEX_START_WITH);
-      ute1_m[jv] = -vti.top[iblte.top] * vti.get(js)[jbl] * dij(ite1 - INDEX_START_WITH, j - INDEX_START_WITH);
-      ute2_m[jv] = -vti.bottom[iblte.bottom] * vti.get(js)[jbl] * dij(ite2 - INDEX_START_WITH, j - INDEX_START_WITH);
-    }
-  }
+  computeLeTeSensitivities(ile1, ile2, ite1, ite2, ule1_m, ule2_m, ute1_m,
+                           ute2_m);
 
   ule1_a = uinv_a.top[2];
   ule2_a = uinv_a.bottom[2];
@@ -3694,13 +3718,7 @@ bool XFoil::setbl() {
   //*** go over each boundary layer/wake
   for (int is = 1; is <= 2; is++) {
     //---- there is no station "1" at similarity, so zero everything out
-    for (int js = 1; js <= 2; js++) {
-      for (int jbl = 2; jbl <= nbl.get(js); jbl++) {
-        int jv = isys.get(js)[jbl];
-        u1_m[jv] = 0.0;
-        d1_m[jv] = 0.0;
-      }
-    }
+    clearDerivativeVectors(u1_m, d1_m);
     double u1_a = 0.0;
     double d1_a = 0.0;
 
