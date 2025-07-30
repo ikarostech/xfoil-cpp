@@ -120,7 +120,7 @@ TEST_F(DatGoogleTest, test_blmid_turbulent) {
   foil->blData1.mz = foil->blData2.mz = 0.01;
   
   //when
-  foil->blmid(1);
+  foil->blmid(XFoil::FlowRegimeEnum::Laminar);
 
   //then
   ASSERT_DOUBLE_EQ(-6.8333333333333339e-07, foil->cfm);
@@ -143,7 +143,7 @@ TEST_F(DatGoogleTest, test_blmid_laminar) {
   foil->blData1.mz = foil->blData2.mz = 0.01;
   
   //when
-  foil->blmid(2);
+  foil->blmid(XFoil::FlowRegimeEnum::Turbulent);
 
   //then
   ASSERT_DOUBLE_EQ(-6.8333333333333339e-07, foil->cfm);
@@ -166,7 +166,7 @@ TEST_F(DatGoogleTest, test_blmid_turbulent_wake) {
   foil->blData1.mz = foil->blData2.mz = 0.01;
   
   //when
-  foil->blmid(3);
+  foil->blmid(XFoil::FlowRegimeEnum::Wake);
 
   //then
   ASSERT_DOUBLE_EQ(0, foil->cfm);
@@ -191,7 +191,7 @@ TEST_F(DatGoogleTest, test_blvar_cfz_wake) {
   foil->ViscousIter();
 
   //when
-  bool actual = foil->blvar(1);
+  bool actual = foil->blvar(XFoil::FlowRegimeEnum::Laminar);
 
   //then
   ASSERT_EQ(0, foil->blData2.cfz_uz);

@@ -80,6 +80,11 @@ class XFoil {
     FIXED_LIFT,
     FIXED_LIFT_AND_DYNAMIC_PRESSURE
   };
+  enum class FlowRegimeEnum {
+    Laminar = 1,
+    Turbulent = 2,
+    Wake = 3
+  };
   ReynoldsType reynolds_type;
   MachType mach_type;
   bool initXFoilAnalysis(double Re, double alpha, double Mach, double NCrit,
@@ -141,33 +146,33 @@ class XFoil {
   bool bldif(int ityp);
   // ---- Helper routines used by bldif ----
   void bldifLaminar();
-  void bldifTurbulent(int ityp, double upw, const Vector3d &upw1,
+  void bldifTurbulent(FlowRegimeEnum ityp, double upw, const Vector3d &upw1,
                       const Vector3d &upw2, double upw_ms, double ulog);
   void bldifMomentum(double xlog, double ulog, double tlog, double ddlog);
   void bldifShape(double upw, double xlog, double ulog, double hlog,
                   double ddlog, const Vector3d &upw1, const Vector3d &upw2,
                   double upw_ms);
   bool blkin();
-  bool blmid(int ityp);
+  bool blmid(FlowRegimeEnum ityp);
   bool blprv(double xsi, double ami, double cti, double thi, double dsi,
              double dswaki, double uei);
   bool blsolve();
   bool blsys();
-  bool blvar(blData& ref, int ityp);
+  bool blvar(blData& ref, FlowRegimeEnum ityp);
   /**
    * @brief Calculate shape parameters and slip velocity.
    */
-  void computeShapeParameters(blData& ref, int ityp);
+  void computeShapeParameters(blData& ref, FlowRegimeEnum ityp);
 
   /**
    * @brief Determine shear and skin friction coefficients.
    */
-  void computeCoefficients(blData& ref, int ityp);
+  void computeCoefficients(blData& ref, FlowRegimeEnum ityp);
 
   /**
    * @brief Compute dissipation and boundary-layer thickness.
    */
-  void computeDissipationAndThickness(blData& ref, int ityp);
+  void computeDissipationAndThickness(blData& ref, FlowRegimeEnum ityp);
   double cang(Matrix2Xd points);
   bool cdcalc();
 
