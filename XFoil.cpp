@@ -229,13 +229,13 @@ void XFoil::resetVariables() {
  * The derivatives with respect to the primary variables are stored in
  * the provided @p ref structure.
  *
- * @param ref  Boundary layer data container updated with the results.
- * @param ityp Flow regime type (1=laminar, 2=turbulent, 3=wake).
+ * @param ref           Boundary layer data container updated with the results.
+ * @param flowRegimeType Flow regime type (1=laminar, 2=turbulent, 3=wake).
  */
-void XFoil::computeShapeParameters(blData& ref, FlowRegimeEnum ityp) {
-  if (ityp == FlowRegimeEnum::Wake)
+void XFoil::computeShapeParameters(blData& ref, FlowRegimeEnum flowRegimeType) {
+  if (flowRegimeType == FlowRegimeEnum::Wake)
     ref.hkz.scalar = std::max(ref.hkz.scalar, 1.00005);
-  if (ityp != FlowRegimeEnum::Wake)
+  if (flowRegimeType != FlowRegimeEnum::Wake)
     ref.hkz.scalar = std::max(ref.hkz.scalar, 1.05000);
 
   auto hct_result = boundary_layer::hct(ref.hkz.scalar, ref.param.mz);
@@ -245,7 +245,7 @@ void XFoil::computeShapeParameters(blData& ref, FlowRegimeEnum ityp) {
   ref.hcz.ms() += hct_result.hc_msq * ref.param.mz_ms;
 
   boundary_layer::ThicknessShapeParameterResult hs_result;
-  if (ityp == FlowRegimeEnum::Laminar) {
+  if (flowRegimeType == FlowRegimeEnum::Laminar) {
     hs_result = boundary_layer::hsl(ref.hkz.scalar);
     ref.hsz.scalar = hs_result.hs;
   } else {
@@ -270,14 +270,15 @@ void XFoil::computeShapeParameters(blData& ref, FlowRegimeEnum ityp) {
   ref.usz.t() += us2_h2 * ref.param.hz_tz;
   ref.usz.d() += us2_h2 * ref.param.hz_dz;
 
-  if (ityp == FlowRegimeEnum::Laminar || ityp == FlowRegimeEnum::Turbulent) {
+  if (flowRegimeType == FlowRegimeEnum::Laminar ||
+      flowRegimeType == FlowRegimeEnum::Turbulent) {
     if (ref.usz.scalar > 0.95) {
       ref.usz.scalar = 0.98;
       ref.usz.vector = Vector<double, 6>::Zero();
     }
   }
 
-  if (ityp == FlowRegimeEnum::Wake && ref.usz.scalar > 0.99995) {
+  if (flowRegimeType == FlowRegimeEnum::Wake && ref.usz.scalar > 0.99995) {
     ref.usz.scalar = 0.99995;
     ref.usz.vector = Vector<double, 6>::Zero();
   }
@@ -291,14 +292,14 @@ void XFoil::computeShapeParameters(blData& ref, FlowRegimeEnum ityp) {
  * Sensitivities with respect to the primary variables are also
  * accumulated in @p ref.
  *
- * @param ref  Boundary layer data container updated with the results.
- * @param ityp Flow regime type (1=laminar, 2=turbulent, 3=wake).
+ * @param ref           Boundary layer data container updated with the results.
+ * @param flowRegimeType Flow regime type (1=laminar, 2=turbulent, 3=wake).
  */
-void XFoil::computeCoefficients(blData& ref, FlowRegimeEnum ityp) {
+void XFoil::computeCoefficients(blData& ref, FlowRegimeEnum flowRegimeType) {
   double hkc = ref.hkz.scalar - 1.0;
   double hkc_hk2 = 1.0;
   double hkc_rt2 = 0.0;
-  if (ityp == FlowRegimeEnum::Turbulent) {
+  if (flowRegimeType == FlowRegimeEnum::Turbulent) {
     const double gcc = gccon;
     hkc = ref.hkz.scalar - 1.0 - gcc / ref.rtz.scalar;
     hkc_hk2 = 1.0;
@@ -348,13 +349,13 @@ void XFoil::computeCoefficients(blData& ref, FlowRegimeEnum ityp) {
   ref.cqz.d() += cq2_h2 * ref.param.hz_dz;
 
   double cf2_hk2, cf2_rt2, cf2_m2;
-  if (ityp == FlowRegimeEnum::Wake) {
+  if (flowRegimeType == FlowRegimeEnum::Wake) {
     ref.cfz.scalar = 0.0;
     cf2_hk2 = 0.0;
     cf2_rt2 = 0.0;
     cf2_m2 = 0.0;
   } else {
-    if (ityp == FlowRegimeEnum::Laminar) {
+    if (flowRegimeType == FlowRegimeEnum::Laminar) {
       C_f c_f = cfl(ref.hkz.scalar, ref.rtz.scalar);
       ref.cfz.scalar = c_f.cf;
       cf2_hk2 = c_f.hk;
@@ -392,19 +393,20 @@ void XFoil::computeCoefficients(blData& ref, FlowRegimeEnum ityp) {
  * wake modifications and adds turbulent outer-layer contributions when
  * applicable.  Resulting derivatives are stored in @p ref.
  *
- * @param ref  Boundary layer data container updated with the results.
- * @param ityp Flow regime type (1=laminar, 2=turbulent, 3=wake).
+ * @param ref           Boundary layer data container updated with the results.
+ * @param flowRegimeType Flow regime type (1=laminar, 2=turbulent, 3=wake).
  */
-void XFoil::computeDissipationAndThickness(blData& ref, FlowRegimeEnum ityp) {
+void XFoil::computeDissipationAndThickness(blData& ref,
+                                           FlowRegimeEnum flowRegimeType) {
   double di2l;
-  if (ityp == FlowRegimeEnum::Laminar) {
+  if (flowRegimeType == FlowRegimeEnum::Laminar) {
     auto dissipation_result = dil(ref.hkz.scalar, ref.rtz.scalar);
     ref.diz.scalar = dissipation_result.di;
     ref.diz.vector =
         dissipation_result.di_hk * ref.hkz.vector +
         dissipation_result.di_rt * ref.rtz.vector;
   } else {
-    if (ityp == FlowRegimeEnum::Turbulent) {
+    if (flowRegimeType == FlowRegimeEnum::Turbulent) {
       C_f c_ft = cft(ref.hkz.scalar, ref.rtz.scalar, ref.param.mz);
       double cf2t = c_ft.cf;
       double cf2t_hk2 = c_ft.hk;
@@ -452,7 +454,7 @@ void XFoil::computeDissipationAndThickness(blData& ref, FlowRegimeEnum ityp) {
     }
   }
 
-  if (ityp != FlowRegimeEnum::Laminar) {
+  if (flowRegimeType != FlowRegimeEnum::Laminar) {
     double dd = ref.param.sz * ref.param.sz * (0.995 - ref.usz.scalar) * 2.0 /
                 ref.hsz.scalar;
     double dd_hs2 =
@@ -479,7 +481,7 @@ void XFoil::computeDissipationAndThickness(blData& ref, FlowRegimeEnum ityp) {
                     dd_us2 * ref.usz.vector + dd_rt2 * ref.rtz.vector;
   }
 
-  if (ityp == FlowRegimeEnum::Turbulent) {
+  if (flowRegimeType == FlowRegimeEnum::Turbulent) {
     auto dissipation_result = dil(ref.hkz.scalar, ref.rtz.scalar);
     if (dissipation_result.di > ref.diz.scalar) {
       ref.diz.scalar = dissipation_result.di;
@@ -488,7 +490,7 @@ void XFoil::computeDissipationAndThickness(blData& ref, FlowRegimeEnum ityp) {
     }
   }
 
-  if (ityp == FlowRegimeEnum::Wake) {
+  if (flowRegimeType == FlowRegimeEnum::Wake) {
     auto dissipation_result = dilw(ref.hkz.scalar, ref.rtz.scalar);
     di2l = dissipation_result.di;
     if (di2l > ref.diz.scalar) {
@@ -710,15 +712,15 @@ XFoil::AxResult XFoil::axset(double hk1, double t1, double rt1, double a1, doubl
 /** -----------------------------------------------------------
  *     sets up the newton system coefficients and residuals
  *
- *         ityp = 0 :  similarity station
- *         ityp = 1 :  laminar interval
- *         ityp = 2 :  turbulent interval
- *         ityp = 3 :  wake interval
+*         flowRegimeType = 0 :  similarity station
+*         flowRegimeType = 1 :  laminar interval
+*         flowRegimeType = 2 :  turbulent interval
+*         flowRegimeType = 3 :  wake interval
  *
  *      this routine knows nothing about a transition interval,
  *      which is taken care of by trdif.
  * ------------------------------------------------------------ */
-bool XFoil::bldif(int ityp) {
+bool XFoil::bldif(int flowRegimeType) {
 
   double hupwt, hdcon, hl, hd_hk1, hd_hk2, hlsq, ehh;
   double upw, upw_hl, upw_hd, upw_hk1, upw_hk2;
@@ -728,7 +730,7 @@ bool XFoil::bldif(int ityp) {
   double f_arg;  // ex arg
                  //	double scc_us1, scc_us2;
 
-  if (ityp == 0) {
+  if (flowRegimeType == 0) {
     //----- similarity logarithmic differences  (prescribed)
     xlog = 1.0;
     ulog = 1.0;
@@ -759,7 +761,7 @@ bool XFoil::bldif(int ityp) {
   hd_hk2 = -hdcon * 2.0 / blData2.hkz.scalar;
 
   //---- use less upwinding in the wake
-  if (ityp == 3) {
+  if (flowRegimeType == 3) {
     hdcon = hupwt / blData2.hkz.scalar / blData2.hkz.scalar;
     hd_hk1 = 0.0;
     hd_hk2 = -hdcon * 2.0 / blData2.hkz.scalar;
@@ -785,17 +787,18 @@ bool XFoil::bldif(int ityp) {
   Vector3d upw2 = upw_hk2 * blData2.hkz.pos_vector();
   double upw_ms = upw_hk1 * blData1.hkz.ms() + upw_hk2 * blData2.hkz.ms();
 
-  if (ityp == 0) {
+  if (flowRegimeType == 0) {
     //***** le point -->  set zero amplification factor
     vs2(0, 0) = 1.0;
     vsr[0] = 0.0;
     vsrez[0] = -blData2.param.amplz;
-  } else if (ityp == 1) {
+  } else if (flowRegimeType == 1) {
     //----- build laminar amplification equation
     bldifLaminar();
   } else {
     //----- build turbulent or wake shear lag equation
-    bldifTurbulent(static_cast<FlowRegimeEnum>(ityp), upw, upw1, upw2, upw_ms,
+    bldifTurbulent(static_cast<FlowRegimeEnum>(flowRegimeType), upw, upw1, upw2,
+                   upw_ms,
                    ulog);
   }
 
@@ -848,7 +851,8 @@ void XFoil::bldifLaminar() {
 /**
  * @brief Build turbulent or wake shear lag equation coefficients.
  */
-void XFoil::bldifTurbulent(FlowRegimeEnum ityp, double upw, const Vector3d &upw1,
+void XFoil::bldifTurbulent(FlowRegimeEnum flowRegimeType, double upw,
+                           const Vector3d &upw1,
                            const Vector3d &upw2, double upw_ms, double ulog) {
   double sa = (1.0 - upw) * blData1.param.sz + upw * blData2.param.sz;
   double cqa = (1.0 - upw) * blData1.cqz.scalar + upw * blData2.cqz.scalar;
@@ -860,10 +864,10 @@ void XFoil::bldifTurbulent(FlowRegimeEnum ityp, double upw, const Vector3d &upw1
   double dea = 0.5 * (blData1.dez.scalar + blData2.dez.scalar);
   double da = 0.5 * (blData1.param.dz + blData2.param.dz);
 
-  double ald = (ityp == FlowRegimeEnum::Wake) ? dlcon : 1.0;
+  double ald = (flowRegimeType == FlowRegimeEnum::Wake) ? dlcon : 1.0;
 
   double gcc, hkc, hkc_hka;
-  if (ityp == FlowRegimeEnum::Turbulent) {
+  if (flowRegimeType == FlowRegimeEnum::Turbulent) {
     gcc = gccon;
     hkc = hka - 1.0 - gcc / rta;
     hkc_hka = 1.0;
@@ -1194,13 +1198,13 @@ bool XFoil::blkin() {
   return true;
 }
 
-bool XFoil::blmid(FlowRegimeEnum ityp) {
+bool XFoil::blmid(FlowRegimeEnum flowRegimeType) {
   //----------------------------------------------------
   //     calculates midpoint skin friction cfm
   //
-  //      ityp = 1 :  laminar
-  //      ityp = 2 :  turbulent
-  //      ityp = 3 :  turbulent wake
+  //      flowRegimeType = 1 :  laminar
+  //      flowRegimeType = 2 :  turbulent
+  //      flowRegimeType = 3 :  turbulent wake
   //----------------------------------------------------
   //
 
@@ -1220,7 +1224,7 @@ bool XFoil::blmid(FlowRegimeEnum ityp) {
 
   //---- compute midpoint skin friction coefficient
   C_f cf_res{};
-  switch (ityp) {
+  switch (flowRegimeType) {
     case FlowRegimeEnum::Laminar:
       cf_res = cfl(hka, rta);
       break;
@@ -1438,16 +1442,16 @@ bool XFoil::blsolve() {
  *      also calculates the sensitivities of the
  *      secondary variables wrt the primary variables.
  *
- *       ityp = 1 :  laminar
- *       ityp = 2 :  turbulent
- *       ityp = 3 :  turbulent wake
- * ---------------------------------------------------- */
-bool XFoil::blvar(blData& ref, FlowRegimeEnum ityp) {
+ *       flowRegimeType = 1 :  laminar
+ *       flowRegimeType = 2 :  turbulent
+ *       flowRegimeType = 3 :  turbulent wake
+* ---------------------------------------------------- */
+bool XFoil::blvar(blData& ref, FlowRegimeEnum flowRegimeType) {
   // This routine is now decomposed into helper functions to simplify
   // the original Fortran translation.
-  computeShapeParameters(ref, ityp);
-  computeCoefficients(ref, ityp);
-  computeDissipationAndThickness(ref, ityp);
+  computeShapeParameters(ref, flowRegimeType);
+  computeCoefficients(ref, flowRegimeType);
+  computeDissipationAndThickness(ref, flowRegimeType);
   return true;
 }
 
