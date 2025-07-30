@@ -210,6 +210,23 @@ class XFoil {
       throw invalid_argument("invalid side type");
     }
   };
+  template <class T>
+  class IterPair {
+    public:
+    T before;
+    T after;
+    //FIXME deprecated
+    T& get(int phase) {
+      if (phase == 0) {
+        return before;
+      }
+      else if (phase == 1) {
+        return after;
+      }
+      throw invalid_argument("invalid phase type");
+    }
+  };
+  
   VectorXd cpcalc(int n, VectorXd q, double qinf, double minf);
   class EnvEnResult {
     public:
