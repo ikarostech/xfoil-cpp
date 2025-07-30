@@ -252,8 +252,13 @@ class XFoil {
   bool qiset();
   bool qvfue();
   bool qwcalc();
-  
+
   bool setbl();
+  void swapEdgeVelocities(SidePair<VectorXd>& usav);
+  void computeLeTeSensitivities(int ile1, int ile2, int ite1, int ite2,
+                                VectorXd& ule1_m, VectorXd& ule2_m,
+                                VectorXd& ute1_m, VectorXd& ute2_m);
+  void clearDerivativeVectors(VectorXd& u_m, VectorXd& d_m);
   bool setexp(double s[], double ds1, double smax, int nn);
 
   bool stepbl();
