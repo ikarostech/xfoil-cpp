@@ -1304,134 +1304,69 @@ bool XFoil::blprv(double xsi, double ami, double cti, double thi, double dsi,
  *       s        3x1  re influence vectors
  * ------------------------------------------------------------------ */
 bool XFoil::blsolve() {
+  // Construct and solve the boundary layer linear system using Eigen
+  int sysDim = nsys * 3;
+  MatrixXd A = MatrixXd::Zero(sysDim, sysDim);
+  MatrixXd B = MatrixXd::Zero(sysDim, 2);
 
-  auto eliminateVaBlock = [&](int iv, int ivp) {
-    double pivot = 1.0 / va[iv](0, 0);
-    va[iv](0, 1) *= pivot;
-    for (int l = iv; l <= nsys; l++) vm[0][l][iv] *= pivot;
-    vdel[iv](0, 0) *= pivot;
-    vdel[iv](0, 1) *= pivot;
+  for (int iv = 1; iv <= nsys; ++iv) {
+    int r = 3 * (iv - 1);
 
-    for (int k = 1; k < 3; k++) {
-      double vtmp = va[iv](k, 0);
-      va[iv](k, 1) -= vtmp * va[iv](0, 1);
-      for (int l = iv; l <= nsys; l++) vm[k][l][iv] -= vtmp * vm[0][l][iv];
-      vdel[iv](k, 0) -= vtmp * vdel[iv](0, 0);
-      vdel[iv](k, 1) -= vtmp * vdel[iv](0, 1);
+    for (int c = 0; c < 2; ++c) {
+      B(r + 0, c) = vdel[iv](0, c);
+      B(r + 1, c) = vdel[iv](1, c);
+      B(r + 2, c) = vdel[iv](2, c);
     }
 
-    pivot = 1.0 / va[iv](1, 1);
-    for (int l = iv; l <= nsys; l++) vm[1][l][iv] *= pivot;
-    vdel[iv](1, 0) *= pivot;
-    vdel[iv](1, 1) *= pivot;
+    A(r + 0, 3 * (iv - 1) + 0) = va[iv](0, 0);
+    A(r + 0, 3 * (iv - 1) + 1) = va[iv](0, 1);
+    A(r + 1, 3 * (iv - 1) + 0) = va[iv](1, 0);
+    A(r + 1, 3 * (iv - 1) + 1) = va[iv](1, 1);
+    A(r + 2, 3 * (iv - 1) + 0) = va[iv](2, 0);
+    A(r + 2, 3 * (iv - 1) + 1) = va[iv](2, 1);
 
-    double vtmp = va[iv](2, 1);
-    for (int l = iv; l <= nsys; l++) vm[2][l][iv] -= vtmp * vm[1][l][iv];
-    vdel[iv](2, 0) -= vtmp * vdel[iv](1, 0);
-    vdel[iv](2, 1) -= vtmp * vdel[iv](1, 1);
-
-    pivot = 1.0 / vm[2][iv][iv];
-    for (int l = ivp; l <= nsys; l++) vm[2][l][iv] *= pivot;
-    vdel[iv](2, 0) *= pivot;
-    vdel[iv](2, 1) *= pivot;
-
-    double vtmp1 = vm[0][iv][iv];
-    double vtmp2 = vm[1][iv][iv];
-    for (int l = ivp; l <= nsys; l++) {
-      vm[0][l][iv] -= vtmp1 * vm[2][l][iv];
-      vm[1][l][iv] -= vtmp2 * vm[2][l][iv];
-    }
-    vdel[iv](0, 0) -= vtmp1 * vdel[iv](2, 0);
-    vdel[iv](1, 0) -= vtmp2 * vdel[iv](2, 0);
-    vdel[iv](0, 1) -= vtmp1 * vdel[iv](2, 1);
-    vdel[iv](1, 1) -= vtmp2 * vdel[iv](2, 1);
-
-    vtmp = va[iv](0, 1);
-    for (int l = ivp; l <= nsys; l++) vm[0][l][iv] -= vtmp * vm[1][l][iv];
-    vdel[iv](0, 0) -= vtmp * vdel[iv](1, 0);
-    vdel[iv](0, 1) -= vtmp * vdel[iv](1, 1);
-  };
-
-  auto eliminateVbBlock = [&](int iv, int ivp, int ivte1) {
-    for (int k = 0; k < 3; k++) {
-      double vtmp1 = vb[ivp](k, 0);
-      double vtmp2 = vb[ivp](k, 1);
-      double vtmp3 = vm[k][iv][ivp];
-      for (int l = ivp; l <= nsys; l++)
-        vm[k][l][ivp] -=
-            (vtmp1 * vm[0][l][iv] + vtmp2 * vm[1][l][iv] + vtmp3 * vm[2][l][iv]);
-      vdel[ivp](k, 0) -=
-          (vtmp1 * vdel[iv](0, 0) + vtmp2 * vdel[iv](1, 0) + vtmp3 * vdel[iv](2, 0));
-      vdel[ivp](k, 1) -=
-          (vtmp1 * vdel[iv](0, 1) + vtmp2 * vdel[iv](1, 1) + vtmp3 * vdel[iv](2, 1));
+    if (iv > 1) {
+      A(r + 0, 3 * (iv - 2) + 0) = vb[iv](0, 0);
+      A(r + 0, 3 * (iv - 2) + 1) = vb[iv](0, 1);
+      A(r + 1, 3 * (iv - 2) + 0) = vb[iv](1, 0);
+      A(r + 1, 3 * (iv - 2) + 1) = vb[iv](1, 1);
+      A(r + 2, 3 * (iv - 2) + 0) = vb[iv](2, 0);
+      A(r + 2, 3 * (iv - 2) + 1) = vb[iv](2, 1);
     }
 
-    if (iv == ivte1) {
+    for (int l = 1; l <= nsys; ++l) {
+      int c = 3 * (l - 1) + 2;
+      A(r + 0, c) = vm[0][l][iv];
+      A(r + 1, c) = vm[1][l][iv];
+      A(r + 2, c) = vm[2][l][iv];
+    }
+
+    if (iv == isys.top[iblte.top]) {
       int ivz = isys.bottom[iblte.bottom + 1];
-      for (int k = 0; k < 3; k++) {
-        double vtmp1 = vz[k][0];
-        double vtmp2 = vz[k][1];
-        for (int l = ivp; l <= nsys; l++)
-          vm[k][l][ivz] -= (vtmp1 * vm[0][l][iv] + vtmp2 * vm[1][l][iv]);
-        vdel[ivz](k, 0) -=
-            (vtmp1 * vdel[iv](0, 0) + vtmp2 * vdel[iv](1, 0));
-        vdel[ivz](k, 1) -=
-            (vtmp1 * vdel[iv](0, 1) + vtmp2 * vdel[iv](1, 1));
-      }
-    }
-  };
-
-  auto eliminateLowerVmColumn = [&](int iv, int ivp) {
-    for (int kv = iv + 2; kv <= nsys; kv++) {
-      double vtmp1 = vm[0][iv][kv];
-      double vtmp2 = vm[1][iv][kv];
-      double vtmp3 = vm[2][iv][kv];
-      if (fabs(vtmp1) > vaccel) {
-        for (int l = ivp; l <= nsys; l++) vm[0][l][kv] -= vtmp1 * vm[2][l][iv];
-        vdel[kv](0, 0) -= vtmp1 * vdel[iv](2, 0);
-        vdel[kv](0, 1) -= vtmp1 * vdel[iv](2, 1);
-      }
-      if (fabs(vtmp2) > vaccel) {
-        for (int l = ivp; l <= nsys; l++) vm[1][l][kv] -= vtmp2 * vm[2][l][iv];
-        vdel[kv](1, 0) -= vtmp2 * vdel[iv](2, 0);
-        vdel[kv](1, 1) -= vtmp2 * vdel[iv](2, 1);
-      }
-      if (fabs(vtmp3) > vaccel) {
-        for (int l = ivp; l <= nsys; l++) vm[2][l][kv] -= vtmp3 * vm[2][l][iv];
-        vdel[kv](2, 0) -= vtmp3 * vdel[iv](2, 0);
-        vdel[kv](2, 1) -= vtmp3 * vdel[iv](2, 1);
-      }
-    }
-  };
-
-  auto backSubstitute = [&]() {
-    for (int iv = nsys; iv >= 2; iv--) {
-      double vtmp = vdel[iv](2, 0);
-      for (int kv = iv - 1; kv >= 1; kv--) {
-        vdel[kv](0, 0) -= vm[0][iv][kv] * vtmp;
-        vdel[kv](1, 0) -= vm[1][iv][kv] * vtmp;
-        vdel[kv](2, 0) -= vm[2][iv][kv] * vtmp;
-      }
-      vtmp = vdel[iv](2, 1);
-      for (int kv = iv - 1; kv >= 1; kv--) {
-        vdel[kv](0, 1) -= vm[0][iv][kv] * vtmp;
-        vdel[kv](1, 1) -= vm[1][iv][kv] * vtmp;
-        vdel[kv](2, 1) -= vm[2][iv][kv] * vtmp;
-      }
-    }
-  };
-
-  int ivte1 = isys.top[iblte.top];
-  for (int iv = 1; iv <= nsys; iv++) {
-    int ivp = iv + 1;
-    eliminateVaBlock(iv, ivp);
-    if (iv != nsys) {
-      eliminateVbBlock(iv, ivp, ivte1);
-      if (ivp != nsys) eliminateLowerVmColumn(iv, ivp);
+      int rr = 3 * (ivz - 1);
+      A(rr + 0, 3 * (iv - 1) + 0) = vz[0][0];
+      A(rr + 0, 3 * (iv - 1) + 1) = vz[0][1];
+      A(rr + 1, 3 * (iv - 1) + 0) = vz[1][0];
+      A(rr + 1, 3 * (iv - 1) + 1) = vz[1][1];
+      A(rr + 2, 3 * (iv - 1) + 0) = vz[2][0];
+      A(rr + 2, 3 * (iv - 1) + 1) = vz[2][1];
     }
   }
 
-  backSubstitute();
+  FullPivLU<MatrixXd> lu(A);
+  VectorXd sol0 = lu.solve(B.col(0));
+  VectorXd sol1 = lu.solve(B.col(1));
+
+  for (int iv = 1; iv <= nsys; ++iv) {
+    int idx = 3 * (iv - 1);
+    vdel[iv](0, 0) = sol0[idx];
+    vdel[iv](1, 0) = sol0[idx + 1];
+    vdel[iv](2, 0) = sol0[idx + 2];
+    vdel[iv](0, 1) = sol1[idx];
+    vdel[iv](1, 1) = sol1[idx + 1];
+    vdel[iv](2, 1) = sol1[idx + 2];
+  }
+
   return true;
 }
 
