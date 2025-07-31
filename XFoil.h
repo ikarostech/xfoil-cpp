@@ -387,6 +387,9 @@ class XFoil {
   vector<Matrix<double, 3, 2>> va, vb, vdel;
   double vm[3][IZX][IZX], vz[3][2];
 
+  MatrixXd blA, blRHS;
+  PartialPivLU<MatrixXd> blLU;
+
 
   /*
   c

@@ -1306,65 +1306,67 @@ bool XFoil::blprv(double xsi, double ami, double cti, double thi, double dsi,
 bool XFoil::blsolve() {
   // Construct and solve the boundary layer linear system using Eigen
   int sysDim = nsys * 3;
-  MatrixXd A = MatrixXd::Zero(sysDim, sysDim);
-  MatrixXd B = MatrixXd::Zero(sysDim, 2);
+  if (blA.rows() != sysDim) {
+    blA.resize(sysDim, sysDim);
+    blRHS.resize(sysDim, 2);
+  }
+  blA.setZero();
+  blRHS.setZero();
 
   for (int iv = 1; iv <= nsys; ++iv) {
     int r = 3 * (iv - 1);
 
     for (int c = 0; c < 2; ++c) {
-      B(r + 0, c) = vdel[iv](0, c);
-      B(r + 1, c) = vdel[iv](1, c);
-      B(r + 2, c) = vdel[iv](2, c);
+      blRHS(r + 0, c) = vdel[iv](0, c);
+      blRHS(r + 1, c) = vdel[iv](1, c);
+      blRHS(r + 2, c) = vdel[iv](2, c);
     }
 
-    A(r + 0, 3 * (iv - 1) + 0) = va[iv](0, 0);
-    A(r + 0, 3 * (iv - 1) + 1) = va[iv](0, 1);
-    A(r + 1, 3 * (iv - 1) + 0) = va[iv](1, 0);
-    A(r + 1, 3 * (iv - 1) + 1) = va[iv](1, 1);
-    A(r + 2, 3 * (iv - 1) + 0) = va[iv](2, 0);
-    A(r + 2, 3 * (iv - 1) + 1) = va[iv](2, 1);
+    blA(r + 0, 3 * (iv - 1) + 0) = va[iv](0, 0);
+    blA(r + 0, 3 * (iv - 1) + 1) = va[iv](0, 1);
+    blA(r + 1, 3 * (iv - 1) + 0) = va[iv](1, 0);
+    blA(r + 1, 3 * (iv - 1) + 1) = va[iv](1, 1);
+    blA(r + 2, 3 * (iv - 1) + 0) = va[iv](2, 0);
+    blA(r + 2, 3 * (iv - 1) + 1) = va[iv](2, 1);
 
     if (iv > 1) {
-      A(r + 0, 3 * (iv - 2) + 0) = vb[iv](0, 0);
-      A(r + 0, 3 * (iv - 2) + 1) = vb[iv](0, 1);
-      A(r + 1, 3 * (iv - 2) + 0) = vb[iv](1, 0);
-      A(r + 1, 3 * (iv - 2) + 1) = vb[iv](1, 1);
-      A(r + 2, 3 * (iv - 2) + 0) = vb[iv](2, 0);
-      A(r + 2, 3 * (iv - 2) + 1) = vb[iv](2, 1);
+      blA(r + 0, 3 * (iv - 2) + 0) = vb[iv](0, 0);
+      blA(r + 0, 3 * (iv - 2) + 1) = vb[iv](0, 1);
+      blA(r + 1, 3 * (iv - 2) + 0) = vb[iv](1, 0);
+      blA(r + 1, 3 * (iv - 2) + 1) = vb[iv](1, 1);
+      blA(r + 2, 3 * (iv - 2) + 0) = vb[iv](2, 0);
+      blA(r + 2, 3 * (iv - 2) + 1) = vb[iv](2, 1);
     }
 
     for (int l = 1; l <= nsys; ++l) {
       int c = 3 * (l - 1) + 2;
-      A(r + 0, c) = vm[0][l][iv];
-      A(r + 1, c) = vm[1][l][iv];
-      A(r + 2, c) = vm[2][l][iv];
+      blA(r + 0, c) = vm[0][l][iv];
+      blA(r + 1, c) = vm[1][l][iv];
+      blA(r + 2, c) = vm[2][l][iv];
     }
 
     if (iv == isys.top[iblte.top]) {
       int ivz = isys.bottom[iblte.bottom + 1];
       int rr = 3 * (ivz - 1);
-      A(rr + 0, 3 * (iv - 1) + 0) = vz[0][0];
-      A(rr + 0, 3 * (iv - 1) + 1) = vz[0][1];
-      A(rr + 1, 3 * (iv - 1) + 0) = vz[1][0];
-      A(rr + 1, 3 * (iv - 1) + 1) = vz[1][1];
-      A(rr + 2, 3 * (iv - 1) + 0) = vz[2][0];
-      A(rr + 2, 3 * (iv - 1) + 1) = vz[2][1];
+      blA(rr + 0, 3 * (iv - 1) + 0) = vz[0][0];
+      blA(rr + 0, 3 * (iv - 1) + 1) = vz[0][1];
+      blA(rr + 1, 3 * (iv - 1) + 0) = vz[1][0];
+      blA(rr + 1, 3 * (iv - 1) + 1) = vz[1][1];
+      blA(rr + 2, 3 * (iv - 1) + 0) = vz[2][0];
+      blA(rr + 2, 3 * (iv - 1) + 1) = vz[2][1];
     }
   }
 
-  FullPivLU<MatrixXd> lu(A);
-  VectorXd sol0 = lu.solve(B.col(0));
-  VectorXd sol1 = lu.solve(B.col(1));
-
+  blLU.compute(blA);
+  MatrixXd sol = blLU.solve(blRHS);
   for (int iv = 1; iv <= nsys; ++iv) {
     int idx = 3 * (iv - 1);
-    vdel[iv](0, 0) = sol0[idx];
-    vdel[iv](1, 0) = sol0[idx + 1];
-    vdel[iv](2, 0) = sol0[idx + 2];
-    vdel[iv](0, 1) = sol1[idx];
-    vdel[iv](1, 1) = sol1[idx + 1];
-    vdel[iv](2, 1) = sol1[idx + 2];
+    vdel[iv](0, 0) = sol(idx, 0);
+    vdel[iv](1, 0) = sol(idx + 1, 0);
+    vdel[iv](2, 0) = sol(idx + 2, 0);
+    vdel[iv](0, 1) = sol(idx, 1);
+    vdel[iv](1, 1) = sol(idx + 1, 1);
+    vdel[iv](2, 1) = sol(idx + 2, 1);
   }
 
   return true;
