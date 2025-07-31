@@ -24,7 +24,10 @@
 #include <numbers>
 #include "Eigen/Core"
 #include "Eigen/Dense"
+#include "Eigen/Sparse"
+#include "Eigen/SparseLU"
 #include "Eigen/StdVector"
+#include <chrono>
 #include "XFoil.h"
 using namespace Eigen;
 
@@ -1304,61 +1307,86 @@ bool XFoil::blprv(double xsi, double ami, double cti, double thi, double dsi,
  *       s        3x1  re influence vectors
  * ------------------------------------------------------------------ */
 bool XFoil::blsolve() {
-  // Construct and solve the boundary layer linear system using Eigen
+  // Assemble sparse boundary layer system and solve with Eigen
   int sysDim = nsys * 3;
-  if (blA.rows() != sysDim) {
-    blA.resize(sysDim, sysDim);
-    blRHS.resize(sysDim, 2);
-  }
-  blA.setZero();
-  blRHS.setZero();
+
+#ifdef BL_TIMING
+  auto t0 = std::chrono::steady_clock::now();
+#endif
+
+  std::vector<Triplet<double>> triplets;
+  triplets.reserve(sysDim * 6);  // approximate sparsity
+  MatrixXd rhs(sysDim, 2);
+  rhs.setZero();
 
   for (int iv = 1; iv <= nsys; ++iv) {
     int r = 3 * (iv - 1);
 
+    // right hand side
     for (int c = 0; c < 2; ++c) {
-      blRHS(r + 0, c) = vdel[iv](0, c);
-      blRHS(r + 1, c) = vdel[iv](1, c);
-      blRHS(r + 2, c) = vdel[iv](2, c);
+      rhs(r + 0, c) = vdel[iv](0, c);
+      rhs(r + 1, c) = vdel[iv](1, c);
+      rhs(r + 2, c) = vdel[iv](2, c);
     }
 
-    blA(r + 0, 3 * (iv - 1) + 0) = va[iv](0, 0);
-    blA(r + 0, 3 * (iv - 1) + 1) = va[iv](0, 1);
-    blA(r + 1, 3 * (iv - 1) + 0) = va[iv](1, 0);
-    blA(r + 1, 3 * (iv - 1) + 1) = va[iv](1, 1);
-    blA(r + 2, 3 * (iv - 1) + 0) = va[iv](2, 0);
-    blA(r + 2, 3 * (iv - 1) + 1) = va[iv](2, 1);
+    // current diagonal block
+    triplets.emplace_back(r + 0, 3 * (iv - 1) + 0, va[iv](0, 0));
+    triplets.emplace_back(r + 0, 3 * (iv - 1) + 1, va[iv](0, 1));
+    triplets.emplace_back(r + 1, 3 * (iv - 1) + 0, va[iv](1, 0));
+    triplets.emplace_back(r + 1, 3 * (iv - 1) + 1, va[iv](1, 1));
+    triplets.emplace_back(r + 2, 3 * (iv - 1) + 0, va[iv](2, 0));
+    triplets.emplace_back(r + 2, 3 * (iv - 1) + 1, va[iv](2, 1));
 
     if (iv > 1) {
-      blA(r + 0, 3 * (iv - 2) + 0) = vb[iv](0, 0);
-      blA(r + 0, 3 * (iv - 2) + 1) = vb[iv](0, 1);
-      blA(r + 1, 3 * (iv - 2) + 0) = vb[iv](1, 0);
-      blA(r + 1, 3 * (iv - 2) + 1) = vb[iv](1, 1);
-      blA(r + 2, 3 * (iv - 2) + 0) = vb[iv](2, 0);
-      blA(r + 2, 3 * (iv - 2) + 1) = vb[iv](2, 1);
+      triplets.emplace_back(r + 0, 3 * (iv - 2) + 0, vb[iv](0, 0));
+      triplets.emplace_back(r + 0, 3 * (iv - 2) + 1, vb[iv](0, 1));
+      triplets.emplace_back(r + 1, 3 * (iv - 2) + 0, vb[iv](1, 0));
+      triplets.emplace_back(r + 1, 3 * (iv - 2) + 1, vb[iv](1, 1));
+      triplets.emplace_back(r + 2, 3 * (iv - 2) + 0, vb[iv](2, 0));
+      triplets.emplace_back(r + 2, 3 * (iv - 2) + 1, vb[iv](2, 1));
     }
 
     for (int l = 1; l <= nsys; ++l) {
       int c = 3 * (l - 1) + 2;
-      blA(r + 0, c) = vm[0][l][iv];
-      blA(r + 1, c) = vm[1][l][iv];
-      blA(r + 2, c) = vm[2][l][iv];
+      triplets.emplace_back(r + 0, c, vm[0][l][iv]);
+      triplets.emplace_back(r + 1, c, vm[1][l][iv]);
+      triplets.emplace_back(r + 2, c, vm[2][l][iv]);
     }
 
     if (iv == isys.top[iblte.top]) {
       int ivz = isys.bottom[iblte.bottom + 1];
       int rr = 3 * (ivz - 1);
-      blA(rr + 0, 3 * (iv - 1) + 0) = vz[0][0];
-      blA(rr + 0, 3 * (iv - 1) + 1) = vz[0][1];
-      blA(rr + 1, 3 * (iv - 1) + 0) = vz[1][0];
-      blA(rr + 1, 3 * (iv - 1) + 1) = vz[1][1];
-      blA(rr + 2, 3 * (iv - 1) + 0) = vz[2][0];
-      blA(rr + 2, 3 * (iv - 1) + 1) = vz[2][1];
+      triplets.emplace_back(rr + 0, 3 * (iv - 1) + 0, vz[0][0]);
+      triplets.emplace_back(rr + 0, 3 * (iv - 1) + 1, vz[0][1]);
+      triplets.emplace_back(rr + 1, 3 * (iv - 1) + 0, vz[1][0]);
+      triplets.emplace_back(rr + 1, 3 * (iv - 1) + 1, vz[1][1]);
+      triplets.emplace_back(rr + 2, 3 * (iv - 1) + 0, vz[2][0]);
+      triplets.emplace_back(rr + 2, 3 * (iv - 1) + 1, vz[2][1]);
     }
   }
 
-  blLU.compute(blA);
-  MatrixXd sol = blLU.solve(blRHS);
+  SparseMatrix<double> A(sysDim, sysDim);
+  A.setFromTriplets(triplets.begin(), triplets.end());
+
+#ifdef BL_TIMING
+  auto t1 = std::chrono::steady_clock::now();
+#endif
+
+  SparseLU<SparseMatrix<double>> solver;
+  solver.compute(A);
+  MatrixXd sol = solver.solve(rhs);
+
+#ifdef BL_TIMING
+  auto t2 = std::chrono::steady_clock::now();
+  std::cerr << "blsolve assemble: "
+            << std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0)
+                   .count()
+            << " us, solve: "
+            << std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1)
+                   .count()
+            << " us" << std::endl;
+#endif
+
   for (int iv = 1; iv <= nsys; ++iv) {
     int idx = 3 * (iv - 1);
     vdel[iv](0, 0) = sol(idx, 0);
