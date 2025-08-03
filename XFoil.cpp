@@ -2522,6 +2522,33 @@ bool XFoil::mrchdu() {
   return true;
 }
 
+double XFoil::calcHtarg(int ibl, int is, bool wake) {
+  if (ibl < itran.get(is) + INDEX_START_WITH) {
+    return blData1.hkz.scalar +
+           0.03 * (blData2.param.xz - blData1.param.xz) / blData1.param.tz;
+  } else if (ibl == itran.get(is) + INDEX_START_WITH) {
+    return blData1.hkz.scalar +
+           (0.03 * (xt - blData1.param.xz) -
+            0.15 * (blData2.param.xz - xt)) /
+               blData1.param.tz;
+  } else if (wake) {
+    const double cst =
+        0.03 * (blData2.param.xz - blData1.param.xz) / blData1.param.tz;
+    auto euler = [](double hk2, double hk1, double cst) {
+      return hk2 - (hk2 + cst * pow(hk2 - 1, 3) - hk1) /
+                       (1 + 3 * cst * pow(hk2 - 1, 2));
+    };
+    blData2.hkz.scalar = blData1.hkz.scalar;
+    for (int i = 0; i < 3; i++) {
+      blData2.hkz.scalar = euler(blData2.hkz.scalar, blData1.hkz.scalar, cst);
+    }
+    return blData2.hkz.scalar;
+  } else {
+    return blData1.hkz.scalar -
+           0.15 * (blData2.param.xz - blData1.param.xz) / blData1.param.tz;
+  }
+}
+
 /** ----------------------------------------------------
  *      marches the bls and wake in direct mode using
  *      the uedg array. if separation is encountered,
@@ -2537,7 +2564,6 @@ bool XFoil::mrchue() {
   double xsi, uei, ucon, tsq, thi, ami, cti, dsi;
   double dswaki;
   double htest, hktest;
-  double cst;
   double cte, dte, tte, dmax, hmax, htarg = 0.0;
   //double cte = dte = tte = dmax = hmax = htarg = 0.0;
 
@@ -2588,6 +2614,7 @@ bool XFoil::mrchue() {
         dswaki = 0.0;
 
       direct = true;
+      bool converged = false;
 
       //------ newton iteration loop for current station
       for (int itbl = 1; itbl <= 25; itbl++) {  // 100
@@ -2664,35 +2691,7 @@ bool XFoil::mrchue() {
           } else {
             //---------- set prescribed hk for inverse calculation at the
             // current station
-            if (ibl < itran.get(is) + INDEX_START_WITH)
-              //----------- laminar case: relatively slow increase in hk
-              // downstream
-              htarg = blData1.hkz.scalar + 0.03 * (blData2.param.xz - blData1.param.xz) / blData1.param.tz;
-            else if (ibl == itran.get(is) + INDEX_START_WITH) {
-              //----------- transition interval: weighted laminar and turbulent
-              // case
-              htarg = blData1.hkz.scalar + (0.03 * (xt - blData1.param.xz) - 0.15 * (blData2.param.xz - xt)) / blData1.param.tz;
-            } else if (wake) {
-              //----------- turbulent wake case:
-              //--          asymptotic wake behavior with approximate backward
-              // euler
-              
-              cst = 0.03 * (blData2.param.xz - blData1.param.xz) / blData1.param.tz;
-              auto euler = [] (double hk2, double hk1, double cst) -> double {
-                return hk2 - (hk2 + cst * pow(hk2 - 1 , 3) - hk1) / (1 + 3 * cst * pow(hk2 - 1, 2));
-              };
-              
-              blData2.hkz.scalar = blData1.hkz.scalar;
-              
-              for (int i=0; i<3; i++) {
-                blData2.hkz.scalar = euler(blData2.hkz.scalar, blData1.hkz.scalar, cst);
-              }
-              htarg = blData2.hkz.scalar;
-            } else
-              htarg =
-                  blData1.hkz.scalar - 0.15 * (blData2.param.xz - blData1.param.xz) /
-                            blData1.param.tz;  //----------- turbulent case: relatively
-                                     // fast decrease in hk downstream
+            htarg = calcHtarg(ibl, is, wake);
 
             //---------- limit specified hk to something reasonable
             if (wake)
@@ -2743,65 +2742,71 @@ bool XFoil::mrchue() {
         dsw = dsi - dswaki;
         dslim(dsw, thi, msq, hklim);
         dsi = dsw + dswaki;
-        if (dmax <= 0.00001) goto stop110;
+        if (dmax <= 0.00001) {
+          converged = true;
+          break;
+        }
 
       }  // end itbl loop
 
-      ss.str("");
-      ss << "     mrchue: convergence failed at " << ibl << ",  side " << is
-         << ", res =" << std::fixed << std::setprecision(3) << dmax << "\n";
-      writeString(ss.str());
+      if (!converged) {
+        ss.str("");
+        ss << "     mrchue: convergence failed at " << ibl << ",  side " << is
+           << ", res =" << std::fixed << std::setprecision(3) << dmax << "\n";
+        writeString(ss.str());
 
-      //------ the current unconverged solution might still be reasonable...
-      if (dmax > 0.1) {
-        //------- the current solution is garbage --> extrapolate values instead
-        if (ibl > 3) {
-          if (ibl <= iblte.get(is)) {
-            thi = thet.get(is)[ibm] * sqrt(xssi.get(is)[ibl] / xssi.get(is)[ibm]);
-            dsi = dstr.get(is)[ibm] * sqrt(xssi.get(is)[ibl] / xssi.get(is)[ibm]);
-          } else {
-            if (ibl == iblte.get(is) + 1) {
-              cti = cte;
-              thi = tte;
-              dsi = dte;
+        //------ the current unconverged solution might still be reasonable...
+        if (dmax > 0.1) {
+          //------- the current solution is garbage --> extrapolate values instead
+          if (ibl > 3) {
+            if (ibl <= iblte.get(is)) {
+              thi = thet.get(is)[ibm] * sqrt(xssi.get(is)[ibl] / xssi.get(is)[ibm]);
+              dsi = dstr.get(is)[ibm] * sqrt(xssi.get(is)[ibl] / xssi.get(is)[ibm]);
             } else {
-              thi = thet.get(is)[ibm];
-              ratlen = (xssi.get(is)[ibl] - xssi.get(is)[ibm]) / (10.0 * dstr.get(is)[ibm]);
-              dsi = (dstr.get(is)[ibm] + thi * ratlen) / (1.0 + ratlen);
+              if (ibl == iblte.get(is) + 1) {
+                cti = cte;
+                thi = tte;
+                dsi = dte;
+              } else {
+                thi = thet.get(is)[ibm];
+                ratlen =
+                    (xssi.get(is)[ibl] - xssi.get(is)[ibm]) /
+                    (10.0 * dstr.get(is)[ibm]);
+                dsi = (dstr.get(is)[ibm] + thi * ratlen) / (1.0 + ratlen);
+              }
             }
+            if (ibl == itran.get(is) + INDEX_START_WITH) cti = 0.05;
+            if (ibl > itran.get(is) + INDEX_START_WITH)
+              cti = ctau.get(is)[ibm];
+
+            uei = uedg.get(is)[ibl];
+
+            if (ibl < nbl.get(is))
+              uei = 0.5 * (uedg.get(is)[ibl - 1] + uedg.get(is)[ibl + 1]);
           }
-          if (ibl == itran.get(is) + INDEX_START_WITH) cti = 0.05;
-          if (ibl > itran.get(is) + INDEX_START_WITH) cti = ctau.get(is)[ibm];
-
-          uei = uedg.get(is)[ibl];
-
-          if (ibl < nbl.get(is))
-            uei = 0.5 * (uedg.get(is)[ibl - 1] + uedg.get(is)[ibl + 1]);
         }
+        // 109
+        blprv(xsi, ami, cti, thi, dsi, dswaki, uei);
+        blkin();
+        //------- check for transition and set appropriate flags and things
+        if ((!simi) && (!turb)) {
+          trchek();
+          ami = blData2.param.amplz;
+          if (tran) itran.get(is) = ibl - INDEX_START_WITH;
+          if (!tran) itran.get(is) = ibl + 2 - INDEX_START_WITH;
+        }
+        //------- set all other extrapolated values for current station
+        if (ibl < itran.get(is) + INDEX_START_WITH)
+          blvar(blData2, FlowRegimeEnum::Laminar);
+        if (ibl >= itran.get(is) + INDEX_START_WITH)
+          blvar(blData2, FlowRegimeEnum::Turbulent);
+        if (wake) blvar(blData2, FlowRegimeEnum::Wake);
+        if (ibl < itran.get(is) + INDEX_START_WITH)
+          blmid(FlowRegimeEnum::Laminar);
+        if (ibl >= itran.get(is) + INDEX_START_WITH)
+          blmid(FlowRegimeEnum::Turbulent);
+        if (wake) blmid(FlowRegimeEnum::Wake);
       }
-      // 109
-      blprv(xsi, ami, cti, thi, dsi, dswaki, uei);
-      blkin();
-      //------- check for transition and set appropriate flags and things
-      if ((!simi) && (!turb)) {
-        trchek();
-        ami = blData2.param.amplz;
-        if (tran) itran.get(is) = ibl - INDEX_START_WITH;
-        if (!tran) itran.get(is) = ibl + 2 - INDEX_START_WITH;
-      }
-      //------- set all other extrapolated values for current station
-      if (ibl < itran.get(is) + INDEX_START_WITH)
-        blvar(blData2, FlowRegimeEnum::Laminar);
-      if (ibl >= itran.get(is) + INDEX_START_WITH)
-        blvar(blData2, FlowRegimeEnum::Turbulent);
-      if (wake) blvar(blData2, FlowRegimeEnum::Wake);
-      if (ibl < itran.get(is) + INDEX_START_WITH)
-        blmid(FlowRegimeEnum::Laminar);
-      if (ibl >= itran.get(is) + INDEX_START_WITH)
-        blmid(FlowRegimeEnum::Turbulent);
-      if (wake) blmid(FlowRegimeEnum::Wake);
-      //------ pick up here after the newton iterations
-    stop110:
       //------ store primary variables
       if (ibl < itran.get(is) + INDEX_START_WITH) ctau.get(is)[ibl] = ami;
       if (ibl >= itran.get(is) + INDEX_START_WITH) ctau.get(is)[ibl] = cti;

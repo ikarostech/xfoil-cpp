@@ -257,6 +257,7 @@ class XFoil {
   
   bool mrchdu();
   bool mrchue();
+  double calcHtarg(int ibl, int is, bool wake);
   Matrix2Xd ncalc(Matrix2Xd point, VectorXd spline_length, int n);
 
   // TODO modle/psi.hppへ移植
