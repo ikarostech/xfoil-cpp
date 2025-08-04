@@ -2298,6 +2298,7 @@ bool XFoil::mrchdu() {
 
       //------ newton iteration loop for current station
 
+      bool converged = false;
       for (itbl = 1; itbl <= 25; itbl++) {  // 100
 
         //-------- assemble 10x3 linearized system for dctau, dth, dds, due, dxi
@@ -2426,70 +2427,75 @@ bool XFoil::mrchdu() {
         dslim(dsw, thi, msq, hklim);
         dsi = dsw + dswaki;
 
-        if (dmax <= deps) goto stop110;
-      }
-
-      ss << "     mrchdu: convergence failed at " << ibl << " ,  side " << is
-         << ", res=" << std::setw(4) << std::fixed << std::setprecision(3)
-         << dmax << "\n";
-      writeString(ss.str());
-      ss.str("");
-
-      if (dmax <= 0.1) goto stop109;
-      //------ the current unconverged solution might still be reasonable...
-
-      if (dmax > 0.1) {
-        //------- the current solution is garbage --> extrapolate values instead
-        if (ibl > 3) {
-          if (ibl <= iblte.get(is)) {
-            thi = thet.get(is)[ibm] * sqrt(xssi.get(is)[ibl] / xssi.get(is)[ibm]);
-            dsi = dstr.get(is)[ibm] * sqrt(xssi.get(is)[ibl] / xssi.get(is)[ibm]);
-            uei = uedg.get(is)[ibm];
-          } else {
-            if (ibl == iblte.get(is) + 1) {
-              cti = cte;
-              thi = tte;
-              dsi = dte;
-              uei = uedg.get(is)[ibm];
-            } else {
-              thi = thet.get(is)[ibm];
-              ratlen = (xssi.get(is)[ibl] - xssi.get(is)[ibm]) / (10.0 * dstr.get(is)[ibm]);
-              dsi = (dstr.get(is)[ibm] + thi * ratlen) / (1.0 + ratlen);
-              uei = uedg.get(is)[ibm];
-            }
-          }
-          if (ibl == itran.get(is) + INDEX_START_WITH) cti = 0.05;
-          if (ibl > itran.get(is) + INDEX_START_WITH) cti = ctau.get(is)[ibm];
+        if (dmax <= deps) {
+          converged = true;
+          break;
         }
       }
 
-    stop109:
-      blprv(xsi, ami, cti, thi, dsi, dswaki, uei);
-      blkin();
+      if (!converged) {
+        ss << "     mrchdu: convergence failed at " << ibl << " ,  side " << is
+           << ", res=" << std::setw(4) << std::fixed << std::setprecision(3)
+           << dmax << "\n";
+        writeString(ss.str());
+        ss.str("");
 
-      //------- check for transition and set appropriate flags and things
-      if ((!simi) && (!turb)) {
-        trchek();
-        ami = blData2.param.amplz;
-        if (tran) itran.get(is) = ibl - INDEX_START_WITH;
-        if (!tran) itran.get(is) = ibl + 2 - INDEX_START_WITH;
+        //------ the current unconverged solution might still be reasonable...
+        if (dmax > 0.1) {
+          //------- the current solution is garbage --> extrapolate values instead
+          if (ibl > 3) {
+            if (ibl <= iblte.get(is)) {
+              thi = thet.get(is)[ibm] *
+                    sqrt(xssi.get(is)[ibl] / xssi.get(is)[ibm]);
+              dsi = dstr.get(is)[ibm] *
+                    sqrt(xssi.get(is)[ibl] / xssi.get(is)[ibm]);
+              uei = uedg.get(is)[ibm];
+            } else {
+              if (ibl == iblte.get(is) + 1) {
+                cti = cte;
+                thi = tte;
+                dsi = dte;
+                uei = uedg.get(is)[ibm];
+              } else {
+                thi = thet.get(is)[ibm];
+                ratlen =
+                    (xssi.get(is)[ibl] - xssi.get(is)[ibm]) /
+                    (10.0 * dstr.get(is)[ibm]);
+                dsi = (dstr.get(is)[ibm] + thi * ratlen) / (1.0 + ratlen);
+                uei = uedg.get(is)[ibm];
+              }
+            }
+            if (ibl == itran.get(is) + INDEX_START_WITH) cti = 0.05;
+            if (ibl > itran.get(is) + INDEX_START_WITH) cti = ctau.get(is)[ibm];
+          }
+        }
+
+        blprv(xsi, ami, cti, thi, dsi, dswaki, uei);
+        blkin();
+
+        //------- check for transition and set appropriate flags and things
+        if ((!simi) && (!turb)) {
+          trchek();
+          ami = blData2.param.amplz;
+          if (tran) itran.get(is) = ibl - INDEX_START_WITH;
+          if (!tran) itran.get(is) = ibl + 2 - INDEX_START_WITH;
+        }
+
+        //------- set all other extrapolated values for current station
+        if (ibl < itran.get(is) + INDEX_START_WITH)
+          blvar(blData2, FlowRegimeEnum::Laminar);
+        if (ibl >= itran.get(is) + INDEX_START_WITH)
+          blvar(blData2, FlowRegimeEnum::Turbulent);
+        if (wake) blvar(blData2, FlowRegimeEnum::Wake);
+
+        if (ibl < itran.get(is) + INDEX_START_WITH)
+          blmid(FlowRegimeEnum::Laminar);
+        if (ibl >= itran.get(is) + INDEX_START_WITH)
+          blmid(FlowRegimeEnum::Turbulent);
+        if (wake) blmid(FlowRegimeEnum::Wake);
       }
 
-      //------- set all other extrapolated values for current station
-      if (ibl < itran.get(is) + INDEX_START_WITH)
-        blvar(blData2, FlowRegimeEnum::Laminar);
-      if (ibl >= itran.get(is) + INDEX_START_WITH)
-        blvar(blData2, FlowRegimeEnum::Turbulent);
-      if (wake) blvar(blData2, FlowRegimeEnum::Wake);
-
-      if (ibl < itran.get(is) + INDEX_START_WITH)
-        blmid(FlowRegimeEnum::Laminar);
-      if (ibl >= itran.get(is) + INDEX_START_WITH)
-        blmid(FlowRegimeEnum::Turbulent);
-      if (wake) blmid(FlowRegimeEnum::Wake);
-
       //------ pick up here after the newton iterations
-    stop110:
       sens = sennew;
 
       //------ store primary variables
