@@ -313,35 +313,17 @@ void XFoil::computeCoefficients(blData& ref, FlowRegimeEnum flowRegimeType) {
 
   double hkb = ref.hkz.scalar - 1.0;
   double usb = 1.0 - ref.usz.scalar;
-  ref.cqz.scalar =
-      sqrt(ctcon * ref.hsz.scalar * hkb * hkc * hkc /
-           (usb * ref.param.hz * ref.hkz.scalar * ref.hkz.scalar));
-  double cq2_hs2 =
-      ctcon * hkb * hkc * hkc /
-          (usb * ref.param.hz * ref.hkz.scalar * ref.hkz.scalar) * 0.5 /
-      ref.cqz.scalar;
-  double cq2_us2 =
-      ctcon * ref.hsz.scalar * hkb * hkc * hkc /
-          (usb * ref.param.hz * ref.hkz.scalar * ref.hkz.scalar) / usb * 0.5 /
-      ref.cqz.scalar;
-  double cq2_hk2 =
-      ctcon * ref.hsz.scalar * hkc * hkc /
-          (usb * ref.param.hz * ref.hkz.scalar * ref.hkz.scalar) * 0.5 /
-          ref.cqz.scalar -
-      ctcon * ref.hsz.scalar * hkb * hkc * hkc /
-          (usb * ref.param.hz * ref.hkz.scalar * ref.hkz.scalar * ref.hkz.scalar) *
-          2.0 * 0.5 / ref.cqz.scalar +
-      ctcon * ref.hsz.scalar * hkb * hkc /
-          (usb * ref.param.hz * ref.hkz.scalar * ref.hkz.scalar) * 2.0 * 0.5 /
-          ref.cqz.scalar * hkc_hk2;
-  double cq2_rt2 =
-      ctcon * ref.hsz.scalar * hkb * hkc /
-          (usb * ref.param.hz * ref.hkz.scalar * ref.hkz.scalar) * 2.0 * 0.5 /
-          ref.cqz.scalar * hkc_rt2;
-  double cq2_h2 =
-      -ctcon * ref.hsz.scalar * hkb * hkc * hkc /
-          (usb * ref.param.hz * ref.hkz.scalar * ref.hkz.scalar) /
-          ref.param.hz * 0.5 / ref.cqz.scalar;
+  ref.cqz.scalar = hkc / ref.hkz.scalar * 
+      sqrt(ctcon * ref.hsz.scalar * hkb / (usb * ref.param.hz));
+  double cq2_hs2 = ref.cqz.scalar / ref.hsz.scalar / 2;
+  double cq2_us2 = ref.cqz.scalar * (0.5 / usb);
+  double cq2_hk2 = ref.cqz.scalar * (
+      0.5 / hkb
+      - 1.0 / ref.hkz.scalar
+      + hkc_hk2 / hkc
+  );
+  double cq2_rt2 = ref.cqz.scalar * (hkc_rt2 / hkc);
+  double cq2_h2 = ref.cqz.scalar * (-0.5 / ref.param.hz);
 
   ref.cqz.vector = cq2_hs2 * ref.hsz.vector + cq2_us2 * ref.usz.vector +
                    cq2_hk2 * ref.hkz.vector + cq2_rt2 * ref.rtz.vector;
