@@ -17,6 +17,7 @@ add_executable(testExe
     ./model/boundary_layer.cpp
     ./model/math_util.cpp
     ./model/spline.cpp
+    ./model/coefficient/dissipation.cpp
     ./XFoil.cpp
     ./main.cpp
 )
