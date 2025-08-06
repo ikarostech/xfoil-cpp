@@ -26,6 +26,7 @@
 #include "Eigen/Dense"
 #include "Eigen/StdVector"
 #include "XFoil.h"
+#include "model/coefficient/dissipation.hpp"
 using namespace Eigen;
 
 // determinant
@@ -382,7 +383,8 @@ void XFoil::computeDissipationAndThickness(blData& ref,
                                            FlowRegimeEnum flowRegimeType) {
   double di2l;
   if (flowRegimeType == FlowRegimeEnum::Laminar) {
-    auto dissipation_result = dil(ref.hkz.scalar, ref.rtz.scalar);
+    auto dissipation_result = dissipation::getDissipation(
+        ref.hkz.scalar, ref.rtz.scalar, flowRegimeType);
     ref.diz.scalar = dissipation_result.di;
     ref.diz.vector =
         dissipation_result.di_hk * ref.hkz.vector +
@@ -464,7 +466,8 @@ void XFoil::computeDissipationAndThickness(blData& ref,
   }
 
   if (flowRegimeType == FlowRegimeEnum::Turbulent) {
-    auto dissipation_result = dil(ref.hkz.scalar, ref.rtz.scalar);
+    auto dissipation_result = dissipation::getDissipation(
+        ref.hkz.scalar, ref.rtz.scalar, flowRegimeType);
     if (dissipation_result.di > ref.diz.scalar) {
       ref.diz.scalar = dissipation_result.di;
       ref.diz.vector = dissipation_result.di_hk * ref.hkz.vector +
@@ -473,7 +476,8 @@ void XFoil::computeDissipationAndThickness(blData& ref,
   }
 
   if (flowRegimeType == FlowRegimeEnum::Wake) {
-    auto dissipation_result = dilw(ref.hkz.scalar, ref.rtz.scalar);
+    auto dissipation_result = dissipation::getDissipation(
+        ref.hkz.scalar, ref.rtz.scalar, flowRegimeType);
     di2l = dissipation_result.di;
     if (di2l > ref.diz.scalar) {
       ref.diz.scalar = dissipation_result.di;
@@ -1827,37 +1831,6 @@ XFoil::EnvEnResult XFoil::dampl(double hk, double th, double rt) {
 }
 
 /** Laminar dissipation function  ( 2 cd/h* )     (from Falkner-Skan)*/
-XFoil::DissipationResult XFoil::dil(double hk, double rt) {
-  DissipationResult result;
-  if (hk < 4.0) {
-    result.di = (0.00205 * pow((4.0 - hk), 5.5) + 0.207) / rt;
-    result.di_hk = (-.00205 * 5.5 * pow((4.0 - hk), 4.5)) / rt;
-  } else {
-    double hkb = hk - 4.0;
-    double den = 1.0 + 0.02 * hkb * hkb;
-    result.di = (-.0016 * hkb * hkb / den + 0.207) / rt;
-    result.di_hk =
-        (-.0016 * 2.0 * hkb * (1.0 / den - 0.02 * hkb * hkb / den / den)) / rt;
-  }
-  result.di_rt = -(result.di) / rt;
-
-  return result;
-}
-
-XFoil::DissipationResult XFoil::dilw(double hk, double rt) {
-  DissipationResult result;
-  boundary_layer::ThicknessShapeParameterResult hsl_result = boundary_layer::hsl(hk);
-  //---- laminar wake dissipation function  ( 2 cd/h* )
-  double rcd = 1.10 * (1.0 - 1.0 / hk) * (1.0 - 1.0 / hk) / hk;
-  double rcd_hk = -1.10 * (1.0 - 1.0 / hk) * 2.0 / hk / hk / hk - rcd / hk;
-
-  result.di = 2.0 * rcd / (hsl_result.hs * rt);
-  result.di_hk = 2.0 * rcd_hk / (hsl_result.hs * rt) - ((result.di) / hsl_result.hs) * hsl_result.hs_hk;
-  result.di_rt = -(result.di) / rt - ((result.di) / hsl_result.hs) * hsl_result.hs_rt;
-
-  return result;
-}
-
 bool XFoil::dslim(double &dstr, double thet, double msq, double hklim) {
   const double h = (dstr) / thet;
 
