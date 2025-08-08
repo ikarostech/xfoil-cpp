@@ -21,6 +21,7 @@
 *****************************************************************************/
 
 #include <cstring>
+#include <cmath>
 #include <numbers>
 #include "Eigen/Core"
 #include "Eigen/Dense"
@@ -1290,134 +1291,99 @@ bool XFoil::blprv(double xsi, double ami, double cti, double thi, double dsi,
  *       s        3x1  re influence vectors
  * ------------------------------------------------------------------ */
 bool XFoil::blsolve() {
-
-  auto eliminateVaBlock = [&](int iv, int ivp) {
-    double pivot = 1.0 / va[iv](0, 0);
-    va[iv](0, 1) *= pivot;
-    for (int l = iv; l <= nsys; l++) vm[0][l][iv] *= pivot;
-    vdel[iv](0, 0) *= pivot;
-    vdel[iv](0, 1) *= pivot;
-
-    for (int k = 1; k < 3; k++) {
-      double vtmp = va[iv](k, 0);
-      va[iv](k, 1) -= vtmp * va[iv](0, 1);
-      for (int l = iv; l <= nsys; l++) vm[k][l][iv] -= vtmp * vm[0][l][iv];
-      vdel[iv](k, 0) -= vtmp * vdel[iv](0, 0);
-      vdel[iv](k, 1) -= vtmp * vdel[iv](0, 1);
-    }
-
-    pivot = 1.0 / va[iv](1, 1);
-    for (int l = iv; l <= nsys; l++) vm[1][l][iv] *= pivot;
-    vdel[iv](1, 0) *= pivot;
-    vdel[iv](1, 1) *= pivot;
-
-    double vtmp = va[iv](2, 1);
-    for (int l = iv; l <= nsys; l++) vm[2][l][iv] -= vtmp * vm[1][l][iv];
-    vdel[iv](2, 0) -= vtmp * vdel[iv](1, 0);
-    vdel[iv](2, 1) -= vtmp * vdel[iv](1, 1);
-
-    pivot = 1.0 / vm[2][iv][iv];
-    for (int l = ivp; l <= nsys; l++) vm[2][l][iv] *= pivot;
-    vdel[iv](2, 0) *= pivot;
-    vdel[iv](2, 1) *= pivot;
-
-    double vtmp1 = vm[0][iv][iv];
-    double vtmp2 = vm[1][iv][iv];
-    for (int l = ivp; l <= nsys; l++) {
-      vm[0][l][iv] -= vtmp1 * vm[2][l][iv];
-      vm[1][l][iv] -= vtmp2 * vm[2][l][iv];
-    }
-    vdel[iv](0, 0) -= vtmp1 * vdel[iv](2, 0);
-    vdel[iv](1, 0) -= vtmp2 * vdel[iv](2, 0);
-    vdel[iv](0, 1) -= vtmp1 * vdel[iv](2, 1);
-    vdel[iv](1, 1) -= vtmp2 * vdel[iv](2, 1);
-
-    vtmp = va[iv](0, 1);
-    for (int l = ivp; l <= nsys; l++) vm[0][l][iv] -= vtmp * vm[1][l][iv];
-    vdel[iv](0, 0) -= vtmp * vdel[iv](1, 0);
-    vdel[iv](0, 1) -= vtmp * vdel[iv](1, 1);
-  };
-
-  auto eliminateVbBlock = [&](int iv, int ivp, int ivte1) {
-    for (int k = 0; k < 3; k++) {
-      double vtmp1 = vb[ivp](k, 0);
-      double vtmp2 = vb[ivp](k, 1);
-      double vtmp3 = vm[k][iv][ivp];
-      for (int l = ivp; l <= nsys; l++)
-        vm[k][l][ivp] -=
-            (vtmp1 * vm[0][l][iv] + vtmp2 * vm[1][l][iv] + vtmp3 * vm[2][l][iv]);
-      vdel[ivp](k, 0) -=
-          (vtmp1 * vdel[iv](0, 0) + vtmp2 * vdel[iv](1, 0) + vtmp3 * vdel[iv](2, 0));
-      vdel[ivp](k, 1) -=
-          (vtmp1 * vdel[iv](0, 1) + vtmp2 * vdel[iv](1, 1) + vtmp3 * vdel[iv](2, 1));
-    }
-
-    if (iv == ivte1) {
-      int ivz = isys.bottom[iblte.bottom + 1];
-      for (int k = 0; k < 3; k++) {
-        double vtmp1 = vz[k][0];
-        double vtmp2 = vz[k][1];
-        for (int l = ivp; l <= nsys; l++)
-          vm[k][l][ivz] -= (vtmp1 * vm[0][l][iv] + vtmp2 * vm[1][l][iv]);
-        vdel[ivz](k, 0) -=
-            (vtmp1 * vdel[iv](0, 0) + vtmp2 * vdel[iv](1, 0));
-        vdel[ivz](k, 1) -=
-            (vtmp1 * vdel[iv](0, 1) + vtmp2 * vdel[iv](1, 1));
-      }
-    }
-  };
-
-  auto eliminateLowerVmColumn = [&](int iv, int ivp) {
-    for (int kv = iv + 2; kv <= nsys; kv++) {
-      double vtmp1 = vm[0][iv][kv];
-      double vtmp2 = vm[1][iv][kv];
-      double vtmp3 = vm[2][iv][kv];
-      if (fabs(vtmp1) > vaccel) {
-        for (int l = ivp; l <= nsys; l++) vm[0][l][kv] -= vtmp1 * vm[2][l][iv];
-        vdel[kv](0, 0) -= vtmp1 * vdel[iv](2, 0);
-        vdel[kv](0, 1) -= vtmp1 * vdel[iv](2, 1);
-      }
-      if (fabs(vtmp2) > vaccel) {
-        for (int l = ivp; l <= nsys; l++) vm[1][l][kv] -= vtmp2 * vm[2][l][iv];
-        vdel[kv](1, 0) -= vtmp2 * vdel[iv](2, 0);
-        vdel[kv](1, 1) -= vtmp2 * vdel[iv](2, 1);
-      }
-      if (fabs(vtmp3) > vaccel) {
-        for (int l = ivp; l <= nsys; l++) vm[2][l][kv] -= vtmp3 * vm[2][l][iv];
-        vdel[kv](2, 0) -= vtmp3 * vdel[iv](2, 0);
-        vdel[kv](2, 1) -= vtmp3 * vdel[iv](2, 1);
-      }
-    }
-  };
-
-  auto backSubstitute = [&]() {
-    for (int iv = nsys; iv >= 2; iv--) {
-      double vtmp = vdel[iv](2, 0);
-      for (int kv = iv - 1; kv >= 1; kv--) {
-        vdel[kv](0, 0) -= vm[0][iv][kv] * vtmp;
-        vdel[kv](1, 0) -= vm[1][iv][kv] * vtmp;
-        vdel[kv](2, 0) -= vm[2][iv][kv] * vtmp;
-      }
-      vtmp = vdel[iv](2, 1);
-      for (int kv = iv - 1; kv >= 1; kv--) {
-        vdel[kv](0, 1) -= vm[0][iv][kv] * vtmp;
-        vdel[kv](1, 1) -= vm[1][iv][kv] * vtmp;
-        vdel[kv](2, 1) -= vm[2][iv][kv] * vtmp;
-      }
-    }
-  };
-
   int ivte1 = isys.top[iblte.top];
-  for (int iv = 1; iv <= nsys; iv++) {
+
+  for (int iv = 1; iv <= nsys; ++iv) {
     int ivp = iv + 1;
-    eliminateVaBlock(iv, ivp);
+
+    Matrix3d a;
+    a << va[iv](0, 0), va[iv](0, 1), vm[0][iv][iv],
+         va[iv](1, 0), va[iv](1, 1), vm[1][iv][iv],
+         va[iv](2, 0), va[iv](2, 1), vm[2][iv][iv];
+    PartialPivLU<Matrix3d> lu(a);
+
+    MatrixXd vmRow(3, nsys - iv + 1);
+    for (int l = iv; l <= nsys; ++l)
+      vmRow.col(l - iv) << vm[0][l][iv], vm[1][l][iv], vm[2][l][iv];
+    vmRow = lu.solve(vmRow);
+    for (int l = iv; l <= nsys; ++l) {
+      vm[0][l][iv] = vmRow(0, l - iv);
+      vm[1][l][iv] = vmRow(1, l - iv);
+      vm[2][l][iv] = vmRow(2, l - iv);
+    }
+
+    Matrix<double, 3, 2> vBlock = lu.solve(vdel[iv]);
+    vdel[iv] = vBlock;
+
     if (iv != nsys) {
-      eliminateVbBlock(iv, ivp, ivte1);
-      if (ivp != nsys) eliminateLowerVmColumn(iv, ivp);
+      Matrix3d b;
+      b << vb[ivp](0, 0), vb[ivp](0, 1), vm[0][iv][ivp],
+           vb[ivp](1, 0), vb[ivp](1, 1), vm[1][iv][ivp],
+           vb[ivp](2, 0), vb[ivp](2, 1), vm[2][iv][ivp];
+
+      MatrixXd vmTail = vmRow.rightCols(nsys - ivp + 1);
+      MatrixXd vmIvp(3, nsys - ivp + 1);
+      for (int l = ivp; l <= nsys; ++l)
+        vmIvp.col(l - ivp) << vm[0][l][ivp], vm[1][l][ivp], vm[2][l][ivp];
+      vmIvp -= b * vmTail;
+      for (int l = ivp; l <= nsys; ++l) {
+        vm[0][l][ivp] = vmIvp(0, l - ivp);
+        vm[1][l][ivp] = vmIvp(1, l - ivp);
+        vm[2][l][ivp] = vmIvp(2, l - ivp);
+      }
+
+      vdel[ivp] -= b * vBlock;
+
+      if (iv == ivte1) {
+        int ivz = isys.bottom[iblte.bottom + 1];
+        Matrix<double, 3, 2> z;
+        for (int k = 0; k < 3; ++k) {
+          z(k, 0) = vz[k][0];
+          z(k, 1) = vz[k][1];
+        }
+        MatrixXd vmIv2 = vmRow.topRows(2).rightCols(nsys - ivp + 1);
+        MatrixXd vmZ(3, nsys - ivp + 1);
+        for (int l = ivp; l <= nsys; ++l)
+          vmZ.col(l - ivp) << vm[0][l][ivz], vm[1][l][ivz], vm[2][l][ivz];
+        vmZ -= z * vmIv2;
+        for (int l = ivp; l <= nsys; ++l) {
+          vm[0][l][ivz] = vmZ(0, l - ivp);
+          vm[1][l][ivz] = vmZ(1, l - ivp);
+          vm[2][l][ivz] = vmZ(2, l - ivp);
+        }
+        vdel[ivz] -= z * vBlock.topRows(2);
+      }
+
+      if (ivp != nsys) {
+        for (int kv = iv + 2; kv <= nsys; ++kv) {
+          Vector3d col(vm[0][iv][kv], vm[1][iv][kv], vm[2][iv][kv]);
+          if (std::abs(col(0)) > vaccel || std::abs(col(1)) > vaccel ||
+              std::abs(col(2)) > vaccel) {
+            MatrixXd vmKv(3, nsys - ivp + 1);
+            for (int l = ivp; l <= nsys; ++l)
+              vmKv.col(l - ivp) << vm[0][l][kv], vm[1][l][kv], vm[2][l][kv];
+            vmKv -= col * vmRow.row(2).rightCols(nsys - ivp + 1);
+            for (int l = ivp; l <= nsys; ++l) {
+              vm[0][l][kv] = vmKv(0, l - ivp);
+              vm[1][l][kv] = vmKv(1, l - ivp);
+              vm[2][l][kv] = vmKv(2, l - ivp);
+            }
+            vdel[kv] -= col * vBlock.row(2);
+          }
+        }
+      }
     }
   }
 
-  backSubstitute();
+  for (int iv = nsys; iv >= 2; --iv) {
+    Vector2d rhs = vdel[iv].row(2);
+    for (int kv = iv - 1; kv >= 1; --kv) {
+      Vector3d coeff(vm[0][iv][kv], vm[1][iv][kv], vm[2][iv][kv]);
+      vdel[kv].col(0) -= coeff * rhs(0);
+      vdel[kv].col(1) -= coeff * rhs(1);
+    }
+  }
+
   return true;
 }
 
