@@ -1293,8 +1293,6 @@ bool XFoil::blprv(double xsi, double ami, double cti, double thi, double dsi,
 bool XFoil::blsolve() {
   int ivte1 = isys.top[iblte.top];
 
-  Matrix<double, 3, IZX> vmRow;
-
   for (int iv = 1; iv <= nsys; ++iv) {
     int ivp = iv + 1;
 
@@ -1303,19 +1301,19 @@ bool XFoil::blsolve() {
          va[iv](1, 0), va[iv](1, 1), vm[1][iv][iv],
          va[iv](2, 0), va[iv](2, 1), vm[2][iv][iv];
     PartialPivLU<Matrix3d> lu(a);
-    Matrix3d invA = lu.inverse();
 
-    int cols = nsys - iv + 1;
+    MatrixXd vmRow(3, nsys - iv + 1);
     for (int l = iv; l <= nsys; ++l)
       vmRow.col(l - iv) << vm[0][l][iv], vm[1][l][iv], vm[2][l][iv];
-    vmRow.leftCols(cols) = invA * vmRow.leftCols(cols);
+    vmRow = lu.solve(vmRow);
     for (int l = iv; l <= nsys; ++l) {
       vm[0][l][iv] = vmRow(0, l - iv);
       vm[1][l][iv] = vmRow(1, l - iv);
       vm[2][l][iv] = vmRow(2, l - iv);
     }
 
-    vdel[iv] = invA * vdel[iv];
+    Matrix<double, 3, 2> vBlock = lu.solve(vdel[iv]);
+    vdel[iv] = vBlock;
 
     if (iv != nsys) {
       Matrix3d b;
@@ -1323,15 +1321,18 @@ bool XFoil::blsolve() {
            vb[ivp](1, 0), vb[ivp](1, 1), vm[1][iv][ivp],
            vb[ivp](2, 0), vb[ivp](2, 1), vm[2][iv][ivp];
 
+      MatrixXd vmTail = vmRow.rightCols(nsys - ivp + 1);
+      MatrixXd vmIvp(3, nsys - ivp + 1);
+      for (int l = ivp; l <= nsys; ++l)
+        vmIvp.col(l - ivp) << vm[0][l][ivp], vm[1][l][ivp], vm[2][l][ivp];
+      vmIvp -= b * vmTail;
       for (int l = ivp; l <= nsys; ++l) {
-        Vector3d col(vm[0][l][ivp], vm[1][l][ivp], vm[2][l][ivp]);
-        col -= b * vmRow.col(l - iv);
-        vm[0][l][ivp] = col(0);
-        vm[1][l][ivp] = col(1);
-        vm[2][l][ivp] = col(2);
+        vm[0][l][ivp] = vmIvp(0, l - ivp);
+        vm[1][l][ivp] = vmIvp(1, l - ivp);
+        vm[2][l][ivp] = vmIvp(2, l - ivp);
       }
 
-      vdel[ivp].noalias() -= b * vdel[iv];
+      vdel[ivp] -= b * vBlock;
 
       if (iv == ivte1) {
         int ivz = isys.bottom[iblte.bottom + 1];
@@ -1340,14 +1341,17 @@ bool XFoil::blsolve() {
           z(k, 0) = vz[k][0];
           z(k, 1) = vz[k][1];
         }
+        MatrixXd vmIv2 = vmRow.topRows(2).rightCols(nsys - ivp + 1);
+        MatrixXd vmZ(3, nsys - ivp + 1);
+        for (int l = ivp; l <= nsys; ++l)
+          vmZ.col(l - ivp) << vm[0][l][ivz], vm[1][l][ivz], vm[2][l][ivz];
+        vmZ -= z * vmIv2;
         for (int l = ivp; l <= nsys; ++l) {
-          Vector3d col(vm[0][l][ivz], vm[1][l][ivz], vm[2][l][ivz]);
-          col -= z * vmRow.block(0, l - iv, 2, 1);
-          vm[0][l][ivz] = col(0);
-          vm[1][l][ivz] = col(1);
-          vm[2][l][ivz] = col(2);
+          vm[0][l][ivz] = vmZ(0, l - ivp);
+          vm[1][l][ivz] = vmZ(1, l - ivp);
+          vm[2][l][ivz] = vmZ(2, l - ivp);
         }
-        vdel[ivz].noalias() -= z * vdel[iv].topRows(2);
+        vdel[ivz] -= z * vBlock.topRows(2);
       }
 
       if (ivp != nsys) {
@@ -1355,15 +1359,16 @@ bool XFoil::blsolve() {
           Vector3d col(vm[0][iv][kv], vm[1][iv][kv], vm[2][iv][kv]);
           if (std::abs(col(0)) > vaccel || std::abs(col(1)) > vaccel ||
               std::abs(col(2)) > vaccel) {
+            MatrixXd vmKv(3, nsys - ivp + 1);
+            for (int l = ivp; l <= nsys; ++l)
+              vmKv.col(l - ivp) << vm[0][l][kv], vm[1][l][kv], vm[2][l][kv];
+            vmKv -= col * vmRow.row(2).rightCols(nsys - ivp + 1);
             for (int l = ivp; l <= nsys; ++l) {
-              double factor = vmRow(2, l - iv);
-              Vector3d c(vm[0][l][kv], vm[1][l][kv], vm[2][l][kv]);
-              c -= col * factor;
-              vm[0][l][kv] = c(0);
-              vm[1][l][kv] = c(1);
-              vm[2][l][kv] = c(2);
+              vm[0][l][kv] = vmKv(0, l - ivp);
+              vm[1][l][kv] = vmKv(1, l - ivp);
+              vm[2][l][kv] = vmKv(2, l - ivp);
             }
-            vdel[kv].noalias() -= col * vdel[iv].row(2);
+            vdel[kv] -= col * vBlock.row(2);
           }
         }
       }
