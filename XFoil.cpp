@@ -3375,46 +3375,37 @@ PsiResult XFoil::pswlin(int i, Vector2d point, Vector2d normal_vector) {
  * 	   matrix for current airfoil and wake geometry.
  * ------------------------------------------------------ */
 bool XFoil::qdcalc() {
-  VectorXd gamu_temp(n + 1);
-
   // TRACE("calculating source influence matrix ...\n");
   writeString("   Calculating source influence matrix ...\n");
 
   if (!ladij) {
     //----- calculate source influence matrix for airfoil surface if it doesn't
     // exist
-    for (int j = 0; j < n; j++) {
-      //------- multiply each dpsi/sig vector by inverse of factored dpsi/dgam
-      // matrix
-      gamu_temp = bij.col(j).head(n + 1);
-      gamu_temp = psi_gamma_lu.solve(gamu_temp);
-      bij.col(j).head(n + 1) = gamu_temp;
+    bij.block(0, 0, n + 1, n) =
+        psi_gamma_lu.solve(bij.block(0, 0, n + 1, n)).eval();
 
-      //------- store resulting dgam/dsig = dqtan/dsig vector
-      dij.col(j).head(n) = bij.col(j).head(n);
-    }
-    
+    //------- store resulting dgam/dsig = dqtan/dsig vector
+    dij.block(0, 0, n, n) = bij.block(0, 0, n, n);
+
     ladij = true;
   }
 
   //---- set up coefficient matrix of dpsi/dm on airfoil surface
   for (int i = 0; i < n; i++) {
-    PsiResult psi_result = pswlin(i, points.col(i + INDEX_START_WITH), normal_vectors.col(i + INDEX_START_WITH));
-    for (int j = n; j < n + nw; j++) {
-      bij(i, j) = -psi_result.dzdm[j];
-    }
+    PsiResult psi_result =
+        pswlin(i, points.col(i + INDEX_START_WITH),
+               normal_vectors.col(i + INDEX_START_WITH));
+    bij.row(i).segment(n, nw) =
+        -psi_result.dzdm.segment(n, nw).transpose();
   }
 
   //---- set up kutta condition (no direct source influence)
   
-  for (int j = n; j < n + nw; j++) bij(n, j) = 0.0;
+  bij.row(n).segment(n, nw).setZero();
 
   //---- multiply by inverse of factored dpsi/dgam matrix
-  for (int j = n; j < n + nw; j++) {
-    gamu_temp = bij.col(j).head(n + 1);
-    gamu_temp = psi_gamma_lu.solve(gamu_temp);
-    bij.col(j).head(n + 1) = gamu_temp;
-  }
+  bij.block(0, n, n + 1, nw) =
+      psi_gamma_lu.solve(bij.block(0, n, n + 1, nw)).eval();
   //---- set the source influence matrix for the wake sources
   dij.block(0, n, n, nw) = bij.block(0, n, n, nw);
 
@@ -3426,32 +3417,26 @@ bool XFoil::qdcalc() {
   for (int i = n; i < n + nw; i++) {
     int iw = i - n;
     //------ airfoil contribution at wake panel node
-    PsiResult psi_result = psilin(i + INDEX_START_WITH, points.col(i + INDEX_START_WITH), normal_vectors.col(i + INDEX_START_WITH), true);
+    PsiResult psi_result = psilin(
+        i + INDEX_START_WITH, points.col(i + INDEX_START_WITH),
+        normal_vectors.col(i + INDEX_START_WITH), true);
     cij.row(iw) = psi_result.dqdg.head(n).transpose();
     dij.row(i).head(n) = psi_result.dqdm.head(n).transpose();
     //------ wake contribution
-    psi_result = pswlin(i + INDEX_START_WITH, points.col(i + INDEX_START_WITH), normal_vectors.col(i + INDEX_START_WITH));
-    for (int j = n; j < n + nw; j++) {
-      dij(i, j) = psi_result.dqdm[j];
-    }
+    psi_result = pswlin(
+        i + INDEX_START_WITH, points.col(i + INDEX_START_WITH),
+        normal_vectors.col(i + INDEX_START_WITH));
+    dij.row(i).segment(n, nw) =
+        psi_result.dqdm.segment(n, nw).transpose();
   }
 
   //---- add on effect of all sources on airfoil vorticity which effects wake
   // qtan
-  for (int i = n; i < n + nw; i++) {
-    int iw = i - n;
+  dij.block(n, 0, nw, n) += cij * dij.topLeftCorner(n, n);
 
-    //------ airfoil surface source contribution first
-    dij.row(i).head(n) += cij.row(iw).head(n) * dij.topLeftCorner(n, n);
-
-    //------ wake source contribution next
-    dij.row(i).segment(n, nw) += cij.row(iw).head(n) * bij.block(0, n, n, nw);
-  }
+  dij.block(n, n, nw, nw) += cij * bij.block(0, n, n, nw);
 
   //---- make sure first wake point has same velocity as trailing edge
-  for (int j = 0; j < n + nw; j++) {
-    dij(n, j) = dij(n - 1, j);
-  }
   dij.row(n) = dij.row(n - 1);
 
   lwdij = true;
