@@ -145,9 +145,9 @@ void XFoil::initializeDataStructures() {
   xssi.bottom = VectorXd::Zero(IVX);
 
   memset(wgap, 0, sizeof(wgap));
-  va.setZero();
-  vb.setZero();
-  vdel.setZero();
+  va.resize(IVX, Matrix<double, 3 ,2>::Zero());
+  vb.resize(IVX, Matrix<double, 3 ,2>::Zero());
+  vdel.resize(IVX, Matrix<double, 3 ,2>::Zero());
   memset(vm, 0, sizeof(vm));
   vs1 = Matrix<double, 4, 5>::Zero();
   vs2 = Matrix<double, 4, 5>::Zero();
@@ -1298,11 +1298,10 @@ bool XFoil::blsolve() {
   for (int iv = 1; iv <= nsys; ++iv) {
     int ivp = iv + 1;
 
-    auto vaBlock = va.block<3, 2>(0, 2 * (iv - 1));
     Matrix3d a;
-    a << vaBlock(0, 0), vaBlock(0, 1), vm[0][iv][iv],
-         vaBlock(1, 0), vaBlock(1, 1), vm[1][iv][iv],
-         vaBlock(2, 0), vaBlock(2, 1), vm[2][iv][iv];
+    a << va[iv](0, 0), va[iv](0, 1), vm[0][iv][iv],
+         va[iv](1, 0), va[iv](1, 1), vm[1][iv][iv],
+         va[iv](2, 0), va[iv](2, 1), vm[2][iv][iv];
     PartialPivLU<Matrix3d> lu(a);
     Matrix3d invA = lu.inverse();
 
@@ -1316,15 +1315,13 @@ bool XFoil::blsolve() {
       vm[2][l][iv] = vmRow(2, l - iv);
     }
 
-    auto vdelBlock = vdel.block<3, 2>(0, 2 * (iv - 1));
-    vdelBlock = invA * vdelBlock;
+    vdel[iv] = invA * vdel[iv];
 
     if (iv != nsys) {
-      auto vbBlock = vb.block<3, 2>(0, 2 * (ivp - 1));
       Matrix3d b;
-      b << vbBlock(0, 0), vbBlock(0, 1), vm[0][iv][ivp],
-           vbBlock(1, 0), vbBlock(1, 1), vm[1][iv][ivp],
-           vbBlock(2, 0), vbBlock(2, 1), vm[2][iv][ivp];
+      b << vb[ivp](0, 0), vb[ivp](0, 1), vm[0][iv][ivp],
+           vb[ivp](1, 0), vb[ivp](1, 1), vm[1][iv][ivp],
+           vb[ivp](2, 0), vb[ivp](2, 1), vm[2][iv][ivp];
 
       for (int l = ivp; l <= nsys; ++l) {
         Vector3d col(vm[0][l][ivp], vm[1][l][ivp], vm[2][l][ivp]);
@@ -1334,7 +1331,7 @@ bool XFoil::blsolve() {
         vm[2][l][ivp] = col(2);
       }
 
-      vdel.block<3, 2>(0, 2 * (ivp - 1)).noalias() -= b * vdelBlock;
+      vdel[ivp].noalias() -= b * vdel[iv];
 
       if (iv == ivte1) {
         int ivz = isys.bottom[iblte.bottom + 1];
@@ -1350,8 +1347,7 @@ bool XFoil::blsolve() {
           vm[1][l][ivz] = col(1);
           vm[2][l][ivz] = col(2);
         }
-        vdel.block<3, 2>(0, 2 * (ivz - 1)).noalias() -=
-            z * vdelBlock.topRows(2);
+        vdel[ivz].noalias() -= z * vdel[iv].topRows(2);
       }
 
       if (ivp != nsys) {
@@ -1367,8 +1363,7 @@ bool XFoil::blsolve() {
               vm[1][l][kv] = c(1);
               vm[2][l][kv] = c(2);
             }
-            vdel.block<3, 2>(0, 2 * (kv - 1)).noalias() -=
-                col * vdelBlock.row(2);
+            vdel[kv].noalias() -= col * vdel[iv].row(2);
           }
         }
       }
@@ -1376,13 +1371,11 @@ bool XFoil::blsolve() {
   }
 
   for (int iv = nsys; iv >= 2; --iv) {
-    auto vdelBlock = vdel.block<3, 2>(0, 2 * (iv - 1));
-    Vector2d rhs = vdelBlock.row(2);
+    Vector2d rhs = vdel[iv].row(2);
     for (int kv = iv - 1; kv >= 1; --kv) {
       Vector3d coeff(vm[0][iv][kv], vm[1][iv][kv], vm[2][iv][kv]);
-      auto vdelPrev = vdel.block<3, 2>(0, 2 * (kv - 1));
-      vdelPrev.col(0) -= coeff * rhs(0);
-      vdelPrev.col(1) -= coeff * rhs(1);
+      vdel[kv].col(0) -= coeff * rhs(0);
+      vdel[kv].col(1) -= coeff * rhs(1);
     }
   }
 
@@ -3792,29 +3785,24 @@ bool XFoil::setbl() {
                             (xi_ule1 * ule1_m[jv] + xi_ule2 * ule2_m[jv]);
       }
 
-      auto vbBlock = vb.block<3, 2>(0, 2 * (iv - 1));
-      auto vaBlock = va.block<3, 2>(0, 2 * (iv - 1));
-      auto vdelBlock = vdel.block<3, 2>(0, 2 * (iv - 1));
+      vb[iv](0, 0) = vs1(0, 0);
+      vb[iv](0, 1) = vs1(0, 1);
 
-      vbBlock(0, 0) = vs1(0, 0);
-      vbBlock(0, 1) = vs1(0, 1);
-
-      vaBlock(0, 0) = vs2(0, 0);
-      vaBlock(0, 1) = vs2(0, 1);
+      va[iv](0, 0) = vs2(0, 0);
+      va[iv](0, 1) = vs2(0, 1);
 
       if (lalfa)
-        vdelBlock(0, 1) = vsr[0] * re_clmr + vsm[0] * msq_clmr;
+        vdel[iv](0, 1) = vsr[0] * re_clmr + vsm[0] * msq_clmr;
       else
-        vdelBlock(0, 1) = (vs1(0, 3) * u1_a + vs1(0, 2) * d1_a) +
-                          (vs2(0, 3) * u2_a + vs2(0, 2) * d2_a) +
-                          (vs1(0, 4) + vs2(0, 4) + vsx[0]) *
-                              (xi_ule1 * ule1_a + xi_ule2 * ule2_a);
+        vdel[iv](0, 1) = (vs1(0, 3) * u1_a + vs1(0, 2) * d1_a) +
+                         (vs2(0, 3) * u2_a + vs2(0, 2) * d2_a) +
+                         (vs1(0, 4) + vs2(0, 4) + vsx[0]) *
+                             (xi_ule1 * ule1_a + xi_ule2 * ule2_a);
 
-      vdelBlock(0, 0) =
-          vsrez[0] + (vs1(0, 3) * due1 + vs1(0, 2) * dds1) +
-          (vs2(0, 3) * due2 + vs2(0, 2) * dds2) +
-          (vs1(0, 4) + vs2(0, 4) + vsx[0]) *
-              (xi_ule1 * dule1 + xi_ule2 * dule2);
+      vdel[iv](0, 0) = vsrez[0] + (vs1(0, 3) * due1 + vs1(0, 2) * dds1) +
+                       (vs2(0, 3) * due2 + vs2(0, 2) * dds2) +
+                       (vs1(0, 4) + vs2(0, 4) + vsx[0]) *
+                           (xi_ule1 * dule1 + xi_ule2 * dule2);
 
       for (int jv = 1; jv <= nsys; jv++) {
         vm[1][jv][iv] = vs1(1, 2) * d1_m[jv] + vs1(1, 3) * u1_m[jv] +
@@ -3822,25 +3810,24 @@ bool XFoil::setbl() {
                         (vs1(1, 4) + vs2(1, 4) + vsx[1]) *
                             (xi_ule1 * ule1_m[jv] + xi_ule2 * ule2_m[jv]);
       }
-      vbBlock(1, 0) = vs1(1, 0);
-      vbBlock(1, 1) = vs1(1, 1);
+      vb[iv](1, 0) = vs1(1, 0);
+      vb[iv](1, 1) = vs1(1, 1);
 
-      vaBlock(1, 0) = vs2(1, 0);
-      vaBlock(1, 1) = vs2(1, 1);
+      va[iv](1, 0) = vs2(1, 0);
+      va[iv](1, 1) = vs2(1, 1);
 
       if (lalfa)
-        vdelBlock(1, 1) = vsr[1] * re_clmr + vsm[1] * msq_clmr;
+        vdel[iv](1, 1) = vsr[1] * re_clmr + vsm[1] * msq_clmr;
       else
-        vdelBlock(1, 1) = (vs1(1, 3) * u1_a + vs1(1, 2) * d1_a) +
-                          (vs2(1, 3) * u2_a + vs2(1, 2) * d2_a) +
-                          (vs1(1, 4) + vs2(1, 4) + vsx[1]) *
-                              (xi_ule1 * ule1_a + xi_ule2 * ule2_a);
+        vdel[iv](1, 1) = (vs1(1, 3) * u1_a + vs1(1, 2) * d1_a) +
+                         (vs2(1, 3) * u2_a + vs2(1, 2) * d2_a) +
+                         (vs1(1, 4) + vs2(1, 4) + vsx[1]) *
+                             (xi_ule1 * ule1_a + xi_ule2 * ule2_a);
 
-      vdelBlock(1, 0) =
-          vsrez[1] + (vs1(1, 3) * due1 + vs1(1, 2) * dds1) +
-          (vs2(1, 3) * due2 + vs2(1, 2) * dds2) +
-          (vs1(1, 4) + vs2(1, 4) + vsx[1]) *
-              (xi_ule1 * dule1 + xi_ule2 * dule2);
+      vdel[iv](1, 0) = vsrez[1] + (vs1(1, 3) * due1 + vs1(1, 2) * dds1) +
+                       (vs2(1, 3) * due2 + vs2(1, 2) * dds2) +
+                       (vs1(1, 4) + vs2(1, 4) + vsx[1]) *
+                           (xi_ule1 * dule1 + xi_ule2 * dule2);
 
       // memory overlap problem
       for (int jv = 1; jv <= nsys; jv++) {
@@ -3850,42 +3837,41 @@ bool XFoil::setbl() {
                             (xi_ule1 * ule1_m[jv] + xi_ule2 * ule2_m[jv]);
       }
 
-      vbBlock(2, 0) = vs1(2, 0);
-      vbBlock(2, 1) = vs1(2, 1);
+      vb[iv](2, 0) = vs1(2, 0);
+      vb[iv](2, 1) = vs1(2, 1);
 
-      vaBlock(2, 0) = vs2(2, 0);
-      vaBlock(2, 1) = vs2(2, 1);
+      va[iv](2 ,0) = vs2(2, 0);
+      va[iv](2, 1) = vs2(2, 1);
 
       if (lalfa)
-        vdelBlock(2, 1) = vsr[2] * re_clmr + vsm[2] * msq_clmr;
+        vdel[iv](2, 1) = vsr[2] * re_clmr + vsm[2] * msq_clmr;
       else
-        vdelBlock(2, 1) = (vs1(2, 3) * u1_a + vs1(2, 2) * d1_a) +
-                          (vs2(2, 3) * u2_a + vs2(2, 2) * d2_a) +
-                          (vs1(2, 4) + vs2(2, 4) + vsx[2]) *
-                              (xi_ule1 * ule1_a + xi_ule2 * ule2_a);
+        vdel[iv](2, 1) = (vs1(2, 3) * u1_a + vs1(2, 2) * d1_a) +
+                         (vs2(2, 3) * u2_a + vs2(2, 2) * d2_a) +
+                         (vs1(2, 4) + vs2(2, 4) + vsx[2]) *
+                             (xi_ule1 * ule1_a + xi_ule2 * ule2_a);
 
-      vdelBlock(2, 0) =
-          vsrez[2] + (vs1(2, 3) * due1 + vs1(2, 2) * dds1) +
-          (vs2(2, 3) * due2 + vs2(2, 2) * dds2) +
-          (vs1(2, 4) + vs2(2, 4) + vsx[2]) *
-              (xi_ule1 * dule1 + xi_ule2 * dule2);
+      vdel[iv](2, 0) = vsrez[2] + (vs1(2, 3) * due1 + vs1(2, 2) * dds1) +
+                       (vs2(2, 3) * due2 + vs2(2, 2) * dds2) +
+                       (vs1(2, 4) + vs2(2, 4) + vsx[2]) *
+                           (xi_ule1 * dule1 + xi_ule2 * dule2);
 
       if (ibl == iblte.get(is) + 1) {
         //----- redefine coefficients for tte, dte, etc
         vz[0][0] = vs1(0, 0) * cte_cte1;
         vz[0][1] = vs1(0, 0) * cte_tte1 + vs1(0, 1) * tte_tte1;
-        vbBlock(0, 0) = vs1(0, 0) * cte_cte2;
-        vbBlock(0, 1) = vs1(0, 0) * cte_tte2 + vs1(0, 1) * tte_tte2;
+        vb[iv](0, 0) = vs1(0, 0) * cte_cte2;
+        vb[iv](0, 1) = vs1(0, 0) * cte_tte2 + vs1(0, 1) * tte_tte2;
 
         vz[1][0] = vs1(1, 0) * cte_cte1;
         vz[1][1] = vs1(1, 0) * cte_tte1 + vs1(1, 1) * tte_tte1;
-        vbBlock(1, 0) = vs1(1, 0) * cte_cte2;
-        vbBlock(1, 1) = vs1(1, 0) * cte_tte2 + vs1(1, 1) * tte_tte2;
+        vb[iv](1, 0) = vs1(1, 0) * cte_cte2;
+        vb[iv](1, 1) = vs1(1, 0) * cte_tte2 + vs1(1, 1) * tte_tte2;
 
         vz[2][0] = vs1(2, 0) * cte_cte1;
         vz[2][1] = vs1(2, 0) * cte_tte1 + vs1(2, 1) * tte_tte1;
-        vbBlock(2, 0) = vs1(2, 0) * cte_cte2;
-        vbBlock(2, 1) = vs1(2, 0) * cte_tte2 + vs1(2, 1) * tte_tte2;
+        vb[iv](2, 0) = vs1(2, 0) * cte_cte2;
+        vb[iv](2, 1) = vs1(2, 0) * cte_tte2 + vs1(2, 1) * tte_tte2;
       }
 
       //---- turbulent intervals will follow if currently at transition interval
@@ -5032,9 +5018,8 @@ void XFoil::computeNewUeDistribution(SidePair<VectorXd>& unew,
           int jv = isys.get(js)[jbl];
           double ue_m = -vti.get(is)[ibl] * vti.get(js)[jbl] *
                         dij(i - INDEX_START_WITH, j - INDEX_START_WITH);
-          auto vdel_jv = vdel.block<3, 2>(0, 2 * (jv - 1));
-          dui += ue_m * (mass.get(js)[jbl] + vdel_jv(2, 0));
-          dui_ac += ue_m * (-vdel_jv(2, 1));
+          dui += ue_m * (mass.get(js)[jbl] + vdel[jv](2, 0));
+          dui_ac += ue_m * (-vdel[jv](2, 1));
         }
       }
 
@@ -5194,10 +5179,9 @@ bool XFoil::update() {
     for (int ibl = 2; ibl <= nbl.get(is); ibl++) {
       int iv = isys.get(is)[ibl];
       //------- set changes without underrelaxation
-      auto vdelBlock = vdel.block<3, 2>(0, 2 * (iv - 1));
-      dctau = vdelBlock(0, 0) - dac * vdelBlock(0, 1);
-      dthet = vdelBlock(1, 0) - dac * vdelBlock(1, 1);
-      dmass = vdelBlock(2, 0) - dac * vdelBlock(2, 1);
+      dctau = vdel[iv](0, 0) - dac * vdel[iv](0, 1);
+      dthet = vdel[iv](1 ,0) - dac * vdel[iv](1, 1);
+      dmass = vdel[iv](2, 0) - dac * vdel[iv](2, 1);
       duedg = unew.get(is)[ibl] + dac * u_ac.get(is)[ibl] - uedg.get(is)[ibl];
       ddstr = (dmass - dstr.get(is)[ibl] * duedg) / uedg.get(is)[ibl];
       //------- normalize changes
@@ -5263,10 +5247,9 @@ bool XFoil::update() {
     for (int ibl = 2; ibl <= nbl.get(is); ibl++) {
       int iv = isys.get(is)[ibl];
 
-      auto vdelBlock = vdel.block<3, 2>(0, 2 * (iv - 1));
-      dctau = vdelBlock(0, 0) - dac * vdelBlock(0, 1);
-      dthet = vdelBlock(1, 0) - dac * vdelBlock(1, 1);
-      dmass = vdelBlock(2, 0) - dac * vdelBlock(2, 1);
+      dctau = vdel[iv](0, 0) - dac * vdel[iv](0, 1);
+      dthet = vdel[iv](1, 0) - dac * vdel[iv](1, 1);
+      dmass = vdel[iv](2, 0) - dac * vdel[iv](2, 1);
       duedg = unew.get(is)[ibl] + dac * u_ac.get(is)[ibl] - uedg.get(is)[ibl];
       ddstr = (dmass - dstr.get(is)[ibl] * duedg) / uedg.get(is)[ibl];
 
