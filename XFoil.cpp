@@ -22,6 +22,7 @@
 
 #include <cstring>
 #include <numbers>
+#include <algorithm>
 #include "Eigen/Core"
 #include "Eigen/Dense"
 #include "Eigen/StdVector"
@@ -5150,11 +5151,9 @@ bool XFoil::update() {
   memset(qnew, 0, IQX * sizeof(double));
   memset(q_ac, 0, IQX * sizeof(double));
   double dalmax = 0.0, dalmin = 0.0, dclmax = 0.0, dclmin = 0.0;
-  double dac = 0.0, dhi = 0.0, dlo = 0.0, dctau, dthet, dmass, duedg, ddstr;
-  double dn1, dn2, dn3, dn4, rdn1, rdn2, rdn3, rdn4;
+  double dac = 0.0, dhi = 0.0, dlo = 0.0;
   double dswaki, hklim, msq, dsw;
   double clnew = 0.0, cl_a = 0.0, cl_ms = 0.0, cl_ac = 0.0;
-  std::string vmxbl;
 
   //---- max allowable alpha changes per iteration
   dalmax = 0.5 * dtor;
@@ -5197,62 +5196,69 @@ bool XFoil::update() {
   rmxbl = 0.0;
   dhi = 1.5;
   dlo = -.5;
-  //--- calculate changes in bl variables and under-relaxation if needed
 
-  for (int is = 1; is <= 2; is++) {
-    for (int ibl = 2; ibl <= nbl.get(is); ibl++) {
-      int iv = isys.get(is)[ibl];
-      //------- set changes without underrelaxation
-      dctau = vdel[iv](0, 0) - dac * vdel[iv](0, 1);
-      dthet = vdel[iv](1 ,0) - dac * vdel[iv](1, 1);
-      dmass = vdel[iv](2, 0) - dac * vdel[iv](2, 1);
-      duedg = unew.get(is)[ibl] + dac * u_ac.get(is)[ibl] - uedg.get(is)[ibl];
-      ddstr = (dmass - dstr.get(is)[ibl] * duedg) / uedg.get(is)[ibl];
-      //------- normalize changes
-      if (ibl < itran.get(is) + INDEX_START_WITH)
-        dn1 = dctau / 10.0;
-      else
-        dn1 = dctau / ctau.get(is)[ibl];
-      dn2 = dthet / thet.get(is)[ibl];
-      dn3 = ddstr / dstr.get(is)[ibl];
-      dn4 = fabs(duedg) / 0.25;
-      //------- accumulate for rms change
-      rmsbl = rmsbl + dn1 * dn1 + dn2 * dn2 + dn3 * dn3 + dn4 * dn4;
-      //------- see if ctau needs underrelaxation
-      rdn1 = rlx * dn1;
-      if (fabs(dn1) > fabs(rmxbl)) {
-        rmxbl = dn1;
-        if (ibl < itran.get(is) + INDEX_START_WITH) vmxbl = "n";
-        if (ibl >= itran.get(is) + INDEX_START_WITH) vmxbl = "c";
-      }
-      if (rdn1 > dhi) rlx = dhi / dn1;
-      if (rdn1 < dlo) rlx = dlo / dn1;
-      //------- see if theta needs underrelaxation
-      rdn2 = rlx * dn2;
-      if (fabs(dn2) > fabs(rmxbl)) {
-        rmxbl = dn2;
-        vmxbl = "t";
-      }
-      if (rdn2 > dhi) rlx = dhi / dn2;
-      if (rdn2 < dlo) rlx = dlo / dn2;
-      //------- see if dstar needs underrelaxation
-      rdn3 = rlx * dn3;
-      if (fabs(dn3) > fabs(rmxbl)) {
-        rmxbl = dn3;
-        vmxbl = "d";
-      }
-      if (rdn3 > dhi) rlx = dhi / dn3;
-      if (rdn3 < dlo) rlx = dlo / dn3;
+  SidePair<VectorXd> dctau_seg, dthet_seg, ddstr_seg, duedg_seg;
+  for (int is = 1; is <= 2; ++is) {
+    int start = 2;
+    int len = nbl.get(is) - 1;
+    if (len <= 0) continue;
 
-      //------- see if ue needs underrelaxation
-      rdn4 = rlx * dn4;
-      if (fabs(dn4) > fabs(rmxbl)) {
-        rmxbl = duedg;
-        vmxbl = "u";
-      }
-      if (rdn4 > dhi) rlx = dhi / dn4;
-      if (rdn4 < dlo) rlx = dlo / dn4;
+    dctau_seg.get(is) = VectorXd(len);
+    dthet_seg.get(is) = VectorXd(len);
+    ddstr_seg.get(is) = VectorXd(len);
+    duedg_seg.get(is) = VectorXd(len);
+
+    auto ctau_slice = ctau.get(is).segment(start, len);
+    auto thet_slice = thet.get(is).segment(start, len);
+    auto dstr_slice = dstr.get(is).segment(start, len);
+    auto uedg_slice = uedg.get(is).segment(start, len);
+    auto unew_slice = unew.get(is).segment(start, len);
+    auto uac_slice = u_ac.get(is).segment(start, len);
+
+    VectorXi iv = isys.get(is).segment(start, len);
+    VectorXd dmass(len);
+    for (int j = 0; j < len; ++j) {
+      int idx = iv[j];
+      dctau_seg.get(is)[j] = vdel[idx](0, 0) - dac * vdel[idx](0, 1);
+      dthet_seg.get(is)[j] = vdel[idx](1, 0) - dac * vdel[idx](1, 1);
+      dmass[j] = vdel[idx](2, 0) - dac * vdel[idx](2, 1);
     }
+    duedg_seg.get(is) = unew_slice + dac * uac_slice - uedg_slice;
+    ddstr_seg.get(is) =
+        (dmass - dstr_slice.cwiseProduct(duedg_seg.get(is)))
+            .cwiseQuotient(uedg_slice);
+
+    VectorXi iblSeq = VectorXi::LinSpaced(len, start, nbl.get(is));
+    VectorXd dn1 =
+        (iblSeq.array() < itran.get(is) + INDEX_START_WITH)
+            .select(dctau_seg.get(is).array() / 10.0,
+                    dctau_seg.get(is).cwiseQuotient(ctau_slice).array())
+            .matrix();
+    VectorXd dn2 = dthet_seg.get(is).cwiseQuotient(thet_slice);
+    VectorXd dn3 = ddstr_seg.get(is).cwiseQuotient(dstr_slice);
+    VectorXd dn4 = duedg_seg.get(is).array().abs() / 0.25;
+
+    rmsbl +=
+        (dn1.array().square() + dn2.array().square() + dn3.array().square() +
+         dn4.array().square())
+            .sum();
+
+    auto relax = [&](const VectorXd &dn) {
+      double max_pos = dn.cwiseMax(0.0).maxCoeff();
+      if (max_pos > 0.0) rlx = std::min(rlx, dhi / max_pos);
+      double min_neg = dn.cwiseMin(0.0).minCoeff();
+      if (min_neg < 0.0) rlx = std::min(rlx, dlo / min_neg);
+    };
+    relax(dn1);
+    relax(dn2);
+    relax(dn3);
+    relax(dn4);
+
+    double local_max = dn1.cwiseAbs().maxCoeff();
+    local_max = std::max(local_max, dn2.cwiseAbs().maxCoeff());
+    local_max = std::max(local_max, dn3.cwiseAbs().maxCoeff());
+    local_max = std::max(local_max, dn4.cwiseAbs().maxCoeff());
+    rmxbl = std::max(rmxbl, local_max);
   }
 
   //--- set true rms change
@@ -5267,27 +5273,32 @@ bool XFoil::update() {
   }
 
   //--- update bl variables with underrelaxed changes
-  for (int is = 1; is <= 2; is++) {
-    for (int ibl = 2; ibl <= nbl.get(is); ibl++) {
-      int iv = isys.get(is)[ibl];
+  for (int is = 1; is <= 2; ++is) {
+    int start = 2;
+    int len = nbl.get(is) - 1;
+    if (len <= 0) continue;
 
-      dctau = vdel[iv](0, 0) - dac * vdel[iv](0, 1);
-      dthet = vdel[iv](1, 0) - dac * vdel[iv](1, 1);
-      dmass = vdel[iv](2, 0) - dac * vdel[iv](2, 1);
-      duedg = unew.get(is)[ibl] + dac * u_ac.get(is)[ibl] - uedg.get(is)[ibl];
-      ddstr = (dmass - dstr.get(is)[ibl] * duedg) / uedg.get(is)[ibl];
+    auto ctau_slice = ctau.get(is).segment(start, len);
+    auto thet_slice = thet.get(is).segment(start, len);
+    auto dstr_slice = dstr.get(is).segment(start, len);
+    auto uedg_slice = uedg.get(is).segment(start, len);
 
-      ctau.get(is)[ibl] = ctau.get(is)[ibl] + rlx * dctau;
-      thet.get(is)[ibl] = thet.get(is)[ibl] + rlx * dthet;
-      dstr.get(is)[ibl] = dstr.get(is)[ibl] + rlx * ddstr;
-      uedg.get(is)[ibl] = uedg.get(is)[ibl] + rlx * duedg;
+    ctau_slice += rlx * dctau_seg.get(is);
+    thet_slice += rlx * dthet_seg.get(is);
+    dstr_slice += rlx * ddstr_seg.get(is);
+    uedg_slice += rlx * duedg_seg.get(is);
 
+    VectorXi iblSeq = VectorXi::LinSpaced(len, start, nbl.get(is));
+    ctau_slice =
+        (iblSeq.array() >= itran.get(is) + INDEX_START_WITH)
+            .select(ctau_slice.array().cwiseMin(0.25), ctau_slice.array())
+            .matrix();
+
+    for (int ibl = 2; ibl <= nbl.get(is); ++ibl) {
       if (ibl > iblte.get(is)) {
         dswaki = wgap[ibl - iblte.get(is)];
       } else
         dswaki = 0.0;
-      //------- eliminate absurd transients
-      if (ibl >= itran.get(is) + INDEX_START_WITH) ctau.get(is)[ibl] = std::min(ctau.get(is)[ibl], 0.25);
 
       if (ibl <= iblte.get(is))
         hklim = 1.02;
