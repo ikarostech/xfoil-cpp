@@ -5197,26 +5197,26 @@ bool XFoil::update() {
   dhi = 1.5;
   dlo = -.5;
 
-  SidePair<ArrayXd> dctau_seg, dthet_seg, ddstr_seg, duedg_seg;
+  SidePair<VectorXd> dctau_seg, dthet_seg, ddstr_seg, duedg_seg;
   for (int is = 1; is <= 2; ++is) {
     int start = 2;
     int len = nbl.get(is) - 1;
     if (len <= 0) continue;
 
-    dctau_seg.get(is) = ArrayXd(len);
-    dthet_seg.get(is) = ArrayXd(len);
-    ddstr_seg.get(is) = ArrayXd(len);
-    duedg_seg.get(is) = ArrayXd(len);
+    dctau_seg.get(is) = VectorXd(len);
+    dthet_seg.get(is) = VectorXd(len);
+    ddstr_seg.get(is) = VectorXd(len);
+    duedg_seg.get(is) = VectorXd(len);
 
-    auto ctau_slice = ctau.get(is).segment(start, len).array();
-    auto thet_slice = thet.get(is).segment(start, len).array();
-    auto dstr_slice = dstr.get(is).segment(start, len).array();
-    auto uedg_slice = uedg.get(is).segment(start, len).array();
-    auto unew_slice = unew.get(is).segment(start, len).array();
-    auto uac_slice = u_ac.get(is).segment(start, len).array();
+    auto ctau_slice = ctau.get(is).segment(start, len);
+    auto thet_slice = thet.get(is).segment(start, len);
+    auto dstr_slice = dstr.get(is).segment(start, len);
+    auto uedg_slice = uedg.get(is).segment(start, len);
+    auto unew_slice = unew.get(is).segment(start, len);
+    auto uac_slice = u_ac.get(is).segment(start, len);
 
     VectorXi iv = isys.get(is).segment(start, len);
-    ArrayXd dmass(len);
+    VectorXd dmass(len);
     for (int j = 0; j < len; ++j) {
       int idx = iv[j];
       dctau_seg.get(is)[j] = vdel[idx](0, 0) - dac * vdel[idx](0, 1);
@@ -5225,20 +5225,25 @@ bool XFoil::update() {
     }
     duedg_seg.get(is) = unew_slice + dac * uac_slice - uedg_slice;
     ddstr_seg.get(is) =
-        (dmass - dstr_slice * duedg_seg.get(is)) / uedg_slice;
+        (dmass - dstr_slice.cwiseProduct(duedg_seg.get(is)))
+            .cwiseQuotient(uedg_slice);
 
     VectorXi iblSeq = VectorXi::LinSpaced(len, start, nbl.get(is));
-    ArrayXd dn1 =
+    VectorXd dn1 =
         (iblSeq.array() < itran.get(is) + INDEX_START_WITH)
-            .select(dctau_seg.get(is) / 10.0,
-                    dctau_seg.get(is) / ctau_slice);
-    ArrayXd dn2 = dthet_seg.get(is) / thet_slice;
-    ArrayXd dn3 = ddstr_seg.get(is) / dstr_slice;
-    ArrayXd dn4 = duedg_seg.get(is).abs() / 0.25;
+            .select(dctau_seg.get(is).array() / 10.0,
+                    dctau_seg.get(is).cwiseQuotient(ctau_slice).array())
+            .matrix();
+    VectorXd dn2 = dthet_seg.get(is).cwiseQuotient(thet_slice);
+    VectorXd dn3 = ddstr_seg.get(is).cwiseQuotient(dstr_slice);
+    VectorXd dn4 = duedg_seg.get(is).array().abs() / 0.25;
 
-    rmsbl += (dn1.square() + dn2.square() + dn3.square() + dn4.square()).sum();
+    rmsbl +=
+        (dn1.array().square() + dn2.array().square() + dn3.array().square() +
+         dn4.array().square())
+            .sum();
 
-    auto relax = [&](const ArrayXd &dn) {
+    auto relax = [&](const VectorXd &dn) {
       double max_pos = dn.cwiseMax(0.0).maxCoeff();
       if (max_pos > 0.0) rlx = std::min(rlx, dhi / max_pos);
       double min_neg = dn.cwiseMin(0.0).minCoeff();
@@ -5249,10 +5254,10 @@ bool XFoil::update() {
     relax(dn3);
     relax(dn4);
 
-    double local_max = dn1.abs().maxCoeff();
-    local_max = std::max(local_max, dn2.abs().maxCoeff());
-    local_max = std::max(local_max, dn3.abs().maxCoeff());
-    local_max = std::max(local_max, dn4.abs().maxCoeff());
+    double local_max = dn1.cwiseAbs().maxCoeff();
+    local_max = std::max(local_max, dn2.cwiseAbs().maxCoeff());
+    local_max = std::max(local_max, dn3.cwiseAbs().maxCoeff());
+    local_max = std::max(local_max, dn4.cwiseAbs().maxCoeff());
     rmxbl = std::max(rmxbl, local_max);
   }
 
@@ -5273,10 +5278,10 @@ bool XFoil::update() {
     int len = nbl.get(is) - 1;
     if (len <= 0) continue;
 
-    auto ctau_slice = ctau.get(is).segment(start, len).array();
-    auto thet_slice = thet.get(is).segment(start, len).array();
-    auto dstr_slice = dstr.get(is).segment(start, len).array();
-    auto uedg_slice = uedg.get(is).segment(start, len).array();
+    auto ctau_slice = ctau.get(is).segment(start, len);
+    auto thet_slice = thet.get(is).segment(start, len);
+    auto dstr_slice = dstr.get(is).segment(start, len);
+    auto uedg_slice = uedg.get(is).segment(start, len);
 
     ctau_slice += rlx * dctau_seg.get(is);
     thet_slice += rlx * dthet_seg.get(is);
@@ -5284,8 +5289,10 @@ bool XFoil::update() {
     uedg_slice += rlx * duedg_seg.get(is);
 
     VectorXi iblSeq = VectorXi::LinSpaced(len, start, nbl.get(is));
-    ctau_slice = (iblSeq.array() >= itran.get(is) + INDEX_START_WITH)
-                     .select(ctau_slice.cwiseMin(0.25), ctau_slice);
+    ctau_slice =
+        (iblSeq.array() >= itran.get(is) + INDEX_START_WITH)
+            .select(ctau_slice.array().cwiseMin(0.25), ctau_slice.array())
+            .matrix();
 
     for (int ibl = 2; ibl <= nbl.get(is); ++ibl) {
       if (ibl > iblte.get(is)) {
