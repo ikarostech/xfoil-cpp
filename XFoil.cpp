@@ -2192,7 +2192,7 @@ bool XFoil::mrchdu() {
   double deps = 0.000005;
   int is = 0, ibl, ibm, itrold, iw = 0, itbl;  // icom
 
-  double senswt = 0.0, thi, uei, dsi, cti, dswaki, ratlen = 0.0;
+  double senswt = 0.0;
   double sens = 0.0, sennew = 0.0, msq = 0.0, thm = 0.0, dsm = 0.0,
          uem = 0.0;
   double xsi, hklim = 0.0, dsw = 0.0;
@@ -2222,25 +2222,31 @@ bool XFoil::mrchdu() {
     //---- march downstream
     for (ibl = 2; ibl <= nbl.get(is); ibl++) {
       ibm = ibl - 1;
+      double cti = 0.0;
+      double ratlen = 0.0;
 
       simi = ibl == 2;
       wake = ibl > iblte.get(is);
 
       //------ initialize current station to existing variables
       xsi = xssi.get(is)[ibl];
-      uei = uedg.get(is)[ibl];
-      thi = thet.get(is)[ibl];
-      dsi = dstr.get(is)[ibl];
+      Vector4d vars;
+      vars[3] = uedg.get(is)[ibl];       // uei
+      vars[1] = thet.get(is)[ibl];       // thi
+      vars[2] = dstr.get(is)[ibl];       // dsi
 
       //------ fixed bug   md 7 june 99
       if (ibl < itrold) {
         ami = ctau.get(is)[ibl];  // ami must be initialized
+        vars[0] = ami;
         cti = 0.03;
       } else {
         cti = ctau.get(is)[ibl];
         if (cti <= 0.0) cti = 0.03;
+        vars[0] = cti;
       }
 
+      double dswaki;
       if (wake) {
         iw = ibl - iblte.get(is);
         dswaki = wgap[iw];
@@ -2248,8 +2254,9 @@ bool XFoil::mrchdu() {
         dswaki = 0.0;
 
       if (ibl <= iblte.get(is))
-        dsi = std::max(dsi - dswaki, 1.02000 * thi) + dswaki;
-      if (ibl > iblte.get(is)) dsi = std::max(dsi - dswaki, 1.00005 * thi) + dswaki;
+        vars[2] = std::max(vars[2] - dswaki, 1.02000 * vars[1]) + dswaki;
+      if (ibl > iblte.get(is))
+        vars[2] = std::max(vars[2] - dswaki, 1.00005 * vars[1]) + dswaki;
 
       //------ newton iteration loop for current station
 
@@ -2259,7 +2266,7 @@ bool XFoil::mrchdu() {
         //         at the previous "1" station and the current "2" station
         //         (the "1" station coefficients will be ignored)
 
-        blprv(xsi, ami, cti, thi, dsi, dswaki, uei);
+        blprv(xsi, ami, cti, vars[1], vars[2], dswaki, vars[3]);
         blkin();
 
         //-------- check for transition and set appropriate flags and things
@@ -2306,6 +2313,7 @@ bool XFoil::mrchdu() {
             if (turb) ctau.get(is)[ibl] = ctau.get(is)[ibl - 1];
             if (tran || turb) {
               cti = ctau.get(is)[ibl];
+              vars[0] = cti;
               blData2.param.sz = cti;
             }
           }
@@ -2348,27 +2356,32 @@ bool XFoil::mrchdu() {
         }
 
         //-------- solve newton system for current "2" station
-        vsrez = vs2.block(0, 0, 4, 4).fullPivLu().solve(vsrez);
+        Vector4d delta =
+            vs2.block(0, 0, 4, 4).fullPivLu().solve(vsrez);
 
         //-------- determine max changes and underrelax if necessary
-        dmax = std::max(fabs(vsrez[1] / thi), fabs(vsrez[2] / dsi));
-        if (ibl >= itran.get(is) + INDEX_START_WITH)
-          dmax = std::max(dmax, fabs(vsrez[0] / (10.0 * cti)));
+        Vector3d rel = delta.segment<3>(1).cwiseQuotient(vars.segment<3>(1)).cwiseAbs();
+        dmax = rel.maxCoeff();
+        if (ibl < itran.get(is) + INDEX_START_WITH)
+          dmax = std::max(dmax, fabs(delta[0] / (10.0 * vars[0])));
+        else
+          dmax = std::max(dmax, fabs(delta[0] / vars[0]));
 
-        rlx = 1.0;
+        double rlx = 1.0;
         if (dmax > 0.3) rlx = 0.3 / dmax;
 
         //-------- update as usual
-        if (ibl < itran.get(is) + INDEX_START_WITH) ami = ami + rlx * vsrez[0];
-        if (ibl >= itran.get(is) + INDEX_START_WITH) cti = cti + rlx * vsrez[0];
-        thi = thi + rlx * vsrez[1];
-        dsi = dsi + rlx * vsrez[2];
-        uei = uei + rlx * vsrez[3];
+        vars += rlx * delta;
+        if (ibl < itran.get(is) + INDEX_START_WITH)
+          ami = vars[0];
+        else
+          cti = vars[0];
 
         //-------- eliminate absurd transients
         if (ibl >= itran.get(is) + INDEX_START_WITH) {
-          cti = std::min(cti, 0.30);
-          cti = std::max(cti, 0.0000001);
+          vars[0] = std::min(vars[0], 0.30);
+          vars[0] = std::max(vars[0], 0.0000001);
+          cti = vars[0];
         }
 
         if (ibl <= iblte.get(is))
@@ -2376,10 +2389,11 @@ bool XFoil::mrchdu() {
         else
           hklim = 1.00005;
 
-        msq = uei * uei * hstinv / (gm1bl * (1.0 - 0.5 * uei * uei * hstinv));
-        dsw = dsi - dswaki;
-        dslim(dsw, thi, msq, hklim);
-        dsi = dsw + dswaki;
+        msq = vars[3] * vars[3] * hstinv /
+              (gm1bl * (1.0 - 0.5 * vars[3] * vars[3] * hstinv));
+        dsw = vars[2] - dswaki;
+        dslim(dsw, vars[1], msq, hklim);
+        vars[2] = dsw + dswaki;
 
         if (dmax <= deps) goto stop110;
       }
@@ -2397,20 +2411,25 @@ bool XFoil::mrchdu() {
         //------- the current solution is garbage --> extrapolate values instead
         if (ibl > 3) {
           if (ibl <= iblte.get(is)) {
-            thi = thet.get(is)[ibm] * sqrt(xssi.get(is)[ibl] / xssi.get(is)[ibm]);
-            dsi = dstr.get(is)[ibm] * sqrt(xssi.get(is)[ibl] / xssi.get(is)[ibm]);
-            uei = uedg.get(is)[ibm];
+            vars[1] = thet.get(is)[ibm] *
+                      sqrt(xssi.get(is)[ibl] / xssi.get(is)[ibm]);
+            vars[2] = dstr.get(is)[ibm] *
+                      sqrt(xssi.get(is)[ibl] / xssi.get(is)[ibm]);
+            vars[3] = uedg.get(is)[ibm];
           } else {
             if (ibl == iblte.get(is) + 1) {
               cti = cte;
-              thi = tte;
-              dsi = dte;
-              uei = uedg.get(is)[ibm];
+              vars[1] = tte;
+              vars[2] = dte;
+              vars[3] = uedg.get(is)[ibm];
             } else {
-              thi = thet.get(is)[ibm];
-              ratlen = (xssi.get(is)[ibl] - xssi.get(is)[ibm]) / (10.0 * dstr.get(is)[ibm]);
-              dsi = (dstr.get(is)[ibm] + thi * ratlen) / (1.0 + ratlen);
-              uei = uedg.get(is)[ibm];
+              vars[1] = thet.get(is)[ibm];
+              ratlen =
+                  (xssi.get(is)[ibl] - xssi.get(is)[ibm]) /
+                  (10.0 * dstr.get(is)[ibm]);
+              vars[2] =
+                  (dstr.get(is)[ibm] + vars[1] * ratlen) / (1.0 + ratlen);
+              vars[3] = uedg.get(is)[ibm];
             }
           }
           if (ibl == itran.get(is) + INDEX_START_WITH) cti = 0.05;
@@ -2419,7 +2438,7 @@ bool XFoil::mrchdu() {
       }
 
     stop109:
-      blprv(xsi, ami, cti, thi, dsi, dswaki, uei);
+      blprv(xsi, ami, cti, vars[1], vars[2], dswaki, vars[3]);
       blkin();
 
       //------- check for transition and set appropriate flags and things
@@ -2452,14 +2471,14 @@ bool XFoil::mrchdu() {
         ctau.get(is)[ibl] = ami;
       else
         ctau.get(is)[ibl] = cti;
-      thet.get(is)[ibl] = thi;
-      dstr.get(is)[ibl] = dsi;
-      uedg.get(is)[ibl] = uei;
-      mass.get(is)[ibl] = dsi * uei;
+      thet.get(is)[ibl] = vars[1];
+      dstr.get(is)[ibl] = vars[2];
+      uedg.get(is)[ibl] = vars[3];
+      mass.get(is)[ibl] = vars[2] * vars[3];
       ctq.get(is)[ibl] = blData2.cqz.scalar;
 
       //------ set "1" variables to "2" variables for next streamwise station
-      blprv(xsi, ami, cti, thi, dsi, dswaki, uei);
+      blprv(xsi, ami, cti, vars[1], vars[2], dswaki, vars[3]);
       blkin();
 
       stepbl();
@@ -2473,6 +2492,29 @@ bool XFoil::mrchdu() {
       //			qApp->processEvents();
       if (s_bCancel) return false;
     }  // 1000 continue
+
+    int nst = nbl.get(is);
+    VectorXd &dsVec = dstr.get(is);
+    VectorXd &thVec = thet.get(is);
+    VectorXd &ueVec = uedg.get(is);
+    VectorXd dswakiVec(nst + 1);
+    dswakiVec.setZero();
+    for (int iw = 1; iw <= nst - iblte.get(is); ++iw) {
+      dswakiVec[iblte.get(is) + iw] = wgap[iw];
+    }
+    ArrayXi idx = ArrayXi::LinSpaced(nst + 1, 0, nst);
+    ArrayXd hklimArr =
+        (idx <= iblte.get(is))
+            .select(ArrayXd::Constant(nst + 1, 1.02),
+                    ArrayXd::Constant(nst + 1, 1.00005));
+    ArrayXd dswArr =
+        dsVec.head(nst + 1).array() - dswakiVec.head(nst + 1).array();
+    dsVec.head(nst + 1) =
+        (dswArr.max(thVec.head(nst + 1).array() * hklimArr) +
+         dswakiVec.head(nst + 1).array())
+            .matrix();
+    mass.get(is).head(nst + 1) =
+        dsVec.head(nst + 1).array() * ueVec.head(nst + 1).array();
   }    // 2000 continue
   return true;
 }
@@ -2516,7 +2558,8 @@ bool XFoil::mrchue() {
   bool direct;
 
   double msq, ratlen, dsw, hklim;
-  double xsi, uei, ucon, tsq, thi, ami, cti, dsi;
+  double xsi, ucon, tsq, ami, cti;
+  Vector4d vars;
   double dswaki;
   double htest, hktest;
   double cte, dte, tte, dmax, hmax, htarg = 0.0;
@@ -2536,13 +2579,14 @@ bool XFoil::mrchue() {
     //---- initialize similarity station with thwaites' formula
     //	ibl = 2;
     xsi = xssi.get(is)[2];
-    uei = uedg.get(is)[2];
+    vars[3] = uedg.get(is)[2];
 
-    ucon = uei / xsi;
+    ucon = vars[3] / xsi;
     tsq = 0.45 / (ucon * 6.0 * reybl);
-    thi = sqrt(tsq);
-    dsi = 2.2 * thi;
+    vars[1] = sqrt(tsq);
+    vars[2] = 2.2 * vars[1];
     ami = 0.0;
+    vars[0] = ami;
 
     //---- initialize ctau for first turbulent station
     cti = 0.03;
@@ -2560,7 +2604,7 @@ bool XFoil::mrchue() {
 
       //------ prescribed quantities
       xsi = xssi.get(is)[ibl];
-      uei = uedg.get(is)[ibl];
+      vars[3] = uedg.get(is)[ibl];
 
       if (wake) {
         iw = ibl - iblte.get(is);
@@ -2578,7 +2622,7 @@ bool XFoil::mrchue() {
         //         at the previous "1" station and the current "2" station
         //         (the "1" station coefficients will be ignored)
 
-        blprv(xsi, ami, cti, thi, dsi, dswaki, uei);
+        blprv(xsi, ami, cti, vars[1], vars[2], dswaki, vars[3]);
         blkin();
 
         //-------- check for transition and set appropriate flags and things
@@ -2614,22 +2658,29 @@ bool XFoil::mrchue() {
           vs2(3, 2) = 0.0;
           vs2(3, 3) = 1.0;
           vsrez[3] = 0.0;
-          //--------- solve newton system for current "2" station
-          vsrez = vs2.block(0, 0, 4, 4).fullPivLu().solve(vsrez);
-          //--------- determine max changes and underrelax if necessary
-          dmax = std::max(fabs(vsrez[1] / thi), fabs(vsrez[2] / dsi));
-          if (ibl < itran.get(is) + INDEX_START_WITH) dmax = std::max(dmax, fabs(vsrez[0] / 10.0));
-          if (ibl >= itran.get(is) + INDEX_START_WITH) dmax = std::max(dmax, fabs(vsrez[0] / cti));
+            //--------- solve newton system for current "2" station
+            Vector4d delta =
+                vs2.block(0, 0, 4, 4).fullPivLu().solve(vsrez);
+            //--------- determine max changes and underrelax if necessary
+            Vector3d rel =
+                delta.segment<3>(1).cwiseQuotient(vars.segment<3>(1)).cwiseAbs();
+          dmax = rel.maxCoeff();
+          if (ibl < itran.get(is) + INDEX_START_WITH)
+            dmax = std::max(dmax, fabs(delta[0] / 10.0));
+          if (ibl >= itran.get(is) + INDEX_START_WITH)
+            dmax = std::max(dmax, fabs(delta[0] / cti));
 
-          rlx = 1.0;
+          double rlx = 1.0;
           if (dmax > 0.3) rlx = 0.3 / dmax;
           //--------- see if direct mode is not applicable
           if (ibl != iblte.get(is) + 1) {
             //---------- calculate resulting kinematic shape parameter hk
-            msq =
-                uei * uei * hstinv / (gm1bl * (1.0 - 0.5 * uei * uei * hstinv));
-            htest = (dsi + rlx * vsrez[2]) / (thi + rlx * vsrez[1]);
-            boundary_layer::KineticShapeParameterResult hkin_result = boundary_layer::hkin(htest, msq);
+            msq = vars[3] * vars[3] * hstinv /
+                  (gm1bl * (1.0 - 0.5 * vars[3] * vars[3] * hstinv));
+            htest = (vars[2] + rlx * delta[2]) /
+                    (vars[1] + rlx * delta[1]);
+            boundary_layer::KineticShapeParameterResult hkin_result =
+                boundary_layer::hkin(htest, msq);
             hktest = hkin_result.hk;
 
             //---------- decide whether to do direct or inverse problem based on
@@ -2640,9 +2691,9 @@ bool XFoil::mrchue() {
           }
           if (direct) {
             //---------- update as usual
-            if (ibl >= itran.get(is) + INDEX_START_WITH) cti = cti + rlx * vsrez[0];
-            thi = thi + rlx * vsrez[1];
-            dsi = dsi + rlx * vsrez[2];
+            if (ibl >= itran.get(is) + INDEX_START_WITH) cti = cti + rlx * delta[0];
+            vars[1] = vars[1] + rlx * delta[1];
+            vars[2] = vars[2] + rlx * delta[2];
           } else {
             //---------- set prescribed hk for inverse calculation at the
             // current station
@@ -2671,17 +2722,20 @@ bool XFoil::mrchue() {
           vs2(3, 2) = blData2.hkz.d();
           vs2(3, 3) = blData2.hkz.u();
           vsrez[3] = htarg - blData2.hkz.scalar;
-          vsrez = vs2.block(0, 0, 4, 4).fullPivLu().solve(vsrez);
+          Vector4d delta =
+              vs2.block(0, 0, 4, 4).fullPivLu().solve(vsrez);
 
-          dmax = std::max(fabs(vsrez[1] / thi), fabs(vsrez[2] / dsi));
-          if (ibl >= itran.get(is) + INDEX_START_WITH) dmax = std::max(dmax, fabs(vsrez[0] / cti));
-          rlx = 1.0;
+          dmax = (delta.segment<3>(1).cwiseQuotient(vars.segment<3>(1)).cwiseAbs())
+                     .maxCoeff();
+          if (ibl >= itran.get(is) + INDEX_START_WITH)
+            dmax = std::max(dmax, fabs(delta[0] / cti));
+          double rlx = 1.0;
           if (dmax > 0.3) rlx = 0.3 / dmax;
           //--------- update variables
-          if (ibl >= itran.get(is) + INDEX_START_WITH) cti = cti + rlx * vsrez[0];
-          thi = thi + rlx * vsrez[1];
-          dsi = dsi + rlx * vsrez[2];
-          uei = uei + rlx * vsrez[3];
+          if (ibl >= itran.get(is) + INDEX_START_WITH) cti = cti + rlx * delta[0];
+          vars[1] = vars[1] + rlx * delta[1];
+          vars[2] = vars[2] + rlx * delta[2];
+          vars[3] = vars[3] + rlx * delta[3];
         }
         //-------- eliminate absurd transients
 
@@ -2693,10 +2747,11 @@ bool XFoil::mrchue() {
           hklim = 1.02;
         else
           hklim = 1.00005;
-        msq = uei * uei * hstinv / (gm1bl * (1.0 - 0.5 * uei * uei * hstinv));
-        dsw = dsi - dswaki;
-        dslim(dsw, thi, msq, hklim);
-        dsi = dsw + dswaki;
+        msq = vars[3] * vars[3] * hstinv /
+              (gm1bl * (1.0 - 0.5 * vars[3] * vars[3] * hstinv));
+        dsw = vars[2] - dswaki;
+        dslim(dsw, vars[1], msq, hklim);
+        vars[2] = dsw + dswaki;
         if (dmax <= 0.00001) {
           converged = true;
           break;
@@ -2715,33 +2770,37 @@ bool XFoil::mrchue() {
           //------- the current solution is garbage --> extrapolate values instead
           if (ibl > 3) {
             if (ibl <= iblte.get(is)) {
-              thi = thet.get(is)[ibm] * sqrt(xssi.get(is)[ibl] / xssi.get(is)[ibm]);
-              dsi = dstr.get(is)[ibm] * sqrt(xssi.get(is)[ibl] / xssi.get(is)[ibm]);
+              vars[1] = thet.get(is)[ibm] *
+                        sqrt(xssi.get(is)[ibl] / xssi.get(is)[ibm]);
+              vars[2] = dstr.get(is)[ibm] *
+                        sqrt(xssi.get(is)[ibl] / xssi.get(is)[ibm]);
             } else {
               if (ibl == iblte.get(is) + 1) {
                 cti = cte;
-                thi = tte;
-                dsi = dte;
+                vars[1] = tte;
+                vars[2] = dte;
               } else {
-                thi = thet.get(is)[ibm];
+                vars[1] = thet.get(is)[ibm];
                 ratlen =
                     (xssi.get(is)[ibl] - xssi.get(is)[ibm]) /
                     (10.0 * dstr.get(is)[ibm]);
-                dsi = (dstr.get(is)[ibm] + thi * ratlen) / (1.0 + ratlen);
+                vars[2] =
+                    (dstr.get(is)[ibm] + vars[1] * ratlen) / (1.0 + ratlen);
               }
             }
             if (ibl == itran.get(is) + INDEX_START_WITH) cti = 0.05;
             if (ibl > itran.get(is) + INDEX_START_WITH)
               cti = ctau.get(is)[ibm];
 
-            uei = uedg.get(is)[ibl];
+            vars[3] = uedg.get(is)[ibl];
 
             if (ibl < nbl.get(is))
-              uei = 0.5 * (uedg.get(is)[ibl - 1] + uedg.get(is)[ibl + 1]);
+              vars[3] =
+                  0.5 * (uedg.get(is)[ibl - 1] + uedg.get(is)[ibl + 1]);
           }
         }
         // 109
-        blprv(xsi, ami, cti, thi, dsi, dswaki, uei);
+        blprv(xsi, ami, cti, vars[1], vars[2], dswaki, vars[3]);
         blkin();
         //------- check for transition and set appropriate flags and things
         if ((!simi) && (!turb)) {
@@ -2765,14 +2824,14 @@ bool XFoil::mrchue() {
       //------ store primary variables
       if (ibl < itran.get(is) + INDEX_START_WITH) ctau.get(is)[ibl] = ami;
       if (ibl >= itran.get(is) + INDEX_START_WITH) ctau.get(is)[ibl] = cti;
-      thet.get(is)[ibl] = thi;
-      dstr.get(is)[ibl] = dsi;
-      uedg.get(is)[ibl] = uei;
-      mass.get(is)[ibl] = dsi * uei;
+      thet.get(is)[ibl] = vars[1];
+      dstr.get(is)[ibl] = vars[2];
+      uedg.get(is)[ibl] = vars[3];
+      mass.get(is)[ibl] = vars[2] * vars[3];
       ctq.get(is)[ibl] = blData2.cqz.scalar;
 
       //------ set "1" variables to "2" variables for next streamwise station
-      blprv(xsi, ami, cti, thi, dsi, dswaki, uei);
+      blprv(xsi, ami, cti, vars[1], vars[2], dswaki, vars[3]);
       blkin();
 
       stepbl();
@@ -2785,10 +2844,33 @@ bool XFoil::mrchue() {
       tran = false;
 
       if (ibl == iblte.get(is)) {
-        thi = thet.top[iblte.top] + thet.bottom[iblte.bottom];
-        dsi = dstr.top[iblte.top] + dstr.bottom[iblte.bottom] + ante;
+        vars[1] = thet.top[iblte.top] + thet.bottom[iblte.bottom];
+        vars[2] = dstr.top[iblte.top] + dstr.bottom[iblte.bottom] + ante;
       }
     }  // 1000 continue : end ibl loop
+
+    int nst = nbl.get(is);
+    VectorXd &dsVec = dstr.get(is);
+    VectorXd &thVec = thet.get(is);
+    VectorXd &ueVec = uedg.get(is);
+    VectorXd dswakiVec(nst + 1);
+    dswakiVec.setZero();
+    for (int iw = 1; iw <= nst - iblte.get(is); ++iw) {
+      dswakiVec[iblte.get(is) + iw] = wgap[iw];
+    }
+    ArrayXi idx = ArrayXi::LinSpaced(nst + 1, 0, nst);
+    ArrayXd hklimArr =
+        (idx <= iblte.get(is))
+            .select(ArrayXd::Constant(nst + 1, 1.02),
+                    ArrayXd::Constant(nst + 1, 1.00005));
+    ArrayXd dswArr =
+        dsVec.head(nst + 1).array() - dswakiVec.head(nst + 1).array();
+    dsVec.head(nst + 1) =
+        (dswArr.max(thVec.head(nst + 1).array() * hklimArr) +
+         dswakiVec.head(nst + 1).array())
+            .matrix();
+    mass.get(is).head(nst + 1) =
+        dsVec.head(nst + 1).array() * ueVec.head(nst + 1).array();
   }    // 2000 continue : end is loop
   return true;
 }
