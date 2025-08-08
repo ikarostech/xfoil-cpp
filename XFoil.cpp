@@ -2867,110 +2867,123 @@ Matrix2Xd XFoil::ncalc(Matrix2Xd points, VectorXd spline_length, int n) {
  * ----------------------------------------------------------------------- */
 PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector, bool siglin) {
   PsiResult psi_result;
-  
+
   //---- distance tolerance for determining if two points are the same
   const double seps = (spline_length[n - 1] - spline_length[0]) * 0.00001;
 
   psi_result.psi = 0.0;
   psi_result.psi_ni = 0.0;
-
   psi_result.qtan = Vector2d::Zero();
-  
-  for (int jo = 0; jo < n; jo++) {
-    int jp = (jo + 1) % n;
-    double dso = (points.col(jo + INDEX_START_WITH) - points.col(jp + INDEX_START_WITH)).norm();
 
-    //------ skip null panel
-    if (fabs(dso) < 1.0e-7) continue;
+  const int panels = n - 1;
 
-    Vector2d r1 = point - points.col(jo + INDEX_START_WITH);
-    Vector2d r2 = point - points.col(jp + INDEX_START_WITH);
-    Vector2d s = (points.col(jp + INDEX_START_WITH) - points.col(jo + INDEX_START_WITH)).normalized();
+  // panel end points
+  Matrix2Xd p1 = points.middleCols(INDEX_START_WITH, panels);
+  Matrix2Xd p2(2, panels);
+  p2.leftCols(panels - 1) = points.middleCols(INDEX_START_WITH + 1, panels - 1);
+  p2.col(panels - 1) = points.col(panels + INDEX_START_WITH);
 
-    blData1.param.xz = s.dot(r1);
-    blData2.param.xz = s.dot(r2);
-    double yy = cross2(s, r1);
+  Matrix2Xd edge = p2 - p1;
+  ArrayXd dso = edge.colwise().norm();
+  Array<bool, Dynamic, 1> valid_panel = (dso >= 1.0e-7);
 
-    //FIXME normを使うと正しく計算されない。計算精度の問題？
-    double rs1 = r1.dot(r1);
-    double rs2 = r2.dot(r2);
+  Matrix2Xd s = edge.array().rowwise() / dso.transpose().array();
+  Matrix2Xd r1 = point.replicate(1, panels) - p1;
+  Matrix2Xd r2 = point.replicate(1, panels) - p2;
 
-    //------ set reflection flag sgn to avoid branch problems with arctan
-    double sgn;
-    if (iNode >= 1 && iNode <= n) {
-      //------- no problem on airfoil surface
-      sgn = 1.0;
-    } else {
-      //------- make sure arctan falls between  -/+  pi/2
-      sgn = sign(1.0, yy);
-    }
+  ArrayXd x1 = (s.array() * r1.array()).colwise().sum();
+  ArrayXd x2 = (s.array() * r2.array()).colwise().sum();
+  ArrayXd yy = s.row(0).array() * r1.row(1).array() - s.row(1).array() * r1.row(0).array();
+  ArrayXd rs1 = r1.colwise().squaredNorm();
+  ArrayXd rs2 = r2.colwise().squaredNorm();
 
-    //------ set log(r^2) and arctan(x/y), correcting for reflection if any
-    double logr12;
-    if (iNode != jo + INDEX_START_WITH && rs1 > 0.0) {
-      logr12 = log(rs1);
-      blData1.param.tz = atan2(sgn * blData1.param.xz, sgn * yy) + (0.5 - 0.5 * sgn) * std::numbers::pi;
-    } else {
-      logr12 = 0.0;
-      blData1.param.tz = 0.0;
-    }
-    double logr22;
-    if (iNode != jp + INDEX_START_WITH && rs2 > 0.0) {
-      logr22 = log(rs2);
-      blData2.param.tz = atan2(sgn * blData2.param.xz, sgn * yy) + (0.5 - 0.5 * sgn) * std::numbers::pi;
-    } else {
-      logr22 = 0.0;
-      blData2.param.tz = 0.0;
-    }
+  ArrayXd sgn = ArrayXd::Ones(panels);
+  if (!(iNode >= 1 && iNode <= n)) {
+    sgn = (yy >= 0.0).select(ArrayXd::Ones(panels), ArrayXd::Constant(panels, -1.0));
+  }
 
-    double x1i = s.dot(normal_vector);
-    double x2i = s.dot(normal_vector);
-    double yyi = cross2(s, normal_vector);
-    if (jo + INDEX_START_WITH == n) break;
-    if (siglin) {
+  ArrayXi idx = ArrayXi::LinSpaced(panels, INDEX_START_WITH, INDEX_START_WITH + panels - 1);
+  ArrayXi jp_idx = idx + 1;
+  Array<bool, Dynamic, 1> mask1 = (rs1 > 0.0) && (idx != iNode);
+  Array<bool, Dynamic, 1> mask2 = (rs2 > 0.0) && (jp_idx != iNode);
+
+  ArrayXd angle1 = (sgn * x1).binaryExpr(sgn * yy, [](double a, double b) { return atan2(a, b); });
+  ArrayXd angle2 = (sgn * x2).binaryExpr(sgn * yy, [](double a, double b) { return atan2(a, b); });
+  ArrayXd t1 = mask1.select(angle1 + (0.5 - 0.5 * sgn) * std::numbers::pi, 0.0);
+  ArrayXd t2 = mask2.select(angle2 + (0.5 - 0.5 * sgn) * std::numbers::pi, 0.0);
+
+  ArrayXd logr12 = mask1.select(rs1.log(), 0.0);
+  ArrayXd logr22 = mask2.select(rs2.log(), 0.0);
+
+  ArrayXd dx = x1 - x2;
+  Array<bool, Dynamic, 1> mask_dx = (dx != 0.0) && valid_panel;
+  ArrayXd dxinv = mask_dx.select(1.0 / dx, 0.0);
+
+  ArrayXd psis = 0.5 * x1 * logr12 - 0.5 * x2 * logr22 + x2 - x1 + yy * (t1 - t2);
+  psis = valid_panel.select(psis, 0.0);
+  ArrayXd psid =
+      ((x1 + x2) * psis + 0.5 * (rs2 * logr22 - rs1 * logr12 + x1 * x1 - x2 * x2)) * dxinv;
+
+  ArrayXd psx1 = 0.5 * logr12;
+  ArrayXd psx2 = -0.5 * logr22;
+  ArrayXd psyy = t1 - t2;
+
+  ArrayXd pdx1 = ((x1 + x2) * psx1 + psis - x1 * logr12 - psid) * dxinv;
+  ArrayXd pdx2 = ((x1 + x2) * psx2 + psis + x2 * logr22 + psid) * dxinv;
+  ArrayXd pdyy = ((x1 + x2) * psyy - yy * (logr12 - logr22)) * dxinv;
+
+  Matrix2Xd gam_jo = gamu.middleCols(0, panels);
+  Matrix2Xd gam_jp(2, panels);
+  gam_jp.leftCols(panels - 1) = gamu.middleCols(1, panels - 1);
+  gam_jp.col(panels - 1) = gamu.col(panels);
+
+  Matrix2Xd gsum_vector = gam_jp + gam_jo;
+  Matrix2Xd gdif_vector = gam_jp - gam_jo;
+
+  ArrayXd sv_jo = surface_vortex.row(0).segment(0, panels).array();
+  ArrayXd sv_jp(panels);
+  sv_jp.head(panels - 1) = surface_vortex.row(0).segment(1, panels - 1).array();
+  sv_jp(panels - 1) = surface_vortex(0, panels);
+  ArrayXd gsum = sv_jp + sv_jo;
+  ArrayXd gdif = sv_jp - sv_jo;
+
+  ArrayXd xi = (s.transpose() * normal_vector).array();
+  ArrayXd yyi = s.row(0).array() * normal_vector.y() - s.row(1).array() * normal_vector.x();
+
+  ArrayXd psni = psx1 * xi + psx2 * xi + psyy * yyi;
+  ArrayXd pdni = pdx1 * xi + pdx2 * xi + pdyy * yyi;
+
+  psi_result.psi +=
+      (1.0 / (4.0 * std::numbers::pi)) * (psis * gsum + psid * gdif).sum();
+  psi_result.psi_ni +=
+      (1.0 / (4.0 * std::numbers::pi)) * (gsum * psni + gdif * pdni).sum();
+
+  Matrix2Xd q_contrib = gsum_vector.array().rowwise() * psni.transpose().array() +
+                        gdif_vector.array().rowwise() * pdni.transpose().array();
+  psi_result.qtan += (1.0 / (4.0 * std::numbers::pi)) * q_contrib.rowwise().sum();
+
+  VectorXd dzdg_jo =
+      (1.0 / (4.0 * std::numbers::pi)) * (psis - psid).matrix();
+  VectorXd dzdg_jp =
+      (1.0 / (4.0 * std::numbers::pi)) * (psis + psid).matrix();
+  psi_result.dzdg.segment(0, panels) += dzdg_jo;
+  psi_result.dzdg.segment(1, panels) += dzdg_jp;
+
+  VectorXd dqdg_jo =
+      (1.0 / (4.0 * std::numbers::pi)) * (psni - pdni).matrix();
+  VectorXd dqdg_jp =
+      (1.0 / (4.0 * std::numbers::pi)) * (psni + pdni).matrix();
+  psi_result.dqdg.segment(0, panels) += dqdg_jo;
+  psi_result.dqdg.segment(1, panels) += dqdg_jp;
+
+  if (siglin) {
+    for (int jo = 0; jo < panels; ++jo) {
+      if (!valid_panel(jo)) continue;
       PsiResult sig_result = psisig(iNode, jo, point, normal_vector);
       psi_result = PsiResult::sum(psi_result, sig_result);
     }
-
-    //------ calculate vortex panel contribution to psi
-    double dxinv = 1.0 / (blData1.param.xz - blData2.param.xz);
-    double psis = 0.5 * blData1.param.xz * logr12 - 0.5 * blData2.param.xz * logr22 + blData2.param.xz - blData1.param.xz +
-           yy * (blData1.param.tz - blData2.param.tz);
-    double psid = ((blData1.param.xz + blData2.param.xz) * psis +
-            0.5 * (rs2 * logr22 - rs1 * logr12 + blData1.param.xz * blData1.param.xz - blData2.param.xz * blData2.param.xz)) *
-           dxinv;
-
-    double psx1 = 0.5 * logr12;
-    double psx2 = -.5 * logr22;
-    double psyy = blData1.param.tz - blData2.param.tz;
-
-    double pdx1 = ((blData1.param.xz + blData2.param.xz) * psx1 + psis - blData1.param.xz * logr12 - psid) * dxinv;
-    double pdx2 = ((blData1.param.xz + blData2.param.xz) * psx2 + psis + blData2.param.xz * logr22 + psid) * dxinv;
-    double pdyy = ((blData1.param.xz + blData2.param.xz) * psyy - yy * (logr12 - logr22)) * dxinv;
-
-    Vector2d gsum_vector = gamu.col(jp) + gamu.col(jo);
-    Vector2d gdif_vector = gamu.col(jp) - gamu.col(jo);
-
-    double gsum = surface_vortex(0, jp) + surface_vortex(0, jo);
-    double gdif = surface_vortex(0, jp) - surface_vortex(0, jo);
-
-    psi_result.psi += (1 / (4 * std::numbers::pi)) * (psis * gsum + psid * gdif);
-
-    //------ dpsi/dgam
-    psi_result.dzdg[jo] += (1 / (4 * std::numbers::pi)) * (psis - psid);
-    psi_result.dzdg[jp] += (1 / (4 * std::numbers::pi)) * (psis + psid);
-
-    //------ dpsi/dni
-    double psni = psx1 * x1i + psx2 * x2i + psyy * yyi;
-    double pdni = pdx1 * x1i + pdx2 * x2i + pdyy * yyi;
-    psi_result.psi_ni += (1 / (4 * std::numbers::pi)) * (gsum * psni + gdif * pdni);
-
-    psi_result.qtan += (1 / (4 * std::numbers::pi)) * (psni * gsum_vector + pdni * gdif_vector);
-
-    psi_result.dqdg[jo] += (1 / (4 * std::numbers::pi)) * (psni - pdni);
-    psi_result.dqdg[jp] += (1 / (4 * std::numbers::pi)) * (psni + pdni);
-  
   }
+
   if ((points.col(n) - points.col(1)).norm() > seps) {
     PsiResult te_result = psi_te(iNode, point, normal_vector);
     psi_result = PsiResult::sum(psi_result, te_result);
