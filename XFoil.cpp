@@ -1362,7 +1362,7 @@ inline void luSolve3x3x6(const double m[3][3], const int piv[3],
     b[2][j] = x2;
   }
 } // namespace
-
+}
 bool XFoil::blsolve() {
 
   auto eliminateVaBlock = [&](int iv, int ivp) {
@@ -1409,7 +1409,7 @@ bool XFoil::blsolve() {
       vm[0][l][iv] = col[0];
       vm[1][l][iv] = col[1];
       vm[2][l][iv] = col[2];
-    
+    }
   };
 
   auto eliminateVbBlock = [&](int iv, int ivp, int ivte1) {
