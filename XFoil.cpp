@@ -1313,6 +1313,7 @@ inline void plu3x3(double m[3][3], int piv[3]) {
     p = 1;
   if (std::abs(m[2][0]) > std::abs(m[p][0]))
     p = 2;
+
   if (p != 0) {
     std::swap(m[0], m[p]);
     std::swap(piv[0], piv[p]);
@@ -1360,7 +1361,6 @@ inline void luSolve3x3x6(const double m[3][3], const int piv[3],
     b[1][j] = x1;
     b[2][j] = x2;
   }
-}
 } // namespace
 
 bool XFoil::blsolve() {
@@ -1409,7 +1409,7 @@ bool XFoil::blsolve() {
       vm[0][l][iv] = col[0];
       vm[1][l][iv] = col[1];
       vm[2][l][iv] = col[2];
-    }
+    
   };
 
   auto eliminateVbBlock = [&](int iv, int ivp, int ivte1) {
