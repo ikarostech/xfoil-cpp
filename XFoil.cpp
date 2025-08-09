@@ -1303,59 +1303,113 @@ bool XFoil::blprv(double xsi, double ami, double cti, double thi, double dsi,
  *       r        3x1  residual vectors
  *       s        3x1  re influence vectors
  * ------------------------------------------------------------------ */
+namespace {
+inline void plu3x3(double m[3][3], int piv[3]) {
+  piv[0] = 0;
+  piv[1] = 1;
+  piv[2] = 2;
+  int p = 0;
+  if (std::abs(m[1][0]) > std::abs(m[0][0]))
+    p = 1;
+  if (std::abs(m[2][0]) > std::abs(m[p][0]))
+    p = 2;
+  if (p != 0) {
+    std::swap(m[0], m[p]);
+    std::swap(piv[0], piv[p]);
+  }
+  double inv = 1.0 / m[0][0];
+  m[1][0] *= inv;
+  m[2][0] *= inv;
+  m[1][1] -= m[1][0] * m[0][1];
+  m[1][2] -= m[1][0] * m[0][2];
+  m[2][1] -= m[2][0] * m[0][1];
+  m[2][2] -= m[2][0] * m[0][2];
+  if (std::abs(m[2][1]) > std::abs(m[1][1])) {
+    std::swap(m[1][0], m[2][0]);
+    std::swap(m[1][1], m[2][1]);
+    std::swap(m[1][2], m[2][2]);
+    std::swap(piv[1], piv[2]);
+  }
+  inv = 1.0 / m[1][1];
+  m[2][1] *= inv;
+  m[2][2] -= m[2][1] * m[1][2];
+}
+
+inline void luSolve3x3(const double m[3][3], const int piv[3], double b[3]) {
+  double x0 = b[piv[0]];
+  double x1 = b[piv[1]] - m[1][0] * x0;
+  double x2 = b[piv[2]] - m[2][0] * x0 - m[2][1] * x1;
+  x2 /= m[2][2];
+  x1 = (x1 - m[1][2] * x2) / m[1][1];
+  x0 = (x0 - m[0][1] * x1 - m[0][2] * x2) / m[0][0];
+  b[0] = x0;
+  b[1] = x1;
+  b[2] = x2;
+}
+
+inline void luSolve3x3x6(const double m[3][3], const int piv[3],
+                         double b[3][6]) {
+  for (int j = 0; j < 6; ++j) {
+    double x0 = b[piv[0]][j];
+    double x1 = b[piv[1]][j] - m[1][0] * x0;
+    double x2 = b[piv[2]][j] - m[2][0] * x0 - m[2][1] * x1;
+    x2 /= m[2][2];
+    x1 = (x1 - m[1][2] * x2) / m[1][1];
+    x0 = (x0 - m[0][1] * x1 - m[0][2] * x2) / m[0][0];
+    b[0][j] = x0;
+    b[1][j] = x1;
+    b[2][j] = x2;
+  }
+}
+} // namespace
+
 bool XFoil::blsolve() {
 
   auto eliminateVaBlock = [&](int iv, int ivp) {
-    double pivot = 1.0 / va[iv](0, 0);
-    va[iv](0, 1) *= pivot;
-    for (int l = iv; l <= nsys; l++)
-      vm[0][l][iv] *= pivot;
-    vdel[iv](0, 0) *= pivot;
-    vdel[iv](0, 1) *= pivot;
+    double D[3][3] = {{va[iv](0, 0), va[iv](0, 1), vm[0][iv][iv]},
+                      {va[iv](1, 0), va[iv](1, 1), vm[1][iv][iv]},
+                      {va[iv](2, 0), va[iv](2, 1), vm[2][iv][iv]}};
+    int piv[3];
+    plu3x3(D, piv);
 
-    for (int k = 1; k < 3; k++) {
-      double vtmp = va[iv](k, 0);
-      va[iv](k, 1) -= vtmp * va[iv](0, 1);
-      for (int l = iv; l <= nsys; l++)
-        vm[k][l][iv] -= vtmp * vm[0][l][iv];
-      vdel[iv](k, 0) -= vtmp * vdel[iv](0, 0);
-      vdel[iv](k, 1) -= vtmp * vdel[iv](0, 1);
+    double rhs[3][6] = {};
+    int cols = 0;
+    for (int offset = 0; offset < 3 && iv + offset <= nsys; ++offset, ++cols) {
+      rhs[0][cols] = vm[0][iv + offset][iv];
+      rhs[1][cols] = vm[1][iv + offset][iv];
+      rhs[2][cols] = vm[2][iv + offset][iv];
     }
+    rhs[0][cols] = vdel[iv](0, 0);
+    rhs[1][cols] = vdel[iv](1, 0);
+    rhs[2][cols] = vdel[iv](2, 0);
+    ++cols;
+    rhs[0][cols] = vdel[iv](0, 1);
+    rhs[1][cols] = vdel[iv](1, 1);
+    rhs[2][cols] = vdel[iv](2, 1);
 
-    pivot = 1.0 / va[iv](1, 1);
-    for (int l = iv; l <= nsys; l++)
-      vm[1][l][iv] *= pivot;
-    vdel[iv](1, 0) *= pivot;
-    vdel[iv](1, 1) *= pivot;
+    luSolve3x3x6(D, piv, rhs);
 
-    double vtmp = va[iv](2, 1);
-    for (int l = iv; l <= nsys; l++)
-      vm[2][l][iv] -= vtmp * vm[1][l][iv];
-    vdel[iv](2, 0) -= vtmp * vdel[iv](1, 0);
-    vdel[iv](2, 1) -= vtmp * vdel[iv](1, 1);
-
-    pivot = 1.0 / vm[2][iv][iv];
-    for (int l = ivp; l <= nsys; l++)
-      vm[2][l][iv] *= pivot;
-    vdel[iv](2, 0) *= pivot;
-    vdel[iv](2, 1) *= pivot;
-
-    double vtmp1 = vm[0][iv][iv];
-    double vtmp2 = vm[1][iv][iv];
-    for (int l = ivp; l <= nsys; l++) {
-      vm[0][l][iv] -= vtmp1 * vm[2][l][iv];
-      vm[1][l][iv] -= vtmp2 * vm[2][l][iv];
+    int idx = 0;
+    for (int offset = 0; offset < 3 && iv + offset <= nsys; ++offset, ++idx) {
+      vm[0][iv + offset][iv] = rhs[0][idx];
+      vm[1][iv + offset][iv] = rhs[1][idx];
+      vm[2][iv + offset][iv] = rhs[2][idx];
     }
-    vdel[iv](0, 0) -= vtmp1 * vdel[iv](2, 0);
-    vdel[iv](1, 0) -= vtmp2 * vdel[iv](2, 0);
-    vdel[iv](0, 1) -= vtmp1 * vdel[iv](2, 1);
-    vdel[iv](1, 1) -= vtmp2 * vdel[iv](2, 1);
+    vdel[iv](0, 0) = rhs[0][idx];
+    vdel[iv](1, 0) = rhs[1][idx];
+    vdel[iv](2, 0) = rhs[2][idx];
+    ++idx;
+    vdel[iv](0, 1) = rhs[0][idx];
+    vdel[iv](1, 1) = rhs[1][idx];
+    vdel[iv](2, 1) = rhs[2][idx];
 
-    vtmp = va[iv](0, 1);
-    for (int l = ivp; l <= nsys; l++)
-      vm[0][l][iv] -= vtmp * vm[1][l][iv];
-    vdel[iv](0, 0) -= vtmp * vdel[iv](1, 0);
-    vdel[iv](0, 1) -= vtmp * vdel[iv](1, 1);
+    for (int l = iv + 3; l <= nsys; ++l) {
+      double col[3] = {vm[0][l][iv], vm[1][l][iv], vm[2][l][iv]};
+      luSolve3x3(D, piv, col);
+      vm[0][l][iv] = col[0];
+      vm[1][l][iv] = col[1];
+      vm[2][l][iv] = col[2];
+    }
   };
 
   auto eliminateVbBlock = [&](int iv, int ivp, int ivte1) {
@@ -2450,7 +2504,7 @@ bool XFoil::mrchdu() {
         //------ the current unconverged solution might still be reasonable...
         if (dmax > 0.1) {
           //------- the current solution is garbage --> extrapolate values
-          //instead
+          // instead
           if (ibl > 3) {
             if (ibl <= iblte.get(is)) {
               thi = thet.get(is)[ibm] *
@@ -2786,7 +2840,7 @@ bool XFoil::mrchue() {
         //------ the current unconverged solution might still be reasonable...
         if (dmax > 0.1) {
           //------- the current solution is garbage --> extrapolate values
-          //instead
+          // instead
           if (ibl > 3) {
             if (ibl <= iblte.get(is)) {
               thi = thet.get(is)[ibm] *
