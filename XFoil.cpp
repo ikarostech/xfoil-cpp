@@ -1413,29 +1413,53 @@ bool XFoil::blsolve() {
   };
 
   auto eliminateVbBlock = [&](int iv, int ivp, int ivte1) {
-    for (int k = 0; k < 3; k++) {
-      double vtmp1 = vb[ivp](k, 0);
-      double vtmp2 = vb[ivp](k, 1);
-      double vtmp3 = vm[k][iv][ivp];
-      for (int l = ivp; l <= nsys; l++)
-        vm[k][l][ivp] -= (vtmp1 * vm[0][l][iv] + vtmp2 * vm[1][l][iv] +
-                          vtmp3 * vm[2][l][iv]);
-      vdel[ivp](k, 0) -= (vtmp1 * vdel[iv](0, 0) + vtmp2 * vdel[iv](1, 0) +
-                          vtmp3 * vdel[iv](2, 0));
-      vdel[ivp](k, 1) -= (vtmp1 * vdel[iv](0, 1) + vtmp2 * vdel[iv](1, 1) +
-                          vtmp3 * vdel[iv](2, 1));
+    double D[3][3] = {{vb[ivp](0, 0), vb[ivp](0, 1), vm[0][iv][ivp]},
+                      {vb[ivp](1, 0), vb[ivp](1, 1), vm[1][iv][ivp]},
+                      {vb[ivp](2, 0), vb[ivp](2, 1), vm[2][iv][ivp]}};
+
+    double col[3];
+    for (int l = ivp; l <= nsys; ++l) {
+      col[0] = vm[0][l][iv];
+      col[1] = vm[1][l][iv];
+      col[2] = vm[2][l][iv];
+      for (int k = 0; k < 3; ++k)
+        vm[k][l][ivp] -= D[k][0] * col[0] + D[k][1] * col[1] + D[k][2] * col[2];
     }
+
+    col[0] = vdel[iv](0, 0);
+    col[1] = vdel[iv](1, 0);
+    col[2] = vdel[iv](2, 0);
+    for (int k = 0; k < 3; ++k)
+      vdel[ivp](k, 0) -= D[k][0] * col[0] + D[k][1] * col[1] + D[k][2] * col[2];
+
+    col[0] = vdel[iv](0, 1);
+    col[1] = vdel[iv](1, 1);
+    col[2] = vdel[iv](2, 1);
+    for (int k = 0; k < 3; ++k)
+      vdel[ivp](k, 1) -= D[k][0] * col[0] + D[k][1] * col[1] + D[k][2] * col[2];
 
     if (iv == ivte1) {
       int ivz = isys.bottom[iblte.bottom + 1];
-      for (int k = 0; k < 3; k++) {
-        double vtmp1 = vz[k][0];
-        double vtmp2 = vz[k][1];
-        for (int l = ivp; l <= nsys; l++)
-          vm[k][l][ivz] -= (vtmp1 * vm[0][l][iv] + vtmp2 * vm[1][l][iv]);
-        vdel[ivz](k, 0) -= (vtmp1 * vdel[iv](0, 0) + vtmp2 * vdel[iv](1, 0));
-        vdel[ivz](k, 1) -= (vtmp1 * vdel[iv](0, 1) + vtmp2 * vdel[iv](1, 1));
+      double Dz[3][2] = {{vz[0][0], vz[0][1]},
+                         {vz[1][0], vz[1][1]},
+                         {vz[2][0], vz[2][1]}};
+
+      for (int l = ivp; l <= nsys; ++l) {
+        col[0] = vm[0][l][iv];
+        col[1] = vm[1][l][iv];
+        for (int k = 0; k < 3; ++k)
+          vm[k][l][ivz] -= Dz[k][0] * col[0] + Dz[k][1] * col[1];
       }
+
+      col[0] = vdel[iv](0, 0);
+      col[1] = vdel[iv](1, 0);
+      for (int k = 0; k < 3; ++k)
+        vdel[ivz](k, 0) -= Dz[k][0] * col[0] + Dz[k][1] * col[1];
+
+      col[0] = vdel[iv](0, 1);
+      col[1] = vdel[iv](1, 1);
+      for (int k = 0; k < 3; ++k)
+        vdel[ivz](k, 1) -= Dz[k][0] * col[0] + Dz[k][1] * col[1];
     }
   };
 
