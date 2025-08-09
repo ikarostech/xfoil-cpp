@@ -2314,23 +2314,21 @@ bool XFoil::mrchdu() {
 
         if (simi || ibl == iblte.get(is) + 1) {
           //--------- for similarity station or first wake point, prescribe ue
-          vs2(3, 0) = 0.0;
-          vs2(3, 1) = 0.0;
-          vs2(3, 2) = 0.0;
-          vs2(3, 3) = blData2.param.uz_uei;
+          vs2.block<1, 4>(3, 0) << 0.0, 0.0, 0.0, blData2.param.uz_uei;
           vsrez[3] = ueref - blData2.param.uz;
         } else {
           //******** calculate ue-hk characteristic slope
-          
+
           //--------- set unit dhk
-          vs2(3, 0) = 0.0;
-          vs2(3, 1) = blData2.hkz.t();
-          vs2(3, 2) = blData2.hkz.d();
-          vs2(3, 3) = blData2.hkz.u() * blData2.param.uz_uei;
+          vs2.block<1, 4>(3, 0)
+              << 0.0, blData2.hkz.t(), blData2.hkz.d(),
+              blData2.hkz.u() * blData2.param.uz_uei;
           vsrez[3] = 1.0;
 
           //--------- calculate due response
-          double delta_sen = vs2.block(0, 0, 4, 4).fullPivLu().solve(vsrez)[3];
+          Matrix4d system_tmp = vs2.block<4, 4>(0, 0);
+          Vector4d rhs_tmp = vsrez;
+          double delta_sen = system_tmp.fullPivLu().solve(rhs_tmp)[3];
 
           //--------- set  senswt * (normalized due/dhk)
           sennew = senswt * delta_sen * hkref / ueref;
@@ -2340,16 +2338,18 @@ bool XFoil::mrchdu() {
             sens = 0.5 * (sens + sennew);
 
           //--------- set prescribed ue-hk combination
-          vs2(3, 0) = 0.0;
-          vs2(3, 1) = blData2.hkz.t() * hkref;
-          vs2(3, 2) = blData2.hkz.d() * hkref;
-          vs2(3, 3) = (blData2.hkz.u() * hkref + sens / ueref) * blData2.param.uz_uei;
+          vs2.block<1, 4>(3, 0)
+              << 0.0, blData2.hkz.t() * hkref, blData2.hkz.d() * hkref,
+              (blData2.hkz.u() * hkref + sens / ueref) *
+                  blData2.param.uz_uei;
           vsrez[3] = -(hkref * hkref) * (blData2.hkz.scalar / hkref - 1.0) -
                      sens * (blData2.param.uz / ueref - 1.0);
         }
 
         //-------- solve newton system for current "2" station
-        vsrez = vs2.block(0, 0, 4, 4).fullPivLu().solve(vsrez);
+        Matrix4d system = vs2.block<4, 4>(0, 0);
+        Vector4d rhs = vsrez;
+        vsrez = system.fullPivLu().solve(rhs);
 
         //-------- determine max changes and underrelax if necessary
         dmax = std::max(fabs(vsrez[1] / thi), fabs(vsrez[2] / dsi));
