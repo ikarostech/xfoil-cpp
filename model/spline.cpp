@@ -110,17 +110,17 @@ Eigen::VectorXd spline::splind(Eigen::VectorXd x, Eigen::VectorXd s) {
     matrixA(i, i) = 2.0 * (dsm + dsp);
     matrixA(i, i + 1) = dsm;
     vectorD(i) =
-        3.0 * ((x[i + 1 + INDEX_START_WITH] - x[i + INDEX_START_WITH]) * dsm / dsp + (x[i + INDEX_START_WITH] - x[i - 1 + INDEX_START_WITH]) * dsp / dsm);
+        3.0 * ((x[i + 1] - x[i]) * dsm / dsp + (x[i] - x[i - 1]) * dsp / dsm);
   }
 
   //----- set zero third derivative end condition
   matrixA(0, 0) = 1.0;
   matrixA(0, 1) = 1.0;
-  vectorD(0) = 2.0 * (x[1 + INDEX_START_WITH] - x[0 + INDEX_START_WITH]) / (s[1] - s[0]);
+  vectorD(0) = 2.0 * (x[1] - x[0]) / (s[1] - s[0]);
 
   matrixA(n - 1, n - 2) = 1.0;
   matrixA(n - 1, n - 1) = 1.0;
-  vectorD(n - 1) = 2.0 * (x[n - 1 + INDEX_START_WITH] - x[n - 2 + INDEX_START_WITH]) / (s[n - 1] - s[n - 2]);
+  vectorD(n - 1) = 2.0 * (x[n - 1] - x[n - 2]) / (s[n - 1] - s[n - 2]);
 
   //---- solve for derivative array xs
   Eigen::VectorXd vectorXs = MathUtil::tridiagonalSolve(matrixA, vectorD).x;
