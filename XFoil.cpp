@@ -5364,26 +5364,19 @@ double XFoil::xifset(int is) {
   Vector2d point_chord = point_te - point_le;
 
   //---- calculate chord-based x/c, y/c
-  for (int i = 1; i <= n; i++) {
-    w1[i] = (points.col(i) - point_le).dot(point_chord.normalized());
-    w2[i] = cross2(points.col(i) - point_le, point_chord.normalized());
+  for (int i = 0; i < n; i++) {
+    w1[i] = (points.col(i + INDEX_START_WITH) - point_le).dot(point_chord.normalized());
+    w2[i] = cross2(points.col(i + INDEX_START_WITH) - point_le, point_chord.normalized());
   }
 
-  w3.segment(1, n) = spline::splind(w1.segment(1, n), spline_length.head(n));
-  w4.segment(1, n) = spline::splind(w2.segment(1, n), spline_length.head(n));
+  w3 = spline::splind(w1, spline_length.head(n));
+  w4 = spline::splind(w2, spline_length.head(n));
 
   if (is == 1) {
-    //----- set approximate arc length of forced transition point for sinvrt
     str = sle + (spline_length[0] - sle) * xstrip.top;
-
-    //----- calculate actual arc length
     str = spline::sinvrt(str, xstrip.top, w1, w3, spline_length.head(n), n);
-
-    //----- set bl coordinate value
     xiforc = std::min((sst - str), xssi.get(is)[iblte.get(is)]);
   } else {
-    //----- same for bottom side
-
     str = sle + (spline_length[n - 1] - sle) * xstrip.bottom;
     str = spline::sinvrt(str, xstrip.bottom, w1, w3, spline_length.head(n), n);
     xiforc = std::min((str - sst), xssi.get(is)[iblte.get(is)]);
