@@ -5374,14 +5374,11 @@ double XFoil::xifset(int is) {
 
   if (is == 1) {
     str = sle + (spline_length[0] - sle) * xstrip.top;
-    str = spline::sinvrt(str, xstrip.top, w1, w3, spline_length.head(n), n);
-    xiforc = std::min((sst - str), xssi.get(is)[iblte.get(is)]);
   } else {
     str = sle + (spline_length[n - 1] - sle) * xstrip.bottom;
-    str = spline::sinvrt(str, xstrip.bottom, w1, w3, spline_length.head(n), n);
-    xiforc = std::min((str - sst), xssi.get(is)[iblte.get(is)]);
   }
-
+  str = spline::sinvrt(str, xstrip.get(is), w1, w3, spline_length.head(n), n);
+  xiforc = std::min((str - sst), xssi.get(is)[iblte.get(is)]);
   if (xiforc < 0.0) {
     ss << " ***  stagnation point is past trip on side " << is << "\n";
     writeString(ss.str());
