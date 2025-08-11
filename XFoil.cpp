@@ -3857,8 +3857,6 @@ bool XFoil::specal() {
   //---- set corresponding  m(clm), re(clm)
   minf_clm = getActualMach(clm, mach_type);
 
-  comset();
-
   //---- set corresponding cl(m)
   clcalc(cmref);
   //---- iterate on clm
@@ -3886,7 +3884,6 @@ bool XFoil::specal() {
     }
 
     //------ set new cl(m)
-    comset();
     clcalc(cmref);
 
     if (fabs(dclm) <= 1.0e-6) {
