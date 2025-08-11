@@ -82,9 +82,6 @@ bool XFoil::initialize() {
   minf_cl = getActualMach(1.0, mach_type);
   reinf_cl = getActualReynolds(1.0, reynolds_type);
 
-  //---- set various compressibility parameters from minf
-  comset();
-
   return true;
 }
 
@@ -1640,6 +1637,9 @@ double XFoil::cang(Matrix2Xd points) {
 }
 
 bool XFoil::cdcalc() {
+  // Ensure compressibility parameters reflect the current Mach number
+  comset();
+
   if (!(lvisc && lblini)) {
     cd = 0.0;
     return true;
