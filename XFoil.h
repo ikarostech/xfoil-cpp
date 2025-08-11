@@ -122,6 +122,7 @@ class XFoil {
 
   bool setMach();
 
+  // TODO ActualMachにあわせる
   bool comset();
   double getActualMach(double cls, MachType mach_type);
   double getActualReynolds(double cls, ReynoldsType reynolds_type);
@@ -328,6 +329,7 @@ class XFoil {
   
   Vector2d cmref;
   double tklam; // karman-tsien parameter minf^2 / [1 + sqrt[1-minf^2]]^2 <- Prandtl-Glauert-Ackeret rule ?
+  double tkl_msq;
   Matrix2Xd dpoints_ds; //formerly xp, yp
   VectorXd spline_length;
   double dtor;
@@ -362,7 +364,6 @@ class XFoil {
 
   double cl_alf, cl_msq;
   double gamma, gamm1;
-  double tkl_msq;
 
 
   Matrix2Xd surface_vortex;
