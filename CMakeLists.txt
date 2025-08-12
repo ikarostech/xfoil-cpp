@@ -19,6 +19,7 @@ add_executable(testExe
     ./model/spline.cpp
     ./model/psi.cpp
     ./model/coefficient/dissipation.cpp
+    ./model/coefficient/skin_friction.cpp
     ./XFoil.cpp
     ./main.cpp
 )

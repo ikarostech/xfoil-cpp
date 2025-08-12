@@ -51,6 +51,7 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 #include "model/spline.hpp"
 #include "model/boundary_layer.hpp"
 #include "model/psi_result.hpp"
+#include "model/coefficient/skin_friction.hpp"
 #include "xfoil_params.h"
 
 using namespace std;
@@ -177,20 +178,6 @@ class XFoil {
   double cang(Matrix2Xd points);
   bool cdcalc();
 
-  /**
-   * @brief 
-   * 
-   */
-  class C_f {
-    public:
-    double cf;
-    double hk;
-    double rt;
-    /** squared freestream mach number at current cl*/
-    double msq;
-  };
-  C_f cfl(double hk, double rt);
-  C_f cft(double hk, double rt, double msq);
   enum class SideType {
     TOP = 1,
     BOTTOM = 2

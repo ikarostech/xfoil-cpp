@@ -24,6 +24,7 @@
 #include "Eigen/Core"
 #include "Eigen/Dense"
 #include "Eigen/StdVector"
+#include "model/coefficient/skin_friction.hpp"
 #include "model/coefficient/dissipation.hpp"
 #include <algorithm>
 #include <cstring>
@@ -332,18 +333,18 @@ void XFoil::computeCoefficients(blData &ref, FlowRegimeEnum flowRegimeType) {
     cf2_m2 = 0.0;
   } else {
     if (flowRegimeType == FlowRegimeEnum::Laminar) {
-      C_f c_f = cfl(ref.hkz.scalar, ref.rtz.scalar);
+      skin_friction::C_f c_f = skin_friction::cfl(ref.hkz.scalar, ref.rtz.scalar);
       ref.cfz.scalar = c_f.cf;
       cf2_hk2 = c_f.hk;
       cf2_rt2 = c_f.rt;
       cf2_m2 = c_f.msq;
     } else {
-      C_f c_fl = cfl(ref.hkz.scalar, ref.rtz.scalar);
+      skin_friction::C_f c_fl = skin_friction::cfl(ref.hkz.scalar, ref.rtz.scalar);
       double cf2l = c_fl.cf;
       double cf2l_hk2 = c_fl.hk;
       double cf2l_rt2 = c_fl.rt;
       double cf2l_m2 = c_fl.msq;
-      C_f c_ft = cft(ref.hkz.scalar, ref.rtz.scalar, ref.param.mz);
+      skin_friction::C_f c_ft = skin_friction::cft(ref.hkz.scalar, ref.rtz.scalar, ref.param.mz);
       ref.cfz.scalar = c_ft.cf;
       cf2_hk2 = c_ft.hk;
       cf2_rt2 = c_ft.rt;
@@ -383,7 +384,7 @@ void XFoil::computeDissipationAndThickness(blData &ref,
                      dissipation_result.di_rt * ref.rtz.vector;
   } else {
     if (flowRegimeType == FlowRegimeEnum::Turbulent) {
-      C_f c_ft = cft(ref.hkz.scalar, ref.rtz.scalar, ref.param.mz);
+      auto c_ft = skin_friction::cft(ref.hkz.scalar, ref.rtz.scalar, ref.param.mz);
       double cf2t = c_ft.cf;
       double cf2t_hk2 = c_ft.hk;
       double cf2t_rt2 = c_ft.rt;
@@ -1207,19 +1208,19 @@ bool XFoil::blmid(FlowRegimeEnum flowRegimeType) {
   double ma = 0.5 * (blData1.param.mz + blData2.param.mz);
 
   //---- compute midpoint skin friction coefficient
-  C_f cf_res{};
+  skin_friction::C_f cf_res{};
   switch (flowRegimeType) {
   case FlowRegimeEnum::Laminar:
-    cf_res = cfl(hka, rta);
+    cf_res = skin_friction::cfl(hka, rta);
     break;
   case FlowRegimeEnum::Turbulent: {
-    C_f lam = cfl(hka, rta);
-    C_f tur = cft(hka, rta, ma);
+    skin_friction::C_f lam = skin_friction::cfl(hka, rta);
+    skin_friction::C_f tur = skin_friction::cft(hka, rta, ma);
     cf_res = (lam.cf > tur.cf) ? lam : tur;
     break;
   }
   case FlowRegimeEnum::Wake:
-    cf_res = C_f(); // zero initialized
+    cf_res = skin_friction::C_f(); // zero initialized
     break;
   default:
     return false;
@@ -1648,56 +1649,6 @@ bool XFoil::cdcalc() {
 
   return true;
 }
-
-/**
- * @brief calculate skin friction coefficient(C_f) in lamier
- *
- * @param hk kinematic shape parameter
- * @param rt momentum-thickness reynolds number
- */
-XFoil::C_f XFoil::cfl(double hk, double rt) {
-  C_f c_f = C_f();
-  if (hk < 5.5) {
-    double tmp = pow(5.5 - hk, 3) / (hk + 1.0);
-    c_f.cf = (0.0727 * tmp - 0.07) / rt;
-    c_f.hk =
-        (-0.0727 * tmp * 3.0 / (5.5 - hk) - 0.0727 * tmp / (hk + 1.0)) / rt;
-  } else {
-    double tmp = 1.0 - 1.0 / (hk - 4.5);
-    c_f.cf = (0.015 * tmp * tmp - 0.07) / rt;
-    c_f.hk = 0.015 * tmp * 2.0 / pow(hk - 4.5, 2.0) / rt;
-  }
-  c_f.rt = -c_f.cf / rt;
-  c_f.msq = 0.0;
-  return c_f;
-}
-
-XFoil::C_f XFoil::cft(double hk, double rt, double msq) {
-  C_f c_f = C_f();
-
-  //---- turbulent skin friction function  ( cf )    (coles)
-  double gm1 = 1.4 - 1.0;
-  double fc = sqrt(1.0 + 0.5 * gm1 * msq);
-  double grt = std::max(log(rt / fc), 3.0);
-
-  double gex = -1.74 - 0.31 * hk;
-
-  double f_arg = std::max(-1.33 * hk, -20.0);
-
-  double tanh_hk = tanh(4.0 - hk / 0.875);
-
-  double cfo = 0.3 * exp(f_arg) * pow((grt / 2.3026), gex);
-  c_f.cf = (cfo + 0.00011 * (tanh_hk - 1.0)) / fc;
-  c_f.hk = (-1.33 * cfo - 0.31 * log(grt / 2.3026) * cfo -
-            0.00011 * (1.0 - pow(tanh_hk, 2)) / 0.875) /
-           fc;
-  c_f.rt = gex * cfo / (fc * grt) / rt;
-  c_f.msq = gex * cfo / (fc * grt) * (-0.25 * gm1 / fc / fc) -
-            0.25 * gm1 * (c_f.cf) / pow(fc, 2);
-
-  return c_f;
-}
-
 bool XFoil::clcalc(Vector2d ref) {
 
   //-----------------------------------------------------------
