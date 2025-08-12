@@ -129,7 +129,7 @@ class XFoil {
   bool restoreblData(int icom);
   bool saveblData(int icom);
 
-  bool apcalc();
+  VectorXd apcalc(Matrix2Xd points);
   class AxResult {
     public:
     double ax;

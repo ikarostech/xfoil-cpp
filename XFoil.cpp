@@ -543,7 +543,7 @@ bool XFoil::abcopy(Matrix2Xd copyFrom) {
   point_te = 0.5 * (points.col(1) + points.col(n));
   chord = (point_le - point_te).norm();
   tecalc();
-  apcalc();
+  apanel.head(n) = apcalc(points.middleCols(INDEX_START_WITH, points.cols() - INDEX_START_WITH));
 
   lgamu = false;
   lwake = false;
@@ -556,31 +556,21 @@ bool XFoil::abcopy(Matrix2Xd copyFrom) {
   return true;
 }
 
-bool XFoil::apcalc() {
-
+VectorXd XFoil::apcalc(Matrix2Xd points) {
+  VectorXd result = VectorXd::Zero(n);
   //---- set angles of airfoil panels
-  for (int i = 0; i < n - 1; i++) {
-
-    Vector2d s =
-        points.col(i + 1 + INDEX_START_WITH) - points.col(i + INDEX_START_WITH);
-
-    // FIXME double型の==比較
-    if (s.norm() == 0.0)
-      apanel[i] = atan2(-normal_vectors.col(i + INDEX_START_WITH).y(),
-                        -normal_vectors.col(i + INDEX_START_WITH).x());
-    else
-      apanel[i] = atan2(s.x(), -s.y());
+  for (int i = 0; i < n; i++) {
+    Vector2d diff =
+        points.col((i + 1) % n) - points.col(i);
+    result[i] = atan2(diff.x(), -diff.y());
   }
 
   //---- TE panel
-  if (sharp)
-    apanel[n - 1] = std::numbers::pi;
-  else {
-    Vector2d s = points.col(1) - points.col(n);
-    apanel[n - 1] = atan2(-s.x(), s.y()) + std::numbers::pi;
+  if (sharp) {
+    result[n - 1] = std::numbers::pi;
   }
 
-  return true;
+  return result;
 }
 
 /** -------------------------------------------------------------
