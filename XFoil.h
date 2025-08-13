@@ -47,11 +47,11 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 #include "Eigen/Dense"
 #include "Eigen/StdVector"
 
+#include "enum/flowRegimeEnum.hpp"
 #include "model/math_util.hpp"
 #include "model/spline.hpp"
 #include "model/boundary_layer.hpp"
 #include "model/psi_result.hpp"
-#include "model/coefficient/skin_friction.hpp"
 #include "xfoil_params.h"
 
 using namespace std;
@@ -80,11 +80,6 @@ class XFoil {
     CONSTANT,
     FIXED_LIFT,
     FIXED_LIFT_AND_DYNAMIC_PRESSURE
-  };
-  enum class FlowRegimeEnum {
-    Laminar = 1,
-    Turbulent = 2,
-    Wake = 3
   };
   ReynoldsType reynolds_type;
   MachType mach_type;

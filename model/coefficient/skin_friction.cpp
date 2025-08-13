@@ -45,3 +45,13 @@ skin_friction::C_f skin_friction::cft(double hk, double rt, double msq) {
 
   return c_f;
 }
+
+skin_friction::C_f skin_friction::getSkinFriction(double hk, double rt, double msq, FlowRegimeEnum flowRegimeType) {
+    if (flowRegimeType == FlowRegimeEnum::Laminar) {
+        return skin_friction::cfl(hk, rt);
+    } else {
+        C_f cfl = skin_friction::cfl(hk, rt);
+        C_f cft = skin_friction::cft(hk, rt, msq);
+        return cfl.cf > cft.cf ? cfl : cft;
+    }
+}

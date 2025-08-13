@@ -1,3 +1,4 @@
+#include "../../enum/flowRegimeEnum.hpp"
 #include "../../XFoil.h"
 
 class dissipation {
@@ -8,8 +9,7 @@ public:
     double di_hk;
     double di_rt;
   };
-  static DissipationResult getDissipation(double hk, double rt,
-                                          XFoil::FlowRegimeEnum flowRegimeType);
+  static DissipationResult getDissipation(double hk, double rt, FlowRegimeEnum flowRegimeType);
 private:
   static DissipationResult dil(double hk, double rt);
   static DissipationResult dilw(double hk, double rt);

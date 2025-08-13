@@ -37,9 +37,8 @@ dissipation::DissipationResult dissipation::dilw(double hk, double rt) {
   return result;
 }
 
-dissipation::DissipationResult dissipation::getDissipation(
-    double hk, double rt, XFoil::FlowRegimeEnum flowRegimeType) {
-  if (flowRegimeType == XFoil::FlowRegimeEnum::Wake) {
+dissipation::DissipationResult dissipation::getDissipation(double hk, double rt, FlowRegimeEnum flowRegimeType) {
+  if (flowRegimeType == FlowRegimeEnum::Wake) {
     return dilw(hk, rt);
   }
   return dil(hk, rt);

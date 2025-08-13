@@ -1,4 +1,4 @@
-#pragma once
+#include "../../enum/flowRegimeEnum.hpp"
 
 class skin_friction {
 public:
@@ -10,6 +10,8 @@ public:
     /** squared freestream mach number at current cl*/
     double msq;
   };
+  static C_f getSkinFriction(double hk, double rt, double msq, FlowRegimeEnum flowRegimeType);
+//private:
   static C_f cfl(double hk, double rt);
   static C_f cft(double hk, double rt, double msq);
 };

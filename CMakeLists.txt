@@ -23,6 +23,7 @@ add_executable(testExe
     ./XFoil.cpp
     ./main.cpp
 )
+target_include_directories(testExe PRIVATE ${CMAKE_SOURCE_DIR}/src)
 list(APPEND CMAKE_PREFIX_PATH "/usr/inclucde/eigen3")
 target_link_libraries(testExe PRIVATE Eigen3::Eigen)
 
