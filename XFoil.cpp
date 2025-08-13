@@ -325,38 +325,12 @@ void XFoil::computeCoefficients(blData &ref, FlowRegimeEnum flowRegimeType) {
   ref.cqz.t() += cq2_h2 * ref.param.hz_tz;
   ref.cqz.d() += cq2_h2 * ref.param.hz_dz;
 
-  double cf2_hk2, cf2_rt2, cf2_m2;
-  if (flowRegimeType == FlowRegimeEnum::Wake) {
-    ref.cfz.scalar = 0.0;
-    cf2_hk2 = 0.0;
-    cf2_rt2 = 0.0;
-    cf2_m2 = 0.0;
-  } else {
-    if (flowRegimeType == FlowRegimeEnum::Laminar) {
-      skin_friction::C_f c_f = skin_friction::cfl(ref.hkz.scalar, ref.rtz.scalar);
-      ref.cfz.scalar = c_f.cf;
-      cf2_hk2 = c_f.hk;
-      cf2_rt2 = c_f.rt;
-      cf2_m2 = c_f.msq;
-    } else {
-      skin_friction::C_f c_fl = skin_friction::cfl(ref.hkz.scalar, ref.rtz.scalar);
-      double cf2l = c_fl.cf;
-      double cf2l_hk2 = c_fl.hk;
-      double cf2l_rt2 = c_fl.rt;
-      double cf2l_m2 = c_fl.msq;
-      skin_friction::C_f c_ft = skin_friction::cft(ref.hkz.scalar, ref.rtz.scalar, ref.param.mz);
-      ref.cfz.scalar = c_ft.cf;
-      cf2_hk2 = c_ft.hk;
-      cf2_rt2 = c_ft.rt;
-      cf2_m2 = c_ft.msq;
-      if (cf2l > ref.cfz.scalar) {
-        ref.cfz.scalar = cf2l;
-        cf2_hk2 = cf2l_hk2;
-        cf2_rt2 = cf2l_rt2;
-        cf2_m2 = cf2l_m2;
-      }
-    }
-  }
+  skin_friction::C_f c_f = skin_friction::getSkinFriction(ref.hkz.scalar, ref.rtz.scalar, ref.param.mz, flowRegimeType);
+  ref.cfz.scalar = c_f.cf;
+  double cf2_hk2 = c_f.hk;
+  double cf2_rt2 = c_f.rt;
+  double cf2_m2 = c_f.msq;
+  
   ref.cfz.vector = cf2_hk2 * ref.hkz.vector + cf2_rt2 * ref.rtz.vector;
   ref.cfz.u() += cf2_m2 * ref.param.mz_uz;
   ref.cfz.ms() += cf2_m2 * ref.param.mz_ms;
@@ -384,7 +358,7 @@ void XFoil::computeDissipationAndThickness(blData &ref,
                      dissipation_result.di_rt * ref.rtz.vector;
   } else {
     if (flowRegimeType == FlowRegimeEnum::Turbulent) {
-      auto c_ft = skin_friction::cft(ref.hkz.scalar, ref.rtz.scalar, ref.param.mz);
+      auto c_ft = skin_friction::getSkinFriction(ref.hkz.scalar, ref.rtz.scalar, ref.param.mz, flowRegimeType);
       double cf2t = c_ft.cf;
       double cf2t_hk2 = c_ft.hk;
       double cf2t_rt2 = c_ft.rt;
@@ -1208,23 +1182,7 @@ bool XFoil::blmid(FlowRegimeEnum flowRegimeType) {
   double ma = 0.5 * (blData1.param.mz + blData2.param.mz);
 
   //---- compute midpoint skin friction coefficient
-  skin_friction::C_f cf_res{};
-  switch (flowRegimeType) {
-  case FlowRegimeEnum::Laminar:
-    cf_res = skin_friction::cfl(hka, rta);
-    break;
-  case FlowRegimeEnum::Turbulent: {
-    skin_friction::C_f lam = skin_friction::cfl(hka, rta);
-    skin_friction::C_f tur = skin_friction::cft(hka, rta, ma);
-    cf_res = (lam.cf > tur.cf) ? lam : tur;
-    break;
-  }
-  case FlowRegimeEnum::Wake:
-    cf_res = skin_friction::C_f(); // zero initialized
-    break;
-  default:
-    return false;
-  }
+  skin_friction::C_f cf_res = skin_friction::getSkinFriction(hka, rta, ma, flowRegimeType);
 
   cfm = cf_res.cf;
   double cfm_hka = cf_res.hk;
