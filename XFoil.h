@@ -237,7 +237,6 @@ class XFoil {
   
 #include "model/psi.hpp"
 
-  PsiResult pswlin(int i, Vector2d point, Vector2d normal_vector);
   bool qdcalc();
   bool qiset();
   bool qvfue();
