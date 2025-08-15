@@ -387,3 +387,154 @@ PsiResult XFoil::psi_te(int iNode, Vector2d point, Vector2d normal_vector) {
   return psi_result;
 }
 
+/** -----------------------------------------------------------------------
+ *	   Calculates current streamfunction psi at panel node or wake node
+ *	   i due to freestream and all bound vorticity gam on the airfoil.
+ *	   Sensitivities of psi with respect to alpha (z_alfa) and inverse
+ *	   qspec dofs (z_qdof0,z_qdof1) which influence gam in inverse cases.
+ *	   Also calculates the sensitivity vector dpsi/dgam (dzdg).
+ *
+ *	   If siglin=true, then psi includes the effects of the viscous
+ *	   source distribution sig and the sensitivity vector dpsi/dsig
+ *	   (dzdm) is calculated.
+ *
+ *			airfoil:  1   < i < n
+ *			wake:	  n+1 < i < n+nw
+ * ----------------------------------------------------------------------- */
+PsiResult XFoil::pswlin(int i, Vector2d point, Vector2d normal_vector) {
+  PsiResult psi_result;
+  psi_result.psi = 0.0;
+  psi_result.psi_ni = 0.0;
+  const int io = i;
+  const int segs = nw - 1;
+  if (segs <= 0)
+    return psi_result;
+  Matrix2Xd p0 = points.block(0, n + INDEX_START_WITH, 2, segs);
+  Matrix2Xd p1 = points.block(0, n + 1 + INDEX_START_WITH, 2, segs);
+  Matrix2Xd svec = p1 - p0;
+  VectorXd dso = svec.colwise().norm();
+  ArrayXd dsio = dso.array().inverse();
+  Matrix2Xd s = svec.array().rowwise() * dsio.transpose().array();
+  Matrix2Xd r1 = point.replicate(1, segs) - p0;
+  Matrix2Xd r2 = point.replicate(1, segs) - p1;
+  ArrayXd x1 = (s.array() * r1.array()).colwise().sum();
+  ArrayXd x2 = (s.array() * r2.array()).colwise().sum();
+  ArrayXd yy = s.row(0).array() * r1.row(1).array() -
+               s.row(1).array() * r1.row(0).array();
+  ArrayXd rs1 = r1.colwise().squaredNorm().array();
+  ArrayXd rs2 = r2.colwise().squaredNorm().array();
+  ArrayXd sgn = ArrayXd::Ones(segs);
+  if (!(io >= n + 1 && io <= n + nw)) {
+    sgn = (yy >= 0).select(ArrayXd::Ones(segs), ArrayXd::Constant(segs, -1.0));
+  }
+  VectorXi jo = VectorXi::LinSpaced(segs, n, n + segs - 1);
+  VectorXi jp = jo.array() + 1;
+  VectorXi jm = jo.array() - 1;
+  VectorXi jq = jp.array() + 1;
+  jm(0) = jo(0);
+  jq(segs - 1) = jp(segs - 1);
+  Array<bool, Dynamic, 1> mask1 = (jo.array() != io) && (rs1 > 0.0);
+  ArrayXd g1 = mask1.select(rs1.log(), 0.0);
+  ArrayXd t1 = mask1.select(
+      (sgn * x1).binaryExpr(
+          sgn * yy, [](double a, double b) { return std::atan2(a, b); }) -
+          (0.5 - 0.5 * sgn) * std::numbers::pi,
+      0.0);
+  Array<bool, Dynamic, 1> mask2 = (jp.array() != io) && (rs2 > 0.0);
+  ArrayXd g2 = mask2.select(rs2.log(), 0.0);
+  ArrayXd t2 = mask2.select(
+      (sgn * x2).binaryExpr(
+          sgn * yy, [](double a, double b) { return std::atan2(a, b); }) -
+          (0.5 - 0.5 * sgn) * std::numbers::pi,
+      0.0);
+  VectorXd x1i = s.transpose() * normal_vector;
+  VectorXd x2i = x1i;
+  ArrayXd xsum = (x1i.array() + x2i.array()) * 0.5;
+  ArrayXd yyi = s.row(0).array() * normal_vector.y() -
+                s.row(1).array() * normal_vector.x();
+  ArrayXd x0 = 0.5 * (x1 + x2);
+  ArrayXd rs0 = x0.square() + yy.square();
+  ArrayXd g0 = rs0.log();
+  ArrayXd t0 = (sgn * x0).binaryExpr(sgn * yy, [](double a, double b) {
+    return std::atan2(a, b);
+  }) - (0.5 - 0.5 * sgn) * std::numbers::pi;
+  ArrayXd dxinv = (x1 - x0).inverse();
+  ArrayXd apan = apanel.segment(n, segs).array();
+  ArrayXd psum = x0 * (t0 - apan) - x1 * (t1 - apan) + 0.5 * yy * (g1 - g0);
+  ArrayXd pdif = ((x1 + x0) * psum + rs1 * (t1 - apan) - rs0 * (t0 - apan) +
+                  (x0 - x1) * yy) *
+                 dxinv;
+  ArrayXd psx1 = -(t1 - apan);
+  ArrayXd psx0 = t0 - apan;
+  ArrayXd psyy = 0.5 * (g1 - g0);
+  ArrayXd pdx1 =
+      ((x1 + x0) * psx1 + psum + 2.0 * x1 * (t1 - apan) - pdif) * dxinv;
+  ArrayXd pdx0 =
+      ((x1 + x0) * psx0 + psum - 2.0 * x0 * (t0 - apan) + pdif) * dxinv;
+  ArrayXd pdyy = ((x1 + x0) * psyy + 2.0 * (x0 - x1 + yy * (t1 - t0))) * dxinv;
+  Matrix2Xd jm_p = points.block(0, n - 1 + INDEX_START_WITH, 2, segs);
+  jm_p.col(0) = p0.col(0);
+  Matrix2Xd jp_p = p1;
+  VectorXd dsm = (jp_p - jm_p).colwise().norm();
+  ArrayXd dsim = dsm.array().inverse();
+  Matrix2Xd jq_p = points.block(0, n + 2 + INDEX_START_WITH, 2, segs);
+  jq_p.col(segs - 1) = p1.col(segs - 1);
+  VectorXd dsp = (jq_p - p0).colwise().norm();
+  ArrayXd dsip = dsp.array().inverse();
+  const double cfac = 1.0 / (4 * std::numbers::pi);
+  ArrayXd dzdm_jm = cfac * (-psum * dsim + pdif * dsim);
+  ArrayXd dzdm_jo1 = cfac * (-psum / dso.array() - pdif / dso.array());
+  ArrayXd dzdm_jp1 = cfac * (psum * (dsio + dsim) + pdif * (dsio - dsim));
+  ArrayXd psni = psx1 * x1i.array() + psx0 * xsum + psyy * yyi;
+  ArrayXd pdni = pdx1 * x1i.array() + pdx0 * xsum + pdyy * yyi;
+  ArrayXd dqdm_jm = cfac * (-psni * dsim + pdni * dsim);
+  ArrayXd dqdm_jo1 = cfac * (-psni / dso.array() - pdni / dso.array());
+  ArrayXd dqdm_jp1 = cfac * (psni * (dsio + dsim) + pdni * (dsio - dsim));
+  ArrayXd dxinv2 = (x0 - x2).inverse();
+  ArrayXd psum2 = x2 * (t2 - apan) - x0 * (t0 - apan) + 0.5 * yy * (g0 - g2);
+  ArrayXd pdif2 = ((x0 + x2) * psum2 + rs0 * (t0 - apan) - rs2 * (t2 - apan) +
+                   (x2 - x0) * yy) *
+                  dxinv2;
+  ArrayXd psx0_2 = -(t0 - apan);
+  ArrayXd psx2 = t2 - apan;
+  ArrayXd psyy2 = 0.5 * (g0 - g2);
+  ArrayXd pdx0_2 =
+      ((x0 + x2) * psx0_2 + psum2 + 2.0 * x0 * (t0 - apan) - pdif2) * dxinv2;
+  ArrayXd pdx2 =
+      ((x0 + x2) * psx2 + psum2 - 2.0 * x2 * (t2 - apan) + pdif2) * dxinv2;
+  ArrayXd pdyy2 =
+      ((x0 + x2) * psyy2 + 2.0 * (x2 - x0 + yy * (t0 - t2))) * dxinv2;
+  ArrayXd dzdm_jo2 = cfac * (-psum2 * (dsip + dsio) - pdif2 * (dsip - dsio));
+  ArrayXd dzdm_jp2 = cfac * (psum2 / dso.array() - pdif2 / dso.array());
+  ArrayXd dzdm_jq = cfac * (psum2 * dsip + pdif2 * dsip);
+  ArrayXd psni2 = psx0_2 * xsum + psx2 * x2i.array() + psyy2 * yyi;
+  ArrayXd pdni2 = pdx0_2 * xsum + pdx2 * x2i.array() + pdyy2 * yyi;
+  ArrayXd dqdm_jo2 = cfac * (-psni2 * (dsip + dsio) - pdni2 * (dsip - dsio));
+  ArrayXd dqdm_jp2 = cfac * (psni2 / dso.array() - pdni2 / dso.array());
+  ArrayXd dqdm_jq = cfac * (psni2 * dsip + pdni2 * dsip);
+  VectorXd dzdm_acc = VectorXd::Zero(n + nw);
+  VectorXd dqdm_acc = VectorXd::Zero(n + nw);
+  dzdm_acc(jm) += dzdm_jm.matrix();
+  MatrixXd dzdm_jo_mat(segs, 2);
+  dzdm_jo_mat.col(0) = dzdm_jo1.matrix();
+  dzdm_jo_mat.col(1) = dzdm_jo2.matrix();
+  dzdm_acc(jo) += dzdm_jo_mat.rowwise().sum();
+  MatrixXd dzdm_jp_mat(segs, 2);
+  dzdm_jp_mat.col(0) = dzdm_jp1.matrix();
+  dzdm_jp_mat.col(1) = dzdm_jp2.matrix();
+  dzdm_acc(jp) += dzdm_jp_mat.rowwise().sum();
+  dzdm_acc(jq) += dzdm_jq.matrix();
+  dqdm_acc(jm) += dqdm_jm.matrix();
+  MatrixXd dqdm_jo_mat(segs, 2);
+  dqdm_jo_mat.col(0) = dqdm_jo1.matrix();
+  dqdm_jo_mat.col(1) = dqdm_jo2.matrix();
+  dqdm_acc(jo) += dqdm_jo_mat.rowwise().sum();
+  MatrixXd dqdm_jp_mat(segs, 2);
+  dqdm_jp_mat.col(0) = dqdm_jp1.matrix();
+  dqdm_jp_mat.col(1) = dqdm_jp2.matrix();
+  dqdm_acc(jp) += dqdm_jp_mat.rowwise().sum();
+  dqdm_acc(jq) += dqdm_jq.matrix();
+  psi_result.dzdm.segment(0, n + nw) = dzdm_acc;
+  psi_result.dqdm.segment(0, n + nw) = dqdm_acc;
+  return psi_result;
+}
