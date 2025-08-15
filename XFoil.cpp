@@ -30,6 +30,7 @@
 #include <numbers>
 using namespace Eigen;
 
+
 // determinant
 double cross2(const Eigen::Vector2d &a, const Eigen::Vector2d &b) {
   return a[0] * b[1] - a[1] * b[0];
@@ -39,7 +40,20 @@ bool XFoil::s_bCancel = false;
 double XFoil::vaccel = 0.01;
 const int INDEX_START_WITH = 1;
 
-XFoil::XFoil() {
+XFoil::XFoil()
+    : foil(),
+      n(foil.n),
+      points(foil.points),
+      normal_vectors(foil.normal_vectors),
+      dpoints_ds(foil.dpoints_ds),
+      spline_length(foil.spline_length),
+      point_le(foil.point_le),
+      point_te(foil.point_te),
+      chord(foil.chord),
+      sle(foil.sle),
+      cmref(foil.cmref),
+      surface_vortex(foil.surface_vortex),
+      apanel(foil.apanel) {
   m_pOutStream = nullptr;
 
   // fortran seems to initializes variables to 0
@@ -5454,3 +5468,4 @@ bool XFoil::isValidFoilAngles(Matrix2Xd points) {
 bool XFoil::isValidFoilPointSize(Matrix2Xd points) {
   return points.cols() >= 3 + INDEX_START_WITH;
 }
+

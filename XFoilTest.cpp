@@ -53,16 +53,16 @@ protected:
       std::cout << "Initialization error!" << std::endl;
     }
 
-    for (int i=1; i<=foil->n; i++) {
-      Vector2d plot = foil->points.row(i);
+    for (int i = 1; i <= foil->foil.n; i++) {
+      Vector2d plot = foil->foil.points.row(i);
       plots.push_back(plot);
     }
-  }  
+  }
 };
 
 TEST_F(DatGoogleTest, test_cang) {
   //when
-  double actual = foil->cang(foil->points);
+  double actual = foil->cang(foil->foil.points);
 
   //then
   ASSERT_DOUBLE_EQ(9.9742071999702819, actual);

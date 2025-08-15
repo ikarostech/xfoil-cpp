@@ -52,6 +52,7 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 #include "model/boundary_layer.hpp"
 #include "model/psi_result.hpp"
 #include "xfoil_params.h"
+#include "src/Foil.h"
 
 using namespace std;
 using namespace Eigen;
@@ -305,8 +306,6 @@ class XFoil {
 
   double clspec;
 
-  Matrix2Xd normal_vectors;
-
   double cl, cm, cd, acrit;
   VectorXd cpi, cpv;
   double xcp;
@@ -320,22 +319,31 @@ class XFoil {
   double minf1;
   bool lblini, lipan;
   
-  int n;
+  Foil foil;
+  int &n;
+  Matrix2Xd &points; // formerly x,y
+  Matrix2Xd &normal_vectors;
+  Matrix2Xd &dpoints_ds; // formerly xp, yp
+  VectorXd &spline_length;
+  Vector2d &point_le;
+  Vector2d &point_te;
+  double &chord;
+  double &sle;
+  Vector2d &cmref;
+  Matrix2Xd &surface_vortex;
+  VectorXd &apanel;
+
   SidePair<VectorXi> ipan, isys;
   SidePair<int> iblte, nbl;
-  
-  Matrix2Xd points; //formerly x,y
+
   SidePair<double> xstrip;
-  
-  Vector2d cmref;
+
   double tklam; // karman-tsien parameter minf^2 / [1 + sqrt[1-minf^2]]^2 <- Prandtl-Glauert-Ackeret rule ?
   double tkl_msq;
-  Matrix2Xd dpoints_ds; //formerly xp, yp
-  VectorXd spline_length;
   double dtor;
 
   SidePair<VectorXd> thet, ctau, dstr, uedg, ctq;
-  SidePair<VectorXd> xssi, uinv, uinv_a, mass, vti;  
+  SidePair<VectorXd> xssi, uinv, uinv_a, mass, vti;
   SidePair<int> itran; // bl array index of transition interval
 
  public: //private:
@@ -355,10 +363,7 @@ class XFoil {
   int nsys;
   VectorXd snew;
 
-  double sle;
-  Vector2d point_le;
-  Vector2d point_te;
-  double chord, wgap[IWX], waklen;
+  double wgap[IWX], waklen;
   int nw, i_stagnation;
 
 
@@ -366,9 +371,7 @@ class XFoil {
   double gamma, gamm1;
 
 
-  Matrix2Xd surface_vortex;
   Matrix2Xd gamu;
-  VectorXd apanel;
   double sst, sst_go, sst_gp, gamte, sigte;
   double dste, aste;
   Matrix2Xd qinvu;
