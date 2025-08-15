@@ -9,6 +9,24 @@ static double cross2(const Vector2d& a, const Vector2d& b) {
   return a[0] * b[1] - a[1] * b[0];
 }
 
+static double reflection_sign(int index, double yy, int lower, int upper) {
+  if (index >= lower && index <= upper) {
+    return 1.0;
+  } else {
+    return yy >= 0.0 ? 1.0 : -1.0;
+  }
+}
+
+static ArrayXd reflection_sign(int index, const ArrayXd& yy, int lower, int upper) {
+  if (index >= lower && index <= upper) {
+    return ArrayXd::Ones(yy.size());
+  } else {
+    return (yy >= 0.0)
+               .select(ArrayXd::Ones(yy.size()),
+                       ArrayXd::Constant(yy.size(), -1.0));
+  }
+}
+
 PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector, bool siglin) {
   PsiResult psi_result;
 
@@ -41,10 +59,7 @@ PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector, bool 
   ArrayXd rs1 = r1.colwise().squaredNorm();
   ArrayXd rs2 = r2.colwise().squaredNorm();
 
-  ArrayXd sgn = ArrayXd::Ones(panels);
-  if (!(iNode >= 1 && iNode <= n)) {
-    sgn = (yy >= 0.0).select(ArrayXd::Ones(panels), ArrayXd::Constant(panels, -1.0));
-  }
+  ArrayXd sgn = reflection_sign(iNode, yy, 1, n);
 
   ArrayXi idx = ArrayXi::LinSpaced(panels, INDEX_START_WITH, INDEX_START_WITH + panels - 1);
   ArrayXi jp_idx = idx + 1;
@@ -176,14 +191,7 @@ PsiResult XFoil::psisig(int iNode, int jo, Vector2d point, Vector2d normal_vecto
   double rs2 = r2.dot(r2);
 
   //------ set reflection flag sgn to avoid branch problems with arctan
-  double sgn;
-  if (io >= 1 && io <= n) {
-    //------- no problem on airfoil surface
-    sgn = 1.0;
-  } else {
-    //------- make sure arctan falls between  -/+  pi/2
-    sgn = sign(1.0, yy);
-  }
+  double sgn = reflection_sign(io, yy, 1, n);
   double logr12, t1;
   //------ set log(r^2) and arctan(x/y), correcting for reflection if any
   if (io != jo + INDEX_START_WITH && rs1 > 0.0) {
@@ -304,14 +312,7 @@ PsiResult XFoil::psi_te(int iNode, Vector2d point, Vector2d normal_vector) {
   const double rs2 = r2.dot(r2);
 
   //------ set reflection flag sgn to avoid branch problems with arctan
-  double sgn;
-  if (iNode >= 1 && iNode <= n) {
-    //------- no problem on airfoil surface
-    sgn = 1.0;
-  } else {
-    //------- make sure arctan falls between  -/+  pi/2
-    sgn = sign(1.0, yy);
-  }
+  double sgn = reflection_sign(iNode, yy, 1, n);
 
   //------ set log(r^2) and arctan(x/y), correcting for reflection if any
   double logr12, logr22;
@@ -423,10 +424,7 @@ PsiResult XFoil::pswlin(int i, Vector2d point, Vector2d normal_vector) {
                s.row(1).array() * r1.row(0).array();
   ArrayXd rs1 = r1.colwise().squaredNorm().array();
   ArrayXd rs2 = r2.colwise().squaredNorm().array();
-  ArrayXd sgn = ArrayXd::Ones(segs);
-  if (!(io >= n + 1 && io <= n + nw)) {
-    sgn = (yy >= 0).select(ArrayXd::Ones(segs), ArrayXd::Constant(segs, -1.0));
-  }
+  ArrayXd sgn = reflection_sign(io, yy, n + 1, n + nw);
   VectorXi jo = VectorXi::LinSpaced(segs, n, n + segs - 1);
   VectorXi jp = jo.array() + 1;
   VectorXi jm = jo.array() - 1;
