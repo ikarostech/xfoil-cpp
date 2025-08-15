@@ -511,9 +511,9 @@ bool XFoil::abcopy(Matrix2Xd copyFrom) {
   normal_vectors = ncalc(points.middleCols(1, points.cols() - 1), spline_length.head(n), n);
   lefind(sle, points.middleCols(INDEX_START_WITH, n), dpoints_ds,
          spline_length.head(n), n);
-  point_le.x() = spline::seval(sle, points.row(0), dpoints_ds.row(0),
+  point_le.x() = spline::seval(sle, points.row(0).segment(1, points.cols() - 1), dpoints_ds.row(0),
                                spline_length.head(n), n);
-  point_le.y() = spline::seval(sle, points.row(1), dpoints_ds.row(1),
+  point_le.y() = spline::seval(sle, points.row(1).segment(1, points.cols() - 1), dpoints_ds.row(1),
                                spline_length.head(n), n);
   point_te = 0.5 * (points.col(1) + points.col(n));
   chord = (point_le - point_te).norm();
@@ -1869,8 +1869,8 @@ bool XFoil::getxyf(Matrix2Xd points, Matrix2Xd dpoints_ds, VectorXd s, int n,
 
   tops = s[1] + (points.col(1).x() - xf);
   bots = s[n] - (points.col(n).x() - xf);
-  topy = spline::seval(tops, points.row(1), dpoints_ds.row(1), s, n);
-  boty = spline::seval(bots, points.row(1), dpoints_ds.row(1), s, n);
+  topy = spline::seval(tops, points.row(1).segment(1, points.cols() - 1), dpoints_ds.row(1), s, n);
+  boty = spline::seval(bots, points.row(1).segment(1, points.cols() - 1), dpoints_ds.row(1), s, n);
 
   yrel = yf;
 
@@ -2169,8 +2169,8 @@ bool XFoil::lefind(double &sle, Matrix2Xd points, Matrix2Xd dpoints_ds,
 
   //---- newton iteration to get exact sle value
   for (int iter = 1; iter <= 50; iter++) {
-    point_le.x() = spline::seval(sle, points.row(0), dpoints_ds.row(0), s, n);
-    point_le.y() = spline::seval(sle, points.row(1), dpoints_ds.row(1), s, n);
+    point_le.x() = spline::seval(sle, points.row(0).segment(1, points.cols() - 1), dpoints_ds.row(0), s, n);
+    point_le.y() = spline::seval(sle, points.row(1).segment(1, points.cols() - 1), dpoints_ds.row(1), s, n);
     const Vector2d dpoint_ds = {
         spline::deval(sle, points.row(0), dpoints_ds.row(0), s, n),
         spline::deval(sle, points.row(1), dpoints_ds.row(1), s, n)};
