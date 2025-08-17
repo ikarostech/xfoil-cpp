@@ -2,7 +2,6 @@
 
 #include <Eigen/Core>
 #include <iostream>
-const int INDEX_START_WITH = 1;
 
 ThomasAlgorithmResult MathUtil::tridiagonalSolve(Eigen::MatrixXd A, Eigen::VectorXd d) {
     int n = A.rows();
