@@ -129,7 +129,7 @@ PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector, bool 
   }
 
   if ((points.col(n) - points.col(1)).norm() > seps) {
-    PsiResult te_result = psi_te(iNode, point, normal_vector);
+    PsiResult te_result = psi_te(points, iNode, normal_vector);
     psi_result = PsiResult::sum(psi_result, te_result);
   }
 
@@ -285,7 +285,8 @@ PsiResult XFoil::psisig(int iNode, int jo, Vector2d point, Vector2d normal_vecto
   return psi_result;
 }
 
-PsiResult XFoil::psi_te(int iNode, Vector2d point, Vector2d normal_vector) {
+PsiResult XFoil::psi_te(Matrix2Xd points, int iNode, Vector2d normal_vector) {
+  Vector2d point = points.col(iNode);
   PsiResult psi_result = PsiResult();
 
   //------ skip null panel
