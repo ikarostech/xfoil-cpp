@@ -1,4 +1,5 @@
 #pragma once
+#include "psi_result.hpp"
 
 PsiResult psilin(int i, Vector2d point, Vector2d normal_vector, bool siglin);
 PsiResult pswlin(int i, Vector2d point, Vector2d normal_vector);
