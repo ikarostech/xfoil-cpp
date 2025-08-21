@@ -1898,7 +1898,7 @@ bool XFoil::ggcalc() {
   for (int i = 0; i < n; i++) {
     //------ calculate psi and dpsi/dgamma array for current node
     PsiResult psi_result =
-        psilin(points, i + INDEX_START_WITH, points.col(i + INDEX_START_WITH),
+        psilin(points.middleCols(1, points.cols() - 1), i + INDEX_START_WITH, points.col(i + INDEX_START_WITH),
                normal_vectors.col(i + INDEX_START_WITH), true);
 
     const Vector2d res = qinf * Vector2d{points.col(i + INDEX_START_WITH).y(),
@@ -1956,7 +1956,7 @@ bool XFoil::ggcalc() {
     const Vector2d normal_bis{-bis_vector.y(), bis_vector.x()};
 
     //----- set velocity component along bisector line
-    PsiResult psi_result = psilin(points, 0, bis, normal_bis, true);
+    PsiResult psi_result = psilin(points.middleCols(1, points.cols() - 1), 0, bis, normal_bis, true);
 
     //----- dres/dgamma
     dpsi_dgam.row(n - 1).head(n) = psi_result.dzdg.head(n);
@@ -2967,7 +2967,7 @@ bool XFoil::qdcalc() {
     int iw = i - n;
     //------ airfoil contribution at wake panel node
     PsiResult psi_result =
-        psilin(points, i + INDEX_START_WITH, points.col(i + INDEX_START_WITH),
+        psilin(points.middleCols(1, points.cols() - 1), i + INDEX_START_WITH, points.col(i + INDEX_START_WITH),
                normal_vectors.col(i), true);
     cij.row(iw) = psi_result.dqdg.head(n).transpose();
     dij.row(i).head(n) = psi_result.dqdm.head(n).transpose();
@@ -3032,7 +3032,7 @@ bool XFoil::qwcalc() {
   //---- rest of wake
   for (int i = n + 1; i < n + nw; i++) {
     qinvu.col(i) =
-        psilin(points, i + INDEX_START_WITH, points.col(i + INDEX_START_WITH),
+        psilin(points.middleCols(1, points.cols() - 1), i + INDEX_START_WITH, points.col(i + INDEX_START_WITH),
                normal_vectors.col(i), false)
             .qtan;
   }
@@ -5161,8 +5161,8 @@ bool XFoil::xyWake() {
   spline_length[n] = spline_length[n - 1];
 
   //---- calculate streamfunction gradient components at first point
-  Vector2d psi = {psilin(points, n + 1, points.col(n + 1), {1.0, 0.0}, false).psi_ni,
-                  psilin(points, n + 1, points.col(n + 1), {0.0, 1.0}, false).psi_ni};
+  Vector2d psi = {psilin(points.middleCols(1, points.cols() - 1), n + 1, points.col(n + 1), {1.0, 0.0}, false).psi_ni,
+                  psilin(points.middleCols(1, points.cols() - 1), n + 1, points.col(n + 1), {0.0, 1.0}, false).psi_ni};
 
   //---- set unit vector normal to wake at first point
   normal_vectors.col(n + 1) = -psi.normalized();
@@ -5181,8 +5181,8 @@ bool XFoil::xyWake() {
 
     if (i != n + nw) {
       //---- calculate streamfunction gradient components at first point
-      Vector2d psi = {psilin(points, i, points.col(i), {1.0, 0.0}, false).psi_ni,
-                      psilin(points, i, points.col(i), {0.0, 1.0}, false).psi_ni};
+      Vector2d psi = {psilin(points.middleCols(1, points.cols() - 1), i, points.col(i), {1.0, 0.0}, false).psi_ni,
+                      psilin(points.middleCols(1, points.cols() - 1), i, points.col(i), {0.0, 1.0}, false).psi_ni};
 
       //---- set unit vector normal to wake at first point
       normal_vectors.col(i) = -psi.normalized();

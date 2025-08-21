@@ -22,10 +22,10 @@ PsiResult XFoil::psilin(Matrix2Xd points, int iNode, Vector2d point, Vector2d no
   const int panels = n - 1;
 
   // panel end points
-  Matrix2Xd p1 = points.middleCols(INDEX_START_WITH, panels);
+  Matrix2Xd p1 = points.leftCols(panels);
   Matrix2Xd p2(2, panels);
-  p2.leftCols(panels - 1) = points.middleCols(INDEX_START_WITH + 1, panels - 1);
-  p2.col(panels - 1) = points.col(panels + INDEX_START_WITH);
+  p2.leftCols(panels - 1) = points.middleCols(1, panels - 1);
+  p2.col(panels - 1) = points.col(panels);
 
   Matrix2Xd edge = p2 - p1;
   ArrayXd dso = edge.colwise().norm();
@@ -123,13 +123,13 @@ PsiResult XFoil::psilin(Matrix2Xd points, int iNode, Vector2d point, Vector2d no
   if (siglin) {
     for (int jo = 0; jo < panels; ++jo) {
       if (!valid_panel(jo)) continue;
-      PsiResult sig_result = psisig(points.middleCols(1, points.cols() - 1), iNode, jo, point, normal_vector);
+      PsiResult sig_result = psisig(points, iNode, jo, point, normal_vector);
       psi_result = PsiResult::sum(psi_result, sig_result);
     }
   }
 
-  if ((points.col(n) - points.col(1)).norm() > seps) {
-    PsiResult te_result = psi_te(points.middleCols(1, points.cols() - 1), iNode - 1, normal_vector);
+  if ((points.col(n - 1) - points.col(0)).norm() > seps) {
+    PsiResult te_result = psi_te(points, iNode - 1, normal_vector);
     psi_result = PsiResult::sum(psi_result, te_result);
   }
 
