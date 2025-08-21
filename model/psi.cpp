@@ -123,7 +123,7 @@ PsiResult XFoil::psilin(Matrix2Xd points, int iNode, Vector2d point, Vector2d no
   if (siglin) {
     for (int jo = 0; jo < panels; ++jo) {
       if (!valid_panel(jo)) continue;
-      PsiResult sig_result = psisig(points, iNode, jo, point, normal_vector);
+      PsiResult sig_result = psisig(points.middleCols(1, points.cols() - 1), iNode, jo, point, normal_vector);
       psi_result = PsiResult::sum(psi_result, sig_result);
     }
   }
@@ -157,15 +157,15 @@ PsiResult XFoil::psisig(Matrix2Xd points, int iNode, int jo, Vector2d point, Vec
   int jm = std::max(0, jo - 1);
   int jq = (jo >= n - 2) ? jp : jp + 1;
 
-  double dso = (points.col(jo + INDEX_START_WITH) - points.col(jp + INDEX_START_WITH)).norm();
+  double dso = (points.col(jo) - points.col(jp)).norm();
 
   double dsio = 1.0 / dso;
 
   double apan = apanel[jo];
 
-  Vector2d r1 = point - points.col(jo + INDEX_START_WITH);
-  Vector2d r2 = point - points.col(jp + INDEX_START_WITH);
-  Vector2d s = (points.col(jp + INDEX_START_WITH)- points.col(jo + INDEX_START_WITH)).normalized();
+  Vector2d r1 = point - points.col(jo);
+  Vector2d r2 = point - points.col(jp);
+  Vector2d s = (points.col(jp) - points.col(jo)).normalized();
 
   double x1 = s.dot(r1);
   double x2 = s.dot(r2);
@@ -231,7 +231,7 @@ PsiResult XFoil::psisig(Matrix2Xd points, int iNode, int jo, Vector2d point, Vec
   double pdyy =
       ((x1 + x0) * psyy + 2.0 * (x0 - x1 + yy * (t1 - theta0))) * dxinv;
 
-  const double dsm = (points.col(jp + INDEX_START_WITH) - points.col(jm + INDEX_START_WITH)).norm();
+  const double dsm = (points.col(jp) - points.col(jm)).norm();
   double dsim = 1.0 / dsm;
 
   //------- dpsi/dm
@@ -266,7 +266,7 @@ PsiResult XFoil::psisig(Matrix2Xd points, int iNode, int jo, Vector2d point, Vec
   pdyy =
       ((x0 + x2) * psyy + 2.0 * (x2 - x0 + yy * (theta0 - t2))) * dxinv;
 
-  double dsp = (points.col(jq + INDEX_START_WITH) - points.col(jo + INDEX_START_WITH)).norm();
+  double dsp = (points.col(jq) - points.col(jo)).norm();
   double dsip = 1.0 / dsp;
 
   //------- dpsi/dm
