@@ -9,7 +9,7 @@ static double cross2(const Vector2d& a, const Vector2d& b) {
   return a[0] * b[1] - a[1] * b[0];
 }
 
-PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector, bool siglin) {
+PsiResult XFoil::psilin(Matrix2Xd points, int iNode, Vector2d point, Vector2d normal_vector, bool siglin) {
   PsiResult psi_result;
 
   //---- distance tolerance for determining if two points are the same
@@ -123,7 +123,7 @@ PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector, bool 
   if (siglin) {
     for (int jo = 0; jo < panels; ++jo) {
       if (!valid_panel(jo)) continue;
-      PsiResult sig_result = psisig(iNode, jo, point, normal_vector);
+      PsiResult sig_result = psisig(points, iNode, jo, point, normal_vector);
       psi_result = PsiResult::sum(psi_result, sig_result);
     }
   }
@@ -146,7 +146,7 @@ PsiResult XFoil::psilin(int iNode, Vector2d point, Vector2d normal_vector, bool 
   return psi_result;
 }
 
-PsiResult XFoil::psisig(int iNode, int jo, Vector2d point, Vector2d normal_vector) {
+PsiResult XFoil::psisig(Matrix2Xd points, int iNode, int jo, Vector2d point, Vector2d normal_vector) {
   PsiResult psi_result;
   psi_result.psi = 0;
   psi_result.psi_ni = 0;
@@ -402,7 +402,7 @@ PsiResult XFoil::psi_te(Matrix2Xd points, int iNode, Vector2d normal_vector) {
  *			airfoil:  1   < i < n
  *			wake:	  n+1 < i < n+nw
  * ----------------------------------------------------------------------- */
-PsiResult XFoil::pswlin(int i, Vector2d point, Vector2d normal_vector) {
+PsiResult XFoil::pswlin(Matrix2Xd points, int i, Vector2d point, Vector2d normal_vector) {
   PsiResult psi_result;
   psi_result.psi = 0.0;
   psi_result.psi_ni = 0.0;
