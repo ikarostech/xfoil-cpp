@@ -410,8 +410,8 @@ PsiResult XFoil::pswlin(Matrix2Xd points, int i, Vector2d point, Vector2d normal
   const int segs = nw - 1;
   if (segs <= 0)
     return psi_result;
-  Matrix2Xd p0 = points.block(0, n + INDEX_START_WITH, 2, segs);
-  Matrix2Xd p1 = points.block(0, n + 1 + INDEX_START_WITH, 2, segs);
+  Matrix2Xd p0 = points.block(0, n, 2, segs);
+  Matrix2Xd p1 = points.block(0, n + 1, 2, segs);
   Matrix2Xd svec = p1 - p0;
   VectorXd dso = svec.colwise().norm();
   ArrayXd dsio = dso.array().inverse();
@@ -473,12 +473,12 @@ PsiResult XFoil::pswlin(Matrix2Xd points, int i, Vector2d point, Vector2d normal
   ArrayXd pdx0 =
       ((x1 + x0) * psx0 + psum - 2.0 * x0 * (t0 - apan) + pdif) * dxinv;
   ArrayXd pdyy = ((x1 + x0) * psyy + 2.0 * (x0 - x1 + yy * (t1 - t0))) * dxinv;
-  Matrix2Xd jm_p = points.block(0, n - 1 + INDEX_START_WITH, 2, segs);
+  Matrix2Xd jm_p = points.block(0, n - 1, 2, segs);
   jm_p.col(0) = p0.col(0);
   Matrix2Xd jp_p = p1;
   VectorXd dsm = (jp_p - jm_p).colwise().norm();
   ArrayXd dsim = dsm.array().inverse();
-  Matrix2Xd jq_p = points.block(0, n + 2 + INDEX_START_WITH, 2, segs);
+  Matrix2Xd jq_p = points.block(0, n + 2, 2, segs);
   jq_p.col(segs - 1) = p1.col(segs - 1);
   VectorXd dsp = (jq_p - p0).colwise().norm();
   ArrayXd dsip = dsp.array().inverse();
