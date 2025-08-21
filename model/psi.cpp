@@ -306,7 +306,7 @@ PsiResult XFoil::psi_te(Matrix2Xd points, int iNode, Vector2d normal_vector) {
 
   //------ set reflection flag sgn to avoid branch problems with arctan
   double sgn;
-  if (iNode >= 1 && iNode <= n) {
+  if (iNode >= 0 && iNode < n) {
     //------- no problem on airfoil surface
     sgn = 1.0;
   } else {
@@ -316,7 +316,7 @@ PsiResult XFoil::psi_te(Matrix2Xd points, int iNode, Vector2d normal_vector) {
 
   //------ set log(r^2) and arctan(x/y), correcting for reflection if any
   double logr12, logr22;
-  if (iNode != n && rs1 > 0.0) {
+  if (iNode != n - 1 && rs1 > 0.0) {
     logr12 = log(rs1);
     blData1.param.tz = atan2(sgn * blData1.param.xz, sgn * yy) + (0.5 - 0.5 * sgn) * std::numbers::pi;
   } else {
@@ -324,7 +324,7 @@ PsiResult XFoil::psi_te(Matrix2Xd points, int iNode, Vector2d normal_vector) {
     blData1.param.tz = 0.0;
   }
 
-  if (iNode != 1 && rs2 > 0.0) {
+  if (iNode != 0 && rs2 > 0.0) {
     logr22 = log(rs2);
     blData2.param.tz = atan2(sgn * blData2.param.xz, sgn * yy) + (0.5 - 0.5 * sgn) * std::numbers::pi;
   } else {
