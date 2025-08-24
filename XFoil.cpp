@@ -4005,153 +4005,159 @@ bool XFoil::trchek() {
   //---- set initial guess for iterate n2 (ampl2) at x2
   blData2.param.amplz = blData1.param.amplz +
                         ax_result.ax * (blData2.param.xz - blData1.param.xz);
-
   //---- solve implicit system for amplification ampl2
-  for (int itam = 0; itam < 30; itam++) {
-    //---- define weighting factors wf1,wf2 for defining "t" quantities from 1,2
-    if (blData2.param.amplz <= amcrit) {
-      //------ there is no transition yet,  "t" is the same as "2"
-      amplt = blData2.param.amplz;
-      amplt_a2 = 1.0;
-      sfa = 1.0;
-      sfa_a1 = 0.0;
-      sfa_a2 = 0.0;
-    } else {
-      //------ there is transition in x1..x2, "t" is set from n1, n2
-      amplt = amcrit;
-      amplt_a2 = 0.0;
-      sfa = (amplt - blData1.param.amplz) /
-            (blData2.param.amplz - blData1.param.amplz);
-      sfa_a1 = (sfa - 1.0) / (blData2.param.amplz - blData1.param.amplz);
-      sfa_a2 = (-sfa) / (blData2.param.amplz - blData1.param.amplz);
+  auto iterateAmplification = [&]() -> bool {
+    for (int itam = 0; itam < 30; itam++) {
+      //---- define weighting factors wf1,wf2 for defining "t" quantities
+      if (blData2.param.amplz <= amcrit) {
+        //------ there is no transition yet,  "t" is the same as "2"
+        amplt = blData2.param.amplz;
+        amplt_a2 = 1.0;
+        sfa = 1.0;
+        sfa_a1 = 0.0;
+        sfa_a2 = 0.0;
+      } else {
+        //------ there is transition in x1..x2, "t" is set from n1, n2
+        amplt = amcrit;
+        amplt_a2 = 0.0;
+        sfa = (amplt - blData1.param.amplz) /
+              (blData2.param.amplz - blData1.param.amplz);
+        sfa_a1 = (sfa - 1.0) / (blData2.param.amplz - blData1.param.amplz);
+        sfa_a2 = (-sfa) / (blData2.param.amplz - blData1.param.amplz);
+      }
+
+      if (xiforc < blData2.param.xz) {
+        sfx = (xiforc - blData1.param.xz) /
+              (blData2.param.xz - blData1.param.xz);
+        sfx_x1 = (sfx - 1.0) / (blData2.param.xz - blData1.param.xz);
+        sfx_x2 = (-sfx) / (blData2.param.xz - blData1.param.xz);
+        sfx_xf = 1.0 / (blData2.param.xz - blData1.param.xz);
+      } else {
+        sfx = 1.0;
+        sfx_x1 = 0.0;
+        sfx_x2 = 0.0;
+        sfx_xf = 0.0;
+      }
+
+      //---- set weighting factor from free or forced transition
+      if (sfa < sfx) {
+        wf = sfa;
+        wf_a1 = sfa_a1;
+        wf_a2 = sfa_a2;
+        wf_x1 = 0.0;
+        wf_x2 = 0.0;
+        wf_xf = 0.0;
+      } else {
+        wf = sfx;
+        wf_a1 = 0.0;
+        wf_a2 = 0.0;
+        wf_x1 = sfx_x1;
+        wf_x2 = sfx_x2;
+        wf_xf = sfx_xf;
+      }
+
+      //---- interpolate bl variables to xt
+      xt = blData1.param.xz * (1 - wf) + blData2.param.xz * wf;
+      tt = blData1.param.tz * (1 - wf) + blData2.param.tz * wf;
+      dt = blData1.param.dz * (1 - wf) + blData2.param.dz * wf;
+      ut = blData1.param.uz * (1 - wf) + blData2.param.uz * wf;
+
+      xt_a2 = (blData2.param.xz - blData1.param.xz) * wf_a2;
+      tt_a2 = (blData2.param.tz - blData1.param.tz) * wf_a2;
+      dt_a2 = (blData2.param.dz - blData1.param.dz) * wf_a2;
+      ut_a2 = (blData2.param.uz - blData1.param.uz) * wf_a2;
+
+      //---- temporarily set "2" variables from "t" for blkin
+      blData2.param.xz = xt;
+      blData2.param.tz = tt;
+      blData2.param.dz = dt;
+      blData2.param.uz = ut;
+
+      //---- calculate laminar secondary "t" variables hkt, rtt
+      blkin();
+
+      hkt = blData2.hkz.scalar;
+      hkt_tt = blData2.hkz.t();
+      hkt_dt = blData2.hkz.d();
+      hkt_ut = blData2.hkz.u();
+      hkt_ms = blData2.hkz.ms();
+
+      rtt = blData2.rtz.scalar;
+      rtt_tt = blData2.rtz.t();
+      rtt_ut = blData2.rtz.u();
+      rtt_ms = blData2.rtz.ms();
+      rtt_re = blData2.rtz.re();
+
+      //---- restore clobbered "2" variables, except for ampl2
+      amsave = blData2.param.amplz;
+
+      restoreblData(2);
+
+      blData2.param.amplz = amsave;
+
+      //---- calculate amplification rate ax over current x1-xt interval
+      ax_result = axset(blData1.hkz.scalar, blData1.param.tz,
+                        blData1.rtz.scalar, blData1.param.amplz, hkt, tt, rtt,
+                        amplt, amcrit);
+
+      //---- punch out early if there is no amplification here
+      if (ax_result.ax <= 0.0) {
+        return true;
+      }
+
+      //---- set sensitivity of ax(a2)
+      ax_result.ax_a2 =
+          (ax_result.ax_hk2 * hkt_tt + ax_result.ax_t2 +
+           ax_result.ax_rt2 * rtt_tt) *
+              tt_a2 +
+          (ax_result.ax_hk2 * hkt_dt) * dt_a2 +
+          (ax_result.ax_hk2 * hkt_ut + ax_result.ax_rt2 * rtt_ut) * ut_a2 +
+          ax_result.ax_a2 * amplt_a2;
+
+      //---- residual for implicit ampl2 definition (amplification equation)
+      res = blData2.param.amplz - blData1.param.amplz -
+            ax_result.ax * (blData2.param.xz - blData1.param.xz);
+      res_a2 = 1.0 - ax_result.ax_a2 * (blData2.param.xz - blData1.param.xz);
+
+      da2 = -res / res_a2;
+
+      rlx = 1.0;
+      dxt = xt_a2 * da2;
+
+      if (rlx * fabs(dxt / (blData2.param.xz - blData1.param.xz)) > 0.05) {
+        rlx = 0.05 * fabs((blData2.param.xz - blData1.param.xz) / dxt);
+      }
+
+      if (rlx * fabs(da2) > 1.0) {
+        rlx = 1.0 * fabs(1.0 / da2);
+      }
+
+      //---- check if converged
+      if (fabs(da2) < daeps) {
+        return true;
+      }
+
+      if ((blData2.param.amplz > amcrit &&
+           blData2.param.amplz + rlx * da2 < amcrit) ||
+          (blData2.param.amplz < amcrit &&
+           blData2.param.amplz + rlx * da2 > amcrit)) {
+        //------ limited newton step so ampl2 doesn't step across amcrit either
+        // way
+        blData2.param.amplz = amcrit;
+      } else {
+        //------ regular newton step
+        blData2.param.amplz = blData2.param.amplz + rlx * da2;
+      }
     }
-
-    if (xiforc < blData2.param.xz) {
-      sfx = (xiforc - blData1.param.xz) / (blData2.param.xz - blData1.param.xz);
-      sfx_x1 = (sfx - 1.0) / (blData2.param.xz - blData1.param.xz);
-      sfx_x2 = (-sfx) / (blData2.param.xz - blData1.param.xz);
-      sfx_xf = 1.0 / (blData2.param.xz - blData1.param.xz);
-    } else {
-      sfx = 1.0;
-      sfx_x1 = 0.0;
-      sfx_x2 = 0.0;
-      sfx_xf = 0.0;
-    }
-
-    //---- set weighting factor from free or forced transition
-    if (sfa < sfx) {
-      wf = sfa;
-      wf_a1 = sfa_a1;
-      wf_a2 = sfa_a2;
-      wf_x1 = 0.0;
-      wf_x2 = 0.0;
-      wf_xf = 0.0;
-    } else {
-      wf = sfx;
-      wf_a1 = 0.0;
-      wf_a2 = 0.0;
-      wf_x1 = sfx_x1;
-      wf_x2 = sfx_x2;
-      wf_xf = sfx_xf;
-    }
-
-    //---- interpolate bl variables to xt
-    xt = blData1.param.xz * (1 - wf) + blData2.param.xz * wf;
-    tt = blData1.param.tz * (1 - wf) + blData2.param.tz * wf;
-    dt = blData1.param.dz * (1 - wf) + blData2.param.dz * wf;
-    ut = blData1.param.uz * (1 - wf) + blData2.param.uz * wf;
-
-    xt_a2 = (blData2.param.xz - blData1.param.xz) * wf_a2;
-    tt_a2 = (blData2.param.tz - blData1.param.tz) * wf_a2;
-    dt_a2 = (blData2.param.dz - blData1.param.dz) * wf_a2;
-    ut_a2 = (blData2.param.uz - blData1.param.uz) * wf_a2;
-
-    //---- temporarily set "2" variables from "t" for blkin
-    blData2.param.xz = xt;
-    blData2.param.tz = tt;
-    blData2.param.dz = dt;
-    blData2.param.uz = ut;
-
-    //---- calculate laminar secondary "t" variables hkt, rtt
-    blkin();
-
-    hkt = blData2.hkz.scalar;
-    hkt_tt = blData2.hkz.t();
-    hkt_dt = blData2.hkz.d();
-    hkt_ut = blData2.hkz.u();
-    hkt_ms = blData2.hkz.ms();
-
-    rtt = blData2.rtz.scalar;
-    rtt_tt = blData2.rtz.t();
-    rtt_ut = blData2.rtz.u();
-    rtt_ms = blData2.rtz.ms();
-    rtt_re = blData2.rtz.re();
-
-    //---- restore clobbered "2" variables, except for ampl2
-    amsave = blData2.param.amplz;
-
-    restoreblData(2);
-
-    blData2.param.amplz = amsave;
-
-    //---- calculate amplification rate ax over current x1-xt interval
-    ax_result = axset(blData1.hkz.scalar, blData1.param.tz, blData1.rtz.scalar,
-                      blData1.param.amplz, hkt, tt, rtt, amplt, amcrit);
-
-    //---- punch out early if there is no amplification here
-    if (ax_result.ax <= 0.0) {
-      break;
-    }
-
-    //---- set sensitivity of ax(a2)
-    ax_result.ax_a2 =
-        (ax_result.ax_hk2 * hkt_tt + ax_result.ax_t2 +
-         ax_result.ax_rt2 * rtt_tt) *
-            tt_a2 +
-        (ax_result.ax_hk2 * hkt_dt) * dt_a2 +
-        (ax_result.ax_hk2 * hkt_ut + ax_result.ax_rt2 * rtt_ut) * ut_a2 +
-        ax_result.ax_a2 * amplt_a2;
-
-    //---- residual for implicit ampl2 definition (amplification equation)
-    res = blData2.param.amplz - blData1.param.amplz -
-          ax_result.ax * (blData2.param.xz - blData1.param.xz);
-    res_a2 = 1.0 - ax_result.ax_a2 * (blData2.param.xz - blData1.param.xz);
-
-    da2 = -res / res_a2;
-
-    rlx = 1.0;
-    dxt = xt_a2 * da2;
-
-    if (rlx * fabs(dxt / (blData2.param.xz - blData1.param.xz)) > 0.05) {
-      rlx = 0.05 * fabs((blData2.param.xz - blData1.param.xz) / dxt);
-    }
-
-    if (rlx * fabs(da2) > 1.0) {
-      rlx = 1.0 * fabs(1.0 / da2);
-    }
-
-    //---- check if converged
-    if (fabs(da2) < daeps) {
-      break;
-    }
-
-    if ((blData2.param.amplz > amcrit &&
-         blData2.param.amplz + rlx * da2 < amcrit) ||
-        (blData2.param.amplz < amcrit &&
-         blData2.param.amplz + rlx * da2 > amcrit)) {
-      //------ limited newton step so ampl2 doesn't step across amcrit either
-      // way
-      blData2.param.amplz = amcrit;
-    } else {
-      //------ regular newton step
-      blData2.param.amplz = blData2.param.amplz + rlx * da2;
-    }
-  }
-
-  // TRACE("trchek2 - n2 convergence failed\n");
-  writeString("trchek2 - n2 convergence failed\n");
-  if (s_bCancel)
     return false;
+  };
+
+  if (!iterateAmplification()) {
+    // TRACE("trchek2 - n2 convergence failed\n");
+    writeString("trchek2 - n2 convergence failed\n");
+    if (s_bCancel)
+      return false;
+  }
 
   //---- test for free or forced transition
   trfree = (blData2.param.amplz >= amcrit);
