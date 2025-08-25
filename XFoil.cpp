@@ -3203,8 +3203,8 @@ bool XFoil::setbl() {
   computeLeTeSensitivities(ile1, ile2, ite1, ite2, ule1_m, ule2_m, ute1_m,
                            ute2_m);
 
-  ule1_a = uinv_a.top[2];
-  ule2_a = uinv_a.bottom[2];
+  ule1_a = uinv_a.top[1];
+  ule2_a = uinv_a.bottom[1];
 
   writeString(" \n");
 
@@ -3268,7 +3268,7 @@ bool XFoil::setbl() {
       }
       d2_m[iv] = d2_m[iv] + d2_m2;
 
-      u2_a = uinv_a.get(is)[ibl];
+      u2_a = uinv_a.get(is)[ibl - INDEX_START_WITH];
       d2_a = d2_u2 * u2_a;
 
       //---- "forced" changes due to mismatch between uedg and
@@ -4583,7 +4583,7 @@ bool XFoil::ueset() {
         }
       }
 
-      uedg.get(is)[ibl] = uinv.get(is)[ibl] + dui;
+      uedg.get(is)[ibl] = uinv.get(is)[ibl - INDEX_START_WITH] + dui;
     }
   }
   return true;
@@ -4594,12 +4594,12 @@ bool XFoil::uicalc() {
   //     sets inviscid ue from panel inviscid tangential velocity
   //--------------------------------------------------------------
   for (int is = 1; is <= 2; is++) {
-    uinv.get(is)[1] = 0.0;
-    uinv_a.get(is)[1] = 0.0;
-    for (int ibl = 2; ibl <= nbl.get(is); ibl++) {
-      int i = ipan.get(is)[ibl];
-      uinv.get(is)[ibl] = vti.get(is)[ibl] * qinv[i - INDEX_START_WITH];
-      uinv_a.get(is)[ibl] = vti.get(is)[ibl] * qinv_a[i - INDEX_START_WITH];
+    uinv.get(is)[0] = 0.0;
+    uinv_a.get(is)[0] = 0.0;
+    for (int ibl = 1; ibl < nbl.get(is); ibl++) {
+      int i = ipan.get(is)[ibl + INDEX_START_WITH];
+      uinv.get(is)[ibl] = vti.get(is)[ibl + INDEX_START_WITH] * qinv[i - INDEX_START_WITH];
+      uinv_a.get(is)[ibl] = vti.get(is)[ibl + INDEX_START_WITH] * qinv_a[i - INDEX_START_WITH];
     }
   }
 
@@ -4627,8 +4627,8 @@ void XFoil::computeNewUeDistribution(SidePair<VectorXd> &unew,
         }
       }
 
-      double uinv_ac = lalfa ? 0.0 : uinv_a.get(is)[ibl];
-      unew.get(is)[ibl] = uinv.get(is)[ibl] + dui;
+      double uinv_ac = lalfa ? 0.0 : uinv_a.get(is)[ibl - INDEX_START_WITH];
+      unew.get(is)[ibl] = uinv.get(is)[ibl - INDEX_START_WITH] + dui;
       u_ac.get(is)[ibl] = uinv_ac + dui_ac;
     }
   }
@@ -4955,11 +4955,11 @@ bool XFoil::viscal() {
 
   if (!lblini) {
     //	----- set initial ue from inviscid ue
-    for (int ibl = 1; ibl <= nbl.top; ibl++) {
-      uedg.top[ibl] = uinv.top[ibl];
+    for (int ibl = 0; ibl < nbl.top; ibl++) {
+      uedg.top[ibl + INDEX_START_WITH] = uinv.top[ibl];
     }
-    for (int ibl = 1; ibl <= nbl.bottom; ibl++) {
-      uedg.bottom[ibl] = uinv.bottom[ibl];
+    for (int ibl = 0; ibl < nbl.bottom; ibl++) {
+      uedg.bottom[ibl + INDEX_START_WITH] = uinv.bottom[ibl];
     }
   }
 
