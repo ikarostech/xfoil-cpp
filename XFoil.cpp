@@ -2009,7 +2009,7 @@ bool XFoil::iblpan() {
   for (int i = i_stagnation; i >= 1; i--) {
     ibl = ibl + 1;
     ipan.top[ibl] = i;
-    vti.top[ibl] = 1.0;
+    vti.top[ibl - INDEX_START_WITH] = 1.0;
   }
 
   iblte.top = ibl;
@@ -2020,7 +2020,7 @@ bool XFoil::iblpan() {
   for (int i = i_stagnation + 1; i <= n; i++) {
     ibl = ibl + 1;
     ipan.bottom[ibl] = i;
-    vti.bottom[ibl] = -1.0;
+    vti.bottom[ibl - INDEX_START_WITH] = -1.0;
   }
 
   //-- wake
@@ -2030,7 +2030,7 @@ bool XFoil::iblpan() {
     int i = n + iw;
     ibl = iblte.bottom + iw;
     ipan.bottom[ibl] = i;
-    vti.bottom[ibl] = -1.0;
+    vti.bottom[ibl - INDEX_START_WITH] = -1.0;
   }
 
   nbl.bottom = iblte.bottom + nw;
@@ -2038,7 +2038,7 @@ bool XFoil::iblpan() {
   //-- upper wake pointers (for plotting only)
   for (int iw = 1; iw <= nw; iw++) {
     ipan.top[iblte.top + iw] = ipan.bottom[iblte.bottom + iw];
-    vti.top[iblte.top + iw] = 1.0;
+    vti.top[iblte.top + iw - INDEX_START_WITH] = 1.0;
   }
   iblmax = std::max(iblte.top, iblte.bottom) + nw;
   if (iblmax > IVX) {
@@ -3013,7 +3013,7 @@ bool XFoil::qvfue() {
   for (int is = 1; is <= 2; is++) {
     for (int ibl = 2; ibl <= nbl.get(is); ibl++) {
       int i = ipan.get(is)[ibl] - INDEX_START_WITH;
-      qvis[i] = vti.get(is)[ibl] * uedg.get(is)[ibl];
+      qvis[i] = vti.get(is)[ibl - INDEX_START_WITH] * uedg.get(is)[ibl];
     }
   }
 
@@ -3075,13 +3075,13 @@ void XFoil::computeLeTeSensitivities(int ile1, int ile2, int ite1, int ite2,
     for (int jbl = 2; jbl <= nbl.get(js); ++jbl) {
       int j = ipan.get(js)[jbl];
       int jv = isys.get(js)[jbl];
-      ule1_m[jv] = -vti.top[2] * vti.get(js)[jbl] *
+      ule1_m[jv] = -vti.top[1] * vti.get(js)[jbl - INDEX_START_WITH] *
                    dij(ile1 - INDEX_START_WITH, j - INDEX_START_WITH);
-      ule2_m[jv] = -vti.bottom[2] * vti.get(js)[jbl] *
+      ule2_m[jv] = -vti.bottom[1] * vti.get(js)[jbl - INDEX_START_WITH] *
                    dij(ile2 - INDEX_START_WITH, j - INDEX_START_WITH);
-      ute1_m[jv] = -vti.top[iblte.top] * vti.get(js)[jbl] *
+      ute1_m[jv] = -vti.top[iblte.top - INDEX_START_WITH] * vti.get(js)[jbl - INDEX_START_WITH] *
                    dij(ite1 - INDEX_START_WITH, j - INDEX_START_WITH);
-      ute2_m[jv] = -vti.bottom[iblte.bottom] * vti.get(js)[jbl] *
+      ute2_m[jv] = -vti.bottom[iblte.bottom - INDEX_START_WITH] * vti.get(js)[jbl - INDEX_START_WITH] *
                    dij(ite2 - INDEX_START_WITH, j - INDEX_START_WITH);
     }
   }
@@ -3261,7 +3261,7 @@ bool XFoil::setbl() {
         for (int jbl = 2; jbl <= nbl.get(js); jbl++) {
           int j = ipan.get(js)[jbl];
           int jv = isys.get(js)[jbl];
-          u2_m[jv] = -vti.get(is)[ibl] * vti.get(js)[jbl] *
+          u2_m[jv] = -vti.get(is)[ibl - INDEX_START_WITH] * vti.get(js)[jbl - INDEX_START_WITH] *
                      dij(i - INDEX_START_WITH, j - INDEX_START_WITH);
           d2_m[jv] = d2_u2 * u2_m[jv];
         }
@@ -4576,7 +4576,7 @@ bool XFoil::ueset() {
       double dui = 0.0;
       for (int js = 1; js <= 2; js++) {
         for (int jbl = 2; jbl <= nbl.get(js); jbl++) {
-          double ue_m = -vti.get(is)[ibl] * vti.get(js)[jbl] *
+          double ue_m = -vti.get(is)[ibl - INDEX_START_WITH] * vti.get(js)[jbl - INDEX_START_WITH] *
                         dij(ipan.get(is)[ibl] - INDEX_START_WITH,
                             ipan.get(js)[jbl] - INDEX_START_WITH);
           dui += ue_m * mass.get(js)[jbl];
@@ -4598,8 +4598,8 @@ bool XFoil::uicalc() {
     uinv_a.get(is)[0] = 0.0;
     for (int ibl = 1; ibl < nbl.get(is); ibl++) {
       int i = ipan.get(is)[ibl + INDEX_START_WITH];
-      uinv.get(is)[ibl] = vti.get(is)[ibl + INDEX_START_WITH] * qinv[i - INDEX_START_WITH];
-      uinv_a.get(is)[ibl] = vti.get(is)[ibl + INDEX_START_WITH] * qinv_a[i - INDEX_START_WITH];
+      uinv.get(is)[ibl] = vti.get(is)[ibl] * qinv[i - INDEX_START_WITH];
+      uinv_a.get(is)[ibl] = vti.get(is)[ibl] * qinv_a[i - INDEX_START_WITH];
     }
   }
 
@@ -4620,7 +4620,7 @@ void XFoil::computeNewUeDistribution(SidePair<VectorXd> &unew,
         for (int jbl = 2; jbl <= nbl.get(js); jbl++) {
           int j = ipan.get(js)[jbl];
           int jv = isys.get(js)[jbl];
-          double ue_m = -vti.get(is)[ibl] * vti.get(js)[jbl] *
+          double ue_m = -vti.get(is)[ibl - INDEX_START_WITH] * vti.get(js)[jbl - INDEX_START_WITH] *
                         dij(i - INDEX_START_WITH, j - INDEX_START_WITH);
           dui += ue_m * (mass.get(js)[jbl] + vdel[jv](2, 0));
           dui_ac += ue_m * (-vdel[jv](2, 1));
@@ -4645,8 +4645,8 @@ void XFoil::computeQtan(const SidePair<VectorXd> &unew,
       int i = ipan.get(is)[ibl];
       const VectorXd &unew_vec = (is == 1) ? unew.top : unew.bottom;
       const VectorXd &uac_vec = (is == 1) ? u_ac.top : u_ac.bottom;
-      qnew[i] = vti.get(is)[ibl] * unew_vec[ibl];
-      q_ac[i] = vti.get(is)[ibl] * uac_vec[ibl];
+      qnew[i] = vti.get(is)[ibl - INDEX_START_WITH] * unew_vec[ibl];
+      q_ac[i] = vti.get(is)[ibl - INDEX_START_WITH] * uac_vec[ibl];
     }
   }
 }
