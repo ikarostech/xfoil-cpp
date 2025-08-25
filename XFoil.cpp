@@ -3984,14 +3984,12 @@ bool XFoil::trchek() {
          z_re = 0.0;
   double amplt_a2, wf, wf_a1, wf_a2, wf_xf, wf_x1, wf_x2;
   double xt_a2, dt_a2, tt_a2;
-  double ut_a2, hkt, hkt_tt, hkt_dt, hkt_ut, hkt_ms, rtt_tt, rtt_ut, rtt_ms,
-      rtt, rtt_re;
+  double ut_a2;
   double daeps = 0.00005;
 
   amplt_a2 = 0.0;
   xt_a2 = dt_a2 = tt_a2 = 0.0;
-  ut_a2 = hkt_tt = hkt_dt = hkt_ut = hkt_ms = rtt_tt = rtt_ut = rtt_ms =
-      rtt_re = 0.0;
+  ut_a2 = 0.0;
 
   //---- save variables and sensitivities at ibl ("2") for future restoration
   saveblData(2);
@@ -4076,17 +4074,8 @@ bool XFoil::trchek() {
       //---- calculate laminar secondary "t" variables hkt, rtt
       blkin();
 
-      hkt = blData2.hkz.scalar;
-      hkt_tt = blData2.hkz.t();
-      hkt_dt = blData2.hkz.d();
-      hkt_ut = blData2.hkz.u();
-      hkt_ms = blData2.hkz.ms();
-
-      rtt = blData2.rtz.scalar;
-      rtt_tt = blData2.rtz.t();
-      rtt_ut = blData2.rtz.u();
-      rtt_ms = blData2.rtz.ms();
-      rtt_re = blData2.rtz.re();
+      blData::blVector hkt = blData2.hkz;
+      blData::blVector rtt = blData2.rtz;
 
       //---- restore clobbered "2" variables, except for ampl2
       amsave = blData2.param.amplz;
@@ -4097,7 +4086,7 @@ bool XFoil::trchek() {
 
       //---- calculate amplification rate ax over current x1-xt interval
       ax_result = axset(blData1.hkz.scalar, blData1.param.tz,
-                        blData1.rtz.scalar, blData1.param.amplz, hkt, tt, rtt,
+                        blData1.rtz.scalar, blData1.param.amplz, hkt.scalar, tt, rtt.scalar,
                         amplt, amcrit);
 
       //---- punch out early if there is no amplification here
@@ -4107,11 +4096,11 @@ bool XFoil::trchek() {
 
       //---- set sensitivity of ax(a2)
       ax_result.ax_a2 =
-          (ax_result.ax_hk2 * hkt_tt + ax_result.ax_t2 +
-           ax_result.ax_rt2 * rtt_tt) *
+          (ax_result.ax_hk2 * hkt.t() + ax_result.ax_t2 +
+           ax_result.ax_rt2 * rtt.t()) *
               tt_a2 +
-          (ax_result.ax_hk2 * hkt_dt) * dt_a2 +
-          (ax_result.ax_hk2 * hkt_ut + ax_result.ax_rt2 * rtt_ut) * ut_a2 +
+          (ax_result.ax_hk2 * hkt.d()) * dt_a2 +
+          (ax_result.ax_hk2 * hkt.u() + ax_result.ax_rt2 * rtt.u()) * ut_a2 +
           ax_result.ax_a2 * amplt_a2;
 
       //---- residual for implicit ampl2 definition (amplification equation)
@@ -4224,57 +4213,59 @@ bool XFoil::trchek() {
   xt_xf = (blData2.param.xz - blData1.param.xz) * wf_xf;
 
   //---- at this point, ax = ax( hk1, t1, rt1, a1, hkt, tt, rtt, at )
+  blData::blVector hkt = blData2.hkz;
+  blData::blVector rtt = blData2.rtz;
 
   //---- set sensitivities of ax( t1 d1 u1 a1 t2 d2 u2 a2 ms re )
   double ax_t1 = ax_result.ax_hk1 * blData1.hkz.t() + ax_result.ax_t1 +
                  ax_result.ax_rt1 * blData1.rtz.t() +
-                 (ax_result.ax_hk2 * hkt_tt + ax_result.ax_t2 +
-                  ax_result.ax_rt2 * rtt_tt) *
+                 (ax_result.ax_hk2 * hkt.t() + ax_result.ax_t2 +
+                  ax_result.ax_rt2 * rtt.t()) *
                      tt_t1;
   double ax_d1 =
-      ax_result.ax_hk1 * blData1.hkz.d() + (ax_result.ax_hk2 * hkt_dt) * dt_d1;
+      ax_result.ax_hk1 * blData1.hkz.d() + (ax_result.ax_hk2 * hkt.d()) * dt_d1;
   double ax_u1 =
       ax_result.ax_hk1 * blData1.hkz.u() + ax_result.ax_rt1 * blData1.rtz.u() +
-      (ax_result.ax_hk2 * hkt_ut + ax_result.ax_rt2 * rtt_ut) * ut_u1;
+      (ax_result.ax_hk2 * hkt.u() + ax_result.ax_rt2 * rtt.u()) * ut_u1;
   double ax_a1 =
       ax_result.ax_a1 +
-      (ax_result.ax_hk2 * hkt_tt + ax_result.ax_t2 +
-       ax_result.ax_rt2 * rtt_tt) *
+      (ax_result.ax_hk2 * hkt.t() + ax_result.ax_t2 +
+       ax_result.ax_rt2 * rtt.t()) *
           tt_a1 +
-      (ax_result.ax_hk2 * hkt_dt) * dt_a1 +
-      (ax_result.ax_hk2 * hkt_ut + ax_result.ax_rt2 * rtt_ut) * ut_a1;
+      (ax_result.ax_hk2 * hkt.d()) * dt_a1 +
+      (ax_result.ax_hk2 * hkt.u() + ax_result.ax_rt2 * rtt.u()) * ut_a1;
   double ax_x1 =
-      (ax_result.ax_hk2 * hkt_tt + ax_result.ax_t2 +
-       ax_result.ax_rt2 * rtt_tt) *
+      (ax_result.ax_hk2 * hkt.t() + ax_result.ax_t2 +
+       ax_result.ax_rt2 * rtt.t()) *
           tt_x1 +
-      (ax_result.ax_hk2 * hkt_dt) * dt_x1 +
-      (ax_result.ax_hk2 * hkt_ut + ax_result.ax_rt2 * rtt_ut) * ut_x1;
+      (ax_result.ax_hk2 * hkt.d()) * dt_x1 +
+      (ax_result.ax_hk2 * hkt.u() + ax_result.ax_rt2 * rtt.u()) * ut_x1;
 
-  double ax_t2 = (ax_result.ax_hk2 * hkt_tt + ax_result.ax_t2 +
-                  ax_result.ax_rt2 * rtt_tt) *
+  double ax_t2 = (ax_result.ax_hk2 * hkt.t() + ax_result.ax_t2 +
+                  ax_result.ax_rt2 * rtt.t()) *
                  tt_t2;
-  double ax_d2 = (ax_result.ax_hk2 * hkt_dt) * dt_d2;
+  double ax_d2 = (ax_result.ax_hk2 * hkt.d()) * dt_d2;
   double ax_u2 =
-      (ax_result.ax_hk2 * hkt_ut + ax_result.ax_rt2 * rtt_ut) * ut_u2;
+      (ax_result.ax_hk2 * hkt.u() + ax_result.ax_rt2 * rtt.u()) * ut_u2;
   double ax_a2 =
       ax_result.ax_a2 * amplt_a2 +
-      (ax_result.ax_hk2 * hkt_tt + ax_result.ax_t2 +
-       ax_result.ax_rt2 * rtt_tt) *
+      (ax_result.ax_hk2 * hkt.t() + ax_result.ax_t2 +
+       ax_result.ax_rt2 * rtt.t()) *
           tt_a2 +
-      (ax_result.ax_hk2 * hkt_dt) * dt_a2 +
-      (ax_result.ax_hk2 * hkt_ut + ax_result.ax_rt2 * rtt_ut) * ut_a2;
+      (ax_result.ax_hk2 * hkt.d()) * dt_a2 +
+      (ax_result.ax_hk2 * hkt.u() + ax_result.ax_rt2 * rtt.u()) * ut_a2;
   double ax_x2 =
-      (ax_result.ax_hk2 * hkt_tt + ax_result.ax_t2 +
-       ax_result.ax_rt2 * rtt_tt) *
+      (ax_result.ax_hk2 * hkt.t() + ax_result.ax_t2 +
+       ax_result.ax_rt2 * rtt.t()) *
           tt_x2 +
-      (ax_result.ax_hk2 * hkt_dt) * dt_x2 +
-      (ax_result.ax_hk2 * hkt_ut + ax_result.ax_rt2 * rtt_ut) * ut_x2;
+      (ax_result.ax_hk2 * hkt.d()) * dt_x2 +
+      (ax_result.ax_hk2 * hkt.u() + ax_result.ax_rt2 * rtt.u()) * ut_x2;
 
-  double ax_ms = ax_result.ax_hk2 * hkt_ms + ax_result.ax_rt2 * rtt_ms +
+  double ax_ms = ax_result.ax_hk2 * hkt.ms() + ax_result.ax_rt2 * rtt.ms() +
                  ax_result.ax_hk1 * blData1.hkz.ms() +
                  ax_result.ax_rt1 * blData1.rtz.ms();
   double ax_re =
-      ax_result.ax_rt2 * rtt_re + ax_result.ax_rt1 * blData1.rtz.re();
+      ax_result.ax_rt2 * rtt.re() + ax_result.ax_rt1 * blData1.rtz.re();
 
   //---- set sensitivities of residual res
   z_ax = -(blData2.param.xz - blData1.param.xz);
