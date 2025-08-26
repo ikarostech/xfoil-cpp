@@ -2008,7 +2008,7 @@ bool XFoil::iblpan() {
   ibl = 1;
   for (int i = i_stagnation; i >= 1; i--) {
     ibl = ibl + 1;
-    ipan.top[ibl] = i;
+    ipan.top[ibl] = i - INDEX_START_WITH;
     vti.top[ibl - INDEX_START_WITH] = 1.0;
   }
 
@@ -2019,7 +2019,7 @@ bool XFoil::iblpan() {
   ibl = 1;
   for (int i = i_stagnation + 1; i <= n; i++) {
     ibl = ibl + 1;
-    ipan.bottom[ibl] = i;
+    ipan.bottom[ibl] = i - INDEX_START_WITH;
     vti.bottom[ibl - INDEX_START_WITH] = -1.0;
   }
 
@@ -2029,7 +2029,7 @@ bool XFoil::iblpan() {
   for (int iw = 1; iw <= nw; iw++) {
     int i = n + iw;
     ibl = iblte.bottom + iw;
-    ipan.bottom[ibl] = i;
+    ipan.bottom[ibl] = i - INDEX_START_WITH;
     vti.bottom[ibl - INDEX_START_WITH] = -1.0;
   }
 
@@ -3012,7 +3012,7 @@ bool XFoil::qiset() {
 bool XFoil::qvfue() {
   for (int is = 1; is <= 2; is++) {
     for (int ibl = 2; ibl <= nbl.get(is); ibl++) {
-      int i = ipan.get(is)[ibl] - INDEX_START_WITH;
+      int i = ipan.get(is)[ibl];
       qvis[i] = vti.get(is)[ibl - INDEX_START_WITH] * uedg.get(is)[ibl];
     }
   }
@@ -3073,7 +3073,7 @@ void XFoil::computeLeTeSensitivities(int ile1, int ile2, int ite1, int ite2,
                                      VectorXd &ute1_m, VectorXd &ute2_m) {
   for (int js = 1; js <= 2; ++js) {
     for (int jbl = 2; jbl <= nbl.get(js); ++jbl) {
-      int j = ipan.get(js)[jbl];
+      int j = ipan.get(js)[jbl] + INDEX_START_WITH;
       int jv = isys.get(js)[jbl];
       ule1_m[jv] = -vti.top[1] * vti.get(js)[jbl - INDEX_START_WITH] *
                    dij(ile1 - INDEX_START_WITH, j - INDEX_START_WITH);
@@ -3188,10 +3188,10 @@ bool XFoil::setbl() {
 
   ueset();
   swapEdgeVelocities(usav);
-  ile1 = ipan.top[2];
-  ile2 = ipan.bottom[2];
-  ite1 = ipan.top[iblte.top];
-  ite2 = ipan.bottom[iblte.bottom];
+  ile1 = ipan.top[2] + INDEX_START_WITH;
+  ile2 = ipan.bottom[2] + INDEX_START_WITH;
+  ite1 = ipan.top[iblte.top] + INDEX_START_WITH;
+  ite2 = ipan.bottom[iblte.bottom] + INDEX_START_WITH;
 
   jvte1 = isys.top[iblte.top];
   jvte2 = isys.bottom[iblte.bottom];
@@ -3233,7 +3233,7 @@ bool XFoil::setbl() {
       tran = (ibl == itran.get(is) + INDEX_START_WITH);
       turb = (ibl > itran.get(is) + INDEX_START_WITH);
 
-      int i = ipan.get(is)[ibl];
+      int i = ipan.get(is)[ibl] + INDEX_START_WITH;
 
       //---- set primary variables for current station
       xsi = xssi.get(is)[ibl];
@@ -3259,7 +3259,7 @@ bool XFoil::setbl() {
 
       for (int js = 1; js <= 2; js++) {
         for (int jbl = 2; jbl <= nbl.get(js); jbl++) {
-          int j = ipan.get(js)[jbl];
+          int j = ipan.get(js)[jbl] + INDEX_START_WITH;
           int jv = isys.get(js)[jbl];
           u2_m[jv] = -vti.get(is)[ibl - INDEX_START_WITH] * vti.get(js)[jbl - INDEX_START_WITH] *
                      dij(i - INDEX_START_WITH, j - INDEX_START_WITH);
@@ -4577,8 +4577,8 @@ bool XFoil::ueset() {
       for (int js = 1; js <= 2; js++) {
         for (int jbl = 2; jbl <= nbl.get(js); jbl++) {
           double ue_m = -vti.get(is)[ibl - INDEX_START_WITH] * vti.get(js)[jbl - INDEX_START_WITH] *
-                        dij(ipan.get(is)[ibl] - INDEX_START_WITH,
-                            ipan.get(js)[jbl] - INDEX_START_WITH);
+                        dij(ipan.get(is)[ibl],
+                            ipan.get(js)[jbl]);
           dui += ue_m * mass.get(js)[jbl];
         }
       }
@@ -4598,8 +4598,8 @@ bool XFoil::uicalc() {
     uinv_a.get(is)[0] = 0.0;
     for (int ibl = 1; ibl < nbl.get(is); ibl++) {
       int i = ipan.get(is)[ibl + INDEX_START_WITH];
-      uinv.get(is)[ibl] = vti.get(is)[ibl] * qinv[i - INDEX_START_WITH];
-      uinv_a.get(is)[ibl] = vti.get(is)[ibl] * qinv_a[i - INDEX_START_WITH];
+      uinv.get(is)[ibl] = vti.get(is)[ibl] * qinv[i];
+      uinv_a.get(is)[ibl] = vti.get(is)[ibl] * qinv_a[i];
     }
   }
 
@@ -4613,12 +4613,12 @@ void XFoil::computeNewUeDistribution(SidePair<VectorXd> &unew,
                                      SidePair<VectorXd> &u_ac) {
   for (int is = 1; is <= 2; is++) {
     for (int ibl = 2; ibl <= nbl.get(is); ibl++) {
-      int i = ipan.get(is)[ibl];
+      int i = ipan.get(is)[ibl] + INDEX_START_WITH;
       double dui = 0.0;
       double dui_ac = 0.0;
       for (int js = 1; js <= 2; js++) {
         for (int jbl = 2; jbl <= nbl.get(js); jbl++) {
-          int j = ipan.get(js)[jbl];
+          int j = ipan.get(js)[jbl] + INDEX_START_WITH;
           int jv = isys.get(js)[jbl];
           double ue_m = -vti.get(is)[ibl - INDEX_START_WITH] * vti.get(js)[jbl - INDEX_START_WITH] *
                         dij(i - INDEX_START_WITH, j - INDEX_START_WITH);
@@ -4642,7 +4642,7 @@ void XFoil::computeQtan(const SidePair<VectorXd> &unew,
                         double q_ac[]) {
   for (int is = 1; is <= 2; is++) {
     for (int ibl = 2; ibl <= iblte.get(is); ibl++) {
-      int i = ipan.get(is)[ibl];
+      int i = ipan.get(is)[ibl] + INDEX_START_WITH;
       const VectorXd &unew_vec = (is == 1) ? unew.top : unew.bottom;
       const VectorXd &uac_vec = (is == 1) ? u_ac.top : u_ac.bottom;
       qnew[i] = vti.get(is)[ibl - INDEX_START_WITH] * unew_vec[ibl];
@@ -5038,18 +5038,18 @@ bool XFoil::xicalc() {
 
   xssi.top[1] = 0.0;
   for (int ibl = 2; ibl <= iblte.top; ibl++) {
-    xssi.top[ibl] = sst - spline_length[ipan.top[ibl] - INDEX_START_WITH];
+    xssi.top[ibl] = sst - spline_length[ipan.top[ibl]];
   }
 
   xssi.bottom[1] = 0.0;
   for (int ibl = 2; ibl <= iblte.bottom; ibl++) {
-    xssi.bottom[ibl] = spline_length[ipan.bottom[ibl] - INDEX_START_WITH] - sst;
+    xssi.bottom[ibl] = spline_length[ipan.bottom[ibl]] - sst;
   }
 
   xssi.bottom[iblte.bottom + 1] = xssi.bottom[iblte.bottom];
   for (int ibl = iblte.bottom + 2; ibl <= nbl.bottom; ibl++) {
-    xssi.bottom[ibl] = xssi.bottom[ibl - 1] + (points.col(ipan.bottom[ibl] - INDEX_START_WITH) -
-                                               points.col(ipan.bottom[ibl] - 1 - INDEX_START_WITH))
+    xssi.bottom[ibl] = xssi.bottom[ibl - 1] + (points.col(ipan.bottom[ibl]) -
+                                               points.col(ipan.bottom[ibl] - 1))
                                                   .norm();
   }
 
