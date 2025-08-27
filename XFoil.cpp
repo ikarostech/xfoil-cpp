@@ -2001,46 +2001,43 @@ bool XFoil::ggcalc() {
  *     sets  bl location -> panel location  pointer array ipan
  * -----------------------------------------------------------*/
 bool XFoil::iblpan() {
-  int iblmax, ibl;
   std::stringstream ss;
 
   //-- top surface first
-  ibl = 1;
   for (int i = i_stagnation; i >= 1; i--) {
-    ibl = ibl + 1;
-    ipan.top[ibl - INDEX_START_WITH] = i - INDEX_START_WITH;
-    vti.top[ibl - INDEX_START_WITH] = 1.0;
+    int index = i_stagnation - i + 1;
+    ipan.top[index] = i - INDEX_START_WITH;
+    vti.top[index] = 1.0;
   }
 
-  iblte.top = ibl;
-  nbl.top = ibl;
+  iblte.top = i_stagnation + INDEX_START_WITH;
+  nbl.top = i_stagnation + INDEX_START_WITH;
 
   //-- bottom surface next
-  ibl = 1;
   for (int i = i_stagnation + 1; i <= n; i++) {
-    ibl = ibl + 1;
-    ipan.bottom[ibl - INDEX_START_WITH] = i - INDEX_START_WITH;
-    vti.bottom[ibl - INDEX_START_WITH] = -1.0;
+    int index = i - i_stagnation;
+    ipan.bottom[index] = i - INDEX_START_WITH;
+    vti.bottom[index] = -1.0;
   }
 
   //-- wake
-  iblte.bottom = ibl;
+  iblte.bottom = n - i_stagnation + INDEX_START_WITH;
 
-  for (int iw = 1; iw <= nw; iw++) {
+  for (int iw = 0; iw < nw; iw++) {
     int i = n + iw;
-    ibl = iblte.bottom + iw;
-    ipan.bottom[ibl - INDEX_START_WITH] = i - INDEX_START_WITH;
-    vti.bottom[ibl - INDEX_START_WITH] = -1.0;
+    int index = iblte.bottom + iw;
+    ipan.bottom[index] = i;
+    vti.bottom[index] = -1.0;
   }
 
   nbl.bottom = iblte.bottom + nw;
 
   //-- upper wake pointers (for plotting only)
-  for (int iw = 1; iw <= nw; iw++) {
-    ipan.top[iblte.top + iw - INDEX_START_WITH] = ipan.bottom[iblte.bottom + iw - INDEX_START_WITH];
-    vti.top[iblte.top + iw - INDEX_START_WITH] = 1.0;
+  for (int iw = 0; iw < nw; iw++) {
+    ipan.top[iblte.top + iw] = ipan.bottom[iblte.bottom + iw];
+    vti.top[iblte.top + iw] = 1.0;
   }
-  iblmax = std::max(iblte.top, iblte.bottom) + nw;
+  int iblmax = std::max(iblte.top, iblte.bottom) + nw;
   if (iblmax > IVX) {
     ss << "iblpan :  ***  bl array overflow\n";
     ss << "Increase IVX to at least " << iblmax << "\n";
