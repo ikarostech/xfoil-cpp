@@ -2493,7 +2493,7 @@ bool XFoil::mrchdu() {
       thet.get(is)[ibl] = thi;
       dstr.get(is)[ibl] = dsi;
       uedg.get(is)[ibl] = uei;
-      mass.get(is)[ibl] = dsi * uei;
+      mass.get(is)[ibl - INDEX_START_WITH] = dsi * uei;
       ctq.get(is)[ibl] = blData2.cqz.scalar;
 
       //------ set "1" variables to "2" variables for next streamwise station
@@ -2824,7 +2824,7 @@ bool XFoil::mrchue() {
       thet.get(is)[ibl] = thi;
       dstr.get(is)[ibl] = dsi;
       uedg.get(is)[ibl] = uei;
-      mass.get(is)[ibl] = dsi * uei;
+      mass.get(is)[ibl - INDEX_START_WITH] = dsi * uei;
       ctq.get(is)[ibl] = blData2.cqz.scalar;
 
       //------ set "1" variables to "2" variables for next streamwise station
@@ -3240,7 +3240,7 @@ bool XFoil::setbl() {
         cti = ctau.get(is)[ibl];
       uei = uedg.get(is)[ibl];
       thi = thet.get(is)[ibl];
-      mdi = mass.get(is)[ibl];
+      mdi = mass.get(is)[ibl - INDEX_START_WITH];
 
       dsi = mdi / uei;
 
@@ -3871,7 +3871,7 @@ bool XFoil::stmove() {
   //-- set new mass array since ue has been tweaked
   for (int is = 1; is <= 2; is++) {
     for (int ibl = 2; ibl <= nbl.get(is); ibl++)
-      mass.get(is)[ibl] = dstr.get(is)[ibl] * uedg.get(is)[ibl];
+      mass.get(is)[ibl - INDEX_START_WITH] = dstr.get(is)[ibl] * uedg.get(is)[ibl];
   }
 
   return true;
@@ -4576,7 +4576,7 @@ bool XFoil::ueset() {
           double ue_m = -vti.get(is)[ibl - INDEX_START_WITH] * vti.get(js)[jbl - INDEX_START_WITH] *
                         dij(ipan.get(is)[ibl - INDEX_START_WITH],
                             ipan.get(js)[jbl - INDEX_START_WITH]);
-          dui += ue_m * mass.get(js)[jbl];
+          dui += ue_m * mass.get(js)[jbl - INDEX_START_WITH];
         }
       }
 
@@ -4619,7 +4619,7 @@ void XFoil::computeNewUeDistribution(SidePair<VectorXd> &unew,
           int jv = isys.get(js)[jbl + INDEX_START_WITH];
           double ue_m = -vti.get(is)[ibl] * vti.get(js)[jbl] *
                         dij(i, j);
-          dui += ue_m * (mass.get(js)[jbl + INDEX_START_WITH] + vdel[jv](2, 0));
+          dui += ue_m * (mass.get(js)[jbl] + vdel[jv](2, 0));
           dui_ac += ue_m * (-vdel[jv](2, 1));
         }
       }
@@ -4898,7 +4898,7 @@ bool XFoil::update() {
       dstr.get(is)[ibl] = dsw + dswaki;
 
       //------- set new mass defect (nonlinear update)
-      mass.get(is)[ibl] = dstr.get(is)[ibl] * uedg.get(is)[ibl];
+      mass.get(is)[ibl - INDEX_START_WITH] = dstr.get(is)[ibl] * uedg.get(is)[ibl];
     }
   }
 
