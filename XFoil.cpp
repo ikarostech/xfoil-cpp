@@ -4609,24 +4609,24 @@ bool XFoil::uicalc() {
 void XFoil::computeNewUeDistribution(SidePair<VectorXd> &unew,
                                      SidePair<VectorXd> &u_ac) {
   for (int is = 1; is <= 2; is++) {
-    for (int ibl = 2; ibl <= nbl.get(is); ibl++) {
-      int i = ipan.get(is)[ibl - INDEX_START_WITH] + INDEX_START_WITH;
+    for (int ibl = 1; ibl < nbl.get(is); ibl++) {
+      int i = ipan.get(is)[ibl];
       double dui = 0.0;
       double dui_ac = 0.0;
       for (int js = 1; js <= 2; js++) {
-        for (int jbl = 2; jbl <= nbl.get(js); jbl++) {
-          int j = ipan.get(js)[jbl - INDEX_START_WITH] + INDEX_START_WITH;
-          int jv = isys.get(js)[jbl];
-          double ue_m = -vti.get(is)[ibl - INDEX_START_WITH] * vti.get(js)[jbl - INDEX_START_WITH] *
-                        dij(i - INDEX_START_WITH, j - INDEX_START_WITH);
-          dui += ue_m * (mass.get(js)[jbl] + vdel[jv](2, 0));
+        for (int jbl = 1; jbl < nbl.get(js); jbl++) {
+          int j = ipan.get(js)[jbl];
+          int jv = isys.get(js)[jbl + INDEX_START_WITH];
+          double ue_m = -vti.get(is)[ibl] * vti.get(js)[jbl] *
+                        dij(i, j);
+          dui += ue_m * (mass.get(js)[jbl + INDEX_START_WITH] + vdel[jv](2, 0));
           dui_ac += ue_m * (-vdel[jv](2, 1));
         }
       }
 
-      double uinv_ac = lalfa ? 0.0 : uinv_a.get(is)[ibl - INDEX_START_WITH];
-      unew.get(is)[ibl] = uinv.get(is)[ibl - INDEX_START_WITH] + dui;
-      u_ac.get(is)[ibl] = uinv_ac + dui_ac;
+      double uinv_ac = lalfa ? 0.0 : uinv_a.get(is)[ibl];
+      unew.get(is)[ibl + INDEX_START_WITH] = uinv.get(is)[ibl] + dui;
+      u_ac.get(is)[ibl + INDEX_START_WITH] = uinv_ac + dui_ac;
     }
   }
 }
