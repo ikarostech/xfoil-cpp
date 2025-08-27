@@ -5165,30 +5165,24 @@ bool XFoil::xyWake() {
   apanel[n] = atan2(psi.y(), psi.x());
 
   //---- set rest of wake points
-  for (int i = n + 2; i <= n + nw; i++) {
-    const double ds = snew[i] - snew[i - 1];
+  for (int i = n + 1; i < n + nw; i++) {
+    const double ds = snew[i + INDEX_START_WITH] - snew[i - 1 + INDEX_START_WITH];
 
     //------ set new point ds downstream of last point
-    points.col(i - INDEX_START_WITH).x() = points.col(i - 1 - INDEX_START_WITH).x() - ds * normal_vectors.col(i - 1).y();
-    points.col(i - INDEX_START_WITH).y() = points.col(i - 1 - INDEX_START_WITH).y() + ds * normal_vectors.col(i - 1).x();
+    points.col(i).x() = points.col(i - 1).x() - ds * normal_vectors.col(i - 1).y();
+    points.col(i).y() = points.col(i - 1).y() + ds * normal_vectors.col(i - 1).x();
     spline_length[i] = spline_length[i - 1] + ds;
 
-    if (i != n + nw) {
+    if (i != n + nw - 1) {
       //---- calculate streamfunction gradient components at first point
-      Vector2d psi = {psilin(points, i - INDEX_START_WITH,
-                             points.col(i - INDEX_START_WITH),
-                             {1.0, 0.0}, false)
-                           .psi_ni,
-                      psilin(points, i - INDEX_START_WITH,
-                             points.col(i - INDEX_START_WITH),
-                             {0.0, 1.0}, false)
-                           .psi_ni};
+      Vector2d psi = {psilin(points, i, points.col(i), {1.0, 0.0}, false).psi_ni,
+                      psilin(points, i, points.col(i), {0.0, 1.0}, false).psi_ni};
 
       //---- set unit vector normal to wake at first point
-      normal_vectors.col(i) = -psi.normalized();
+      normal_vectors.col(i + 1) = -psi.normalized();
 
       //------- set angle of wake panel normal
-      apanel[i - INDEX_START_WITH] = atan2(psi.y(), psi.x());
+      apanel[i] = atan2(psi.y(), psi.x());
     }
   }
 
