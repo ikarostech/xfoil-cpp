@@ -3,8 +3,6 @@
 #include <cmath>
 #include "../XFoil.h"
 
-const int INDEX_START_WITH = 1;
-
 static double cross2(const Vector2d& a, const Vector2d& b) {
   return a[0] * b[1] - a[1] * b[0];
 }
@@ -42,11 +40,11 @@ PsiResult XFoil::psilin(Matrix2Xd points, int iNode, Vector2d point, Vector2d no
   ArrayXd rs2 = r2.colwise().squaredNorm();
 
   ArrayXd sgn = ArrayXd::Ones(panels);
-  if (!(iNode >= 1 && iNode <= n)) {
+  if (!(iNode >= 0 && iNode < n)) {
     sgn = (yy >= 0.0).select(ArrayXd::Ones(panels), ArrayXd::Constant(panels, -1.0));
   }
 
-  ArrayXi idx = ArrayXi::LinSpaced(panels, INDEX_START_WITH, INDEX_START_WITH + panels - 1);
+  ArrayXi idx = ArrayXi::LinSpaced(panels, 0, panels - 1);
   ArrayXi jp_idx = idx + 1;
   Array<bool, Dynamic, 1> mask1 = (rs1 > 0.0) && (idx != iNode);
   Array<bool, Dynamic, 1> mask2 = (rs2 > 0.0) && (jp_idx != iNode);
@@ -129,7 +127,7 @@ PsiResult XFoil::psilin(Matrix2Xd points, int iNode, Vector2d point, Vector2d no
   }
 
   if ((points.col(n - 1) - points.col(0)).norm() > seps) {
-    PsiResult te_result = psi_te(points, iNode - 1, normal_vector);
+    PsiResult te_result = psi_te(points, iNode, normal_vector);
     psi_result = PsiResult::sum(psi_result, te_result);
   }
 
@@ -177,7 +175,7 @@ PsiResult XFoil::psisig(Matrix2Xd points, int iNode, int jo, Vector2d point, Vec
 
   //------ set reflection flag sgn to avoid branch problems with arctan
   double sgn;
-  if (io >= 1 && io <= n) {
+  if (io >= 0 && io < n) {
     //------- no problem on airfoil surface
     sgn = 1.0;
   } else {
@@ -186,7 +184,7 @@ PsiResult XFoil::psisig(Matrix2Xd points, int iNode, int jo, Vector2d point, Vec
   }
   double logr12, t1;
   //------ set log(r^2) and arctan(x/y), correcting for reflection if any
-  if (io != jo + INDEX_START_WITH && rs1 > 0.0) {
+  if (io != jo && rs1 > 0.0) {
     logr12 = log(rs1);
     t1 = atan2(sgn * x1, sgn * yy) + (0.5 - 0.5 * sgn) * std::numbers::pi;
   } else {
@@ -194,7 +192,7 @@ PsiResult XFoil::psisig(Matrix2Xd points, int iNode, int jo, Vector2d point, Vec
     t1 = 0.0;
   }
   double logr22, t2;
-  if (io != jp + INDEX_START_WITH && rs2 > 0.0) {
+  if (io != jp && rs2 > 0.0) {
     logr22 = log(rs2);
     t2 = atan2(sgn * x2, sgn * yy) + (0.5 - 0.5 * sgn) * std::numbers::pi;
   } else {
