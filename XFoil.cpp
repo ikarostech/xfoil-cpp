@@ -1595,12 +1595,13 @@ bool XFoil::cdcalc() {
   }
 
   //---- set variables at the end of the wake
-  double thwake = thet.bottom[nbl.bottom];
+  double thwake = thet.bottom[nbl.bottom - INDEX_START_WITH];
   double urat = uedg.bottom[nbl.bottom - INDEX_START_WITH] / qinf;
   double uewake =
       uedg.bottom[nbl.bottom - INDEX_START_WITH] * (1.0 - tklam) /
       (1.0 - tklam * urat * urat);
-  double shwake = dstr.bottom[nbl.bottom] / thet.bottom[nbl.bottom];
+  double shwake = dstr.bottom[nbl.bottom - INDEX_START_WITH] /
+                   thet.bottom[nbl.bottom - INDEX_START_WITH];
 
   //---- extrapolate wake to downstream infinity using squire-young relation
   //      (reduces errors of the wake not being long enough)
@@ -2225,15 +2226,15 @@ bool XFoil::mrchdu() {
       //------ initialize current station to existing variables
       xsi = xssi.get(is)[ibl];
       uei = uedg.get(is)[ibl - INDEX_START_WITH];
-      thi = thet.get(is)[ibl];
-      dsi = dstr.get(is)[ibl];
+      thi = thet.get(is)[ibl - INDEX_START_WITH];
+      dsi = dstr.get(is)[ibl - INDEX_START_WITH];
 
       //------ fixed bug   md 7 june 99
       if (ibl < itrold) {
-        ami = ctau.get(is)[ibl]; // ami must be initialized
+        ami = ctau.get(is)[ibl - INDEX_START_WITH]; // ami must be initialized
         cti = 0.03;
       } else {
-        cti = ctau.get(is)[ibl];
+        cti = ctau.get(is)[ibl - INDEX_START_WITH];
         if (cti <= 0.0)
           cti = 0.03;
       }
@@ -2270,10 +2271,14 @@ bool XFoil::mrchdu() {
             itran.get(is) = ibl + 2 - INDEX_START_WITH;
         }
         if (ibl == iblte.get(is) + 1) {
-          tte = thet.top[iblte.top] + thet.bottom[iblte.bottom];
-          dte = dstr.top[iblte.top] + dstr.bottom[iblte.bottom] + ante;
-          cte = (ctau.top[iblte.top] * thet.top[iblte.top] +
-                 ctau.bottom[iblte.bottom] * thet.bottom[iblte.bottom]) /
+          tte = thet.top[iblte.top - INDEX_START_WITH] +
+                thet.bottom[iblte.bottom - INDEX_START_WITH];
+          dte = dstr.top[iblte.top - INDEX_START_WITH] +
+                dstr.bottom[iblte.bottom - INDEX_START_WITH] + ante;
+          cte = (ctau.top[iblte.top - INDEX_START_WITH] *
+                     thet.top[iblte.top - INDEX_START_WITH] +
+                 ctau.bottom[iblte.bottom - INDEX_START_WITH] *
+                     thet.bottom[iblte.bottom - INDEX_START_WITH]) /
                 tte;
           tesys(cte, tte, dte);
         } else {
@@ -2291,8 +2296,8 @@ bool XFoil::mrchdu() {
           if (ibl < itran.get(is) + INDEX_START_WITH && ibl >= itrold) {
             //---------- extrapolate baseline hk
             uem = uedg.get(is)[ibl - 1 - INDEX_START_WITH];
-            dsm = dstr.get(is)[ibl - 1];
-            thm = thet.get(is)[ibl - 1];
+            dsm = dstr.get(is)[ibl - 1 - INDEX_START_WITH];
+            thm = thet.get(is)[ibl - 1 - INDEX_START_WITH];
             msq =
                 uem * uem * hstinv / (gm1bl * (1.0 - 0.5 * uem * uem * hstinv));
             boundary_layer::KineticShapeParameterResult hkin_result =
@@ -2304,11 +2309,12 @@ bool XFoil::mrchdu() {
           if (ibl < itrold) {
             //---------- reinitialize or extrapolate ctau if it's now turbulent
             if (tran)
-              ctau.get(is)[ibl] = 0.03;
+              ctau.get(is)[ibl - INDEX_START_WITH] = 0.03;
             if (turb)
-              ctau.get(is)[ibl] = ctau.get(is)[ibl - 1];
+              ctau.get(is)[ibl - INDEX_START_WITH] =
+                  ctau.get(is)[ibl - 1 - INDEX_START_WITH];
             if (tran || turb) {
-              cti = ctau.get(is)[ibl];
+              cti = ctau.get(is)[ibl - INDEX_START_WITH];
               blData2.param.sz = cti;
             }
           }
@@ -2407,9 +2413,9 @@ bool XFoil::mrchdu() {
           // instead
           if (ibl > 3) {
             if (ibl <= iblte.get(is)) {
-              thi = thet.get(is)[ibm] *
+              thi = thet.get(is)[ibm - INDEX_START_WITH] *
                     sqrt(xssi.get(is)[ibl] / xssi.get(is)[ibm]);
-              dsi = dstr.get(is)[ibm] *
+              dsi = dstr.get(is)[ibm - INDEX_START_WITH] *
                     sqrt(xssi.get(is)[ibl] / xssi.get(is)[ibm]);
               uei = uedg.get(is)[ibm - INDEX_START_WITH];
             } else {
@@ -2419,17 +2425,19 @@ bool XFoil::mrchdu() {
                 dsi = dte;
                 uei = uedg.get(is)[ibm - INDEX_START_WITH];
               } else {
-                thi = thet.get(is)[ibm];
+                thi = thet.get(is)[ibm - INDEX_START_WITH];
                 ratlen = (xssi.get(is)[ibl] - xssi.get(is)[ibm]) /
-                         (10.0 * dstr.get(is)[ibm]);
-                dsi = (dstr.get(is)[ibm] + thi * ratlen) / (1.0 + ratlen);
+                         (10.0 * dstr.get(is)[ibm - INDEX_START_WITH]);
+                dsi = (dstr.get(is)[ibm - INDEX_START_WITH] +
+                       thi * ratlen) /
+                      (1.0 + ratlen);
                 uei = uedg.get(is)[ibm - INDEX_START_WITH];
               }
             }
             if (ibl == itran.get(is) + INDEX_START_WITH)
               cti = 0.05;
             if (ibl > itran.get(is) + INDEX_START_WITH)
-              cti = ctau.get(is)[ibm];
+              cti = ctau.get(is)[ibm - INDEX_START_WITH];
           }
         }
 
@@ -2467,14 +2475,14 @@ bool XFoil::mrchdu() {
 
       //------ store primary variables
       if (ibl < itran.get(is) + INDEX_START_WITH)
-        ctau.get(is)[ibl] = ami;
+        ctau.get(is)[ibl - INDEX_START_WITH] = ami;
       else
-        ctau.get(is)[ibl] = cti;
-      thet.get(is)[ibl] = thi;
-      dstr.get(is)[ibl] = dsi;
+        ctau.get(is)[ibl - INDEX_START_WITH] = cti;
+      thet.get(is)[ibl - INDEX_START_WITH] = thi;
+      dstr.get(is)[ibl - INDEX_START_WITH] = dsi;
       uedg.get(is)[ibl - INDEX_START_WITH] = uei;
       mass.get(is)[ibl - INDEX_START_WITH] = dsi * uei;
-      ctq.get(is)[ibl] = blData2.cqz.scalar;
+      ctq.get(is)[ibl - INDEX_START_WITH] = blData2.cqz.scalar;
 
       //------ set "1" variables to "2" variables for next streamwise station
       blprv(xsi, ami, cti, thi, dsi, dswaki, uei);
@@ -2615,10 +2623,14 @@ bool XFoil::mrchue() {
         }
 
         if (ibl == iblte.get(is) + 1) {
-          tte = thet.top[iblte.top] + thet.bottom[iblte.bottom];
-          dte = dstr.top[iblte.top] + dstr.bottom[iblte.bottom] + ante;
-          cte = (ctau.top[iblte.top] * thet.top[iblte.top] +
-                 ctau.bottom[iblte.bottom] * thet.bottom[iblte.bottom]) /
+          tte = thet.top[iblte.top - INDEX_START_WITH] +
+                thet.bottom[iblte.bottom - INDEX_START_WITH];
+          dte = dstr.top[iblte.top - INDEX_START_WITH] +
+                dstr.bottom[iblte.bottom - INDEX_START_WITH] + ante;
+          cte = (ctau.top[iblte.top - INDEX_START_WITH] *
+                     thet.top[iblte.top - INDEX_START_WITH] +
+                 ctau.bottom[iblte.bottom - INDEX_START_WITH] *
+                     thet.bottom[iblte.bottom - INDEX_START_WITH]) /
                 tte;
           tesys(cte, tte, dte);
         } else
@@ -2743,9 +2755,9 @@ bool XFoil::mrchue() {
           // instead
           if (ibl > 3) {
             if (ibl <= iblte.get(is)) {
-              thi = thet.get(is)[ibm] *
+              thi = thet.get(is)[ibm - INDEX_START_WITH] *
                     sqrt(xssi.get(is)[ibl] / xssi.get(is)[ibm]);
-              dsi = dstr.get(is)[ibm] *
+              dsi = dstr.get(is)[ibm - INDEX_START_WITH] *
                     sqrt(xssi.get(is)[ibl] / xssi.get(is)[ibm]);
             } else {
               if (ibl == iblte.get(is) + 1) {
@@ -2753,16 +2765,18 @@ bool XFoil::mrchue() {
                 thi = tte;
                 dsi = dte;
               } else {
-                thi = thet.get(is)[ibm];
+                thi = thet.get(is)[ibm - INDEX_START_WITH];
                 ratlen = (xssi.get(is)[ibl] - xssi.get(is)[ibm]) /
-                         (10.0 * dstr.get(is)[ibm]);
-                dsi = (dstr.get(is)[ibm] + thi * ratlen) / (1.0 + ratlen);
+                         (10.0 * dstr.get(is)[ibm - INDEX_START_WITH]);
+                dsi = (dstr.get(is)[ibm - INDEX_START_WITH] +
+                       thi * ratlen) /
+                      (1.0 + ratlen);
               }
             }
             if (ibl == itran.get(is) + INDEX_START_WITH)
               cti = 0.05;
             if (ibl > itran.get(is) + INDEX_START_WITH)
-              cti = ctau.get(is)[ibm];
+              cti = ctau.get(is)[ibm - INDEX_START_WITH];
 
             uei = uedg.get(is)[ibl - INDEX_START_WITH];
 
@@ -2800,14 +2814,14 @@ bool XFoil::mrchue() {
       }
       //------ store primary variables
       if (ibl < itran.get(is) + INDEX_START_WITH)
-        ctau.get(is)[ibl] = ami;
+        ctau.get(is)[ibl - INDEX_START_WITH] = ami;
       if (ibl >= itran.get(is) + INDEX_START_WITH)
-        ctau.get(is)[ibl] = cti;
-      thet.get(is)[ibl] = thi;
-      dstr.get(is)[ibl] = dsi;
+        ctau.get(is)[ibl - INDEX_START_WITH] = cti;
+      thet.get(is)[ibl - INDEX_START_WITH] = thi;
+      dstr.get(is)[ibl - INDEX_START_WITH] = dsi;
       uedg.get(is)[ibl - INDEX_START_WITH] = uei;
       mass.get(is)[ibl - INDEX_START_WITH] = dsi * uei;
-      ctq.get(is)[ibl] = blData2.cqz.scalar;
+      ctq.get(is)[ibl - INDEX_START_WITH] = blData2.cqz.scalar;
 
       //------ set "1" variables to "2" variables for next streamwise station
       blprv(xsi, ami, cti, thi, dsi, dswaki, uei);
@@ -2823,8 +2837,10 @@ bool XFoil::mrchue() {
       tran = false;
 
       if (ibl == iblte.get(is)) {
-        thi = thet.top[iblte.top] + thet.bottom[iblte.bottom];
-        dsi = dstr.top[iblte.top] + dstr.bottom[iblte.bottom] + ante;
+        thi = thet.top[iblte.top - INDEX_START_WITH] +
+              thet.bottom[iblte.bottom - INDEX_START_WITH];
+        dsi = dstr.top[iblte.top - INDEX_START_WITH] +
+              dstr.bottom[iblte.bottom - INDEX_START_WITH] + ante;
       }
     } // 1000 continue : end ibl loop
   } // 2000 continue : end is loop
@@ -3220,11 +3236,11 @@ bool XFoil::setbl() {
       //---- set primary variables for current station
       xsi = xssi.get(is)[ibl];
       if (ibl < itran.get(is) + INDEX_START_WITH)
-        ami = ctau.get(is)[ibl];
+        ami = ctau.get(is)[ibl - INDEX_START_WITH];
       else
-        cti = ctau.get(is)[ibl];
+        cti = ctau.get(is)[ibl - INDEX_START_WITH];
       uei = uedg.get(is)[ibl - INDEX_START_WITH];
-      thi = thet.get(is)[ibl];
+      thi = thet.get(is)[ibl - INDEX_START_WITH];
       mdi = mass.get(is)[ibl - INDEX_START_WITH];
 
       dsi = mdi / uei;
@@ -3284,25 +3300,29 @@ bool XFoil::setbl() {
       if (ibl == iblte.get(is) + 1) {
         //----- define quantities at start of wake, adding te base thickness to
         // dstar
-        tte = thet.top[iblte.top] + thet.bottom[iblte.bottom];
-        dte = dstr.top[iblte.top] + dstr.bottom[iblte.bottom] + ante;
-        cte = (ctau.top[iblte.top] * thet.top[iblte.top] +
-               ctau.bottom[iblte.bottom] * thet.bottom[iblte.bottom]) /
+        tte = thet.top[iblte.top - INDEX_START_WITH] +
+              thet.bottom[iblte.bottom - INDEX_START_WITH];
+        dte = dstr.top[iblte.top - INDEX_START_WITH] +
+              dstr.bottom[iblte.bottom - INDEX_START_WITH] + ante;
+        cte = (ctau.top[iblte.top - INDEX_START_WITH] *
+                   thet.top[iblte.top - INDEX_START_WITH] +
+               ctau.bottom[iblte.bottom - INDEX_START_WITH] *
+                   thet.bottom[iblte.bottom - INDEX_START_WITH]) /
               tte;
         tesys(cte, tte, dte);
 
         tte_tte1 = 1.0;
         tte_tte2 = 1.0;
         dte_mte1 = 1.0 / uedg.top[iblte.top - INDEX_START_WITH];
-        dte_ute1 = -dstr.top[iblte.top] /
+        dte_ute1 = -dstr.top[iblte.top - INDEX_START_WITH] /
                     uedg.top[iblte.top - INDEX_START_WITH];
         dte_mte2 = 1.0 / uedg.bottom[iblte.bottom - INDEX_START_WITH];
-        dte_ute2 = -dstr.bottom[iblte.bottom] /
+        dte_ute2 = -dstr.bottom[iblte.bottom - INDEX_START_WITH] /
                     uedg.bottom[iblte.bottom - INDEX_START_WITH];
-        cte_cte1 = thet.top[iblte.top] / tte;
-        cte_cte2 = thet.bottom[iblte.bottom] / tte;
-        cte_tte1 = (ctau.top[iblte.top] - cte) / tte;
-        cte_tte2 = (ctau.bottom[iblte.bottom] - cte) / tte;
+        cte_cte1 = thet.top[iblte.top - INDEX_START_WITH] / tte;
+        cte_cte2 = thet.bottom[iblte.bottom - INDEX_START_WITH] / tte;
+        cte_tte1 = (ctau.top[iblte.top - INDEX_START_WITH] - cte) / tte;
+        cte_tte2 = (ctau.bottom[iblte.bottom - INDEX_START_WITH] - cte) / tte;
 
         //----- re-define d1 sensitivities wrt m since d1 depends on both te ds
         // values
@@ -3330,7 +3350,7 @@ bool XFoil::setbl() {
 
       //---- save wall shear and equil. max shear coefficient for plotting
       // output
-      ctq.get(is)[ibl] = blData2.cqz.scalar;
+      ctq.get(is)[ibl - INDEX_START_WITH] = blData2.cqz.scalar;
 
       //---- set xi sensitivities wrt le ue changes
       if (is == 1) {
@@ -3805,9 +3825,12 @@ bool XFoil::stmove() {
 
       //---- move top side bl variables downstream
       for (int ibl = nbl.top; ibl >= idif + 2; ibl--) {
-        ctau.top[ibl] = ctau.top[ibl - idif];
-        thet.top[ibl] = thet.top[ibl - idif];
-        dstr.top[ibl] = dstr.top[ibl - idif];
+        ctau.top[ibl - INDEX_START_WITH] =
+            ctau.top[ibl - idif - INDEX_START_WITH];
+        thet.top[ibl - INDEX_START_WITH] =
+            thet.top[ibl - idif - INDEX_START_WITH];
+        dstr.top[ibl - INDEX_START_WITH] =
+            dstr.top[ibl - idif - INDEX_START_WITH];
         uedg.top[ibl - INDEX_START_WITH] =
             uedg.top[ibl - idif - INDEX_START_WITH];
       }
@@ -3816,17 +3839,23 @@ bool XFoil::stmove() {
       const double dudx =
           uedg.top[idif + 2 - INDEX_START_WITH] / xssi.top[idif + 2];
       for (int ibl = idif + 1; ibl >= 2; ibl--) {
-        ctau.top[ibl] = ctau.top[idif + 2];
-        thet.top[ibl] = thet.top[idif + 2];
-        dstr.top[ibl] = dstr.top[idif + 2];
+        ctau.top[ibl - INDEX_START_WITH] =
+            ctau.top[idif + 2 - INDEX_START_WITH];
+        thet.top[ibl - INDEX_START_WITH] =
+            thet.top[idif + 2 - INDEX_START_WITH];
+        dstr.top[ibl - INDEX_START_WITH] =
+            dstr.top[idif + 2 - INDEX_START_WITH];
         uedg.top[ibl - INDEX_START_WITH] = dudx * xssi.top[ibl];
       }
 
       //---- move bottom side bl variables upstream
       for (int ibl = 2; ibl <= nbl.bottom; ibl++) {
-        ctau.bottom[ibl] = ctau.bottom[ibl + idif];
-        thet.bottom[ibl] = thet.bottom[ibl + idif];
-        dstr.bottom[ibl] = dstr.bottom[ibl + idif];
+        ctau.bottom[ibl - INDEX_START_WITH] =
+            ctau.bottom[ibl + idif - INDEX_START_WITH];
+        thet.bottom[ibl - INDEX_START_WITH] =
+            thet.bottom[ibl + idif - INDEX_START_WITH];
+        dstr.bottom[ibl - INDEX_START_WITH] =
+            dstr.bottom[ibl + idif - INDEX_START_WITH];
         uedg.bottom[ibl - INDEX_START_WITH] =
             uedg.bottom[ibl + idif - INDEX_START_WITH];
       }
@@ -3839,9 +3868,12 @@ bool XFoil::stmove() {
 
       //---- move bottom side bl variables downstream
       for (int ibl = nbl.bottom; ibl >= idif + 2; ibl--) {
-        ctau.bottom[ibl] = ctau.bottom[ibl - idif];
-        thet.bottom[ibl] = thet.bottom[ibl - idif];
-        dstr.bottom[ibl] = dstr.bottom[ibl - idif];
+        ctau.bottom[ibl - INDEX_START_WITH] =
+            ctau.bottom[ibl - idif - INDEX_START_WITH];
+        thet.bottom[ibl - INDEX_START_WITH] =
+            thet.bottom[ibl - idif - INDEX_START_WITH];
+        dstr.bottom[ibl - INDEX_START_WITH] =
+            dstr.bottom[ibl - idif - INDEX_START_WITH];
         uedg.bottom[ibl - INDEX_START_WITH] =
             uedg.bottom[ibl - idif - INDEX_START_WITH];
       }
@@ -3850,17 +3882,23 @@ bool XFoil::stmove() {
       const double dudx =
           uedg.bottom[idif + 2 - INDEX_START_WITH] / xssi.bottom[idif + 2];
       for (int ibl = idif + 1; ibl >= 2; ibl--) {
-        ctau.bottom[ibl] = ctau.bottom[idif + 2];
-        thet.bottom[ibl] = thet.bottom[idif + 2];
-        dstr.bottom[ibl] = dstr.bottom[idif + 2];
+        ctau.bottom[ibl - INDEX_START_WITH] =
+            ctau.bottom[idif + 2 - INDEX_START_WITH];
+        thet.bottom[ibl - INDEX_START_WITH] =
+            thet.bottom[idif + 2 - INDEX_START_WITH];
+        dstr.bottom[ibl - INDEX_START_WITH] =
+            dstr.bottom[idif + 2 - INDEX_START_WITH];
         uedg.bottom[ibl - INDEX_START_WITH] = dudx * xssi.bottom[ibl];
       }
 
       //---- move top side bl variables upstream
       for (int ibl = 2; ibl <= nbl.top; ibl++) {
-        ctau.top[ibl] = ctau.top[ibl + idif];
-        thet.top[ibl] = thet.top[ibl + idif];
-        dstr.top[ibl] = dstr.top[ibl + idif];
+        ctau.top[ibl - INDEX_START_WITH] =
+            ctau.top[ibl + idif - INDEX_START_WITH];
+        thet.top[ibl - INDEX_START_WITH] =
+            thet.top[ibl + idif - INDEX_START_WITH];
+        dstr.top[ibl - INDEX_START_WITH] =
+            dstr.top[ibl + idif - INDEX_START_WITH];
         uedg.top[ibl - INDEX_START_WITH] =
             uedg.top[ibl + idif - INDEX_START_WITH];
       }
@@ -3871,7 +3909,8 @@ bool XFoil::stmove() {
   for (int is = 1; is <= 2; is++) {
     for (int ibl = 2; ibl <= nbl.get(is); ibl++)
       mass.get(is)[ibl - INDEX_START_WITH] =
-          dstr.get(is)[ibl] * uedg.get(is)[ibl - INDEX_START_WITH];
+          dstr.get(is)[ibl - INDEX_START_WITH] *
+          uedg.get(is)[ibl - INDEX_START_WITH];
   }
 
   return true;
@@ -4793,9 +4832,9 @@ bool XFoil::update() {
     ddstr_seg.get(is) = VectorXd(len);
     duedg_seg.get(is) = VectorXd(len);
 
-    auto ctau_slice = ctau.get(is).segment(start, len);
-    auto thet_slice = thet.get(is).segment(start, len);
-    auto dstr_slice = dstr.get(is).segment(start, len);
+    auto ctau_slice = ctau.get(is).segment(start - INDEX_START_WITH, len);
+    auto thet_slice = thet.get(is).segment(start - INDEX_START_WITH, len);
+    auto dstr_slice = dstr.get(is).segment(start - INDEX_START_WITH, len);
     auto uedg_slice = uedg.get(is).segment(start - INDEX_START_WITH, len);
     auto unew_slice = unew.get(is).segment(start, len);
     auto uac_slice = u_ac.get(is).segment(start, len);
@@ -4864,9 +4903,9 @@ bool XFoil::update() {
     if (len <= 0)
       continue;
 
-    auto ctau_slice = ctau.get(is).segment(start, len);
-    auto thet_slice = thet.get(is).segment(start, len);
-    auto dstr_slice = dstr.get(is).segment(start, len);
+    auto ctau_slice = ctau.get(is).segment(start - INDEX_START_WITH, len);
+    auto thet_slice = thet.get(is).segment(start - INDEX_START_WITH, len);
+    auto dstr_slice = dstr.get(is).segment(start - INDEX_START_WITH, len);
     auto uedg_slice = uedg.get(is).segment(start - INDEX_START_WITH, len);
 
     ctau_slice += rlx * dctau_seg.get(is);
@@ -4896,24 +4935,29 @@ bool XFoil::update() {
             (gamm1 *
              (1.0 - 0.5 * uedg.get(is)[ibl - INDEX_START_WITH] *
                         uedg.get(is)[ibl - INDEX_START_WITH] * hstinv));
-      dsw = dstr.get(is)[ibl] - dswaki;
-      dslim(dsw, thet.get(is)[ibl], msq, hklim);
-      dstr.get(is)[ibl] = dsw + dswaki;
+      dsw = dstr.get(is)[ibl - INDEX_START_WITH] - dswaki;
+      dslim(dsw, thet.get(is)[ibl - INDEX_START_WITH], msq, hklim);
+      dstr.get(is)[ibl - INDEX_START_WITH] = dsw + dswaki;
 
       //------- set new mass defect (nonlinear update)
       mass.get(is)[ibl - INDEX_START_WITH] =
-          dstr.get(is)[ibl] * uedg.get(is)[ibl - INDEX_START_WITH];
+          dstr.get(is)[ibl - INDEX_START_WITH] *
+          uedg.get(is)[ibl - INDEX_START_WITH];
     }
   }
 
   //--- equate upper wake arrays to lower wake arrays
   for (int kbl = 1; kbl <= nbl.bottom - iblte.bottom; kbl++) {
-    ctau.top[iblte.top + kbl] = ctau.bottom[iblte.bottom + kbl];
-    thet.top[iblte.top + kbl] = thet.bottom[iblte.bottom + kbl];
-    dstr.top[iblte.top + kbl] = dstr.bottom[iblte.bottom + kbl];
+    ctau.top[iblte.top + kbl - INDEX_START_WITH] =
+        ctau.bottom[iblte.bottom + kbl - INDEX_START_WITH];
+    thet.top[iblte.top + kbl - INDEX_START_WITH] =
+        thet.bottom[iblte.bottom + kbl - INDEX_START_WITH];
+    dstr.top[iblte.top + kbl - INDEX_START_WITH] =
+        dstr.bottom[iblte.bottom + kbl - INDEX_START_WITH];
     uedg.top[iblte.top + kbl - INDEX_START_WITH] =
         uedg.bottom[iblte.bottom + kbl - INDEX_START_WITH];
-    ctq.top[iblte.top + kbl] = ctq.bottom[iblte.bottom + kbl];
+    ctq.top[iblte.top + kbl - INDEX_START_WITH] =
+        ctq.bottom[iblte.bottom + kbl - INDEX_START_WITH];
   }
 
   return true;
