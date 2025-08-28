@@ -1903,9 +1903,6 @@ bool XFoil::ggcalc() {
   //-    res = gam(1) + gam[n]
   res = 0.0;
 
-  for (int j = 0; j < n + 1; j++) {
-    dpsi_dgam(n, j) = 0;
-  }
   dpsi_dgam.row(n).head(n + 1) = VectorXd::Zero(n + 1);
   dpsi_dgam(n, 0) = 1;
   dpsi_dgam(n, n - 1) = 1;
@@ -1914,8 +1911,7 @@ bool XFoil::ggcalc() {
   psi.col(n).y() = -res;
 
   //---- set up Kutta condition (no direct source influence)
-  for (int j = 0; j < n; j++)
-    bij(n, j) = 0.0;
+  bij.row(n).head(n) = VectorXd::Zero(n);
 
   if (sharp) {
     //----- set zero internal velocity in TE corner
@@ -1989,19 +1985,17 @@ bool XFoil::iblpan() {
   std::stringstream ss;
 
   //-- top surface first
-  for (int i = i_stagnation; i >= 1; i--) {
-    int index = i_stagnation - i + 1;
-    ipan.top[index] = i - INDEX_START_WITH;
-    vti.top[index] = 1.0;
+  for (int i = 1; i <= i_stagnation; i++) {
+    ipan.top[i] = i_stagnation - i;
+    vti.top[i] = 1.0;
   }
 
   iblte.top = i_stagnation + INDEX_START_WITH;
   nbl.top = i_stagnation + INDEX_START_WITH;
 
   //-- bottom surface next
-  for (int i = i_stagnation + 1; i <= n; i++) {
-    int index = i - i_stagnation;
-    ipan.bottom[index] = i - INDEX_START_WITH;
+  for (int index = 1; index <= n - i_stagnation; ++index) {
+    ipan.bottom[index] = i_stagnation + index - INDEX_START_WITH;
     vti.bottom[index] = -1.0;
   }
 
