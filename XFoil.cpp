@@ -1863,21 +1863,6 @@ bool XFoil::gamqv() {
   return true;
 }
 
-bool XFoil::getxyf(Matrix2Xd points, Matrix2Xd dpoints_ds, VectorXd s, int n,
-                   double &tops, double &bots, double xf, double &yf) {
-  double topy, boty, yrel;
-
-  tops = s[1] + (points.col(0).x() - xf);
-  bots = s[n] - (points.col(n - 1).x() - xf);
-  topy = spline::seval(tops, points.row(1), dpoints_ds.row(1), s, n);
-  boty = spline::seval(bots, points.row(1), dpoints_ds.row(1), s, n);
-
-  yrel = yf;
-
-  yf = topy * yrel + boty * (1.0 - yrel);
-  return true;
-}
-
 /** --------------------------------------------------------------
  *     Calculates two surface vorticity (gamma) distributions
  *     for alpha = 0, 90  degrees.  These are superimposed

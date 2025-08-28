@@ -223,8 +223,6 @@ class XFoil {
   bool dslim(double &dstr, double thet, double msq, double hklim);
 
   bool gamqv();
-  bool getxyf(Matrix2Xd points, Matrix2Xd dpoints_ds, VectorXd s,
-              int n, double &tops, double &bots, double xf, double &yf);
   bool ggcalc();
   bool iblpan();
   bool iblsys();
