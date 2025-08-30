@@ -3069,17 +3069,17 @@ void XFoil::computeLeTeSensitivities(int ile1, int ile2, int ite1, int ite2,
                                      VectorXd &ule1_m, VectorXd &ule2_m,
                                      VectorXd &ute1_m, VectorXd &ute2_m) {
   for (int js = 1; js <= 2; ++js) {
-    for (int jbl = 2; jbl <= nbl.get(js); ++jbl) {
-      int j = ipan.get(js)[jbl - INDEX_START_WITH] + INDEX_START_WITH;
-      int jv = isys.get(js)[jbl];
-      ule1_m[jv] = -vti.top[1] * vti.get(js)[jbl - INDEX_START_WITH] *
-                   dij(ile1 - INDEX_START_WITH, j - INDEX_START_WITH);
-      ule2_m[jv] = -vti.bottom[1] * vti.get(js)[jbl - INDEX_START_WITH] *
-                   dij(ile2 - INDEX_START_WITH, j - INDEX_START_WITH);
-      ute1_m[jv] = -vti.top[iblte.top] * vti.get(js)[jbl - INDEX_START_WITH] *
-                   dij(ite1 - INDEX_START_WITH, j - INDEX_START_WITH);
-      ute2_m[jv] = -vti.bottom[iblte.bottom] * vti.get(js)[jbl - INDEX_START_WITH] *
-                   dij(ite2 - INDEX_START_WITH, j - INDEX_START_WITH);
+    for (int jbl = 1; jbl < nbl.get(js); ++jbl) {
+      int j = ipan.get(js)[jbl];
+      int jv = isys.get(js)[jbl + INDEX_START_WITH];
+      ule1_m[jv] = -vti.top[1] * vti.get(js)[jbl] *
+                   dij(ile1, j);
+      ule2_m[jv] = -vti.bottom[1] * vti.get(js)[jbl] *
+                   dij(ile2, j);
+      ute1_m[jv] = -vti.top[iblte.top] * vti.get(js)[jbl] *
+                   dij(ite1, j);
+      ute2_m[jv] = -vti.bottom[iblte.bottom] * vti.get(js)[jbl] *
+                   dij(ite2, j);
     }
   }
 }
@@ -3103,7 +3103,7 @@ bool XFoil::setbl() {
   //-------------------------------------------------
 
   std::stringstream ss;
-  int ile1 = 0, ile2 = 0, ite1 = 0, ite2 = 0, jvte1 = 0, jvte2 = 0;
+  int jvte1 = 0, jvte2 = 0;
   VectorXd u1_m = VectorXd::Zero(2 * IVX + 1);
   VectorXd u2_m = VectorXd::Zero(2 * IVX + 1);
   VectorXd d1_m = VectorXd::Zero(2 * IVX + 1);
@@ -3185,11 +3185,6 @@ bool XFoil::setbl() {
 
   ueset();
   swapEdgeVelocities(usav);
-  ile1 = ipan.top[1] + INDEX_START_WITH;
-  ile2 = ipan.bottom[1] + INDEX_START_WITH;
-  ite1 = ipan.top[iblte.top] + INDEX_START_WITH;
-  ite2 = ipan.bottom[iblte.bottom] + INDEX_START_WITH;
-
   jvte1 = isys.top[iblte.top + INDEX_START_WITH];
   jvte2 = isys.bottom[iblte.bottom + INDEX_START_WITH];
 
@@ -3198,8 +3193,10 @@ bool XFoil::setbl() {
       uedg.bottom[2 - INDEX_START_WITH] - usav.bottom[2 - INDEX_START_WITH];
 
   //---- set le and te ue sensitivities wrt all m values
-  computeLeTeSensitivities(ile1, ile2, ite1, ite2, ule1_m, ule2_m, ute1_m,
-                           ute2_m);
+  computeLeTeSensitivities(
+    ipan.top[1], ipan.bottom[1], ipan.top[iblte.top], ipan.bottom[iblte.bottom],
+    ule1_m, ule2_m, ute1_m, ute2_m
+  );
 
   ule1_a = uinv_a.top[1];
   ule2_a = uinv_a.bottom[1];
