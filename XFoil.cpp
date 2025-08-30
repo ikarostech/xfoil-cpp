@@ -3253,11 +3253,11 @@ bool XFoil::setbl() {
       d2_u2 = -dsi / uei;
 
       for (int js = 1; js <= 2; js++) {
-        for (int jbl = 2; jbl <= nbl.get(js); jbl++) {
-          int j = ipan.get(js)[jbl - INDEX_START_WITH] + INDEX_START_WITH;
-          int jv = isys.get(js)[jbl - INDEX_START_WITH];
-          u2_m[jv] = -vti.get(is)[ibl - INDEX_START_WITH] * vti.get(js)[jbl - INDEX_START_WITH] *
-                     dij(i - INDEX_START_WITH, j - INDEX_START_WITH);
+        for (int jbl = 1; jbl < nbl.get(js); jbl++) {
+          int j = ipan.get(js)[jbl];
+          int jv = isys.get(js)[jbl];
+          u2_m[jv] = -vti.get(is)[ibl - INDEX_START_WITH] * vti.get(js)[jbl] *
+                     dij(i - INDEX_START_WITH, j);
           d2_m[jv] = d2_u2 * u2_m[jv];
         }
       }
@@ -3324,8 +3324,8 @@ bool XFoil::setbl() {
         //----- re-define d1 sensitivities wrt m since d1 depends on both te ds
         // values
         for (int js = 1; js <= 2; js++) {
-          for (int jbl = 2; jbl <= nbl.get(js); jbl++) {
-            int jv = isys.get(js)[jbl - INDEX_START_WITH];
+          for (int jbl = 1; jbl < nbl.get(js); jbl++) {
+            int jv = isys.get(js)[jbl];
             d1_m[jv] = dte_ute1 * ute1_m[jv] + dte_ute2 * ute2_m[jv];
           }
         }
