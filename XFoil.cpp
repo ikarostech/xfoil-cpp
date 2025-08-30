@@ -1385,7 +1385,7 @@ bool XFoil::blsolve() {
       vdel[ivp](k, 1) -= D[k][0] * col[0] + D[k][1] * col[1] + D[k][2] * col[2];
 
     if (iv == ivte1) {
-      int ivz = isys.bottom[iblte.bottom + INDEX_START_WITH];
+      int ivz = isys.bottom[iblte.bottom];
       double Dz[3][2] = {{vz[0][0], vz[0][1]},
                          {vz[1][0], vz[1][1]},
                          {vz[2][0], vz[2][1]}};
@@ -1452,7 +1452,7 @@ bool XFoil::blsolve() {
     }
   };
 
-  int ivte1 = isys.top[iblte.top + INDEX_START_WITH];
+  int ivte1 = isys.top[iblte.top];
   for (int iv = 1; iv <= nsys; iv++) {
     int ivp = iv + 1;
     eliminateVaBlock(iv, ivp);
@@ -2037,7 +2037,7 @@ bool XFoil::iblpan() {
 bool XFoil::iblsys() {
   int iv = 0;
   for (int is = 1; is <= 2; is++) {
-    for (int ibl = 2; ibl <= nbl.get(is); ibl++) {
+    for (int ibl = 1; ibl < nbl.get(is); ibl++) {
       iv++;
       isys.get(is)[ibl] = iv;
     }
@@ -3071,7 +3071,7 @@ void XFoil::computeLeTeSensitivities(int ile1, int ile2, int ite1, int ite2,
   for (int js = 1; js <= 2; ++js) {
     for (int jbl = 1; jbl < nbl.get(js); ++jbl) {
       int j = ipan.get(js)[jbl];
-      int jv = isys.get(js)[jbl + INDEX_START_WITH];
+      int jv = isys.get(js)[jbl];
       ule1_m[jv] = -vti.top[1] * vti.get(js)[jbl] *
                    dij(ile1, j);
       ule2_m[jv] = -vti.bottom[1] * vti.get(js)[jbl] *
@@ -3086,7 +3086,7 @@ void XFoil::computeLeTeSensitivities(int ile1, int ile2, int ite1, int ite2,
 
 void XFoil::clearDerivativeVectors(VectorXd &u_m, VectorXd &d_m) {
   for (int js = 1; js <= 2; ++js) {
-    for (int jbl = 2; jbl <= nbl.get(js); ++jbl) {
+    for (int jbl = 1; jbl < nbl.get(js); ++jbl) {
       int jv = isys.get(js)[jbl];
       u_m[jv] = 0.0;
       d_m[jv] = 0.0;
@@ -3185,8 +3185,8 @@ bool XFoil::setbl() {
 
   ueset();
   swapEdgeVelocities(usav);
-  jvte1 = isys.top[iblte.top + INDEX_START_WITH];
-  jvte2 = isys.bottom[iblte.bottom + INDEX_START_WITH];
+  jvte1 = isys.top[iblte.top];
+  jvte2 = isys.bottom[iblte.bottom];
 
   dule1 = uedg.top[2 - INDEX_START_WITH] - usav.top[2 - INDEX_START_WITH];
   dule2 =
@@ -3221,7 +3221,7 @@ bool XFoil::setbl() {
 
     //**** sweep downstream setting up bl equation linearizations
     for (int ibl = 2; ibl <= nbl.get(is); ibl++) {
-      int iv = isys.get(is)[ibl];
+      int iv = isys.get(is)[ibl - INDEX_START_WITH];
 
       simi = (ibl == 2);
   wake = (ibl > iblte.get(is) + INDEX_START_WITH);
@@ -3255,7 +3255,7 @@ bool XFoil::setbl() {
       for (int js = 1; js <= 2; js++) {
         for (int jbl = 2; jbl <= nbl.get(js); jbl++) {
           int j = ipan.get(js)[jbl - INDEX_START_WITH] + INDEX_START_WITH;
-          int jv = isys.get(js)[jbl];
+          int jv = isys.get(js)[jbl - INDEX_START_WITH];
           u2_m[jv] = -vti.get(is)[ibl - INDEX_START_WITH] * vti.get(js)[jbl - INDEX_START_WITH] *
                      dij(i - INDEX_START_WITH, j - INDEX_START_WITH);
           d2_m[jv] = d2_u2 * u2_m[jv];
@@ -3325,7 +3325,7 @@ bool XFoil::setbl() {
         // values
         for (int js = 1; js <= 2; js++) {
           for (int jbl = 2; jbl <= nbl.get(js); jbl++) {
-            int jv = isys.get(js)[jbl];
+            int jv = isys.get(js)[jbl - INDEX_START_WITH];
             d1_m[jv] = dte_ute1 * ute1_m[jv] + dte_ute2 * ute2_m[jv];
           }
         }
@@ -4653,7 +4653,7 @@ void XFoil::computeNewUeDistribution(SidePair<VectorXd> &unew,
       for (int js = 1; js <= 2; js++) {
         for (int jbl = 1; jbl < nbl.get(js); jbl++) {
           int j = ipan.get(js)[jbl];
-          int jv = isys.get(js)[jbl + INDEX_START_WITH];
+          int jv = isys.get(js)[jbl];
           double ue_m = -vti.get(is)[ibl] * vti.get(js)[jbl] *
                         dij(i, j);
           dui += ue_m * (mass.get(js)[jbl] + vdel[jv](2, 0));
@@ -4836,7 +4836,7 @@ bool XFoil::update() {
     auto unew_slice = unew.get(is).segment(start, len);
     auto uac_slice = u_ac.get(is).segment(start, len);
 
-    VectorXi iv = isys.get(is).segment(start, len);
+    VectorXi iv = isys.get(is).segment(start - INDEX_START_WITH, len);
     VectorXd dmass(len);
     for (int j = 0; j < len; ++j) {
       int idx = iv[j];
