@@ -2964,8 +2964,7 @@ bool XFoil::qdcalc() {
     cij.row(iw) = psi_result.dqdg.head(n).transpose();
     dij.row(i).head(n) = psi_result.dqdm.head(n).transpose();
     //------ wake contribution
-    psi_result = pswlin(points, i + INDEX_START_WITH, points.col(i),
-                        normal_vectors.col(i));
+    psi_result = pswlin(points, i, points.col(i), normal_vectors.col(i));
     dij.row(i).segment(n, nw) = psi_result.dqdm.segment(n, nw).transpose();
   }
 
@@ -3003,10 +3002,9 @@ bool XFoil::qiset() {
  * -------------------------------------------------------------- */
 bool XFoil::qvfue() {
   for (int is = 1; is <= 2; is++) {
-    for (int ibl = 2; ibl <= nbl.get(is); ibl++) {
-      int i = ipan.get(is)[ibl - INDEX_START_WITH];
-      qvis[i] = vti.get(is)[ibl - INDEX_START_WITH] *
-                uedg.get(is)[ibl - INDEX_START_WITH];
+    for (int ibl = 1; ibl < nbl.get(is); ibl++) {
+      int i = ipan.get(is)[ibl];
+      qvis[i] = vti.get(is)[ibl] * uedg.get(is)[ibl];
     }
   }
 
@@ -3053,11 +3051,10 @@ bool XFoil::saveblData(int icom) {
 
 void XFoil::swapEdgeVelocities(SidePair<VectorXd> &usav) {
   for (int is = 1; is <= 2; ++is) {
-    for (int ibl = 2; ibl <= nbl.get(is); ++ibl) {
-      double temp = usav.get(is)[ibl - INDEX_START_WITH];
-      usav.get(is)[ibl - INDEX_START_WITH] =
-          uedg.get(is)[ibl - INDEX_START_WITH];
-      uedg.get(is)[ibl - INDEX_START_WITH] = temp;
+    for (int ibl = 1; ibl < nbl.get(is); ++ibl) {
+      double temp = usav.get(is)[ibl];
+      usav.get(is)[ibl] = uedg.get(is)[ibl];
+      uedg.get(is)[ibl] = temp;
     }
   }
 }
@@ -3185,9 +3182,8 @@ bool XFoil::setbl() {
   jvte1 = isys.top[iblte.top];
   jvte2 = isys.bottom[iblte.bottom];
 
-  dule1 = uedg.top[2 - INDEX_START_WITH] - usav.top[2 - INDEX_START_WITH];
-  dule2 =
-      uedg.bottom[2 - INDEX_START_WITH] - usav.bottom[2 - INDEX_START_WITH];
+  dule1 = uedg.top[1] - usav.top[1];
+  dule2 = uedg.bottom[1] - usav.bottom[1];
 
   //---- set le and te ue sensitivities wrt all m values
   computeLeTeSensitivities(
@@ -3226,8 +3222,6 @@ bool XFoil::setbl() {
       tran = (ibl == itran.get(is));
       turb = (ibl > itran.get(is));
 
-      int i = ipan.get(is)[ibl] + INDEX_START_WITH;
-
       //---- set primary variables for current station
       xsi = xssi.get(is)[ibl];
       if (ibl < itran.get(is))
@@ -3252,10 +3246,9 @@ bool XFoil::setbl() {
 
       for (int js = 1; js <= 2; js++) {
         for (int jbl = 1; jbl < nbl.get(js); jbl++) {
-          int j = ipan.get(js)[jbl];
           int jv = isys.get(js)[jbl];
           u2_m[jv] = -vti.get(is)[ibl] * vti.get(js)[jbl] *
-                     dij(i - INDEX_START_WITH, j);
+                     dij(ipan.get(is)[ibl], ipan.get(js)[jbl]);
           d2_m[jv] = d2_u2 * u2_m[jv];
         }
       }
@@ -3828,14 +3821,14 @@ bool XFoil::stmove() {
 
       //---- set bl variables between old and new stagnation point
       const double dudx =
-          uedg.top[idif + 2 - INDEX_START_WITH] / xssi.top[idif + 2 - INDEX_START_WITH];
+          uedg.top[idif + 1] / xssi.top[idif + 1];
       for (int ibl = idif; ibl >= 1; ibl--) {
         ctau.top[ibl] =
-            ctau.top[idif + 2 - INDEX_START_WITH];
+            ctau.top[idif + 1];
         thet.top[ibl] =
-            thet.top[idif + 2 - INDEX_START_WITH];
+            thet.top[idif + 1];
         dstr.top[ibl] =
-            dstr.top[idif + 2 - INDEX_START_WITH];
+            dstr.top[idif + 1];
         uedg.top[ibl] = dudx * xssi.top[ibl];
       }
 
@@ -3871,14 +3864,14 @@ bool XFoil::stmove() {
 
       //---- set bl variables between old and new stagnation point
       const double dudx =
-          uedg.bottom[idif + 2 - INDEX_START_WITH] / xssi.bottom[idif + 2 - INDEX_START_WITH];
+          uedg.bottom[idif + 1] / xssi.bottom[idif + 1];
       for (int ibl = idif; ibl >= 1; ibl--) {
         ctau.bottom[ibl] =
-            ctau.bottom[idif + 2 - INDEX_START_WITH];
+            ctau.bottom[idif + 1];
         thet.bottom[ibl] =
-            thet.bottom[idif + 2 - INDEX_START_WITH];
+            thet.bottom[idif + 1];
         dstr.bottom[ibl] =
-            dstr.bottom[idif + 2 - INDEX_START_WITH];
+            dstr.bottom[idif + 1];
         uedg.bottom[ibl] = dudx * xssi.bottom[ibl];
       }
 
@@ -4599,19 +4592,17 @@ bool XFoil::ueset() {
   //     sets ue from inviscid ue plus all source influence
   //---------------------------------------------------------
   for (int is = 1; is <= 2; is++) {
-    for (int ibl = 2; ibl <= nbl.get(is); ibl++) {
+    for (int ibl = 1; ibl < nbl.get(is); ibl++) {
       double dui = 0.0;
       for (int js = 1; js <= 2; js++) {
-        for (int jbl = 2; jbl <= nbl.get(js); jbl++) {
-          double ue_m = -vti.get(is)[ibl - INDEX_START_WITH] * vti.get(js)[jbl - INDEX_START_WITH] *
-                        dij(ipan.get(is)[ibl - INDEX_START_WITH],
-                            ipan.get(js)[jbl - INDEX_START_WITH]);
-          dui += ue_m * mass.get(js)[jbl - INDEX_START_WITH];
+        for (int jbl = 1; jbl < nbl.get(js); jbl++) {
+          double ue_m = -vti.get(is)[ibl] * vti.get(js)[jbl] *
+                        dij(ipan.get(is)[ibl],
+                            ipan.get(js)[jbl]);
+          dui += ue_m * mass.get(js)[jbl];
         }
       }
-
-      uedg.get(is)[ibl - INDEX_START_WITH] =
-          uinv.get(is)[ibl - INDEX_START_WITH] + dui;
+      uedg.get(is)[ibl] = uinv.get(is)[ibl] + dui;
     }
   }
   return true;
@@ -4669,12 +4660,12 @@ void XFoil::computeQtan(const SidePair<VectorXd> &unew,
                         const SidePair<VectorXd> &u_ac, double qnew[],
                         double q_ac[]) {
   for (int is = 1; is <= 2; is++) {
-    for (int ibl = 2; ibl <= iblte.get(is) + INDEX_START_WITH; ibl++) {
-      int i = ipan.get(is)[ibl - INDEX_START_WITH] + INDEX_START_WITH;
+    for (int ibl = 1; ibl <= iblte.get(is); ibl++) {
+      int i = ipan.get(is)[ibl] + INDEX_START_WITH;
       const VectorXd &unew_vec = (is == 1) ? unew.top : unew.bottom;
       const VectorXd &uac_vec = (is == 1) ? u_ac.top : u_ac.bottom;
-      qnew[i] = vti.get(is)[ibl - INDEX_START_WITH] * unew_vec[ibl];
-      q_ac[i] = vti.get(is)[ibl - INDEX_START_WITH] * uac_vec[ibl];
+      qnew[i] = vti.get(is)[ibl] * unew_vec[ibl];
+      q_ac[i] = vti.get(is)[ibl] * uac_vec[ibl];
     }
   }
 }
@@ -4705,23 +4696,20 @@ void XFoil::computeClFromQtan(const double qnew[], const double q_ac[],
   double cpc_cpi = (1.0 - bfac * cpg1) / (beta + bfac * cginc);
   double cpg1_ac = cpc_cpi * cpi_q * q_ac[1];
 
-  for (int i = 1; i <= n; i++) {
-    int ip = i + 1;
-    if (i == n)
-      ip = 1;
-
-    cginc = 1.0 - (qnew[ip] / qinf) * (qnew[ip] / qinf);
+  for (int i = 0; i < n; i++) {
+    int ip = (i + 1) % n;
+    cginc = 1.0 - (qnew[ip + INDEX_START_WITH] / qinf) * (qnew[ip + INDEX_START_WITH] / qinf);
     double cpg2 = cginc / (beta + bfac * cginc);
     double cpg2_ms =
         -cpg2 / (beta + bfac * cginc) * (beta_msq + bfac_msq * cginc);
 
-    cpi_q = -2.0 * qnew[ip] / qinf / qinf;
+    cpi_q = -2.0 * qnew[ip + INDEX_START_WITH] / qinf / qinf;
     cpc_cpi = (1.0 - bfac * cpg2) / (beta + bfac * cginc);
-    double cpg2_ac = cpc_cpi * cpi_q * q_ac[ip];
+    double cpg2_ac = cpc_cpi * cpi_q * q_ac[ip + INDEX_START_WITH];
 
     Matrix2d rotateMatrix =
         Matrix2d{{cos(alfa), sin(alfa)}, {-sin(alfa), cos(alfa)}};
-    Vector2d dpoint = rotateMatrix * (points.col(ip - INDEX_START_WITH) - points.col(i - INDEX_START_WITH));
+    Vector2d dpoint = rotateMatrix * (points.col(ip) - points.col(i));
 
     const double ag = 0.5 * (cpg2 + cpg1);
     const double ag_ms = 0.5 * (cpg2_ms + cpg1_ms);
@@ -4889,51 +4877,51 @@ bool XFoil::update() {
 
   //--- update bl variables with underrelaxed changes
   for (int is = 1; is <= 2; ++is) {
-    int start = 2;
+    int start = 1;
     int len = nbl.get(is) - 1;
     if (len <= 0)
       continue;
 
-    auto ctau_slice = ctau.get(is).segment(start - INDEX_START_WITH, len);
-    auto thet_slice = thet.get(is).segment(start - INDEX_START_WITH, len);
-    auto dstr_slice = dstr.get(is).segment(start - INDEX_START_WITH, len);
-    auto uedg_slice = uedg.get(is).segment(start - INDEX_START_WITH, len);
+    auto ctau_slice = ctau.get(is).segment(start, len);
+    auto thet_slice = thet.get(is).segment(start, len);
+    auto dstr_slice = dstr.get(is).segment(start, len);
+    auto uedg_slice = uedg.get(is).segment(start, len);
 
     ctau_slice += rlx * dctau_seg.get(is);
     thet_slice += rlx * dthet_seg.get(is);
     dstr_slice += rlx * ddstr_seg.get(is);
     uedg_slice += rlx * duedg_seg.get(is);
 
-    VectorXi iblSeq = VectorXi::LinSpaced(len, start, nbl.get(is));
+    VectorXi iblSeq = VectorXi::LinSpaced(len, 2, nbl.get(is));
     ctau_slice =
         (iblSeq.array() >= itran.get(is) + INDEX_START_WITH)
             .select(ctau_slice.array().cwiseMin(0.25), ctau_slice.array())
             .matrix();
 
-    for (int ibl = 2; ibl <= nbl.get(is); ++ibl) {
-      if (ibl > iblte.get(is) + INDEX_START_WITH) {
-        dswaki = wgap[ibl - (iblte.get(is) + INDEX_START_WITH)];
+    for (int ibl = 1; ibl < nbl.get(is); ++ibl) {
+      if (ibl > iblte.get(is)) {
+        dswaki = wgap[ibl - iblte.get(is)];
       } else
         dswaki = 0.0;
 
-      if (ibl <= iblte.get(is) + INDEX_START_WITH)
+      if (ibl <= iblte.get(is))
         hklim = 1.02;
       else
         hklim = 1.00005;
 
-      msq = uedg.get(is)[ibl - INDEX_START_WITH] *
-            uedg.get(is)[ibl - INDEX_START_WITH] * hstinv /
+      msq = uedg.get(is)[ibl] *
+            uedg.get(is)[ibl] * hstinv /
             (gamm1 *
-             (1.0 - 0.5 * uedg.get(is)[ibl - INDEX_START_WITH] *
-                        uedg.get(is)[ibl - INDEX_START_WITH] * hstinv));
-      dsw = dstr.get(is)[ibl - INDEX_START_WITH] - dswaki;
-      dslim(dsw, thet.get(is)[ibl - INDEX_START_WITH], msq, hklim);
-      dstr.get(is)[ibl - INDEX_START_WITH] = dsw + dswaki;
+             (1.0 - 0.5 * uedg.get(is)[ibl] *
+                        uedg.get(is)[ibl] * hstinv));
+      dsw = dstr.get(is)[ibl] - dswaki;
+      dslim(dsw, thet.get(is)[ibl], msq, hklim);
+      dstr.get(is)[ibl] = dsw + dswaki;
 
       //------- set new mass defect (nonlinear update)
-      mass.get(is)[ibl - INDEX_START_WITH] =
-          dstr.get(is)[ibl - INDEX_START_WITH] *
-          uedg.get(is)[ibl - INDEX_START_WITH];
+      mass.get(is)[ibl] =
+          dstr.get(is)[ibl] *
+          uedg.get(is)[ibl];
     }
   }
 
@@ -5074,19 +5062,19 @@ bool XFoil::xicalc() {
   //-------------------------------------------------------------
 
   xssi.top[0] = 0.0;
-  for (int ibl = 2; ibl <= iblte.top + INDEX_START_WITH; ibl++) {
-    xssi.top[ibl - INDEX_START_WITH] = sst - spline_length[ipan.top[ibl - INDEX_START_WITH]];
+  for (int ibl = 1; ibl <= iblte.top; ibl++) {
+    xssi.top[ibl] = sst - spline_length[ipan.top[ibl]];
   }
 
   xssi.bottom[0] = 0.0;
-  for (int ibl = 2; ibl <= iblte.bottom + INDEX_START_WITH; ibl++) {
-    xssi.bottom[ibl - INDEX_START_WITH] = spline_length[ipan.bottom[ibl - INDEX_START_WITH]] - sst;
+  for (int ibl = 1; ibl <= iblte.bottom; ibl++) {
+    xssi.bottom[ibl] = spline_length[ipan.bottom[ibl]] - sst;
   }
 
   xssi.bottom[iblte.bottom + 1] = xssi.bottom[iblte.bottom];
-  for (int ibl = iblte.bottom + 2 + INDEX_START_WITH; ibl <= nbl.bottom; ibl++) {
-    xssi.bottom[ibl - INDEX_START_WITH] = xssi.bottom[ibl - 1 - INDEX_START_WITH] + (points.col(ipan.bottom[ibl - INDEX_START_WITH]) -
-                                               points.col(ipan.bottom[ibl - INDEX_START_WITH] - 1))
+  for (int ibl = iblte.bottom + 2; ibl < nbl.bottom; ibl++) {
+    xssi.bottom[ibl] = xssi.bottom[ibl - 1] + (points.col(ipan.bottom[ibl]) -
+                                               points.col(ipan.bottom[ibl] - 1))
                                                   .norm();
   }
 
