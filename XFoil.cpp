@@ -3822,40 +3822,36 @@ bool XFoil::stmove() {
       itran.bottom -= idif;
 
       //---- move top side bl variables downstream
-      for (int ibl = nbl.top; ibl >= idif + 2; ibl--) {
-        ctau.top[ibl - INDEX_START_WITH] =
-            ctau.top[ibl - idif - INDEX_START_WITH];
-        thet.top[ibl - INDEX_START_WITH] =
-            thet.top[ibl - idif - INDEX_START_WITH];
-        dstr.top[ibl - INDEX_START_WITH] =
-            dstr.top[ibl - idif - INDEX_START_WITH];
-        uedg.top[ibl - INDEX_START_WITH] =
-            uedg.top[ibl - idif - INDEX_START_WITH];
+      for (int ibl = nbl.top - 1; ibl >= idif + 1; ibl--) {
+        ctau.top[ibl] = ctau.top[ibl - idif];
+        thet.top[ibl] = thet.top[ibl - idif];
+        dstr.top[ibl] = dstr.top[ibl - idif];
+        uedg.top[ibl] = uedg.top[ibl - idif];
       }
 
       //---- set bl variables between old and new stagnation point
       const double dudx =
           uedg.top[idif + 2 - INDEX_START_WITH] / xssi.top[idif + 2];
-      for (int ibl = idif + 1; ibl >= 2; ibl--) {
-        ctau.top[ibl - INDEX_START_WITH] =
+      for (int ibl = idif; ibl >= 1; ibl--) {
+        ctau.top[ibl] =
             ctau.top[idif + 2 - INDEX_START_WITH];
-        thet.top[ibl - INDEX_START_WITH] =
+        thet.top[ibl] =
             thet.top[idif + 2 - INDEX_START_WITH];
-        dstr.top[ibl - INDEX_START_WITH] =
+        dstr.top[ibl] =
             dstr.top[idif + 2 - INDEX_START_WITH];
-        uedg.top[ibl - INDEX_START_WITH] = dudx * xssi.top[ibl];
+        uedg.top[ibl] = dudx * xssi.top[ibl + INDEX_START_WITH];
       }
 
       //---- move bottom side bl variables upstream
-      for (int ibl = 2; ibl <= nbl.bottom; ibl++) {
-        ctau.bottom[ibl - INDEX_START_WITH] =
-            ctau.bottom[ibl + idif - INDEX_START_WITH];
-        thet.bottom[ibl - INDEX_START_WITH] =
-            thet.bottom[ibl + idif - INDEX_START_WITH];
-        dstr.bottom[ibl - INDEX_START_WITH] =
-            dstr.bottom[ibl + idif - INDEX_START_WITH];
-        uedg.bottom[ibl - INDEX_START_WITH] =
-            uedg.bottom[ibl + idif - INDEX_START_WITH];
+      for (int ibl = 1; ibl < nbl.bottom; ibl++) {
+        ctau.bottom[ibl] =
+            ctau.bottom[ibl + idif];
+        thet.bottom[ibl] =
+            thet.bottom[ibl + idif];
+        dstr.bottom[ibl] =
+            dstr.bottom[ibl + idif];
+        uedg.bottom[ibl] =
+            uedg.bottom[ibl + idif];
       }
     } else {
       //---- increase in number of points on bottom side (is=2)
@@ -3865,50 +3861,50 @@ bool XFoil::stmove() {
       itran.bottom = itran.bottom + idif;
 
       //---- move bottom side bl variables downstream
-      for (int ibl = nbl.bottom; ibl >= idif + 2; ibl--) {
-        ctau.bottom[ibl - INDEX_START_WITH] =
-            ctau.bottom[ibl - idif - INDEX_START_WITH];
-        thet.bottom[ibl - INDEX_START_WITH] =
-            thet.bottom[ibl - idif - INDEX_START_WITH];
-        dstr.bottom[ibl - INDEX_START_WITH] =
-            dstr.bottom[ibl - idif - INDEX_START_WITH];
-        uedg.bottom[ibl - INDEX_START_WITH] =
-            uedg.bottom[ibl - idif - INDEX_START_WITH];
+      for (int ibl = nbl.bottom - 1; ibl >= idif + 1; ibl--) {
+        ctau.bottom[ibl] =
+            ctau.bottom[ibl - idif];
+        thet.bottom[ibl] =
+            thet.bottom[ibl - idif];
+        dstr.bottom[ibl] =
+            dstr.bottom[ibl - idif];
+        uedg.bottom[ibl] =
+            uedg.bottom[ibl - idif];
       }
 
       //---- set bl variables between old and new stagnation point
       const double dudx =
           uedg.bottom[idif + 2 - INDEX_START_WITH] / xssi.bottom[idif + 2];
-      for (int ibl = idif + 1; ibl >= 2; ibl--) {
-        ctau.bottom[ibl - INDEX_START_WITH] =
+      for (int ibl = idif; ibl >= 1; ibl--) {
+        ctau.bottom[ibl] =
             ctau.bottom[idif + 2 - INDEX_START_WITH];
-        thet.bottom[ibl - INDEX_START_WITH] =
+        thet.bottom[ibl] =
             thet.bottom[idif + 2 - INDEX_START_WITH];
-        dstr.bottom[ibl - INDEX_START_WITH] =
+        dstr.bottom[ibl] =
             dstr.bottom[idif + 2 - INDEX_START_WITH];
-        uedg.bottom[ibl - INDEX_START_WITH] = dudx * xssi.bottom[ibl];
+        uedg.bottom[ibl] = dudx * xssi.bottom[ibl + INDEX_START_WITH];
       }
 
       //---- move top side bl variables upstream
-      for (int ibl = 2; ibl <= nbl.top; ibl++) {
-        ctau.top[ibl - INDEX_START_WITH] =
-            ctau.top[ibl + idif - INDEX_START_WITH];
-        thet.top[ibl - INDEX_START_WITH] =
-            thet.top[ibl + idif - INDEX_START_WITH];
-        dstr.top[ibl - INDEX_START_WITH] =
-            dstr.top[ibl + idif - INDEX_START_WITH];
-        uedg.top[ibl - INDEX_START_WITH] =
-            uedg.top[ibl + idif - INDEX_START_WITH];
+      for (int ibl = 1; ibl < nbl.top; ibl++) {
+        ctau.top[ibl] =
+            ctau.top[ibl + idif];
+        thet.top[ibl] =
+            thet.top[ibl + idif];
+        dstr.top[ibl] =
+            dstr.top[ibl + idif];
+        uedg.top[ibl] =
+            uedg.top[ibl + idif];
       }
     }
   }
 
   //-- set new mass array since ue has been tweaked
   for (int is = 1; is <= 2; is++) {
-    for (int ibl = 2; ibl <= nbl.get(is); ibl++)
-      mass.get(is)[ibl - INDEX_START_WITH] =
-          dstr.get(is)[ibl - INDEX_START_WITH] *
-          uedg.get(is)[ibl - INDEX_START_WITH];
+    for (int ibl = 1; ibl < nbl.get(is); ibl++)
+      mass.get(is)[ibl] =
+          dstr.get(is)[ibl] *
+          uedg.get(is)[ibl];
   }
 
   return true;
