@@ -2501,10 +2501,10 @@ bool XFoil::mrchdu() {
   return true;
 }
 double XFoil::calcHtarg(int ibl, int is, bool wake) {
-  if (ibl < itran.get(is) + INDEX_START_WITH) {
+  if (ibl < itran.get(is)) {
     return blData1.hkz.scalar +
            0.03 * (blData2.param.xz - blData1.param.xz) / blData1.param.tz;
-  } else if (ibl == itran.get(is) + INDEX_START_WITH) {
+  } else if (ibl == itran.get(is)) {
     return blData1.hkz.scalar +
            (0.03 * (xt - blData1.param.xz) - 0.15 * (blData2.param.xz - xt)) /
                blData1.param.tz;
@@ -2557,8 +2557,8 @@ bool XFoil::mrchue() {
 
     //---- initialize similarity station with thwaites' formula
     //	ibl = 2;
-    xsi = xssi.get(is)[2 - INDEX_START_WITH];
-    uei = uedg.get(is)[2 - INDEX_START_WITH];
+    xsi = xssi.get(is)[1];
+    uei = uedg.get(is)[1];
 
     ucon = uei / xsi;
     tsq = 0.45 / (ucon * 6.0 * reybl);
@@ -2571,21 +2571,21 @@ bool XFoil::mrchue() {
 
     tran = false;
     turb = false;
-  itran.get(is) = iblte.get(is);
+    itran.get(is) = iblte.get(is);
 
     //---- march downstream
-    for (int ibl = 2; ibl <= nbl.get(is); ibl++) { // 1000
-      int ibm = ibl - 1;
-      int iw = ibl - (iblte.get(is) + INDEX_START_WITH);
-      simi = (ibl == 2);
-      wake = ibl > iblte.get(is) + INDEX_START_WITH;
+    for (int ibl = 1; ibl < nbl.get(is); ibl++) {
+      int ibm = ibl;
+      int iw = ibl - iblte.get(is);
+      simi = (ibl == 1);
+      wake = ibl > iblte.get(is);
 
       //------ prescribed quantities
-      xsi = xssi.get(is)[ibl - INDEX_START_WITH];
-      uei = uedg.get(is)[ibl - INDEX_START_WITH];
+      xsi = xssi.get(is)[ibl];
+      uei = uedg.get(is)[ibl];
 
       if (wake) {
-        iw = ibl - (iblte.get(is) + INDEX_START_WITH);
+        iw = ibl - iblte.get(is);
         dswaki = wgap[iw];
       } else
         dswaki = 0.0;
@@ -2610,16 +2610,16 @@ bool XFoil::mrchue() {
 
           //--------- fixed bug   md 7 jun 99
           if (tran) {
-            itran.get(is) = ibl - INDEX_START_WITH;
+            itran.get(is) = ibl;
             if (cti <= 0.0) {
               cti = 0.03;
               blData2.param.sz = cti;
             }
           } else
-            itran.get(is) = ibl + 2 - INDEX_START_WITH;
+            itran.get(is) = ibl + 2;
         }
 
-        if (ibl == iblte.get(is) + 1 + INDEX_START_WITH) {
+        if (ibl == iblte.get(is) + 1) {
           tte = thet.top[iblte.top] +
                 thet.bottom[iblte.bottom];
           dte = dstr.top[iblte.top] +
@@ -2644,16 +2644,16 @@ bool XFoil::mrchue() {
           vsrez = vs2.block(0, 0, 4, 4).fullPivLu().solve(vsrez);
           //--------- determine max changes and underrelax if necessary
           dmax = std::max(fabs(vsrez[1] / thi), fabs(vsrez[2] / dsi));
-          if (ibl < itran.get(is) + INDEX_START_WITH)
+          if (ibl < itran.get(is))
             dmax = std::max(dmax, fabs(vsrez[0] / 10.0));
-          if (ibl >= itran.get(is) + INDEX_START_WITH)
+          if (ibl >= itran.get(is))
             dmax = std::max(dmax, fabs(vsrez[0] / cti));
 
           rlx = 1.0;
           if (dmax > 0.3)
             rlx = 0.3 / dmax;
           //--------- see if direct mode is not applicable
-          if (ibl != iblte.get(is) + 1 + INDEX_START_WITH) {
+          if (ibl != iblte.get(is) + 1) {
             //---------- calculate resulting kinematic shape parameter hk
             msq =
                 uei * uei * hstinv / (gm1bl * (1.0 - 0.5 * uei * uei * hstinv));
@@ -2664,15 +2664,15 @@ bool XFoil::mrchue() {
 
             //---------- decide whether to do direct or inverse problem based on
             // hk
-            if (ibl < itran.get(is) + INDEX_START_WITH)
+            if (ibl < itran.get(is))
               hmax = hlmax;
-            if (ibl >= itran.get(is) + INDEX_START_WITH)
+            if (ibl >= itran.get(is))
               hmax = htmax;
             direct = (hktest < hmax);
           }
           if (direct) {
             //---------- update as usual
-            if (ibl >= itran.get(is) + INDEX_START_WITH)
+            if (ibl >= itran.get(is))
               cti = cti + rlx * vsrez[0];
             thi = thi + rlx * vsrez[1];
             dsi = dsi + rlx * vsrez[2];
@@ -2707,13 +2707,13 @@ bool XFoil::mrchue() {
           vsrez = vs2.block(0, 0, 4, 4).fullPivLu().solve(vsrez);
 
           dmax = std::max(fabs(vsrez[1] / thi), fabs(vsrez[2] / dsi));
-          if (ibl >= itran.get(is) + INDEX_START_WITH)
+          if (ibl >= itran.get(is))
             dmax = std::max(dmax, fabs(vsrez[0] / cti));
           rlx = 1.0;
           if (dmax > 0.3)
             rlx = 0.3 / dmax;
           //--------- update variables
-          if (ibl >= itran.get(is) + INDEX_START_WITH)
+          if (ibl >= itran.get(is))
             cti = cti + rlx * vsrez[0];
           thi = thi + rlx * vsrez[1];
           dsi = dsi + rlx * vsrez[2];
@@ -2721,11 +2721,11 @@ bool XFoil::mrchue() {
         }
         //-------- eliminate absurd transients
 
-        if (ibl >= itran.get(is) + INDEX_START_WITH) {
+        if (ibl >= itran.get(is)) {
           cti = std::min(cti, 0.30);
           cti = std::max(cti, 0.0000001);
         }
-        if (ibl <= iblte.get(is) + INDEX_START_WITH)
+        if (ibl <= iblte.get(is))
           hklim = 1.02;
         else
           hklim = 1.00005;
@@ -2750,37 +2750,37 @@ bool XFoil::mrchue() {
         if (dmax > 0.1) {
           //------- the current solution is garbage --> extrapolate values
           // instead
-          if (ibl > 3) {
-            if (ibl <= iblte.get(is) + INDEX_START_WITH) {
-              thi = thet.get(is)[ibm - INDEX_START_WITH] *
-                    sqrt(xssi.get(is)[ibl - INDEX_START_WITH] / xssi.get(is)[ibm - INDEX_START_WITH]);
-              dsi = dstr.get(is)[ibm - INDEX_START_WITH] *
-                    sqrt(xssi.get(is)[ibl - INDEX_START_WITH] / xssi.get(is)[ibm - INDEX_START_WITH]);
+          if (ibl > 2) {
+            if (ibl <= iblte.get(is)) {
+              thi = thet.get(is)[ibl - 1] *
+                    sqrt(xssi.get(is)[ibl] / xssi.get(is)[ibl - 1]);
+              dsi = dstr.get(is)[ibl - 1] *
+                    sqrt(xssi.get(is)[ibl] / xssi.get(is)[ibl - 1]);
             } else {
-              if (ibl == iblte.get(is) + 1 + INDEX_START_WITH) {
+              if (ibl == iblte.get(is) + 1) {
                 cti = cte;
                 thi = tte;
                 dsi = dte;
               } else {
-                thi = thet.get(is)[ibm - INDEX_START_WITH];
-                ratlen = (xssi.get(is)[ibl - INDEX_START_WITH] - xssi.get(is)[ibm - INDEX_START_WITH]) /
-                         (10.0 * dstr.get(is)[ibm - INDEX_START_WITH]);
-                dsi = (dstr.get(is)[ibm - INDEX_START_WITH] +
+                thi = thet.get(is)[ibl - 1];
+                ratlen = (xssi.get(is)[ibl] - xssi.get(is)[ibl - 1]) /
+                         (10.0 * dstr.get(is)[ibl - 1]);
+                dsi = (dstr.get(is)[ibl - 1] +
                        thi * ratlen) /
                       (1.0 + ratlen);
               }
             }
-            if (ibl == itran.get(is) + INDEX_START_WITH)
+            if (ibl == itran.get(is))
               cti = 0.05;
-            if (ibl > itran.get(is) + INDEX_START_WITH)
-              cti = ctau.get(is)[ibm - INDEX_START_WITH];
+            if (ibl > itran.get(is))
+              cti = ctau.get(is)[ibl - 1];
 
-            uei = uedg.get(is)[ibl - INDEX_START_WITH];
+            uei = uedg.get(is)[ibl];
 
             if (ibl < nbl.get(is))
               uei = 0.5 *
-                    (uedg.get(is)[ibl - 1 - INDEX_START_WITH] +
-                     uedg.get(is)[ibl + 1 - INDEX_START_WITH]);
+                    (uedg.get(is)[ibl - 1] +
+                     uedg.get(is)[ibl + 1]);
           }
         }
         // 109
@@ -2791,34 +2791,34 @@ bool XFoil::mrchue() {
           trchek();
           ami = blData2.param.amplz;
           if (tran)
-            itran.get(is) = ibl - INDEX_START_WITH;
+            itran.get(is) = ibl;
           if (!tran)
-            itran.get(is) = ibl + 2 - INDEX_START_WITH;
+            itran.get(is) = ibl + 2;
         }
         //------- set all other extrapolated values for current station
-        if (ibl < itran.get(is) + INDEX_START_WITH)
+        if (ibl < itran.get(is))
           blvar(blData2, FlowRegimeEnum::Laminar);
-        if (ibl >= itran.get(is) + INDEX_START_WITH)
+        if (ibl >= itran.get(is))
           blvar(blData2, FlowRegimeEnum::Turbulent);
         if (wake)
           blvar(blData2, FlowRegimeEnum::Wake);
-        if (ibl < itran.get(is) + INDEX_START_WITH)
+        if (ibl < itran.get(is))
           blmid(FlowRegimeEnum::Laminar);
-        if (ibl >= itran.get(is) + INDEX_START_WITH)
+        if (ibl >= itran.get(is))
           blmid(FlowRegimeEnum::Turbulent);
         if (wake)
           blmid(FlowRegimeEnum::Wake);
       }
       //------ store primary variables
-      if (ibl < itran.get(is) + INDEX_START_WITH)
-        ctau.get(is)[ibl - INDEX_START_WITH] = ami;
-      if (ibl >= itran.get(is) + INDEX_START_WITH)
-        ctau.get(is)[ibl - INDEX_START_WITH] = cti;
-      thet.get(is)[ibl - INDEX_START_WITH] = thi;
-      dstr.get(is)[ibl - INDEX_START_WITH] = dsi;
-      uedg.get(is)[ibl - INDEX_START_WITH] = uei;
-      mass.get(is)[ibl - INDEX_START_WITH] = dsi * uei;
-      ctq.get(is)[ibl - INDEX_START_WITH] = blData2.cqz.scalar;
+      if (ibl < itran.get(is))
+        ctau.get(is)[ibl] = ami;
+      if (ibl >= itran.get(is))
+        ctau.get(is)[ibl] = cti;
+      thet.get(is)[ibl] = thi;
+      dstr.get(is)[ibl] = dsi;
+      uedg.get(is)[ibl] = uei;
+      mass.get(is)[ibl] = dsi * uei;
+      ctq.get(is)[ibl] = blData2.cqz.scalar;
 
       //------ set "1" variables to "2" variables for next streamwise station
       blprv(xsi, ami, cti, thi, dsi, dswaki, uei);
@@ -2827,20 +2827,20 @@ bool XFoil::mrchue() {
       stepbl();
 
       //------ turbulent intervals will follow transition interval or te
-      if (tran || ibl == iblte.get(is) + INDEX_START_WITH) {
+      if (tran || ibl == iblte.get(is)) {
         turb = true;
       }
 
       tran = false;
 
-      if (ibl == iblte.get(is) + INDEX_START_WITH) {
+      if (ibl == iblte.get(is)) {
         thi = thet.top[iblte.top] +
               thet.bottom[iblte.bottom];
         dsi = dstr.top[iblte.top] +
               dstr.bottom[iblte.bottom] + ante;
       }
-    } // 1000 continue : end ibl loop
-  } // 2000 continue : end is loop
+    }
+  }
   return true;
 }
 
