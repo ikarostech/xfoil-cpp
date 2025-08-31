@@ -3220,30 +3220,31 @@ bool XFoil::setbl() {
     turb = false;
 
     //**** sweep downstream setting up bl equation linearizations
-    for (int ibl = 2; ibl <= nbl.get(is); ibl++) {
-      int iv = isys.get(is)[ibl - INDEX_START_WITH];
+    //    Define loop as 1..(< nbl), but use shifted index internally
+    for (int ibl = 1; ibl < nbl.get(is); ibl++) {
+      int iv = isys.get(is)[ibl];
 
-      simi = (ibl == 2);
-  wake = (ibl > iblte.get(is) + INDEX_START_WITH);
-      tran = (ibl == itran.get(is) + INDEX_START_WITH);
-      turb = (ibl > itran.get(is) + INDEX_START_WITH);
+      simi = (ibl == 1);
+      wake = (ibl > iblte.get(is));
+      tran = (ibl == itran.get(is));
+      turb = (ibl > itran.get(is));
 
-      int i = ipan.get(is)[ibl - INDEX_START_WITH] + INDEX_START_WITH;
+      int i = ipan.get(is)[ibl] + INDEX_START_WITH;
 
       //---- set primary variables for current station
-      xsi = xssi.get(is)[ibl];
-      if (ibl < itran.get(is) + INDEX_START_WITH)
-        ami = ctau.get(is)[ibl - INDEX_START_WITH];
+      xsi = xssi.get(is)[ibl + INDEX_START_WITH];
+      if (ibl < itran.get(is))
+        ami = ctau.get(is)[ibl];
       else
-        cti = ctau.get(is)[ibl - INDEX_START_WITH];
-      uei = uedg.get(is)[ibl - INDEX_START_WITH];
-      thi = thet.get(is)[ibl - INDEX_START_WITH];
-      mdi = mass.get(is)[ibl - INDEX_START_WITH];
+        cti = ctau.get(is)[ibl];
+      uei = uedg.get(is)[ibl];
+      thi = thet.get(is)[ibl];
+      mdi = mass.get(is)[ibl];
 
       dsi = mdi / uei;
 
       if (wake) {
-        int iw = ibl - (iblte.get(is) + INDEX_START_WITH);
+        int iw = ibl - iblte.get(is);
         dswaki = wgap[iw];
       } else
         dswaki = 0.0;
@@ -3256,21 +3257,21 @@ bool XFoil::setbl() {
         for (int jbl = 1; jbl < nbl.get(js); jbl++) {
           int j = ipan.get(js)[jbl];
           int jv = isys.get(js)[jbl];
-          u2_m[jv] = -vti.get(is)[ibl - INDEX_START_WITH] * vti.get(js)[jbl] *
+          u2_m[jv] = -vti.get(is)[ibl] * vti.get(js)[jbl] *
                      dij(i - INDEX_START_WITH, j);
           d2_m[jv] = d2_u2 * u2_m[jv];
         }
       }
       d2_m[iv] = d2_m[iv] + d2_m2;
 
-      u2_a = uinv_a.get(is)[ibl - INDEX_START_WITH];
+      u2_a = uinv_a.get(is)[ibl];
       d2_a = d2_u2 * u2_a;
 
       //---- "forced" changes due to mismatch between uedg and
       // usav=uinv+dij*mass
       due2 =
-          uedg.get(is)[ibl - INDEX_START_WITH] -
-          usav.get(is)[ibl - INDEX_START_WITH];
+          uedg.get(is)[ibl] -
+          usav.get(is)[ibl];
       dds2 = d2_u2 * due2;
 
       blprv(xsi, ami, cti, thi, dsi, dswaki, uei); // cti
@@ -3282,7 +3283,7 @@ bool XFoil::setbl() {
         ami = blData2.param.amplz;
       }
 
-      if (ibl == itran.get(is) + INDEX_START_WITH && !tran) {
+      if (ibl == itran.get(is) && !tran) {
         // TRACE("setbl: xtr???  n1=%d n2=%d: \n", ampl1, ampl2);
 
         ss << "setbl: xtr???  n1=" << blData1.param.amplz
@@ -3294,7 +3295,7 @@ bool XFoil::setbl() {
       //---- assemble 10x4 linearized system for dctau, dth, dds, due, dxi
       //	   at the previous "1" station and the current "2" station
 
-      if (ibl == iblte.get(is) + 1 + INDEX_START_WITH) {
+      if (ibl == iblte.get(is) + 1) {
         //----- define quantities at start of wake, adding te base thickness to
         // dstar
         tte = thet.top[iblte.top] +
@@ -3347,7 +3348,7 @@ bool XFoil::setbl() {
 
       //---- save wall shear and equil. max shear coefficient for plotting
       // output
-      ctq.get(is)[ibl - INDEX_START_WITH] = blData2.cqz.scalar;
+      ctq.get(is)[ibl] = blData2.cqz.scalar;
 
       //---- set xi sensitivities wrt le ue changes
       if (is == 1) {
@@ -3438,7 +3439,7 @@ bool XFoil::setbl() {
                        (vs1(2, 4) + vs2(2, 4) + vsx[2]) *
                            (xi_ule1 * dule1 + xi_ule2 * dule2);
 
-      if (ibl == iblte.get(is) + 1 + INDEX_START_WITH) {
+      if (ibl == iblte.get(is) + 1) {
         //----- redefine coefficients for tte, dte, etc
         vz[0][0] = vs1(0, 0) * cte_cte1;
         vz[0][1] = vs1(0, 0) * cte_tte1 + vs1(0, 1) * tte_tte1;
@@ -3461,12 +3462,12 @@ bool XFoil::setbl() {
         turb = true;
 
         //------ save transition location
-        itran.get(is) = ibl - INDEX_START_WITH;
+        itran.get(is) = ibl;
       }
 
       tran = false;
 
-      if (ibl == iblte.get(is) + INDEX_START_WITH) {
+      if (ibl == iblte.get(is)) {
         //----- set "2" variables at te to wake correlations for next station
 
         turb = true;
