@@ -1987,22 +1987,22 @@ bool XFoil::iblpan() {
   std::stringstream ss;
 
   //-- top surface first
-  for (int i = 1; i <= i_stagnation; i++) {
-    ipan.top[i] = i_stagnation - i;
+  for (int i = 1; i <= i_stagnation + INDEX_START_WITH; i++) {
+    ipan.top[i] = i_stagnation + INDEX_START_WITH - i;
     vti.top[i] = 1.0;
   }
 
-  iblte.top = i_stagnation;
-  nbl.top = i_stagnation + INDEX_START_WITH;
+  iblte.top = i_stagnation + INDEX_START_WITH;
+  nbl.top = i_stagnation + INDEX_START_WITH + INDEX_START_WITH;
 
   //-- bottom surface next
-  for (int index = 1; index <= n - i_stagnation; ++index) {
-    ipan.bottom[index] = i_stagnation + index - INDEX_START_WITH;
+  for (int index = 1; index <= n - i_stagnation + INDEX_START_WITH; ++index) {
+    ipan.bottom[index] = i_stagnation + INDEX_START_WITH + index - INDEX_START_WITH;
     vti.bottom[index] = -1.0;
   }
 
   //-- wake
-  iblte.bottom = n - i_stagnation;
+  iblte.bottom = n - (i_stagnation + INDEX_START_WITH);
 
   for (int iw = 0; iw < nw; iw++) {
     int i = n + iw;
@@ -3757,7 +3757,7 @@ bool XFoil::stfind() {
     i = n / 2;
   }
 
-  i_stagnation = i + INDEX_START_WITH;
+  i_stagnation = i;
   const double dgam = surface_vortex(0, i + 1) - surface_vortex(0, i);
   const double ds = spline_length[i + 1] - spline_length[i];
 
@@ -3785,10 +3785,10 @@ bool XFoil::stmove() {
   //---------------------------------------------------
   int istold;
   //-- locate new stagnation point arc length sst from gam distribution
-  istold = i_stagnation;
+  istold = i_stagnation + INDEX_START_WITH;
   stfind();
 
-  if (istold == i_stagnation) {
+  if (istold == i_stagnation + INDEX_START_WITH) {
     //--- recalculate new arc length array
     xicalc();
   } else {
@@ -3804,9 +3804,9 @@ bool XFoil::stmove() {
     //--- set  bl position -> system line  pointers
     iblsys();
 
-    if (i_stagnation > istold) {
+    if (i_stagnation + INDEX_START_WITH > istold) {
       //---- increase in number of points on top side (is=1)
-      int idif = i_stagnation - istold;
+      int idif = i_stagnation + INDEX_START_WITH - istold;
 
       itran.top += idif;
       itran.bottom -= idif;
@@ -3845,7 +3845,7 @@ bool XFoil::stmove() {
       }
     } else {
       //---- increase in number of points on bottom side (is=2)
-      int idif = istold - i_stagnation;
+      int idif = istold - (i_stagnation + INDEX_START_WITH);
 
       itran.top = itran.top - idif;
       itran.bottom = itran.bottom + idif;
