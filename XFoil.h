@@ -192,6 +192,14 @@ class XFoil {
       }
       throw invalid_argument("invalid side type");
     }
+    const T& get(int side) const {
+      if (side == 1) {
+        return top;
+      } else if (side == 2) {
+        return bottom;
+      }
+      throw invalid_argument("invalid side type");
+    }
   };
   template <class T>
   class IterPair {
@@ -278,6 +286,21 @@ class XFoil {
   double sign(double a, double b);
 
  public:
+  // Helpers to make BL indexing readable
+  // Maps a 0-based BL station index (ibl0) to internal 1-based storage index
+  inline int bl_index(int ibl0) const { return ibl0 + 1; }
+  // Trailing-edge BL index for array access (1-based)
+  inline int te_index(int is) const { return iblte.get(is) + 1; }
+  inline int tran_index(int is) const { return itran.get(is) + 1; }
+  // Wake starts at TE+1 in internal storage (1-based)
+  inline int wake_start_index(int is) const { return te_index(is) + 1; }
+  // 0-based logical indices for TE/transition (ibl0 space, stored internally)
+  inline int te0_index(int is) const { return iblte.get(is); }
+  inline int tran0_index(int is) const { return itran.get(is); }
+  // Setters for 0-based logical indices (store as 0-based internally)
+  inline void set_te0_index(int is, int te0) { iblte.get(is) = te0; }
+  inline void set_tran0_index(int is, int tr0) { itran.get(is) = tr0; }
+
   static double vaccel;
   static bool s_bCancel;
   std::stringstream *m_pOutStream;
