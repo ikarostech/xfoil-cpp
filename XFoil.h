@@ -287,14 +287,15 @@ class XFoil {
 
  public:
   // Helpers to make BL indexing readable
-  // Maps a 0-based BL station index (ibl0) to internal 1-based storage index
-  inline int bl_index(int ibl0) const { return ibl0 + 1; }
-  // Trailing-edge BL index for array access (1-based)
-  inline int te_index(int is) const { return iblte.get(is) + 1; }
+  // 0-based logical station index (use for logic; convert to +1 for array segments)
+  inline int bl_index(int ibl0) const { return ibl0; }
+  // 0-based TE/transition indices (logic用). 配列アクセス時は +1 してください。
+  inline int te_index(int is) const { return iblte.get(is); }
+  // Note: tran_index remains 1-based for array-index comparisons in legacy code
   inline int tran_index(int is) const { return itran.get(is) + 1; }
-  // Wake starts at TE+1 in internal storage (1-based)
+  // Wake starts just after TE (0-based TE): logicでは te_index+1 が最初のwake
   inline int wake_start_index(int is) const { return te_index(is) + 1; }
-  // 0-based logical indices for TE/transition (ibl0 space, stored internally)
+  // 0-based logical indices for TE/transition (same as above; kept for clarity)
   inline int te0_index(int is) const { return iblte.get(is); }
   inline int tran0_index(int is) const { return itran.get(is); }
   // Setters for 0-based logical indices (store as 0-based internally)

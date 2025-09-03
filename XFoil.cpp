@@ -1385,7 +1385,7 @@ bool XFoil::blsolve() {
       vdel[ivp](k, 1) -= D[k][0] * col[0] + D[k][1] * col[1] + D[k][2] * col[2];
 
     if (iv == ivte1) {
-      int ivz = isys.bottom[te_index(2)];
+      int ivz = isys.bottom[te0_index(2) + 1];
       double Dz[3][2] = {{vz[0][0], vz[0][1]},
                          {vz[1][0], vz[1][1]},
                          {vz[2][0], vz[2][1]}};
@@ -1452,7 +1452,7 @@ bool XFoil::blsolve() {
     }
   };
 
-  int ivte1 = isys.top[te_index(1)];
+int ivte1 = isys.top[te0_index(1) + 1];
   for (int iv = 1; iv <= nsys; iv++) {
     int ivp = iv + 1;
     eliminateVaBlock(iv, ivp);
@@ -1997,8 +1997,8 @@ bool XFoil::iblpan() {
 
   // store TE as 0-based logical index
   iblte.top = i_stagnation;
-  // nbl remains 1-based max index: TE (1-based) + 1
-  nbl.top = te_index(1) + 1;
+  // nbl exclusive upper bound (0-based TE -> 1-based TE station + 1)
+  nbl.top = te0_index(1) + 2;
 
   //-- bottom surface next
   // Seed BL station 0 similarly for bottom side
@@ -2014,19 +2014,19 @@ bool XFoil::iblpan() {
 
   for (int iw = 0; iw < nw; iw++) {
     int i = n + iw;
-    int index = te_index(2) + iw + INDEX_START_WITH;
+    int index = te0_index(2) + iw + 2;
     ipan.bottom[index] = i;
     vti.bottom[index] = -1.0;
   }
 
-  nbl.bottom = te_index(2) + nw + INDEX_START_WITH;
+  nbl.bottom = te0_index(2) + nw + 2;
 
   //-- upper wake pointers (for plotting only)
   for (int iw = 0; iw < nw; iw++) {
-    ipan.top[te_index(1) + iw + INDEX_START_WITH] = ipan.bottom[te_index(2) + iw + INDEX_START_WITH];
-    vti.top[te_index(1) + iw + INDEX_START_WITH] = 1.0;
+    ipan.top[te0_index(1) + iw + 2] = ipan.bottom[te0_index(2) + iw + 2];
+    vti.top[te0_index(1) + iw + 2] = 1.0;
   }
-  int iblmax = std::max(te_index(1), te_index(2)) + nw + INDEX_START_WITH;
+  int iblmax = std::max(te0_index(1), te0_index(2)) + nw + 2;
   if (iblmax > IVX) {
     ss << "iblpan :  ***  bl array overflow\n";
     ss << "Increase IVX to at least " << iblmax << "\n";
@@ -2226,7 +2226,7 @@ bool XFoil::mrchdu() {
       int ibm = ibl - 1;
 
       simi = (ibl == 1);
-      wake = ibl > te_index(is);
+      wake = ibl > te0_index(is) + 1;
 
       //------ initialize current station to existing variables
       xsi = xssi.get(is)[ibl];
@@ -2245,14 +2245,14 @@ bool XFoil::mrchdu() {
       }
 
       if (wake) {
-        iw = ibl - te_index(is);
+        iw = ibl - (te0_index(is) + 1);
         dswaki = wgap[iw - 1];
       } else
         dswaki = 0.0;
 
-      if (ibl <= te_index(is))
+      if (ibl <= te0_index(is) + 1)
         dsi = std::max(dsi - dswaki, 1.02000 * thi) + dswaki;
-      if (ibl > te_index(is))
+      if (ibl > te0_index(is) + 1)
         dsi = std::max(dsi - dswaki, 1.00005 * thi) + dswaki;
 
       //------ newton iteration loop for current station
@@ -2275,15 +2275,15 @@ bool XFoil::mrchdu() {
           if (!tran)
             set_tran0_index(is, ibl);
         }
-        if (ibl == te_index(is) + 1) {
-          tte = thet.top[te_index(1)] +
-                thet.bottom[te_index(2)];
-          dte = dstr.top[te_index(1)] +
-                dstr.bottom[te_index(2)] + ante;
-          cte = (ctau.top[te_index(1)] *
-                     thet.top[te_index(1)] +
-                 ctau.bottom[te_index(2)] *
-                     thet.bottom[te_index(2)]) /
+        if (ibl == te0_index(is) + 2) {
+          tte = thet.top[te0_index(1) + 1] +
+                thet.bottom[te0_index(2) + 1];
+          dte = dstr.top[te0_index(1) + 1] +
+                dstr.bottom[te0_index(2) + 1] + ante;
+          cte = (ctau.top[te0_index(1) + 1] *
+                     thet.top[te0_index(1) + 1] +
+                 ctau.bottom[te0_index(2) + 1] *
+                     thet.bottom[te0_index(2) + 1]) /
                 tte;
           tesys(cte, tte, dte);
         } else {
@@ -2334,7 +2334,7 @@ bool XFoil::mrchdu() {
           }
         }
 
-        if (simi || ibl == te_index(is) + 1) {
+        if (simi || ibl == te0_index(is) + 2) {
           //--------- for similarity station or first wake point, prescribe ue
           vs2(3, 0) = 0.0;
           vs2(3, 1) = 0.0;
@@ -2398,7 +2398,7 @@ bool XFoil::mrchdu() {
           cti = std::max(cti, 0.0000001);
         }
 
-        if (ibl <= te_index(is))
+        if (ibl <= te0_index(is) + 1)
           hklim = 1.02;
         else
           hklim = 1.00005;
@@ -2426,14 +2426,14 @@ bool XFoil::mrchdu() {
           //------- the current solution is garbage --> extrapolate values
           // instead
           if (ibl > 2) {
-            if (ibl <= te_index(is)) {
+            if (ibl <= te0_index(is) + 1) {
               thi = thet.get(is)[ibm] *
                     sqrt(xssi.get(is)[ibl] / xssi.get(is)[ibm]);
               dsi = dstr.get(is)[ibm] *
                     sqrt(xssi.get(is)[ibl] / xssi.get(is)[ibm]);
               uei = uedg.get(is)[ibm];
             } else {
-              if (ibl == te_index(is) + 1) {
+              if (ibl == te0_index(is) + 2) {
                 cti = cte;
                 thi = tte;
                 dsi = dte;
@@ -2505,7 +2505,7 @@ bool XFoil::mrchdu() {
       stepbl();
 
       //------ turbulent intervals will follow transition interval or te
-      if (tran || ibl == te_index(is)) {
+      if (tran || ibl == te0_index(is) + 1) {
         turb = true;
       }
 
@@ -2592,16 +2592,16 @@ bool XFoil::mrchue() {
     //---- march downstream
     for (int ibl = 1; ibl < nbl.get(is); ++ibl) {
       int ibm = ibl;
-      int iw = ibl - te_index(is);
+      int iw = ibl - (te0_index(is) + 1);
       simi = (ibl == 1);
-      wake = ibl > te_index(is);
+      wake = ibl > te0_index(is) + 1;
 
       //------ prescribed quantities
       xsi = xssi.get(is)[ibl];
       uei = uedg.get(is)[ibl];
 
       if (wake) {
-        iw = ibl - te_index(is);
+        iw = ibl - (te0_index(is) + 1);
         dswaki = wgap[iw - 1];
       } else
         dswaki = 0.0;
@@ -2635,15 +2635,15 @@ bool XFoil::mrchue() {
             set_tran0_index(is, ibl + 1);
         }
 
-        if (ibl == te_index(is) + 1) {
-          tte = thet.top[te_index(1)] +
-                thet.bottom[te_index(2)];
-          dte = dstr.top[te_index(1)] +
-                dstr.bottom[te_index(2)] + ante;
-          cte = (ctau.top[te_index(1)] *
-                     thet.top[te_index(1)] +
-                 ctau.bottom[te_index(2)] *
-                     thet.bottom[te_index(2)]) /
+        if (ibl == te0_index(is) + 2) {
+          tte = thet.top[te0_index(1) + 1] +
+                thet.bottom[te0_index(2) + 1];
+          dte = dstr.top[te0_index(1) + 1] +
+                dstr.bottom[te0_index(2) + 1] + ante;
+          cte = (ctau.top[te0_index(1) + 1] *
+                     thet.top[te0_index(1) + 1] +
+                 ctau.bottom[te0_index(2) + 1] *
+                     thet.bottom[te0_index(2) + 1]) /
                 tte;
           tesys(cte, tte, dte);
         } else
@@ -2669,7 +2669,7 @@ bool XFoil::mrchue() {
           if (dmax > 0.3)
             rlx = 0.3 / dmax;
           //--------- see if direct mode is not applicable
-          if (ibl != te_index(is) + 1) {
+          if (ibl != te0_index(is) + 2) {
             //---------- calculate resulting kinematic shape parameter hk
             msq =
                 uei * uei * hstinv / (gm1bl * (1.0 - 0.5 * uei * uei * hstinv));
@@ -2741,7 +2741,7 @@ bool XFoil::mrchue() {
           cti = std::min(cti, 0.30);
           cti = std::max(cti, 0.0000001);
         }
-        if (ibl <= te_index(is))
+        if (ibl <= te0_index(is) + 1)
           hklim = 1.02;
         else
           hklim = 1.00005;
@@ -2767,13 +2767,13 @@ bool XFoil::mrchue() {
           //------- the current solution is garbage --> extrapolate values
           // instead
           if (ibl > 2) {
-            if (ibl <= te_index(is)) {
+            if (ibl <= te0_index(is) + 1) {
               thi = thet.get(is)[ibl - 1] *
                     sqrt(xssi.get(is)[ibl] / xssi.get(is)[ibl - 1]);
               dsi = dstr.get(is)[ibl - 1] *
                     sqrt(xssi.get(is)[ibl] / xssi.get(is)[ibl - 1]);
             } else {
-              if (ibl == te_index(is) + 1) {
+              if (ibl == te0_index(is) + 2) {
                 cti = cte;
                 thi = tte;
                 dsi = dte;
@@ -2843,17 +2843,17 @@ bool XFoil::mrchue() {
       stepbl();
 
       //------ turbulent intervals will follow transition interval or te
-      if (tran || ibl == te_index(is)) {
+      if (tran || ibl == te0_index(is) + 1) {
         turb = true;
       }
 
       tran = false;
 
-      if (ibl == te_index(is)) {
-        thi = thet.top[te_index(1)] +
-              thet.bottom[te_index(2)];
-        dsi = dstr.top[te_index(1)] +
-              dstr.bottom[te_index(2)] + ante;
+      if (ibl == te0_index(is) + 1) {
+        thi = thet.top[te0_index(1) + 1] +
+              thet.bottom[te0_index(2) + 1];
+        dsi = dstr.top[te0_index(1) + 1] +
+              dstr.bottom[te0_index(2) + 1] + ante;
       }
     }
   }
@@ -3086,9 +3086,9 @@ void XFoil::computeLeTeSensitivities(int ile1, int ile2, int ite1, int ite2,
                    dij(ile1, j);
       ule2_m[jv] = -vti.bottom[1] * vti.get(js)[jbl] *
                    dij(ile2, j);
-      ute1_m[jv] = -vti.top[te_index(1)] * vti.get(js)[jbl] *
+      ute1_m[jv] = -vti.top[te0_index(1) + 1] * vti.get(js)[jbl] *
                    dij(ite1, j);
-      ute2_m[jv] = -vti.bottom[te_index(2)] * vti.get(js)[jbl] *
+      ute2_m[jv] = -vti.bottom[te0_index(2) + 1] * vti.get(js)[jbl] *
                    dij(ite2, j);
     }
   }
@@ -3195,15 +3195,15 @@ bool XFoil::setbl() {
 
   ueset();
   swapEdgeVelocities(usav);
-  jvte1 = isys.top[te_index(1)];
-  jvte2 = isys.bottom[te_index(2)];
+jvte1 = isys.top[te0_index(1) + 1];
+jvte2 = isys.bottom[te0_index(2) + 1];
 
   dule1 = uedg.top[1] - usav.top[1];
   dule2 = uedg.bottom[1] - usav.bottom[1];
 
   //---- set le and te ue sensitivities wrt all m values
   computeLeTeSensitivities(
-    ipan.top[1], ipan.bottom[1], ipan.top[te_index(1)], ipan.bottom[te_index(2)],
+    ipan.top[1], ipan.bottom[1], ipan.top[te0_index(1) + 1], ipan.bottom[te0_index(2) + 1],
     ule1_m, ule2_m, ute1_m, ute2_m
   );
 
@@ -3233,7 +3233,7 @@ bool XFoil::setbl() {
       int iv = isys.get(is)[ibl];
 
       simi = (ibl == 1);
-      wake = (ibl > te_index(is));
+      wake = (ibl > te0_index(is) + 1);
       tran = (ibl == tran_index(is));
       turb = (ibl > tran_index(is));
 
@@ -3250,7 +3250,7 @@ bool XFoil::setbl() {
       dsi = mdi / uei;
 
       if (wake) {
-        int iw = ibl - te_index(is);
+        int iw = ibl - (te0_index(is) + 1);
         dswaki = wgap[iw - 1];
       } else
         dswaki = 0.0;
@@ -3300,32 +3300,32 @@ bool XFoil::setbl() {
       //---- assemble 10x4 linearized system for dctau, dth, dds, due, dxi
       //	   at the previous "1" station and the current "2" station
 
-      if (ibl == te_index(is) + 1) {
+      if (ibl == te0_index(is) + 2) {
         //----- define quantities at start of wake, adding te base thickness to
         // dstar
-        tte = thet.top[te_index(1)] +
-              thet.bottom[te_index(2)];
-        dte = dstr.top[te_index(1)] +
-              dstr.bottom[te_index(2)] + ante;
-        cte = (ctau.top[te_index(1)] *
-                   thet.top[te_index(1)] +
-               ctau.bottom[te_index(2)] *
-                   thet.bottom[te_index(2)]) /
+        tte = thet.top[te0_index(1) + 1] +
+              thet.bottom[te0_index(2) + 1];
+        dte = dstr.top[te0_index(1) + 1] +
+              dstr.bottom[te0_index(2) + 1] + ante;
+        cte = (ctau.top[te0_index(1) + 1] *
+                   thet.top[te0_index(1) + 1] +
+               ctau.bottom[te0_index(2) + 1] *
+                   thet.bottom[te0_index(2) + 1]) /
               tte;
         tesys(cte, tte, dte);
 
         tte_tte1 = 1.0;
         tte_tte2 = 1.0;
-        dte_mte1 = 1.0 / uedg.top[te_index(1)];
-        dte_ute1 = -dstr.top[te_index(1)] /
-                    uedg.top[te_index(1)];
-        dte_mte2 = 1.0 / uedg.bottom[te_index(2)];
-        dte_ute2 = -dstr.bottom[te_index(2)] /
-                    uedg.bottom[te_index(2)];
-        cte_cte1 = thet.top[te_index(1)] / tte;
-        cte_cte2 = thet.bottom[te_index(2)] / tte;
-        cte_tte1 = (ctau.top[te_index(1)] - cte) / tte;
-        cte_tte2 = (ctau.bottom[te_index(2)] - cte) / tte;
+        dte_mte1 = 1.0 / uedg.top[te0_index(1) + 1];
+        dte_ute1 = -dstr.top[te0_index(1) + 1] /
+                    uedg.top[te0_index(1) + 1];
+        dte_mte2 = 1.0 / uedg.bottom[te0_index(2) + 1];
+        dte_ute2 = -dstr.bottom[te0_index(2) + 1] /
+                    uedg.bottom[te0_index(2) + 1];
+        cte_cte1 = thet.top[te0_index(1) + 1] / tte;
+        cte_cte2 = thet.bottom[te0_index(2) + 1] / tte;
+        cte_tte1 = (ctau.top[te0_index(1) + 1] - cte) / tte;
+        cte_tte2 = (ctau.bottom[te0_index(2) + 1] - cte) / tte;
 
         //----- re-define d1 sensitivities wrt m since d1 depends on both te ds
         // values
@@ -3342,11 +3342,11 @@ bool XFoil::setbl() {
         due1 = 0.0;
         dds1 =
             dte_ute1 *
-                (uedg.top[te_index(1)] -
-                 usav.top[te_index(1)]) +
+                (uedg.top[te0_index(1) + 1] -
+                 usav.top[te0_index(1) + 1]) +
             dte_ute2 *
-                (uedg.bottom[te_index(2)] -
-                 usav.bottom[te_index(2)]);
+                (uedg.bottom[te0_index(2) + 1] -
+                 usav.bottom[te0_index(2) + 1]);
       } else {
         blsys();
       }
@@ -3444,7 +3444,7 @@ bool XFoil::setbl() {
                        (vs1(2, 4) + vs2(2, 4) + vsx[2]) *
                            (xi_ule1 * dule1 + xi_ule2 * dule2);
 
-      if (ibl == te_index(is) + 1) {
+      if (ibl == te0_index(is) + 2) {
         //----- redefine coefficients for tte, dte, etc
         vz[0][0] = vs1(0, 0) * cte_cte1;
         vz[0][1] = vs1(0, 0) * cte_tte1 + vs1(0, 1) * tte_tte1;
@@ -3472,7 +3472,7 @@ bool XFoil::setbl() {
 
       tran = false;
 
-      if (ibl == te_index(is)) {
+      if (ibl == te0_index(is) + 1) {
         //----- set "2" variables at te to wake correlations for next station
 
         turb = true;
@@ -4675,8 +4675,9 @@ void XFoil::computeQtan(const SidePair<VectorXd> &unew,
                         const SidePair<VectorXd> &u_ac, double qnew[],
                         double q_ac[]) {
   for (int is = 1; is <= 2; is++) {
-    // Up to TE station (exclusive upper bound, 1-based BL index)
-    const int te0 = te_index(is);
+    // Up to TE station (exclusive upper bound). Use 0-based TE scalar and
+    // convert locally to 1-based BL array index.
+    const int te0 = te0_index(is) + 1;
     for (int ibl = 1; ibl < te0; ++ibl) {
       int i = ipan.get(is)[ibl];
       const VectorXd &unew_vec = (is == 1) ? unew.top : unew.bottom;
@@ -4920,12 +4921,12 @@ bool XFoil::update() {
             .matrix();
 
     for (int ibl = 1; ibl < nbl.get(is); ++ibl) {
-      if (ibl > te_index(is)) {
-        dswaki = wgap[ibl - te_index(is) - 1];
+      if (ibl > te0_index(is) + 1) {
+        dswaki = wgap[ibl - (te0_index(is) + 1) - 1];
       } else
         dswaki = 0.0;
 
-      if (ibl <= te_index(is))
+      if (ibl <= te0_index(is) + 1)
         hklim = 1.02;
       else
         hklim = 1.00005;
@@ -4947,17 +4948,17 @@ bool XFoil::update() {
   }
 
   //--- equate upper wake arrays to lower wake arrays
-  for (int kbl = 1; kbl <= nbl.bottom - te_index(2); kbl++) {
-    ctau.top[te_index(1) + kbl] =
-        ctau.bottom[te_index(2) + kbl];
-    thet.top[te_index(1) + kbl] =
-        thet.bottom[te_index(2) + kbl];
-    dstr.top[te_index(1) + kbl] =
-        dstr.bottom[te_index(2) + kbl];
-    uedg.top[te_index(1) + kbl] =
-        uedg.bottom[te_index(2) + kbl];
-    ctq.top[te_index(1) + kbl] =
-        ctq.bottom[te_index(2) + kbl];
+  for (int kbl = 1; kbl <= nbl.bottom - (te0_index(2) + 1); kbl++) {
+    ctau.top[te0_index(1) + 1 + kbl] =
+        ctau.bottom[te0_index(2) + 1 + kbl];
+    thet.top[te0_index(1) + 1 + kbl] =
+        thet.bottom[te0_index(2) + 1 + kbl];
+    dstr.top[te0_index(1) + 1 + kbl] =
+        dstr.bottom[te0_index(2) + 1 + kbl];
+    uedg.top[te0_index(1) + 1 + kbl] =
+        uedg.bottom[te0_index(2) + 1 + kbl];
+    ctq.top[te0_index(1) + 1 + kbl] =
+        ctq.bottom[te0_index(2) + 1 + kbl];
   }
 
   return true;
@@ -5084,7 +5085,9 @@ bool XFoil::xicalc() {
 
   xssi.top[0] = 0.0;
   {
-    const int te_top = te_index(1); // 1-based TE index
+    // Use 0-based TE for clarity, convert locally to 1-based array index
+    const int te0_top = te0_index(1);
+    const int te_top = te0_top + 1; // 1-based array index at TE station
     for (int ibl = 1; ibl <= te_top; ++ibl) {
       xssi.top[ibl] = sst - spline_length[ipan.top[ibl]];
     }
@@ -5092,7 +5095,9 @@ bool XFoil::xicalc() {
 
   xssi.bottom[0] = 0.0;
   {
-    const int te_bot = te_index(2); // 1-based TE index
+    // Use 0-based TE for clarity, convert locally to 1-based array index
+    const int te0_bot = te0_index(2);
+    const int te_bot = te0_bot + 1; // 1-based array index at TE station
     for (int ibl = 1; ibl <= te_bot; ++ibl) {
       xssi.bottom[ibl] = spline_length[ipan.bottom[ibl]] - sst;
     }
@@ -5130,9 +5135,10 @@ bool XFoil::xicalc() {
   else {
     //----- set te flap (wake gap) array (0-based: iw0=0..nw-1)
     for (int iw0 = 0; iw0 < nw; iw0++) {
-      const double zn =
-          1.0 - (xssi.bottom[te_index(2) + (iw0 + 1)] - xssi.bottom[te_index(2)]) /
-                    (telrat * ante);
+      const int te_bot_1b = te0_index(2) + 1; // 1-based TE for array indexing
+      const double zn = 1.0 - (xssi.bottom[te_bot_1b + (iw0 + 1)] -
+                               xssi.bottom[te_bot_1b]) /
+                                  (telrat * ante);
       wgap[iw0] = 0.0;
       if (zn >= 0.0)
         wgap[iw0] = ante * (aa + bb * zn) * zn * zn;
@@ -5153,7 +5159,7 @@ double XFoil::xifset(int is) {
   double str;
 
   if (xstrip.get(is) >= 1.0) {
-    return xssi.get(is)[te_index(is)];
+    return xssi.get(is)[te0_index(is) + 1];
   }
 
   Vector2d point_chord = point_te - point_le;
@@ -5173,12 +5179,12 @@ double XFoil::xifset(int is) {
     str = sle + (spline_length[n - 1] - sle) * xstrip.bottom;
   }
   str = spline::sinvrt(str, xstrip.get(is), w1, w3, spline_length.head(n), n);
-  xiforc = std::min((str - sst), xssi.get(is)[te_index(is)]);
+  xiforc = std::min((str - sst), xssi.get(is)[te0_index(is) + 1]);
   if (xiforc < 0.0) {
     ss << " ***  stagnation point is past trip on side " << is << "\n";
     writeString(ss.str());
 
-    xiforc = xssi.get(is)[te_index(is)];
+    xiforc = xssi.get(is)[te0_index(is) + 1];
   }
 
   return xiforc;
