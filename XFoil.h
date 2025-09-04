@@ -302,6 +302,12 @@ class XFoil {
   inline void set_te0_index(int is, int te0) { iblte.get(is) = te0; }
   inline void set_tran0_index(int is, int tr0) { itran.get(is) = tr0; }
 
+  // 0-based BL-station to panel-index accessor
+  // ipan storage is 0-based (ibl0: 0..)
+  inline int ipan_from_ibl0(int is, int ibl0) const {
+    return ipan.get(is)[ibl0];
+  }
+
   static double vaccel;
   static bool s_bCancel;
   std::stringstream *m_pOutStream;

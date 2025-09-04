@@ -1987,12 +1987,11 @@ bool XFoil::iblpan() {
   std::stringstream ss;
 
   //-- top surface first
-  // Seed BL station 0 without disturbing existing ibl>=1 logic
-  ipan.top[0] = i_stagnation;
-  vti.top[0] = 1.0;
+  // store ipan with 0-based BL station index
   for (int i = 1; i <= i_stagnation + INDEX_START_WITH; i++) {
-    ipan.top[i] = i_stagnation + INDEX_START_WITH - i;
-    vti.top[i] = 1.0;
+    int ibl0 = i - 1; // 0-based BL station
+    ipan.top[ibl0] = i_stagnation + INDEX_START_WITH - i; // panel index
+    vti.top[i] = 1.0; // vti remains 1-based storage
   }
 
   // store TE as 0-based logical index
@@ -2001,30 +2000,30 @@ bool XFoil::iblpan() {
   nbl.top = te0_index(1) + 2;
 
   //-- bottom surface next
-  // Seed BL station 0 similarly for bottom side
-  ipan.bottom[0] = i_stagnation;
-  vti.bottom[0] = -1.0;
+  // Bottom side: station 0 just after stagnation on bottom
   for (int index = 1; index <= n - i_stagnation + INDEX_START_WITH; ++index) {
-    ipan.bottom[index] = i_stagnation + INDEX_START_WITH + index - INDEX_START_WITH;
-    vti.bottom[index] = -1.0;
+    int ibl0 = index - 1;
+    ipan.bottom[ibl0] = i_stagnation + INDEX_START_WITH + index - INDEX_START_WITH; // panel index
+    vti.bottom[index] = -1.0; // vti remains 1-based
   }
 
   //-- wake
   iblte.bottom = n - (i_stagnation + INDEX_START_WITH) - 1; // logical 0-based TE
 
   for (int iw = 0; iw < nw; iw++) {
-    int i = n + iw;
-    int index = te0_index(2) + iw + 2;
-    ipan.bottom[index] = i;
-    vti.bottom[index] = -1.0;
+    int i = n + iw; // panel index in wake
+    int index = te0_index(2) + iw + 2; // 1-based BL station for wake (bottom)
+    ipan.bottom[index - 1] = i;        // ipan is 0-based in BL station
+    vti.bottom[index] = -1.0;          // vti remains 1-based
   }
 
   nbl.bottom = te0_index(2) + nw + 2;
 
   //-- upper wake pointers (for plotting only)
   for (int iw = 0; iw < nw; iw++) {
-    ipan.top[te0_index(1) + iw + 2] = ipan.bottom[te0_index(2) + iw + 2];
-    vti.top[te0_index(1) + iw + 2] = 1.0;
+    // copy wake panel pointer from bottom to top (for plotting)
+    ipan.top[te0_index(1) + iw + 1] = ipan.bottom[te0_index(2) + iw + 1]; // both sides are 0-based indices, hence -1 vs vti
+    vti.top[te0_index(1) + iw + 2] = 1.0; // vti stays 1-based
   }
   int iblmax = std::max(te0_index(1), te0_index(2)) + nw + 2;
   if (iblmax > IVX) {
@@ -3019,7 +3018,7 @@ bool XFoil::qiset() {
 bool XFoil::qvfue() {
   for (int is = 1; is <= 2; is++) {
     for (int ibl = 1; ibl < nbl.get(is); ++ibl) {
-      int i = ipan.get(is)[ibl];
+      int i = ipan_from_ibl0(is, ibl - 1);
       qvis[i] = vti.get(is)[ibl] * uedg.get(is)[ibl];
     }
   }
@@ -3080,7 +3079,7 @@ void XFoil::computeLeTeSensitivities(int ile1, int ile2, int ite1, int ite2,
                                      VectorXd &ute1_m, VectorXd &ute2_m) {
   for (int js = 1; js <= 2; ++js) {
     for (int jbl = 1; jbl < nbl.get(js); ++jbl) {
-      int j = ipan.get(js)[jbl];
+      int j = ipan_from_ibl0(js, jbl - 1);
       int jv = isys.get(js)[jbl];
       ule1_m[jv] = -vti.top[1] * vti.get(js)[jbl] *
                    dij(ile1, j);
@@ -3203,7 +3202,10 @@ jvte2 = isys.bottom[te0_index(2) + 1];
 
   //---- set le and te ue sensitivities wrt all m values
   computeLeTeSensitivities(
-    ipan.top[1], ipan.bottom[1], ipan.top[te0_index(1) + 1], ipan.bottom[te0_index(2) + 1],
+    ipan_from_ibl0(1, 0),
+    ipan_from_ibl0(2, 0),
+    ipan_from_ibl0(1, te0_index(1)),
+    ipan_from_ibl0(2, te0_index(2)),
     ule1_m, ule2_m, ute1_m, ute2_m
   );
 
@@ -3263,7 +3265,7 @@ jvte2 = isys.bottom[te0_index(2) + 1];
         for (int jbl = 1; jbl < nbl.get(js); ++jbl) {
           int jv = isys.get(js)[jbl];
           u2_m[jv] = -vti.get(is)[ibl] * vti.get(js)[jbl] *
-                     dij(ipan.get(is)[ibl], ipan.get(js)[jbl]);
+                     dij(ipan_from_ibl0(is, ibl - 1), ipan_from_ibl0(js, jbl - 1));
           d2_m[jv] = d2_u2 * u2_m[jv];
         }
       }
@@ -4612,8 +4614,8 @@ bool XFoil::ueset() {
       for (int js = 1; js <= 2; js++) {
         for (int jbl = 1; jbl < nbl.get(js); ++jbl) {
           double ue_m = -vti.get(is)[ibl] * vti.get(js)[jbl] *
-                        dij(ipan.get(is)[ibl],
-                            ipan.get(js)[jbl]);
+                        dij(ipan_from_ibl0(is, ibl - 1),
+                            ipan_from_ibl0(js, jbl - 1));
           dui += ue_m * mass.get(js)[jbl];
         }
       }
@@ -4631,7 +4633,7 @@ bool XFoil::uicalc() {
     uinv.get(is)[0] = 0.0;
     uinv_a.get(is)[0] = 0.0;
     for (int ibl = 1; ibl < nbl.get(is); ++ibl) {
-      int i = ipan.get(is)[ibl];
+      int i = ipan_from_ibl0(is, ibl - 1);
       uinv.get(is)[ibl] = vti.get(is)[ibl] * qinv[i];
       uinv_a.get(is)[ibl] = vti.get(is)[ibl] * qinv_a[i];
     }
@@ -4647,12 +4649,12 @@ void XFoil::computeNewUeDistribution(SidePair<VectorXd> &unew,
                                      SidePair<VectorXd> &u_ac) {
   for (int is = 1; is <= 2; is++) {
     for (int ibl = 1; ibl < nbl.get(is); ++ibl) {
-      int i = ipan.get(is)[ibl];
+      int i = ipan_from_ibl0(is, ibl - 1);
       double dui = 0.0;
       double dui_ac = 0.0;
       for (int js = 1; js <= 2; js++) {
         for (int jbl = 1; jbl < nbl.get(js); ++jbl) {
-          int j = ipan.get(js)[jbl];
+          int j = ipan_from_ibl0(js, jbl - 1);
           int jv = isys.get(js)[jbl];
           double ue_m = -vti.get(is)[ibl] * vti.get(js)[jbl] *
                         dij(i, j);
@@ -4679,7 +4681,7 @@ void XFoil::computeQtan(const SidePair<VectorXd> &unew,
     // convert locally to 1-based BL array index.
     const int te0 = te0_index(is) + 1;
     for (int ibl = 1; ibl < te0; ++ibl) {
-      int i = ipan.get(is)[ibl];
+      int i = ipan_from_ibl0(is, ibl - 1);
       const VectorXd &unew_vec = (is == 1) ? unew.top : unew.bottom;
       const VectorXd &uac_vec = (is == 1) ? u_ac.top : u_ac.bottom;
       qnew[i] = vti.get(is)[ibl] * unew_vec[ibl];
@@ -5085,28 +5087,26 @@ bool XFoil::xicalc() {
 
   xssi.top[0] = 0.0;
   {
-    // Use 0-based TE for clarity, convert locally to 1-based array index
     const int te0_top = te0_index(1);
     const int te_top = te0_top + 1; // 1-based array index at TE station
     for (int ibl = 1; ibl <= te_top; ++ibl) {
-      xssi.top[ibl] = sst - spline_length[ipan.top[ibl]];
+      xssi.top[ibl] = sst - spline_length[ipan_from_ibl0(1, ibl - 1)];
     }
   }
 
   xssi.bottom[0] = 0.0;
   {
-    // Use 0-based TE for clarity, convert locally to 1-based array index
     const int te0_bot = te0_index(2);
     const int te_bot = te0_bot + 1; // 1-based array index at TE station
     for (int ibl = 1; ibl <= te_bot; ++ibl) {
-      xssi.bottom[ibl] = spline_length[ipan.bottom[ibl]] - sst;
+      xssi.bottom[ibl] = spline_length[ipan_from_ibl0(2, ibl - 1)] - sst;
     }
 
     xssi.bottom[te_bot + 1] = xssi.bottom[te_bot];
     for (int ibl = te_bot + 2; ibl < nbl.bottom; ++ibl) {
       xssi.bottom[ibl] = xssi.bottom[ibl - 1] +
-                         (points.col(ipan.bottom[ibl]) -
-                          points.col(ipan.bottom[ibl] - 1))
+                         (points.col(ipan_from_ibl0(2, ibl - 1)) -
+                          points.col(ipan_from_ibl0(2, ibl - 1) - 1))
                              .norm();
     }
   }
