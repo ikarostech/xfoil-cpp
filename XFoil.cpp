@@ -1988,12 +1988,10 @@ bool XFoil::iblpan() {
 
   //-- top surface first
   // store ipan with 0-based BL station index, and set vti at 0-based
-  for (int i = 1; i <= i_stagnation + INDEX_START_WITH; i++) {
-    int ibl0 = i - 1; // 0-based BL station
-    ipan.top[ibl0] = i_stagnation + INDEX_START_WITH - i; // panel index
-    set_vti_at_ibl0(1, ibl0, 1.0);
+  for (int i = 0; i <= i_stagnation; i++) {
+    ipan.top[i] = i_stagnation - i; // panel index
+    vti.top[i] = 1.0;
   }
-
   // store TE as 0-based logical index
   iblte.top = i_stagnation;
   // nbl exclusive upper bound (0-based TE -> 1-based TE station + 1)
@@ -2001,10 +1999,9 @@ bool XFoil::iblpan() {
 
   //-- bottom surface next
   // Bottom side: station 0 just after stagnation on bottom
-  for (int index = 1; index <= n - i_stagnation + INDEX_START_WITH; ++index) {
-    int ibl0 = index - 1;
-    ipan.bottom[ibl0] = i_stagnation + INDEX_START_WITH + index - INDEX_START_WITH; // panel index
-    set_vti_at_ibl0(2, ibl0, -1.0);
+  for (int index = 0; index <= n - i_stagnation; ++index) {
+    ipan.bottom[index] = i_stagnation + INDEX_START_WITH + index;
+    vti.bottom[index] = -1.0;
   }
 
   //-- wake
@@ -2014,7 +2011,7 @@ bool XFoil::iblpan() {
     int i = n + iw; // panel index in wake
     int index = te0_index(2) + iw + 2; // 1-based BL station for wake (bottom)
     ipan.bottom[index - 1] = i;        // ipan is 0-based in BL station
-    set_vti_at_ibl0(2, index - 1, -1.0);
+    vti.bottom[index - 1] = -1.0;
   }
 
   nbl.bottom = te0_index(2) + nw + 2;
@@ -2023,7 +2020,7 @@ bool XFoil::iblpan() {
   for (int iw = 0; iw < nw; iw++) {
     // copy wake panel pointer from bottom to top (for plotting)
     ipan.top[te0_index(1) + iw + 1] = ipan.bottom[te0_index(2) + iw + 1]; // both sides are 0-based indices, hence -1 vs vti
-    set_vti_at_ibl0(1, te0_index(1) + iw + 1, 1.0);
+    vti.top[te0_index(1) + iw + 1] = 1.0;
   }
   int iblmax = std::max(te0_index(1), te0_index(2)) + nw + 2;
   if (iblmax > IVX) {
