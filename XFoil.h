@@ -308,6 +308,27 @@ class XFoil {
     return ipan.get(is)[ibl0];
   }
 
+  // 0-based accessors for BL arrays still stored 1-based internally
+  inline double vti_from_ibl0(int is, int ibl0) const { return vti.get(is)[ibl0]; }
+  inline double thet_from_ibl0(int is, int ibl0) const { return thet.get(is)[ibl0 + 1]; }
+  inline double uedg_from_ibl0(int is, int ibl0) const { return uedg.get(is)[ibl0 + 1]; }
+  inline void set_thet_at_ibl0(int is, int ibl0, double val) { thet.get(is)[ibl0 + 1] = val; }
+  inline void set_uedg_at_ibl0(int is, int ibl0, double val) { uedg.get(is)[ibl0 + 1] = val; }
+  // 0-based accessors for other BL arrays (currently 1-based storage)
+  inline double ctau_from_ibl0(int is, int ibl0) const { return ctau.get(is)[ibl0 + 1]; }
+  inline void set_ctau_at_ibl0(int is, int ibl0, double val) { ctau.get(is)[ibl0 + 1] = val; }
+  inline double dstr_from_ibl0(int is, int ibl0) const { return dstr.get(is)[ibl0 + 1]; }
+  inline void set_dstr_at_ibl0(int is, int ibl0, double val) { dstr.get(is)[ibl0 + 1] = val; }
+  inline double mass_from_ibl0(int is, int ibl0) const { return mass.get(is)[ibl0 + 1]; }
+  inline void set_mass_at_ibl0(int is, int ibl0, double val) { mass.get(is)[ibl0 + 1] = val; }
+  inline double ctq_from_ibl0(int is, int ibl0) const { return ctq.get(is)[ibl0 + 1]; }
+  inline void set_ctq_at_ibl0(int is, int ibl0, double val) { ctq.get(is)[ibl0 + 1] = val; }
+  inline double uinv_from_ibl0(int is, int ibl0) const { return uinv.get(is)[ibl0 + 1]; }
+  inline void set_uinv_at_ibl0(int is, int ibl0, double val) { uinv.get(is)[ibl0 + 1] = val; }
+  inline double uinv_a_from_ibl0(int is, int ibl0) const { return uinv_a.get(is)[ibl0 + 1]; }
+  inline void set_uinv_a_at_ibl0(int is, int ibl0, double val) { uinv_a.get(is)[ibl0 + 1] = val; }
+  inline void set_vti_at_ibl0(int is, int ibl0, double val) { vti.get(is)[ibl0] = val; }
+
   static double vaccel;
   static bool s_bCancel;
   std::stringstream *m_pOutStream;

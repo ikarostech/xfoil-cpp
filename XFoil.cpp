@@ -1595,13 +1595,13 @@ bool XFoil::cdcalc() {
   }
 
   //---- set variables at the end of the wake
-  double thwake = thet.bottom[nbl.bottom - 1];
-  double urat = uedg.bottom[nbl.bottom - 1] / qinf;
+  double thwake = thet_from_ibl0(2, nbl.bottom - 2);
+  double urat = uedg_from_ibl0(2, nbl.bottom - 2) / qinf;
   double uewake =
-      uedg.bottom[nbl.bottom - 1] * (1.0 - tklam) /
+      uedg_from_ibl0(2, nbl.bottom - 2) * (1.0 - tklam) /
       (1.0 - tklam * urat * urat);
-  double shwake = dstr.bottom[nbl.bottom - 1] /
-                   thet.bottom[nbl.bottom - 1];
+  double shwake = dstr_from_ibl0(2, nbl.bottom - 2) /
+                   thet_from_ibl0(2, nbl.bottom - 2);
 
   //---- extrapolate wake to downstream infinity using squire-young relation
   //      (reduces errors of the wake not being long enough)
@@ -1987,11 +1987,11 @@ bool XFoil::iblpan() {
   std::stringstream ss;
 
   //-- top surface first
-  // store ipan with 0-based BL station index
+  // store ipan with 0-based BL station index, and set vti at 0-based
   for (int i = 1; i <= i_stagnation + INDEX_START_WITH; i++) {
     int ibl0 = i - 1; // 0-based BL station
     ipan.top[ibl0] = i_stagnation + INDEX_START_WITH - i; // panel index
-    vti.top[i] = 1.0; // vti remains 1-based storage
+    set_vti_at_ibl0(1, ibl0, 1.0);
   }
 
   // store TE as 0-based logical index
@@ -2004,7 +2004,7 @@ bool XFoil::iblpan() {
   for (int index = 1; index <= n - i_stagnation + INDEX_START_WITH; ++index) {
     int ibl0 = index - 1;
     ipan.bottom[ibl0] = i_stagnation + INDEX_START_WITH + index - INDEX_START_WITH; // panel index
-    vti.bottom[index] = -1.0; // vti remains 1-based
+    set_vti_at_ibl0(2, ibl0, -1.0);
   }
 
   //-- wake
@@ -2014,7 +2014,7 @@ bool XFoil::iblpan() {
     int i = n + iw; // panel index in wake
     int index = te0_index(2) + iw + 2; // 1-based BL station for wake (bottom)
     ipan.bottom[index - 1] = i;        // ipan is 0-based in BL station
-    vti.bottom[index] = -1.0;          // vti remains 1-based
+    set_vti_at_ibl0(2, index - 1, -1.0);
   }
 
   nbl.bottom = te0_index(2) + nw + 2;
@@ -2023,7 +2023,7 @@ bool XFoil::iblpan() {
   for (int iw = 0; iw < nw; iw++) {
     // copy wake panel pointer from bottom to top (for plotting)
     ipan.top[te0_index(1) + iw + 1] = ipan.bottom[te0_index(2) + iw + 1]; // both sides are 0-based indices, hence -1 vs vti
-    vti.top[te0_index(1) + iw + 2] = 1.0; // vti stays 1-based
+    set_vti_at_ibl0(1, te0_index(1) + iw + 1, 1.0);
   }
   int iblmax = std::max(te0_index(1), te0_index(2)) + nw + 2;
   if (iblmax > IVX) {
@@ -2229,16 +2229,16 @@ bool XFoil::mrchdu() {
 
       //------ initialize current station to existing variables
       xsi = xssi.get(is)[ibl];
-      uei = uedg.get(is)[ibl];
-      thi = thet.get(is)[ibl];
-      dsi = dstr.get(is)[ibl];
+      uei = uedg_from_ibl0(is, ibl - 1);
+      thi = thet_from_ibl0(is, ibl - 1);
+      dsi = dstr_from_ibl0(is, ibl - 1);
 
       //------ fixed bug   md 7 june 99
       if (ibl < itrold) {
-        ami = ctau.get(is)[ibl]; // ami must be initialized
+        ami = ctau_from_ibl0(is, ibl - 1); // ami must be initialized
         cti = 0.03;
       } else {
-        cti = ctau.get(is)[ibl];
+        cti = ctau_from_ibl0(is, ibl - 1);
         if (cti <= 0.0)
           cti = 0.03;
       }
@@ -2275,14 +2275,14 @@ bool XFoil::mrchdu() {
             set_tran0_index(is, ibl);
         }
         if (ibl == te0_index(is) + 2) {
-          tte = thet.top[te0_index(1) + 1] +
-                thet.bottom[te0_index(2) + 1];
-          dte = dstr.top[te0_index(1) + 1] +
-                dstr.bottom[te0_index(2) + 1] + ante;
-          cte = (ctau.top[te0_index(1) + 1] *
-                     thet.top[te0_index(1) + 1] +
-                 ctau.bottom[te0_index(2) + 1] *
-                     thet.bottom[te0_index(2) + 1]) /
+          tte = thet_from_ibl0(1, te0_index(1)) +
+                thet_from_ibl0(2, te0_index(2));
+          dte = dstr_from_ibl0(1, te0_index(1)) +
+                dstr_from_ibl0(2, te0_index(2)) + ante;
+          cte = (ctau_from_ibl0(1, te0_index(1)) *
+                     thet_from_ibl0(1, te0_index(1)) +
+                 ctau_from_ibl0(2, te0_index(2)) *
+                     thet_from_ibl0(2, te0_index(2))) /
                 tte;
           tesys(cte, tte, dte);
         } else {
@@ -2299,14 +2299,14 @@ bool XFoil::mrchdu() {
           // then...
           if (ibl < tran_index(is) && ibl >= itrold) {
             //---------- extrapolate baseline hk
-            if (ibl > 0) {
-              uem = uedg.get(is)[ibl - 1];
-              dsm = dstr.get(is)[ibl - 1];
-              thm = thet.get(is)[ibl - 1];
+            if (ibl > 1) {
+              uem = uedg_from_ibl0(is, ibl - 2);
+              dsm = dstr_from_ibl0(is, (ibl - 1) - 1);
+              thm = thet_from_ibl0(is, ibl - 2);
             } else {
-              uem = uedg.get(is)[ibl];
-              dsm = dstr.get(is)[ibl];
-              thm = thet.get(is)[ibl];
+              uem = uedg_from_ibl0(is, ibl - 1);
+              dsm = dstr_from_ibl0(is, ibl - 1);
+              thm = thet_from_ibl0(is, ibl - 1);
             }
             msq =
                 uem * uem * hstinv / (gm1bl * (1.0 - 0.5 * uem * uem * hstinv));
@@ -2319,15 +2319,14 @@ bool XFoil::mrchdu() {
           if (ibl < itrold) {
             //---------- reinitialize or extrapolate ctau if it's now turbulent
             if (tran)
-              ctau.get(is)[ibl] = 0.03;
+              set_ctau_at_ibl0(is, ibl - 1, 0.03);
             if (turb) {
-              if (ibl > 0)
-                ctau.get(is)[ibl] = ctau.get(is)[ibl - 1];
-              else
-                ctau.get(is)[ibl] = ctau.get(is)[ibl];
+              double prev = (ibl > 1) ? ctau_from_ibl0(is, ibl - 2)
+                                     : ctau_from_ibl0(is, ibl - 1);
+              set_ctau_at_ibl0(is, ibl - 1, prev);
             }
             if (tran || turb) {
-              cti = ctau.get(is)[ibl];
+              cti = ctau_from_ibl0(is, ibl - 1);
               blData2.param.sz = cti;
             }
           }
@@ -2426,31 +2425,31 @@ bool XFoil::mrchdu() {
           // instead
           if (ibl > 2) {
             if (ibl <= te0_index(is) + 1) {
-              thi = thet.get(is)[ibm] *
+              thi = thet_from_ibl0(is, ibm - 1) *
                     sqrt(xssi.get(is)[ibl] / xssi.get(is)[ibm]);
-              dsi = dstr.get(is)[ibm] *
+              dsi = dstr_from_ibl0(is, ibm - 1) *
                     sqrt(xssi.get(is)[ibl] / xssi.get(is)[ibm]);
-              uei = uedg.get(is)[ibm];
+              uei = uedg_from_ibl0(is, ibm - 1);
             } else {
               if (ibl == te0_index(is) + 2) {
                 cti = cte;
                 thi = tte;
                 dsi = dte;
-                uei = uedg.get(is)[ibm];
+                uei = uedg_from_ibl0(is, ibm - 1);
               } else {
-                thi = thet.get(is)[ibm];
+                thi = thet_from_ibl0(is, ibm - 1);
                 ratlen = (xssi.get(is)[ibl] - xssi.get(is)[ibm]) /
-                         (10.0 * dstr.get(is)[ibm]);
-                dsi = (dstr.get(is)[ibm] +
+                         (10.0 * dstr_from_ibl0(is, ibm - 1));
+                dsi = (dstr_from_ibl0(is, ibm - 1) +
                        thi * ratlen) /
                       (1.0 + ratlen);
-                uei = uedg.get(is)[ibm];
+                uei = uedg_from_ibl0(is, ibm - 1);
               }
             }
             if (ibl == tran_index(is))
               cti = 0.05;
             if (ibl > tran_index(is))
-              cti = ctau.get(is)[ibm];
+              cti = ctau_from_ibl0(is, ibm - 1);
           }
         }
 
@@ -2488,14 +2487,14 @@ bool XFoil::mrchdu() {
 
       //------ store primary variables
       if (ibl < tran_index(is))
-        ctau.get(is)[ibl] = ami;
+        set_ctau_at_ibl0(is, ibl - 1, ami);
       else
-        ctau.get(is)[ibl] = cti;
-      thet.get(is)[ibl] = thi;
-      dstr.get(is)[ibl] = dsi;
-      uedg.get(is)[ibl] = uei;
-      mass.get(is)[ibl] = dsi * uei;
-      ctq.get(is)[ibl] = blData2.cqz.scalar;
+        set_ctau_at_ibl0(is, ibl - 1, cti);
+      set_thet_at_ibl0(is, ibl - 1, thi);
+      set_dstr_at_ibl0(is, ibl - 1, dsi);
+      set_uedg_at_ibl0(is, ibl - 1, uei);
+      set_mass_at_ibl0(is, ibl - 1, dsi * uei);
+      set_ctq_at_ibl0(is, ibl - 1, blData2.cqz.scalar);
 
       //------ set "1" variables to "2" variables for next streamwise station
       blprv(xsi, ami, cti, thi, dsi, dswaki, uei);
@@ -2573,7 +2572,7 @@ bool XFoil::mrchue() {
 
     //---- initialize similarity station with thwaites' formula (keep ibl=1)
     xsi = xssi.get(is)[1];
-    uei = uedg.get(is)[1];
+    uei = uedg_from_ibl0(is, 0);
 
     ucon = uei / xsi;
     tsq = 0.45 / (ucon * 6.0 * reybl);
@@ -2597,7 +2596,7 @@ bool XFoil::mrchue() {
 
       //------ prescribed quantities
       xsi = xssi.get(is)[ibl];
-      uei = uedg.get(is)[ibl];
+      uei = uedg_from_ibl0(is, ibl - 1);
 
       if (wake) {
         iw = ibl - (te0_index(is) + 1);
@@ -2635,14 +2634,14 @@ bool XFoil::mrchue() {
         }
 
         if (ibl == te0_index(is) + 2) {
-          tte = thet.top[te0_index(1) + 1] +
-                thet.bottom[te0_index(2) + 1];
-          dte = dstr.top[te0_index(1) + 1] +
-                dstr.bottom[te0_index(2) + 1] + ante;
-          cte = (ctau.top[te0_index(1) + 1] *
-                     thet.top[te0_index(1) + 1] +
-                 ctau.bottom[te0_index(2) + 1] *
-                     thet.bottom[te0_index(2) + 1]) /
+          tte = thet_from_ibl0(1, te0_index(1)) +
+                thet_from_ibl0(2, te0_index(2));
+          dte = dstr_from_ibl0(1, te0_index(1)) +
+                dstr_from_ibl0(2, te0_index(2)) + ante;
+          cte = (ctau_from_ibl0(1, te0_index(1)) *
+                     thet_from_ibl0(1, te0_index(1)) +
+                 ctau_from_ibl0(2, te0_index(2)) *
+                     thet_from_ibl0(2, te0_index(2))) /
                 tte;
           tesys(cte, tte, dte);
         } else
@@ -2767,9 +2766,9 @@ bool XFoil::mrchue() {
           // instead
           if (ibl > 2) {
             if (ibl <= te0_index(is) + 1) {
-              thi = thet.get(is)[ibl - 1] *
+              thi = thet_from_ibl0(is, ibl - 2) *
                     sqrt(xssi.get(is)[ibl] / xssi.get(is)[ibl - 1]);
-              dsi = dstr.get(is)[ibl - 1] *
+              dsi = dstr_from_ibl0(is, (ibl - 1) - 1) *
                     sqrt(xssi.get(is)[ibl] / xssi.get(is)[ibl - 1]);
             } else {
               if (ibl == te0_index(is) + 2) {
@@ -2777,10 +2776,10 @@ bool XFoil::mrchue() {
                 thi = tte;
                 dsi = dte;
               } else {
-                thi = thet.get(is)[ibl - 1];
+                thi = thet_from_ibl0(is, ibl - 2);
                 ratlen = (xssi.get(is)[ibl] - xssi.get(is)[ibl - 1]) /
-                         (10.0 * dstr.get(is)[ibl - 1]);
-                dsi = (dstr.get(is)[ibl - 1] +
+                         (10.0 * dstr_from_ibl0(is, (ibl - 1) - 1));
+                dsi = (dstr_from_ibl0(is, (ibl - 1) - 1) +
                        thi * ratlen) /
                       (1.0 + ratlen);
               }
@@ -2788,14 +2787,14 @@ bool XFoil::mrchue() {
             if (ibl == tran_index(is))
               cti = 0.05;
             if (ibl > tran_index(is))
-              cti = ctau.get(is)[ibl - 1];
+              cti = ctau_from_ibl0(is, (ibl - 1) - 1);
 
-            uei = uedg.get(is)[ibl];
+            uei = uedg_from_ibl0(is, ibl - 1);
 
             if (ibl < nbl.get(is))
               uei = 0.5 *
-                    (uedg.get(is)[ibl - 1] +
-                     uedg.get(is)[ibl + 1]);
+                    (uedg_from_ibl0(is, ibl - 2) +
+                     uedg_from_ibl0(is, ibl));
           }
         }
         // 109
@@ -2826,14 +2825,14 @@ bool XFoil::mrchue() {
       }
       //------ store primary variables
       if (ibl < tran_index(is))
-        ctau.get(is)[ibl] = ami;
+        set_ctau_at_ibl0(is, ibl - 1, ami);
       if (ibl >= tran_index(is))
-        ctau.get(is)[ibl] = cti;
-      thet.get(is)[ibl] = thi;
-      dstr.get(is)[ibl] = dsi;
-      uedg.get(is)[ibl] = uei;
-      mass.get(is)[ibl] = dsi * uei;
-      ctq.get(is)[ibl] = blData2.cqz.scalar;
+        set_ctau_at_ibl0(is, ibl - 1, cti);
+      set_thet_at_ibl0(is, ibl - 1, thi);
+      set_dstr_at_ibl0(is, ibl - 1, dsi);
+      set_uedg_at_ibl0(is, ibl - 1, uei);
+      set_mass_at_ibl0(is, ibl - 1, dsi * uei);
+      set_ctq_at_ibl0(is, ibl - 1, blData2.cqz.scalar);
 
       //------ set "1" variables to "2" variables for next streamwise station
       blprv(xsi, ami, cti, thi, dsi, dswaki, uei);
@@ -2849,10 +2848,10 @@ bool XFoil::mrchue() {
       tran = false;
 
       if (ibl == te0_index(is) + 1) {
-        thi = thet.top[te0_index(1) + 1] +
-              thet.bottom[te0_index(2) + 1];
-        dsi = dstr.top[te0_index(1) + 1] +
-              dstr.bottom[te0_index(2) + 1] + ante;
+        thi = thet_from_ibl0(1, te0_index(1)) +
+              thet_from_ibl0(2, te0_index(2));
+        dsi = dstr_from_ibl0(1, te0_index(1)) +
+              dstr_from_ibl0(2, te0_index(2)) + ante;
       }
     }
   }
@@ -3019,7 +3018,7 @@ bool XFoil::qvfue() {
   for (int is = 1; is <= 2; is++) {
     for (int ibl = 1; ibl < nbl.get(is); ++ibl) {
       int i = ipan_from_ibl0(is, ibl - 1);
-      qvis[i] = vti.get(is)[ibl] * uedg.get(is)[ibl];
+      qvis[i] = vti_from_ibl0(is, ibl - 1) * uedg_from_ibl0(is, ibl - 1);
     }
   }
 
@@ -3068,8 +3067,9 @@ void XFoil::swapEdgeVelocities(SidePair<VectorXd> &usav) {
   for (int is = 1; is <= 2; ++is) {
     for (int ibl = 1; ibl < nbl.get(is); ++ibl) {
       double temp = usav.get(is)[ibl];
-      usav.get(is)[ibl] = uedg.get(is)[ibl];
-      uedg.get(is)[ibl] = temp;
+      double cur = uedg_from_ibl0(is, ibl - 1);
+      usav.get(is)[ibl] = cur;
+      set_uedg_at_ibl0(is, ibl - 1, temp);
     }
   }
 }
@@ -3081,13 +3081,13 @@ void XFoil::computeLeTeSensitivities(int ile1, int ile2, int ite1, int ite2,
     for (int jbl = 1; jbl < nbl.get(js); ++jbl) {
       int j = ipan_from_ibl0(js, jbl - 1);
       int jv = isys.get(js)[jbl];
-      ule1_m[jv] = -vti.top[1] * vti.get(js)[jbl] *
+      ule1_m[jv] = -vti_from_ibl0(1, 0) * vti_from_ibl0(js, jbl - 1) *
                    dij(ile1, j);
-      ule2_m[jv] = -vti.bottom[1] * vti.get(js)[jbl] *
+      ule2_m[jv] = -vti_from_ibl0(2, 0) * vti_from_ibl0(js, jbl - 1) *
                    dij(ile2, j);
-      ute1_m[jv] = -vti.top[te0_index(1) + 1] * vti.get(js)[jbl] *
+      ute1_m[jv] = -vti_from_ibl0(1, te0_index(1)) * vti_from_ibl0(js, jbl - 1) *
                    dij(ite1, j);
-      ute2_m[jv] = -vti.bottom[te0_index(2) + 1] * vti.get(js)[jbl] *
+      ute2_m[jv] = -vti_from_ibl0(2, te0_index(2)) * vti_from_ibl0(js, jbl - 1) *
                    dij(ite2, j);
     }
   }
@@ -3197,8 +3197,8 @@ bool XFoil::setbl() {
 jvte1 = isys.top[te0_index(1) + 1];
 jvte2 = isys.bottom[te0_index(2) + 1];
 
-  dule1 = uedg.top[1] - usav.top[1];
-  dule2 = uedg.bottom[1] - usav.bottom[1];
+  dule1 = uedg_from_ibl0(1, 0) - usav.top[1];
+  dule2 = uedg_from_ibl0(2, 0) - usav.bottom[1];
 
   //---- set le and te ue sensitivities wrt all m values
   computeLeTeSensitivities(
@@ -3209,8 +3209,8 @@ jvte2 = isys.bottom[te0_index(2) + 1];
     ule1_m, ule2_m, ute1_m, ute2_m
   );
 
-  ule1_a = uinv_a.top[1];
-  ule2_a = uinv_a.bottom[1];
+  ule1_a = uinv_a_from_ibl0(1, 0);
+  ule2_a = uinv_a_from_ibl0(2, 0);
 
   writeString(" \n");
 
@@ -3242,12 +3242,12 @@ jvte2 = isys.bottom[te0_index(2) + 1];
       //---- set primary variables for current station
       xsi = xssi.get(is)[ibl];
       if (ibl < tran_index(is))
-        ami = ctau.get(is)[ibl];
+        ami = ctau_from_ibl0(is, ibl - 1);
       else
-        cti = ctau.get(is)[ibl];
-      uei = uedg.get(is)[ibl];
-      thi = thet.get(is)[ibl];
-      mdi = mass.get(is)[ibl];
+        cti = ctau_from_ibl0(is, ibl - 1);
+      uei = uedg_from_ibl0(is, ibl - 1);
+      thi = thet_from_ibl0(is, ibl - 1);
+      mdi = mass_from_ibl0(is, ibl - 1);
 
       dsi = mdi / uei;
 
@@ -3264,21 +3264,19 @@ jvte2 = isys.bottom[te0_index(2) + 1];
       for (int js = 1; js <= 2; js++) {
         for (int jbl = 1; jbl < nbl.get(js); ++jbl) {
           int jv = isys.get(js)[jbl];
-          u2_m[jv] = -vti.get(is)[ibl] * vti.get(js)[jbl] *
+          u2_m[jv] = -vti_from_ibl0(is, ibl - 1) * vti_from_ibl0(js, jbl - 1) *
                      dij(ipan_from_ibl0(is, ibl - 1), ipan_from_ibl0(js, jbl - 1));
           d2_m[jv] = d2_u2 * u2_m[jv];
         }
       }
       d2_m[iv] = d2_m[iv] + d2_m2;
 
-      u2_a = uinv_a.get(is)[ibl];
+      u2_a = uinv_a_from_ibl0(is, ibl - 1);
       d2_a = d2_u2 * u2_a;
 
       //---- "forced" changes due to mismatch between uedg and
       // usav=uinv+dij*mass
-      due2 =
-          uedg.get(is)[ibl] -
-          usav.get(is)[ibl];
+      due2 = uedg_from_ibl0(is, ibl - 1) - usav.get(is)[ibl];
       dds2 = d2_u2 * due2;
 
       blprv(xsi, ami, cti, thi, dsi, dswaki, uei); // cti
@@ -3305,29 +3303,29 @@ jvte2 = isys.bottom[te0_index(2) + 1];
       if (ibl == te0_index(is) + 2) {
         //----- define quantities at start of wake, adding te base thickness to
         // dstar
-        tte = thet.top[te0_index(1) + 1] +
-              thet.bottom[te0_index(2) + 1];
-        dte = dstr.top[te0_index(1) + 1] +
-              dstr.bottom[te0_index(2) + 1] + ante;
-        cte = (ctau.top[te0_index(1) + 1] *
-                   thet.top[te0_index(1) + 1] +
-               ctau.bottom[te0_index(2) + 1] *
-                   thet.bottom[te0_index(2) + 1]) /
-              tte;
+        tte = thet_from_ibl0(1, te0_index(1)) +
+              thet_from_ibl0(2, te0_index(2));
+        dte = dstr_from_ibl0(1, te0_index(1)) +
+              dstr_from_ibl0(2, te0_index(2)) + ante;
+        cte = (ctau_from_ibl0(1, te0_index(1)) *
+                   thet_from_ibl0(1, te0_index(1)) +
+               ctau_from_ibl0(2, te0_index(2)) *
+                   thet_from_ibl0(2, te0_index(2))) /
+               tte;
         tesys(cte, tte, dte);
 
         tte_tte1 = 1.0;
         tte_tte2 = 1.0;
-        dte_mte1 = 1.0 / uedg.top[te0_index(1) + 1];
-        dte_ute1 = -dstr.top[te0_index(1) + 1] /
-                    uedg.top[te0_index(1) + 1];
-        dte_mte2 = 1.0 / uedg.bottom[te0_index(2) + 1];
-        dte_ute2 = -dstr.bottom[te0_index(2) + 1] /
-                    uedg.bottom[te0_index(2) + 1];
-        cte_cte1 = thet.top[te0_index(1) + 1] / tte;
-        cte_cte2 = thet.bottom[te0_index(2) + 1] / tte;
-        cte_tte1 = (ctau.top[te0_index(1) + 1] - cte) / tte;
-        cte_tte2 = (ctau.bottom[te0_index(2) + 1] - cte) / tte;
+        dte_mte1 = 1.0 / uedg_from_ibl0(1, te0_index(1));
+        dte_ute1 = -dstr_from_ibl0(1, te0_index(1)) /
+                    uedg_from_ibl0(1, te0_index(1));
+        dte_mte2 = 1.0 / uedg_from_ibl0(2, te0_index(2));
+        dte_ute2 = -dstr_from_ibl0(2, te0_index(2)) /
+                    uedg_from_ibl0(2, te0_index(2));
+        cte_cte1 = thet_from_ibl0(1, te0_index(1)) / tte;
+        cte_cte2 = thet_from_ibl0(2, te0_index(2)) / tte;
+        cte_tte1 = (ctau_from_ibl0(1, te0_index(1)) - cte) / tte;
+        cte_tte2 = (ctau_from_ibl0(2, te0_index(2)) - cte) / tte;
 
         //----- re-define d1 sensitivities wrt m since d1 depends on both te ds
         // values
@@ -3344,10 +3342,10 @@ jvte2 = isys.bottom[te0_index(2) + 1];
         due1 = 0.0;
         dds1 =
             dte_ute1 *
-                (uedg.top[te0_index(1) + 1] -
+                (uedg_from_ibl0(1, te0_index(1)) -
                  usav.top[te0_index(1) + 1]) +
             dte_ute2 *
-                (uedg.bottom[te0_index(2) + 1] -
+                (uedg_from_ibl0(2, te0_index(2)) -
                  usav.bottom[te0_index(2) + 1]);
       } else {
         blsys();
@@ -3355,7 +3353,7 @@ jvte2 = isys.bottom[te0_index(2) + 1];
 
       //---- save wall shear and equil. max shear coefficient for plotting
       // output
-      ctq.get(is)[ibl] = blData2.cqz.scalar;
+      set_ctq_at_ibl0(is, ibl - 1, blData2.cqz.scalar);
 
       //---- set xi sensitivities wrt le ue changes
       if (is == 1) {
@@ -3831,35 +3829,28 @@ bool XFoil::stmove() {
 
       //---- move top side bl variables downstream
       for (int ibl = nbl.top - 1; ibl >= idif + 1; ibl--) {
-        ctau.top[ibl] = ctau.top[ibl - idif];
-        thet.top[ibl] = thet.top[ibl - idif];
-        dstr.top[ibl] = dstr.top[ibl - idif];
-        uedg.top[ibl] = uedg.top[ibl - idif];
+        set_ctau_at_ibl0(1, ibl - 1, ctau_from_ibl0(1, (ibl - idif) - 1));
+        set_thet_at_ibl0(1, ibl - 1, thet_from_ibl0(1, (ibl - idif) - 1));
+        set_dstr_at_ibl0(1, ibl - 1, dstr_from_ibl0(1, (ibl - idif) - 1));
+        set_uedg_at_ibl0(1, ibl - 1, uedg_from_ibl0(1, (ibl - idif) - 1));
       }
 
       //---- set bl variables between old and new stagnation point
       const double dudx =
-          uedg.top[idif + 1] / xssi.top[idif + 1];
+          uedg_from_ibl0(1, idif) / xssi.top[idif + 1];
       for (int ibl = idif; ibl >= 1; ibl--) {
-        ctau.top[ibl] =
-            ctau.top[idif + 1];
-        thet.top[ibl] =
-            thet.top[idif + 1];
-        dstr.top[ibl] =
-            dstr.top[idif + 1];
-        uedg.top[ibl] = dudx * xssi.top[ibl];
+        set_ctau_at_ibl0(1, ibl - 1, ctau_from_ibl0(1, idif));
+        set_thet_at_ibl0(1, ibl - 1, thet_from_ibl0(1, idif));
+        set_dstr_at_ibl0(1, ibl - 1, dstr_from_ibl0(1, idif));
+        set_uedg_at_ibl0(1, ibl - 1, dudx * xssi.top[ibl]);
       }
 
       //---- move bottom side bl variables upstream
       for (int ibl = 1; ibl < nbl.bottom; ibl++) {
-        ctau.bottom[ibl] =
-            ctau.bottom[ibl + idif];
-        thet.bottom[ibl] =
-            thet.bottom[ibl + idif];
-        dstr.bottom[ibl] =
-            dstr.bottom[ibl + idif];
-        uedg.bottom[ibl] =
-            uedg.bottom[ibl + idif];
+        set_ctau_at_ibl0(2, ibl - 1, ctau_from_ibl0(2, (ibl + idif) - 1));
+        set_thet_at_ibl0(2, ibl - 1, thet_from_ibl0(2, (ibl + idif) - 1));
+        set_dstr_at_ibl0(2, ibl - 1, dstr_from_ibl0(2, (ibl + idif) - 1));
+        set_uedg_at_ibl0(2, ibl - 1, uedg_from_ibl0(2, (ibl + idif) - 1));
       }
     } else {
       //---- increase in number of points on bottom side (is=2)
@@ -3870,39 +3861,28 @@ bool XFoil::stmove() {
 
       //---- move bottom side bl variables downstream
       for (int ibl = nbl.bottom - 1; ibl >= idif + 1; ibl--) {
-        ctau.bottom[ibl] =
-            ctau.bottom[ibl - idif];
-        thet.bottom[ibl] =
-            thet.bottom[ibl - idif];
-        dstr.bottom[ibl] =
-            dstr.bottom[ibl - idif];
-        uedg.bottom[ibl] =
-            uedg.bottom[ibl - idif];
+        set_ctau_at_ibl0(2, ibl - 1, ctau_from_ibl0(2, (ibl - idif) - 1));
+        set_thet_at_ibl0(2, ibl - 1, thet_from_ibl0(2, (ibl - idif) - 1));
+        set_dstr_at_ibl0(2, ibl - 1, dstr_from_ibl0(2, (ibl - idif) - 1));
+        set_uedg_at_ibl0(2, ibl - 1, uedg_from_ibl0(2, (ibl - idif) - 1));
       }
 
       //---- set bl variables between old and new stagnation point
       const double dudx =
-          uedg.bottom[idif + 1] / xssi.bottom[idif + 1];
+          uedg_from_ibl0(2, idif) / xssi.bottom[idif + 1];
       for (int ibl = idif; ibl >= 1; ibl--) {
-        ctau.bottom[ibl] =
-            ctau.bottom[idif + 1];
-        thet.bottom[ibl] =
-            thet.bottom[idif + 1];
-        dstr.bottom[ibl] =
-            dstr.bottom[idif + 1];
-        uedg.bottom[ibl] = dudx * xssi.bottom[ibl];
+        set_ctau_at_ibl0(2, ibl - 1, ctau_from_ibl0(2, idif));
+        set_thet_at_ibl0(2, ibl - 1, thet_from_ibl0(2, idif));
+        set_dstr_at_ibl0(2, ibl - 1, dstr_from_ibl0(2, idif));
+        set_uedg_at_ibl0(2, ibl - 1, dudx * xssi.bottom[ibl]);
       }
 
       //---- move top side bl variables upstream
       for (int ibl = 1; ibl < nbl.top; ibl++) {
-        ctau.top[ibl] =
-            ctau.top[ibl + idif];
-        thet.top[ibl] =
-            thet.top[ibl + idif];
-        dstr.top[ibl] =
-            dstr.top[ibl + idif];
-        uedg.top[ibl] =
-            uedg.top[ibl + idif];
+        set_ctau_at_ibl0(1, ibl - 1, ctau_from_ibl0(1, (ibl + idif) - 1));
+        set_thet_at_ibl0(1, ibl - 1, thet_from_ibl0(1, (ibl + idif) - 1));
+        set_dstr_at_ibl0(1, ibl - 1, dstr_from_ibl0(1, (ibl + idif) - 1));
+        set_uedg_at_ibl0(1, ibl - 1, uedg_from_ibl0(1, (ibl + idif) - 1));
       }
     }
   }
@@ -3910,7 +3890,7 @@ bool XFoil::stmove() {
   //-- set new mass array since ue has been tweaked
   for (int is = 1; is <= 2; is++) {
     for (int ibl = 1; ibl < nbl.get(is); ++ibl) {
-      mass.get(is)[ibl] = dstr.get(is)[ibl] * uedg.get(is)[ibl];
+      set_mass_at_ibl0(is, ibl - 1, dstr_from_ibl0(is, ibl - 1) * uedg_from_ibl0(is, ibl - 1));
     }
   }
 
@@ -4613,13 +4593,13 @@ bool XFoil::ueset() {
       double dui = 0.0;
       for (int js = 1; js <= 2; js++) {
         for (int jbl = 1; jbl < nbl.get(js); ++jbl) {
-          double ue_m = -vti.get(is)[ibl] * vti.get(js)[jbl] *
+          double ue_m = -vti_from_ibl0(is, ibl - 1) * vti_from_ibl0(js, jbl - 1) *
                         dij(ipan_from_ibl0(is, ibl - 1),
                             ipan_from_ibl0(js, jbl - 1));
-          dui += ue_m * mass.get(js)[jbl];
+          dui += ue_m * mass_from_ibl0(js, jbl - 1);
         }
       }
-      uedg.get(is)[ibl] = uinv.get(is)[ibl] + dui;
+      set_uedg_at_ibl0(is, ibl - 1, uinv_from_ibl0(is, ibl - 1) + dui);
     }
   }
   return true;
@@ -4634,8 +4614,8 @@ bool XFoil::uicalc() {
     uinv_a.get(is)[0] = 0.0;
     for (int ibl = 1; ibl < nbl.get(is); ++ibl) {
       int i = ipan_from_ibl0(is, ibl - 1);
-      uinv.get(is)[ibl] = vti.get(is)[ibl] * qinv[i];
-      uinv_a.get(is)[ibl] = vti.get(is)[ibl] * qinv_a[i];
+      set_uinv_at_ibl0(is, ibl - 1, vti_from_ibl0(is, ibl - 1) * qinv[i]);
+      set_uinv_a_at_ibl0(is, ibl - 1, vti_from_ibl0(is, ibl - 1) * qinv_a[i]);
     }
   }
 
@@ -4656,16 +4636,17 @@ void XFoil::computeNewUeDistribution(SidePair<VectorXd> &unew,
         for (int jbl = 1; jbl < nbl.get(js); ++jbl) {
           int j = ipan_from_ibl0(js, jbl - 1);
           int jv = isys.get(js)[jbl];
-          double ue_m = -vti.get(is)[ibl] * vti.get(js)[jbl] *
+          double ue_m = -vti_from_ibl0(is, ibl - 1) * vti_from_ibl0(js, jbl - 1) *
                         dij(i, j);
-          dui += ue_m * (mass.get(js)[jbl] + vdel[jv](2, 0));
+          dui += ue_m * (mass_from_ibl0(js, jbl - 1) + vdel[jv](2, 0));
           dui_ac += ue_m * (-vdel[jv](2, 1));
         }
       }
 
-      double uinv_ac = lalfa ? 0.0 : uinv_a.get(is)[ibl];
-      unew.get(is)[ibl] = uinv.get(is)[ibl] + dui;
-      u_ac.get(is)[ibl] = uinv_ac + dui_ac;
+      double uinv_ac = lalfa ? 0.0 : uinv_a_from_ibl0(is, ibl - 1);
+      // Store unew/u_ac at 0-based station index
+      unew.get(is)[ibl - 1] = uinv_from_ibl0(is, ibl - 1) + dui;
+      u_ac.get(is)[ibl - 1] = uinv_ac + dui_ac;
     }
   }
 }
@@ -4684,8 +4665,9 @@ void XFoil::computeQtan(const SidePair<VectorXd> &unew,
       int i = ipan_from_ibl0(is, ibl - 1);
       const VectorXd &unew_vec = (is == 1) ? unew.top : unew.bottom;
       const VectorXd &uac_vec = (is == 1) ? u_ac.top : u_ac.bottom;
-      qnew[i] = vti.get(is)[ibl] * unew_vec[ibl];
-      q_ac[i] = vti.get(is)[ibl] * uac_vec[ibl];
+      // Read unew/u_ac at 0-based station index
+      qnew[i] = vti_from_ibl0(is, ibl - 1) * unew_vec[ibl - 1];
+      q_ac[i] = vti_from_ibl0(is, ibl - 1) * uac_vec[ibl - 1];
     }
   }
 }
@@ -4832,12 +4814,16 @@ bool XFoil::update() {
     ddstr_seg.get(is) = VectorXd(len);
     duedg_seg.get(is) = VectorXd(len);
 
-    auto ctau_slice = ctau.get(is).segment(start, len);
-    auto thet_slice = thet.get(is).segment(start, len);
-    auto dstr_slice = dstr.get(is).segment(start, len);
-    auto uedg_slice = uedg.get(is).segment(start, len);
-    auto unew_slice = unew.get(is).segment(start, len);
-    auto uac_slice = u_ac.get(is).segment(start, len);
+    // Build 0-based local slices for calculations
+    VectorXd ctau_slice(len), thet_slice(len), dstr_slice(len), uedg_slice(len);
+    VectorXd unew_slice = unew.get(is).segment(0, len);
+    VectorXd uac_slice = u_ac.get(is).segment(0, len);
+    for (int j = 0; j < len; ++j) {
+      ctau_slice[j] = ctau_from_ibl0(is, j);
+      thet_slice[j] = thet_from_ibl0(is, j);
+      dstr_slice[j] = dstr_from_ibl0(is, j);
+      uedg_slice[j] = uedg_from_ibl0(is, j);
+    }
 
     VectorXi iv = isys.get(is).segment(start, len);
     VectorXd dmass(len);
@@ -4851,10 +4837,10 @@ bool XFoil::update() {
     ddstr_seg.get(is) = (dmass - dstr_slice.cwiseProduct(duedg_seg.get(is)))
                             .cwiseQuotient(uedg_slice);
 
-    VectorXi iblSeq = VectorXi::LinSpaced(len, start, nbl.get(is) - 1);
-    // Compare using 0-based logical indices: (iblSeq-1) vs tran0_index
+    VectorXi iblSeq = VectorXi::LinSpaced(len, 0, len - 1);
+    // Compare using 0-based logical indices
     VectorXd dn1 =
-        ((iblSeq.array() - 1) < tran0_index(is))
+        ((iblSeq.array()) < tran0_index(is))
             .select(dctau_seg.get(is).array() / 10.0,
                     dctau_seg.get(is).cwiseQuotient(ctau_slice).array())
             .matrix();
@@ -4905,22 +4891,34 @@ bool XFoil::update() {
     if (len <= 0)
       continue;
 
-    auto ctau_slice = ctau.get(is).segment(start, len);
-    auto thet_slice = thet.get(is).segment(start, len);
-    auto dstr_slice = dstr.get(is).segment(start, len);
-    auto uedg_slice = uedg.get(is).segment(start, len);
+    // Local 0-based slices, then write back to arrays
+    VectorXd ctau_slice(len), thet_slice(len), dstr_slice(len), uedg_slice(len);
+    for (int j = 0; j < len; ++j) {
+      ctau_slice[j] = ctau_from_ibl0(is, j);
+      thet_slice[j] = thet_from_ibl0(is, j);
+      dstr_slice[j] = dstr_from_ibl0(is, j);
+      uedg_slice[j] = uedg_from_ibl0(is, j);
+    }
 
     ctau_slice += rlx * dctau_seg.get(is);
     thet_slice += rlx * dthet_seg.get(is);
     dstr_slice += rlx * ddstr_seg.get(is);
     uedg_slice += rlx * duedg_seg.get(is);
 
-    VectorXi iblSeq = VectorXi::LinSpaced(len, 1, nbl.get(is) - 1);
-    // Use 0-based comparison for transition: (iblSeq-1) >= tran0
+    VectorXi iblSeq = VectorXi::LinSpaced(len, 0, len - 1);
+    // Use 0-based comparison for transition: ibl0 >= tran0
     ctau_slice =
-        ((iblSeq.array() - 1) >= tran0_index(is))
+        ((iblSeq.array()) >= tran0_index(is))
             .select(ctau_slice.array().cwiseMin(0.25), ctau_slice.array())
             .matrix();
+
+    // Write back updated slices to arrays via 0-based accessors
+    for (int j = 0; j < len; ++j) {
+      set_ctau_at_ibl0(is, j, ctau_slice[j]);
+      set_thet_at_ibl0(is, j, thet_slice[j]);
+      set_dstr_at_ibl0(is, j, dstr_slice[j]);
+      set_uedg_at_ibl0(is, j, uedg_slice[j]);
+    }
 
     for (int ibl = 1; ibl < nbl.get(is); ++ibl) {
       if (ibl > te0_index(is) + 1) {
@@ -4933,34 +4931,33 @@ bool XFoil::update() {
       else
         hklim = 1.00005;
 
-      msq = uedg.get(is)[ibl] *
-            uedg.get(is)[ibl] * hstinv /
+      msq = uedg_from_ibl0(is, ibl - 1) *
+            uedg_from_ibl0(is, ibl - 1) * hstinv /
             (gamm1 *
-             (1.0 - 0.5 * uedg.get(is)[ibl] *
-                        uedg.get(is)[ibl] * hstinv));
-      dsw = dstr.get(is)[ibl] - dswaki;
-      dslim(dsw, thet.get(is)[ibl], msq, hklim);
-      dstr.get(is)[ibl] = dsw + dswaki;
+             (1.0 - 0.5 * uedg_from_ibl0(is, ibl - 1) *
+                        uedg_from_ibl0(is, ibl - 1) * hstinv));
+      dsw = dstr_from_ibl0(is, ibl - 1) - dswaki;
+      dslim(dsw, thet_from_ibl0(is, ibl - 1), msq, hklim);
+      set_dstr_at_ibl0(is, ibl - 1, dsw + dswaki);
 
       //------- set new mass defect (nonlinear update)
-      mass.get(is)[ibl] =
-          dstr.get(is)[ibl] *
-          uedg.get(is)[ibl];
+      set_mass_at_ibl0(is, ibl - 1,
+          dstr_from_ibl0(is, ibl - 1) * uedg_from_ibl0(is, ibl - 1));
     }
   }
 
   //--- equate upper wake arrays to lower wake arrays
   for (int kbl = 1; kbl <= nbl.bottom - (te0_index(2) + 1); kbl++) {
-    ctau.top[te0_index(1) + 1 + kbl] =
-        ctau.bottom[te0_index(2) + 1 + kbl];
-    thet.top[te0_index(1) + 1 + kbl] =
-        thet.bottom[te0_index(2) + 1 + kbl];
-    dstr.top[te0_index(1) + 1 + kbl] =
-        dstr.bottom[te0_index(2) + 1 + kbl];
-    uedg.top[te0_index(1) + 1 + kbl] =
-        uedg.bottom[te0_index(2) + 1 + kbl];
-    ctq.top[te0_index(1) + 1 + kbl] =
-        ctq.bottom[te0_index(2) + 1 + kbl];
+    set_ctau_at_ibl0(1, te0_index(1) + kbl,
+        ctau_from_ibl0(2, te0_index(2) + kbl));
+    set_thet_at_ibl0(1, te0_index(1) + kbl,
+                     thet_from_ibl0(2, te0_index(2) + kbl));
+    set_dstr_at_ibl0(1, te0_index(1) + kbl,
+        dstr_from_ibl0(2, te0_index(2) + kbl));
+    set_uedg_at_ibl0(1, te0_index(1) + kbl,
+                     uedg_from_ibl0(2, te0_index(2) + kbl));
+    set_ctq_at_ibl0(1, te0_index(1) + kbl,
+        ctq_from_ibl0(2, te0_index(2) + kbl));
   }
 
   return true;
