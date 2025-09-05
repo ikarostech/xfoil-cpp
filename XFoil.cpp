@@ -3063,9 +3063,9 @@ bool XFoil::saveblData(int icom) {
 void XFoil::swapEdgeVelocities(SidePair<VectorXd> &usav) {
   for (int is = 1; is <= 2; ++is) {
     for (int ibl = 1; ibl < nbl.get(is); ++ibl) {
-      double temp = usav.get(is)[ibl];
+      double temp = usav.get(is)[ibl - 1];
       double cur = uedg_from_ibl0(is, ibl - 1);
-      usav.get(is)[ibl] = cur;
+      usav.get(is)[ibl - 1] = cur;
       set_uedg_at_ibl0(is, ibl - 1, temp);
     }
   }
@@ -3187,15 +3187,17 @@ bool XFoil::setbl() {
   //---- march bl with current ue and ds to establish transition
   mrchdu();
 
-  SidePair<VectorXd> usav = uedg;
+  SidePair<VectorXd> usav;
+  usav.top = uedg.top.segment(1, IVX - 1);
+  usav.bottom = uedg.bottom.segment(1, IVX - 1);
 
   ueset();
   swapEdgeVelocities(usav);
 jvte1 = isys.top[te0_index(1) + 1];
 jvte2 = isys.bottom[te0_index(2) + 1];
 
-  dule1 = uedg_from_ibl0(1, 0) - usav.top[1];
-  dule2 = uedg_from_ibl0(2, 0) - usav.bottom[1];
+  dule1 = uedg_from_ibl0(1, 0) - usav.top[0];
+  dule2 = uedg_from_ibl0(2, 0) - usav.bottom[0];
 
   //---- set le and te ue sensitivities wrt all m values
   computeLeTeSensitivities(
@@ -3229,22 +3231,23 @@ jvte2 = isys.bottom[te0_index(2) + 1];
 
     //**** sweep downstream setting up bl equation linearizations
     for (int ibl = 1; ibl < nbl.get(is); ++ibl) {
+      int ibl0 = ibl - 1;
       int iv = isys.get(is)[ibl];
 
-      simi = (ibl == 1);
-      wake = (ibl > iblte.get(is) + 1);
-      tran = (ibl == tran_index(is));
-      turb = (ibl > tran_index(is));
+      simi = (ibl0 == 0);
+      wake = (ibl0 > iblte.get(is));
+      tran = (ibl0 == tran0_index(is));
+      turb = (ibl0 > tran0_index(is));
 
       //---- set primary variables for current station
       xsi = xssi.get(is)[ibl];
-      if (ibl < tran_index(is))
-        ami = ctau_from_ibl0(is, ibl - 1);
+      if (ibl0 < tran0_index(is))
+        ami = ctau_from_ibl0(is, ibl0);
       else
-        cti = ctau_from_ibl0(is, ibl - 1);
-      uei = uedg_from_ibl0(is, ibl - 1);
-      thi = thet_from_ibl0(is, ibl - 1);
-      mdi = mass_from_ibl0(is, ibl - 1);
+        cti = ctau_from_ibl0(is, ibl0);
+      uei = uedg_from_ibl0(is, ibl0);
+      thi = thet_from_ibl0(is, ibl0);
+      mdi = mass_from_ibl0(is, ibl0);
 
       dsi = mdi / uei;
 
@@ -3259,21 +3262,21 @@ jvte2 = isys.bottom[te0_index(2) + 1];
       d2_u2 = -dsi / uei;
 
       for (int js = 1; js <= 2; js++) {
-        for (int jbl = 1; jbl < nbl.get(js); ++jbl) {
-          int jv = isys.get(js)[jbl];
-          u2_m[jv] = -vti_from_ibl0(is, ibl - 1) * vti_from_ibl0(js, jbl - 1) *
-                     dij(ipan_from_ibl0(is, ibl - 1), ipan_from_ibl0(js, jbl - 1));
+        for (int jbl = 0; jbl < nbl.get(js) - 1; ++jbl) {
+          int jv = isys.get(js)[jbl + INDEX_START_WITH];
+          u2_m[jv] = -vti_from_ibl0(is, ibl0) * vti_from_ibl0(js, jbl) *
+                     dij(ipan_from_ibl0(is, ibl0), ipan_from_ibl0(js, jbl));
           d2_m[jv] = d2_u2 * u2_m[jv];
         }
       }
       d2_m[iv] = d2_m[iv] + d2_m2;
 
-      u2_a = uinv_a_from_ibl0(is, ibl - 1);
+      u2_a = uinv_a_from_ibl0(is, ibl0);
       d2_a = d2_u2 * u2_a;
 
       //---- "forced" changes due to mismatch between uedg and
       // usav=uinv+dij*mass
-      due2 = uedg_from_ibl0(is, ibl - 1) - usav.get(is)[ibl];
+      due2 = uedg_from_ibl0(is, ibl0) - usav.get(is)[ibl0];
       dds2 = d2_u2 * due2;
 
       blprv(xsi, ami, cti, thi, dsi, dswaki, uei); // cti
@@ -3285,7 +3288,7 @@ jvte2 = isys.bottom[te0_index(2) + 1];
         ami = blData2.param.amplz;
       }
 
-      if (ibl == tran_index(is) && !tran) {
+      if (ibl0 == tran0_index(is) && !tran) {
         // TRACE("setbl: xtr???  n1=%d n2=%d: \n", ampl1, ampl2);
 
         ss << "setbl: xtr???  n1=" << blData1.param.amplz
@@ -3327,8 +3330,8 @@ jvte2 = isys.bottom[te0_index(2) + 1];
         //----- re-define d1 sensitivities wrt m since d1 depends on both te ds
         // values
       for (int js = 1; js <= 2; js++) {
-        for (int jbl = 1; jbl < nbl.get(js); ++jbl) {
-            int jv = isys.get(js)[jbl];
+        for (int jbl = 0; jbl < nbl.get(js) - 1; ++jbl) {
+            int jv = isys.get(js)[jbl + INDEX_START_WITH];
             d1_m[jv] = dte_ute1 * ute1_m[jv] + dte_ute2 * ute2_m[jv];
           }
         }
@@ -3340,10 +3343,10 @@ jvte2 = isys.bottom[te0_index(2) + 1];
         dds1 =
             dte_ute1 *
                 (uedg_from_ibl0(1, te0_index(1)) -
-                 usav.top[te0_index(1) + 1]) +
+                 usav.top[te0_index(1)]) +
             dte_ute2 *
                 (uedg_from_ibl0(2, te0_index(2)) -
-                 usav.bottom[te0_index(2) + 1]);
+                 usav.bottom[te0_index(2)]);
       } else {
         blsys();
       }
