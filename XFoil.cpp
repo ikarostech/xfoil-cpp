@@ -2216,39 +2216,40 @@ bool XFoil::mrchdu() {
 
     tran = false;
     turb = false;
-    set_tran0_index(is, te0_index(is));
+    set_tran0_index(is, iblte.get(is));
     //---- march downstream
     for (int ibl = 1; ibl < nbl.get(is); ++ibl) {
+      int ibl0 = ibl - 1;
       int ibm = ibl - 1;
 
       simi = (ibl == 1);
-      wake = ibl > te0_index(is) + 1;
+      wake = ibl > iblte.get(is) + 1;
 
       //------ initialize current station to existing variables
       xsi = xssi.get(is)[ibl];
-      uei = uedg_from_ibl0(is, ibl - 1);
-      thi = thet_from_ibl0(is, ibl - 1);
-      dsi = dstr_from_ibl0(is, ibl - 1);
+      uei = uedg_from_ibl0(is, ibl0);
+      thi = thet_from_ibl0(is, ibl0);
+      dsi = dstr_from_ibl0(is, ibl0);
 
       //------ fixed bug   md 7 june 99
       if (ibl < itrold) {
-        ami = ctau_from_ibl0(is, ibl - 1); // ami must be initialized
+        ami = ctau_from_ibl0(is, ibl0); // ami must be initialized
         cti = 0.03;
       } else {
-        cti = ctau_from_ibl0(is, ibl - 1);
+        cti = ctau_from_ibl0(is, ibl0);
         if (cti <= 0.0)
           cti = 0.03;
       }
 
       if (wake) {
-        iw = ibl - (te0_index(is) + 1);
+        iw = ibl0 - iblte.get(is);
         dswaki = wgap[iw - 1];
       } else
         dswaki = 0.0;
 
-      if (ibl <= te0_index(is) + 1)
-        dsi = std::max(dsi - dswaki, 1.02000 * thi) + dswaki;
-      if (ibl > te0_index(is) + 1)
+      if (ibl0 <= iblte.get(is))
+        dsi =std::max(dsi - dswaki, 1.02000 * thi) + dswaki;
+      if (ibl0 > iblte.get(is))
         dsi = std::max(dsi - dswaki, 1.00005 * thi) + dswaki;
 
       //------ newton iteration loop for current station
@@ -2267,11 +2268,11 @@ bool XFoil::mrchdu() {
           trchek();
           ami = blData2.param.amplz;
           if (tran)
-            set_tran0_index(is, ibl - 1);
+            set_tran0_index(is, ibl0);
           if (!tran)
-            set_tran0_index(is, ibl);
+            set_tran0_index(is, ibl0 + 1);
         }
-        if (ibl == te0_index(is) + 2) {
+        if (ibl0 == iblte.get(is) + 1) {
           tte = thet_from_ibl0(1, te0_index(1)) +
                 thet_from_ibl0(2, te0_index(2));
           dte = dstr_from_ibl0(1, te0_index(1)) +
@@ -2294,16 +2295,16 @@ bool XFoil::mrchdu() {
 
           //--------- if current point ibl was turbulent and is now laminar,
           // then...
-          if (ibl < tran_index(is) && ibl >= itrold) {
+          if (ibl0 < tran0_index(is) && ibl0 >= itrold - INDEX_START_WITH) {
             //---------- extrapolate baseline hk
             if (ibl > 1) {
-              uem = uedg_from_ibl0(is, ibl - 2);
-              dsm = dstr_from_ibl0(is, (ibl - 1) - 1);
-              thm = thet_from_ibl0(is, ibl - 2);
+              uem = uedg_from_ibl0(is, ibl0 - 1);
+              dsm = dstr_from_ibl0(is, ibl0 - 1);
+              thm = thet_from_ibl0(is, ibl0 - 1);
             } else {
-              uem = uedg_from_ibl0(is, ibl - 1);
-              dsm = dstr_from_ibl0(is, ibl - 1);
-              thm = thet_from_ibl0(is, ibl - 1);
+              uem = uedg_from_ibl0(is, ibl0);
+              dsm = dstr_from_ibl0(is, ibl0);
+              thm = thet_from_ibl0(is, ibl0);
             }
             msq =
                 uem * uem * hstinv / (gm1bl * (1.0 - 0.5 * uem * uem * hstinv));
@@ -2313,23 +2314,23 @@ bool XFoil::mrchdu() {
           }
 
           //--------- if current point ibl was laminar, then...
-          if (ibl < itrold) {
+          if (ibl0 < itrold - INDEX_START_WITH) {
             //---------- reinitialize or extrapolate ctau if it's now turbulent
             if (tran)
-              set_ctau_at_ibl0(is, ibl - 1, 0.03);
+              set_ctau_at_ibl0(is, ibl0, 0.03);
             if (turb) {
-              double prev = (ibl > 1) ? ctau_from_ibl0(is, ibl - 2)
-                                     : ctau_from_ibl0(is, ibl - 1);
-              set_ctau_at_ibl0(is, ibl - 1, prev);
+              double prev = (ibl0 >= 1) ? ctau_from_ibl0(is, ibl0 - 1)
+                                     : ctau_from_ibl0(is, ibl0);
+              set_ctau_at_ibl0(is, ibl0, prev);
             }
             if (tran || turb) {
-              cti = ctau_from_ibl0(is, ibl - 1);
+              cti = ctau_from_ibl0(is, ibl0 - 1);
               blData2.param.sz = cti;
             }
           }
         }
 
-        if (simi || ibl == te0_index(is) + 2) {
+        if (simi || ibl0 == iblte.get(is) + 1) {
           //--------- for similarity station or first wake point, prescribe ue
           vs2(3, 0) = 0.0;
           vs2(3, 1) = 0.0;
@@ -2393,7 +2394,7 @@ bool XFoil::mrchdu() {
           cti = std::max(cti, 0.0000001);
         }
 
-        if (ibl <= te0_index(is) + 1)
+        if (ibl <= iblte.get(is) + 1)
           hklim = 1.02;
         else
           hklim = 1.00005;
@@ -2419,16 +2420,15 @@ bool XFoil::mrchdu() {
         //------ the current unconverged solution might still be reasonable...
         if (dmax > 0.1) {
           //------- the current solution is garbage --> extrapolate values
-          // instead
-          if (ibl > 2) {
-            if (ibl <= te0_index(is) + 1) {
+          if (ibl0 >= 2) {
+            if (ibl0 <= iblte.get(is)) {
               thi = thet_from_ibl0(is, ibm - 1) *
                     sqrt(xssi.get(is)[ibl] / xssi.get(is)[ibm]);
               dsi = dstr_from_ibl0(is, ibm - 1) *
                     sqrt(xssi.get(is)[ibl] / xssi.get(is)[ibm]);
               uei = uedg_from_ibl0(is, ibm - 1);
             } else {
-              if (ibl == te0_index(is) + 2) {
+              if (ibl0 == iblte.get(is) + 1) {
                 cti = cte;
                 thi = tte;
                 dsi = dte;
@@ -2443,9 +2443,9 @@ bool XFoil::mrchdu() {
                 uei = uedg_from_ibl0(is, ibm - 1);
               }
             }
-            if (ibl == tran_index(is))
+            if (ibl0 == tran0_index(is))
               cti = 0.05;
-            if (ibl > tran_index(is))
+            if (ibl0 > tran0_index(is))
               cti = ctau_from_ibl0(is, ibm - 1);
           }
         }
@@ -2458,22 +2458,22 @@ bool XFoil::mrchdu() {
           trchek();
           ami = blData2.param.amplz;
           if (tran)
-            set_tran0_index(is, ibl - 1);
+            set_tran0_index(is, ibl0);
           if (!tran)
-            set_tran0_index(is, ibl + 1);
+            set_tran0_index(is, ibl0 + 2);
         }
 
         //------- set all other extrapolated values for current station
-        if (ibl < tran_index(is))
+        if (ibl0 < tran0_index(is))
           blvar(blData2, FlowRegimeEnum::Laminar);
-        if (ibl >= tran_index(is))
+        if (ibl0 >= tran0_index(is))
           blvar(blData2, FlowRegimeEnum::Turbulent);
         if (wake)
           blvar(blData2, FlowRegimeEnum::Wake);
 
-        if (ibl < tran_index(is))
+        if (ibl0 < tran0_index(is))
           blmid(FlowRegimeEnum::Laminar);
-        if (ibl >= tran_index(is))
+        if (ibl0 >= tran0_index(is))
           blmid(FlowRegimeEnum::Turbulent);
         if (wake)
           blmid(FlowRegimeEnum::Wake);
@@ -2484,14 +2484,14 @@ bool XFoil::mrchdu() {
 
       //------ store primary variables
       if (ibl < tran_index(is))
-        set_ctau_at_ibl0(is, ibl - 1, ami);
+        set_ctau_at_ibl0(is, ibl0, ami);
       else
-        set_ctau_at_ibl0(is, ibl - 1, cti);
-      set_thet_at_ibl0(is, ibl - 1, thi);
-      set_dstr_at_ibl0(is, ibl - 1, dsi);
-      set_uedg_at_ibl0(is, ibl - 1, uei);
-      set_mass_at_ibl0(is, ibl - 1, dsi * uei);
-      set_ctq_at_ibl0(is, ibl - 1, blData2.cqz.scalar);
+        set_ctau_at_ibl0(is, ibl0, cti);
+      set_thet_at_ibl0(is, ibl0, thi);
+      set_dstr_at_ibl0(is, ibl0, dsi);
+      set_uedg_at_ibl0(is, ibl0, uei);
+      set_mass_at_ibl0(is, ibl0, dsi * uei);
+      set_ctq_at_ibl0(is, ibl0, blData2.cqz.scalar);
 
       //------ set "1" variables to "2" variables for next streamwise station
       blprv(xsi, ami, cti, thi, dsi, dswaki, uei);
@@ -2500,7 +2500,7 @@ bool XFoil::mrchdu() {
       stepbl();
 
       //------ turbulent intervals will follow transition interval or te
-      if (tran || ibl == te0_index(is) + 1) {
+      if (tran || ibl0 == iblte.get(is)) {
         turb = true;
       }
 
@@ -2582,21 +2582,21 @@ bool XFoil::mrchue() {
 
     tran = false;
     turb = false;
-    set_tran0_index(is, te0_index(is));
+    set_tran0_index(is, iblte.get(is));
 
     //---- march downstream
     for (int ibl = 1; ibl < nbl.get(is); ++ibl) {
       int ibm = ibl;
-      int iw = ibl - (te0_index(is) + 1);
+      int iw = ibl - (iblte.get(is) + 1);
       simi = (ibl == 1);
-      wake = ibl > te0_index(is) + 1;
+      wake = ibl > iblte.get(is) + 1;
 
       //------ prescribed quantities
       xsi = xssi.get(is)[ibl];
       uei = uedg_from_ibl0(is, ibl - 1);
 
       if (wake) {
-        iw = ibl - (te0_index(is) + 1);
+        iw = ibl - (iblte.get(is) + 1);
         dswaki = wgap[iw - 1];
       } else
         dswaki = 0.0;
@@ -2630,7 +2630,7 @@ bool XFoil::mrchue() {
             set_tran0_index(is, ibl + 1);
         }
 
-        if (ibl == te0_index(is) + 2) {
+        if (ibl == iblte.get(is) + 2) {
           tte = thet_from_ibl0(1, te0_index(1)) +
                 thet_from_ibl0(2, te0_index(2));
           dte = dstr_from_ibl0(1, te0_index(1)) +
@@ -2664,7 +2664,7 @@ bool XFoil::mrchue() {
           if (dmax > 0.3)
             rlx = 0.3 / dmax;
           //--------- see if direct mode is not applicable
-          if (ibl != te0_index(is) + 2) {
+          if (ibl != iblte.get(is) + 2) {
             //---------- calculate resulting kinematic shape parameter hk
             msq =
                 uei * uei * hstinv / (gm1bl * (1.0 - 0.5 * uei * uei * hstinv));
@@ -2736,7 +2736,7 @@ bool XFoil::mrchue() {
           cti = std::min(cti, 0.30);
           cti = std::max(cti, 0.0000001);
         }
-        if (ibl <= te0_index(is) + 1)
+        if (ibl <= iblte.get(is) + 1)
           hklim = 1.02;
         else
           hklim = 1.00005;
@@ -2762,13 +2762,13 @@ bool XFoil::mrchue() {
           //------- the current solution is garbage --> extrapolate values
           // instead
           if (ibl > 2) {
-            if (ibl <= te0_index(is) + 1) {
+            if (ibl <= iblte.get(is) + 1) {
               thi = thet_from_ibl0(is, ibl - 2) *
                     sqrt(xssi.get(is)[ibl] / xssi.get(is)[ibl - 1]);
               dsi = dstr_from_ibl0(is, (ibl - 1) - 1) *
                     sqrt(xssi.get(is)[ibl] / xssi.get(is)[ibl - 1]);
             } else {
-              if (ibl == te0_index(is) + 2) {
+              if (ibl == iblte.get(is) + 2) {
                 cti = cte;
                 thi = tte;
                 dsi = dte;
@@ -2838,13 +2838,13 @@ bool XFoil::mrchue() {
       stepbl();
 
       //------ turbulent intervals will follow transition interval or te
-      if (tran || ibl == te0_index(is) + 1) {
+      if (tran || ibl == iblte.get(is) + 1) {
         turb = true;
       }
 
       tran = false;
 
-      if (ibl == te0_index(is) + 1) {
+      if (ibl == iblte.get(is) + 1) {
         thi = thet_from_ibl0(1, te0_index(1)) +
               thet_from_ibl0(2, te0_index(2));
         dsi = dstr_from_ibl0(1, te0_index(1)) +
@@ -3232,7 +3232,7 @@ jvte2 = isys.bottom[te0_index(2) + 1];
       int iv = isys.get(is)[ibl];
 
       simi = (ibl == 1);
-      wake = (ibl > te0_index(is) + 1);
+      wake = (ibl > iblte.get(is) + 1);
       tran = (ibl == tran_index(is));
       turb = (ibl > tran_index(is));
 
@@ -3249,7 +3249,7 @@ jvte2 = isys.bottom[te0_index(2) + 1];
       dsi = mdi / uei;
 
       if (wake) {
-        int iw = ibl - (te0_index(is) + 1);
+        int iw = ibl - (iblte.get(is) + 1);
         dswaki = wgap[iw - 1];
       } else
         dswaki = 0.0;
@@ -3297,7 +3297,7 @@ jvte2 = isys.bottom[te0_index(2) + 1];
       //---- assemble 10x4 linearized system for dctau, dth, dds, due, dxi
       //	   at the previous "1" station and the current "2" station
 
-      if (ibl == te0_index(is) + 2) {
+      if (ibl == iblte.get(is) + 2) {
         //----- define quantities at start of wake, adding te base thickness to
         // dstar
         tte = thet_from_ibl0(1, te0_index(1)) +
@@ -3441,7 +3441,7 @@ jvte2 = isys.bottom[te0_index(2) + 1];
                        (vs1(2, 4) + vs2(2, 4) + vsx[2]) *
                            (xi_ule1 * dule1 + xi_ule2 * dule2);
 
-      if (ibl == te0_index(is) + 2) {
+      if (ibl == iblte.get(is) + 2) {
         //----- redefine coefficients for tte, dte, etc
         vz[0][0] = vs1(0, 0) * cte_cte1;
         vz[0][1] = vs1(0, 0) * cte_tte1 + vs1(0, 1) * tte_tte1;
@@ -3469,7 +3469,7 @@ jvte2 = isys.bottom[te0_index(2) + 1];
 
       tran = false;
 
-      if (ibl == te0_index(is) + 1) {
+      if (ibl == iblte.get(is) + 1) {
         //----- set "2" variables at te to wake correlations for next station
 
         turb = true;
@@ -4657,7 +4657,7 @@ void XFoil::computeQtan(const SidePair<VectorXd> &unew,
   for (int is = 1; is <= 2; is++) {
     // Up to TE station (exclusive upper bound). Use 0-based TE scalar and
     // convert locally to 1-based BL array index.
-    const int te0 = te0_index(is) + 1;
+    const int te0 = iblte.get(is) + 1;
     for (int ibl = 1; ibl < te0; ++ibl) {
       int i = ipan_from_ibl0(is, ibl - 1);
       const VectorXd &unew_vec = (is == 1) ? unew.top : unew.bottom;
@@ -4918,12 +4918,12 @@ bool XFoil::update() {
     }
 
     for (int ibl = 1; ibl < nbl.get(is); ++ibl) {
-      if (ibl > te0_index(is) + 1) {
-        dswaki = wgap[ibl - (te0_index(is) + 1) - 1];
+      if (ibl > iblte.get(is) + 1) {
+        dswaki = wgap[ibl - (iblte.get(is) + 1) - 1];
       } else
         dswaki = 0.0;
 
-      if (ibl <= te0_index(is) + 1)
+      if (ibl <= iblte.get(is) + 1)
         hklim = 1.02;
       else
         hklim = 1.00005;
@@ -5153,7 +5153,7 @@ double XFoil::xifset(int is) {
   double str;
 
   if (xstrip.get(is) >= 1.0) {
-    return xssi.get(is)[te0_index(is) + 1];
+    return xssi.get(is)[iblte.get(is) + 1];
   }
 
   Vector2d point_chord = point_te - point_le;
@@ -5173,12 +5173,12 @@ double XFoil::xifset(int is) {
     str = sle + (spline_length[n - 1] - sle) * xstrip.bottom;
   }
   str = spline::sinvrt(str, xstrip.get(is), w1, w3, spline_length.head(n), n);
-  xiforc = std::min((str - sst), xssi.get(is)[te0_index(is) + 1]);
+  xiforc = std::min((str - sst), xssi.get(is)[iblte.get(is) + 1]);
   if (xiforc < 0.0) {
     ss << " ***  stagnation point is past trip on side " << is << "\n";
     writeString(ss.str());
 
-    xiforc = xssi.get(is)[te0_index(is) + 1];
+    xiforc = xssi.get(is)[iblte.get(is) + 1];
   }
 
   return xiforc;
