@@ -305,16 +305,11 @@ class XFoil {
     return ipan.get(is)[ibl0];
   }
 
-  // 0-based accessors for BL arrays still stored 1-based internally
-  inline double thet_from_ibl0(int is, int ibl0) const { return thet.get(is)[ibl0 + 1]; }
-  inline void set_thet_at_ibl0(int is, int ibl0, double val) { thet.get(is)[ibl0 + 1] = val; }
-  // 0-based accessors for other BL arrays (currently 1-based storage)
-  inline double ctau_from_ibl0(int is, int ibl0) const { return ctau.get(is)[ibl0 + 1]; }
-  inline void set_ctau_at_ibl0(int is, int ibl0, double val) { ctau.get(is)[ibl0 + 1] = val; }
-  inline double dstr_from_ibl0(int is, int ibl0) const { return dstr.get(is)[ibl0 + 1]; }
-  inline void set_dstr_at_ibl0(int is, int ibl0, double val) { dstr.get(is)[ibl0 + 1] = val; }
-  inline double mass_from_ibl0(int is, int ibl0) const { return mass.get(is)[ibl0 + 1]; }
-  inline void set_mass_at_ibl0(int is, int ibl0, double val) { mass.get(is)[ibl0 + 1] = val; }
+  // (removed) 0-based accessors for BL arrays: use direct access
+  // thet: thet.get(is)[ibl0]
+  // ctau: ctau.get(is)[ibl0]
+  // dstr: dstr.get(is)[ibl0]
+  // mass: mass.get(is)[ibl0]
   inline double ctq_from_ibl0(int is, int ibl0) const { return ctq.get(is)[ibl0 + 1]; }
   inline void set_ctq_at_ibl0(int is, int ibl0, double val) { ctq.get(is)[ibl0 + 1] = val; }
   inline double uinv_from_ibl0(int is, int ibl0) const { return uinv.get(is)[ibl0 + 1]; }
