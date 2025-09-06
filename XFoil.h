@@ -311,9 +311,7 @@ class XFoil {
   // 0-based accessors for BL arrays still stored 1-based internally
   inline double vti_from_ibl0(int is, int ibl0) const { return vti.get(is)[ibl0]; }
   inline double thet_from_ibl0(int is, int ibl0) const { return thet.get(is)[ibl0 + 1]; }
-  inline double uedg_from_ibl0(int is, int ibl0) const { return uedg.get(is)[ibl0]; }
   inline void set_thet_at_ibl0(int is, int ibl0, double val) { thet.get(is)[ibl0 + 1] = val; }
-  inline void set_uedg_at_ibl0(int is, int ibl0, double val) { uedg.get(is)[ibl0] = val; }
   // 0-based accessors for other BL arrays (currently 1-based storage)
   inline double ctau_from_ibl0(int is, int ibl0) const { return ctau.get(is)[ibl0 + 1]; }
   inline void set_ctau_at_ibl0(int is, int ibl0, double val) { ctau.get(is)[ibl0 + 1] = val; }
