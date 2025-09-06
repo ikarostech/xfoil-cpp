@@ -3015,9 +3015,9 @@ bool XFoil::qiset() {
  * -------------------------------------------------------------- */
 bool XFoil::qvfue() {
   for (int is = 1; is <= 2; is++) {
-    for (int ibl = 1; ibl < nbl.get(is); ++ibl) {
-      int i = ipan.get(is)[ibl - 1];
-      qvis[i] = vti.get(is)[ibl - 1] * uedg.get(is)[ibl - 1];
+    for (int ibl = 0; ibl < nbl.get(is) - 1; ++ibl) {
+      int i = ipan.get(is)[ibl];
+      qvis[i] = vti.get(is)[ibl] * uedg.get(is)[ibl];
     }
   }
 
@@ -3064,11 +3064,11 @@ bool XFoil::saveblData(int icom) {
 
 void XFoil::swapEdgeVelocities(SidePair<VectorXd> &usav) {
   for (int is = 1; is <= 2; ++is) {
-    for (int ibl = 1; ibl < nbl.get(is); ++ibl) {
-      double temp = usav.get(is)[ibl - 1];
-      double cur = uedg.get(is)[ibl - 1];
-      usav.get(is)[ibl - 1] = cur;
-      uedg.get(is)[ibl - 1] = temp;
+    for (int ibl = 0; ibl < nbl.get(is) - 1; ++ibl) {
+      double temp = usav.get(is)[ibl];
+      double cur = uedg.get(is)[ibl];
+      usav.get(is)[ibl] = cur;
+      uedg.get(is)[ibl] = temp;
     }
   }
 }
@@ -3846,11 +3846,11 @@ bool XFoil::stmove() {
       }
 
       //---- move bottom side bl variables upstream
-      for (int ibl = 1; ibl < nbl.bottom; ibl++) {
-        ctau.bottom[ibl - 1] = ctau.bottom[(ibl + idif) - 1];
-        thet.bottom[ibl - 1] = thet.bottom[(ibl + idif) - 1];
-        dstr.bottom[ibl - 1] = dstr.bottom[(ibl + idif) - 1];
-        uedg.bottom[ibl - 1] = uedg.bottom[(ibl + idif) - 1];
+      for (int ibl = 0; ibl < nbl.bottom - 1; ibl++) {
+        ctau.bottom[ibl] = ctau.bottom[ibl + idif];
+        thet.bottom[ibl] = thet.bottom[ibl + idif];
+        dstr.bottom[ibl] = dstr.bottom[ibl + idif];
+        uedg.bottom[ibl] = uedg.bottom[ibl + idif];
       }
     } else {
       //---- increase in number of points on bottom side (is=2)
@@ -3878,19 +3878,19 @@ bool XFoil::stmove() {
       }
 
       //---- move top side bl variables upstream
-      for (int ibl = 1; ibl < nbl.top; ibl++) {
-        ctau.top[ibl - 1] = ctau.top[(ibl + idif) - 1];
-        thet.top[ibl - 1] = thet.top[(ibl + idif) - 1];
-        dstr.top[ibl - 1] = dstr.top[(ibl + idif) - 1];
-        uedg.top[ibl - 1] = uedg.top[(ibl + idif) - 1];
+      for (int ibl = 0; ibl < nbl.top - 1; ibl++) {
+        ctau.top[ibl] = ctau.top[ibl + idif];
+        thet.top[ibl] = thet.top[ibl + idif];
+        dstr.top[ibl] = dstr.top[ibl + idif];
+        uedg.top[ibl] = uedg.top[ibl + idif];
       }
     }
   }
 
   //-- set new mass array since ue has been tweaked
   for (int is = 1; is <= 2; is++) {
-    for (int ibl = 1; ibl < nbl.get(is); ++ibl) {
-      mass.get(is)[ibl - 1] = dstr.get(is)[ibl - 1] * uedg.get(is)[ibl - 1];
+    for (int ibl = 0; ibl < nbl.get(is) - 1; ++ibl) {
+      mass.get(is)[ibl] = dstr.get(is)[ibl] * uedg.get(is)[ibl];
     }
   }
 
@@ -4589,17 +4589,17 @@ bool XFoil::ueset() {
   //     sets ue from inviscid ue plus all source influence
   //---------------------------------------------------------
   for (int is = 1; is <= 2; is++) {
-    for (int ibl = 1; ibl < nbl.get(is); ++ibl) {
+    for (int ibl = 0; ibl < nbl.get(is) - 1; ++ibl) {
       double dui = 0.0;
       for (int js = 1; js <= 2; js++) {
-        for (int jbl = 1; jbl < nbl.get(js); ++jbl) {
-          double ue_m = -vti.get(is)[ibl - 1] * vti.get(js)[jbl - 1] *
-                        dij(ipan.get(is)[ibl - 1],
-                            ipan.get(js)[jbl - 1]);
-          dui += ue_m * mass.get(js)[jbl - 1];
+        for (int jbl = 0; jbl < nbl.get(js) - 1; ++jbl) {
+          double ue_m = -vti.get(is)[ibl] * vti.get(js)[jbl] *
+                        dij(ipan.get(is)[ibl],
+                            ipan.get(js)[jbl]);
+          dui += ue_m * mass.get(js)[jbl];
         }
       }
-      uedg.get(is)[ibl - 1] = uinv.get(is)[ibl - 1] + dui;
+      uedg.get(is)[ibl] = uinv.get(is)[ibl] + dui;
     }
   }
   return true;
@@ -4612,10 +4612,10 @@ bool XFoil::uicalc() {
   for (int is = 1; is <= 2; is++) {
     uinv.get(is)[0] = 0.0;
     uinv_a.get(is)[0] = 0.0;
-    for (int ibl = 1; ibl < nbl.get(is); ++ibl) {
-      int i = ipan.get(is)[ibl - 1];
-      uinv.get(is)[ibl - 1] = vti.get(is)[ibl - 1] * qinv[i];
-      uinv_a.get(is)[ibl - 1] = vti.get(is)[ibl - 1] * qinv_a[i];
+    for (int ibl = 0; ibl < nbl.get(is) - 1; ++ibl) {
+      int i = ipan.get(is)[ibl];
+      uinv.get(is)[ibl] = vti.get(is)[ibl] * qinv[i];
+      uinv_a.get(is)[ibl] = vti.get(is)[ibl] * qinv_a[i];
     }
   }
 
@@ -4628,25 +4628,25 @@ bool XFoil::uicalc() {
 void XFoil::computeNewUeDistribution(SidePair<VectorXd> &unew,
                                      SidePair<VectorXd> &u_ac) {
   for (int is = 1; is <= 2; is++) {
-    for (int ibl = 1; ibl < nbl.get(is); ++ibl) {
-      int i = ipan.get(is)[ibl - 1];
+    for (int ibl = 0; ibl < nbl.get(is) - 1; ++ibl) {
+      int i = ipan.get(is)[ibl];
       double dui = 0.0;
       double dui_ac = 0.0;
       for (int js = 1; js <= 2; js++) {
-        for (int jbl = 1; jbl < nbl.get(js); ++jbl) {
-          int j = ipan.get(js)[jbl - 1];
-          int jv = isys.get(js)[jbl];
-          double ue_m = -vti.get(is)[ibl - 1] * vti.get(js)[jbl - 1] *
+        for (int jbl = 0; jbl < nbl.get(js) - 1; ++jbl) {
+          int j = ipan.get(js)[jbl];
+          int jv = isys.get(js)[jbl + INDEX_START_WITH];
+          double ue_m = -vti.get(is)[ibl] * vti.get(js)[jbl] *
                         dij(i, j);
-          dui += ue_m * (mass.get(js)[jbl - 1] + vdel[jv](2, 0));
+          dui += ue_m * (mass.get(js)[jbl] + vdel[jv](2, 0));
           dui_ac += ue_m * (-vdel[jv](2, 1));
         }
       }
 
-      double uinv_ac = lalfa ? 0.0 : uinv_a.get(is)[ibl - 1];
+      double uinv_ac = lalfa ? 0.0 : uinv_a.get(is)[ibl];
       // Store unew/u_ac at 0-based station index
-      unew.get(is)[ibl - 1] = uinv.get(is)[ibl - 1] + dui;
-      u_ac.get(is)[ibl - 1] = uinv_ac + dui_ac;
+      unew.get(is)[ibl] = uinv.get(is)[ibl] + dui;
+      u_ac.get(is)[ibl] = uinv_ac + dui_ac;
     }
   }
 }
@@ -4658,16 +4658,12 @@ void XFoil::computeQtan(const SidePair<VectorXd> &unew,
                         const SidePair<VectorXd> &u_ac, double qnew[],
                         double q_ac[]) {
   for (int is = 1; is <= 2; is++) {
-    // Up to TE station (exclusive upper bound). Use 0-based TE scalar and
-    // convert locally to 1-based BL array index.
-    const int te0 = iblte.get(is) + 1;
-    for (int ibl = 1; ibl < te0; ++ibl) {
-      int i = ipan.get(is)[ibl - 1];
+    for (int ibl = 0; ibl < iblte.get(is); ++ibl) {
+      int i = ipan.get(is)[ibl];
       const VectorXd &unew_vec = (is == 1) ? unew.top : unew.bottom;
       const VectorXd &uac_vec = (is == 1) ? u_ac.top : u_ac.bottom;
-      // Read unew/u_ac at 0-based station index
-      qnew[i] = vti.get(is)[ibl - 1] * unew_vec[ibl - 1];
-      q_ac[i] = vti.get(is)[ibl - 1] * uac_vec[ibl - 1];
+      qnew[i] = vti.get(is)[ibl] * unew_vec[ibl];
+      q_ac[i] = vti.get(is)[ibl] * uac_vec[ibl];
     }
   }
 }
@@ -4920,29 +4916,29 @@ bool XFoil::update() {
       uedg.get(is)[j] = uedg_slice[j];
     }
 
-    for (int ibl = 1; ibl < nbl.get(is); ++ibl) {
-      if (ibl > iblte.get(is) + 1) {
-        dswaki = wgap[ibl - (iblte.get(is) + 1) - 1];
+    for (int ibl = 0; ibl < nbl.get(is) - 1; ++ibl) {
+      if (ibl > iblte.get(is)) {
+        dswaki = wgap[ibl - (iblte.get(is) + 1)];
       } else
         dswaki = 0.0;
 
-      if (ibl <= iblte.get(is) + 1)
+      if (ibl <= iblte.get(is))
         hklim = 1.02;
       else
         hklim = 1.00005;
 
-      msq = uedg.get(is)[ibl - 1] *
-            uedg.get(is)[ibl - 1] * hstinv /
+      msq = uedg.get(is)[ibl] *
+            uedg.get(is)[ibl] * hstinv /
             (gamm1 *
-             (1.0 - 0.5 * uedg.get(is)[ibl - 1] *
-                        uedg.get(is)[ibl - 1] * hstinv));
-      dsw = dstr.get(is)[ibl - 1] - dswaki;
-      dslim(dsw, thet.get(is)[ibl - 1], msq, hklim);
-      dstr.get(is)[ibl - 1] = dsw + dswaki;
+             (1.0 - 0.5 * uedg.get(is)[ibl] *
+                        uedg.get(is)[ibl] * hstinv));
+      dsw = dstr.get(is)[ibl] - dswaki;
+      dslim(dsw, thet.get(is)[ibl], msq, hklim);
+      dstr.get(is)[ibl] = dsw + dswaki;
 
       //------- set new mass defect (nonlinear update)
-      mass.get(is)[ibl - 1] =
-          dstr.get(is)[ibl - 1] * uedg.get(is)[ibl - 1];
+      mass.get(is)[ibl] =
+          dstr.get(is)[ibl] * uedg.get(is)[ibl];
     }
   }
 
@@ -4997,11 +4993,11 @@ bool XFoil::viscal() {
 
   if (!lblini) {
     //	----- set initial ue from inviscid ue
-    for (int ibl = 1; ibl < nbl.top; ibl++) {
-      uedg.top[ibl - 1] = uinv.top[ibl - 1];
+    for (int ibl = 0; ibl < nbl.top - 1; ibl++) {
+      uedg.top[ibl] = uinv.top[ibl];
     }
-    for (int ibl = 1; ibl < nbl.bottom; ibl++) {
-      uedg.bottom[ibl - 1] = uinv.bottom[ibl - 1];
+    for (int ibl = 0; ibl < nbl.bottom - 1; ibl++) {
+      uedg.bottom[ibl] = uinv.bottom[ibl];
     }
   }
 
