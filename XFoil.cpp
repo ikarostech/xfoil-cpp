@@ -4902,7 +4902,6 @@ bool XFoil::update() {
     uedg_slice += rlx * duedg_seg.get(is);
 
     VectorXi iblSeq = VectorXi::LinSpaced(len, 0, len - 1);
-    // Use 0-based comparison for transition: ibl0 >= tran0
     ctau_slice =
         ((iblSeq.array()) >= itran.get(is))
             .select(ctau_slice.array().cwiseMin(0.25), ctau_slice.array())
@@ -5074,29 +5073,24 @@ bool XFoil::xicalc() {
   //     sets bl arc length array on each airfoil side and wake
   //-------------------------------------------------------------
 
-  // 0-based: fill surface arc lengths from stagnation to TE
-  {
-    const int te0_top = iblte.top; // 0-based TE station index
-    for (int ibl0 = 0; ibl0 <= te0_top; ++ibl0) {
-      xssi.top[ibl0] = sst - spline_length[ipan.get(1)[ibl0]];
+  
+    for (int ibl = 0; ibl <= iblte.top; ++ibl) {
+      xssi.top[ibl] = sst - spline_length[ipan.get(1)[ibl]];
     }
-  }
-
-  {
-    const int te0_bot = iblte.bottom; // 0-based TE station index
-    for (int ibl0 = 0; ibl0 <= te0_bot; ++ibl0) {
-      xssi.bottom[ibl0] = spline_length[ipan.get(2)[ibl0]] - sst;
+  
+    for (int ibl = 0; ibl <= iblte.bottom; ++ibl) {
+      xssi.bottom[ibl] = spline_length[ipan.get(2)[ibl]] - sst;
     }
 
     // Wake: start from TE, duplicate TE value at first wake station
-    xssi.bottom[te0_bot + 1] = xssi.bottom[te0_bot];
-    for (int ibl0 = te0_bot + 2; ibl0 < nbl.bottom; ++ibl0) {
-      xssi.bottom[ibl0] = xssi.bottom[ibl0 - 1] +
-                          (points.col(ipan.get(2)[ibl0 - 1]) -
-                           points.col(ipan.get(2)[(ibl0 - 1) - 1]))
+    xssi.bottom[iblte.bottom + 1] = xssi.bottom[iblte.bottom];
+    for (int ibl = iblte.bottom + 2; ibl < nbl.bottom; ++ibl) {
+      xssi.bottom[ibl] = xssi.bottom[ibl - 1] +
+                          (points.col(ipan.get(2)[ibl - 1]) -
+                           points.col(ipan.get(2)[ibl - 2]))
                               .norm();
     }
-  }
+  
 
   //---- trailing edge flap length to te gap ratio
   const double telrat = 2.50;
