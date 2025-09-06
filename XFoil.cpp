@@ -3188,8 +3188,12 @@ bool XFoil::setbl() {
   mrchdu();
 
   SidePair<VectorXd> usav;
-  usav.top = uedg.top.segment(1, IVX - 1);
-  usav.bottom = uedg.bottom.segment(1, IVX - 1);
+  for (int is = 1; is <= 2; ++is) {
+    usav.get(is) = VectorXd::Zero(IVX);
+    for (int ibl = 1; ibl < IVX; ++ibl) {
+      usav.get(is)[ibl - 1] = uedg_from_ibl0(is, ibl - 1);
+    }
+  }
 
   ueset();
   swapEdgeVelocities(usav);
@@ -5001,11 +5005,11 @@ bool XFoil::viscal() {
 
   if (!lblini) {
     //	----- set initial ue from inviscid ue
-    for (int ibl = 0; ibl < nbl.top; ibl++) {
-      uedg.top[ibl] = uinv.top[ibl];
+    for (int ibl = 1; ibl < nbl.top; ibl++) {
+      set_uedg_at_ibl0(1, ibl - 1, uinv_from_ibl0(1, ibl - 1));
     }
-    for (int ibl = 0; ibl < nbl.bottom; ibl++) {
-      uedg.bottom[ibl] = uinv.bottom[ibl];
+    for (int ibl = 1; ibl < nbl.bottom; ibl++) {
+      set_uedg_at_ibl0(2, ibl - 1, uinv_from_ibl0(2, ibl - 1));
     }
   }
 
