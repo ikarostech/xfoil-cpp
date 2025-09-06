@@ -2212,7 +2212,7 @@ bool XFoil::mrchdu() {
     xiforc = xifset(is);
 
     //---- old transition station
-    itrold = tran_index(is);
+    itrold = tran0_index(is);
 
     tran = false;
     turb = false;
@@ -2232,7 +2232,7 @@ bool XFoil::mrchdu() {
       dsi = dstr.get(is)[ibl0];
 
       //------ fixed bug   md 7 june 99
-      if (ibl < itrold) {
+      if (ibl0 < itrold) {
         ami = ctau.get(is)[ibl0]; // ami must be initialized
         cti = 0.03;
       } else {
@@ -2295,7 +2295,7 @@ bool XFoil::mrchdu() {
 
           //--------- if current point ibl was turbulent and is now laminar,
           // then...
-          if (ibl0 < tran0_index(is) && ibl0 >= itrold - INDEX_START_WITH) {
+          if (ibl0 < tran0_index(is) && ibl0 >= itrold) {
             //---------- extrapolate baseline hk
             if (ibl > 1) {
               uem = uedg.get(is)[ibl0 - 1];
@@ -2314,7 +2314,7 @@ bool XFoil::mrchdu() {
           }
 
           //--------- if current point ibl was laminar, then...
-          if (ibl0 < itrold - INDEX_START_WITH) {
+          if (ibl0 < itrold) {
             //---------- reinitialize or extrapolate ctau if it's now turbulent
             if (tran)
               ctau.get(is)[ibl0] = 0.03;
