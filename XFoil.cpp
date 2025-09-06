@@ -2041,10 +2041,9 @@ bool XFoil::iblpan() {
 bool XFoil::iblsys() {
   int iv = 0;
   for (int is = 1; is <= 2; is++) {
-    // 0-based: map BL station ibl0=0..nbl-2 to system line indices 1..nsys
-    for (int ibl0 = 0; ibl0 < nbl.get(is) - 1; ++ibl0) {
+    for (int ibl = 0; ibl < nbl.get(is) - 1; ++ibl) {
       iv++;
-      isys.get(is)[ibl0] = iv;
+      isys.get(is)[ibl] = iv;
     }
   }
 
@@ -3231,29 +3230,29 @@ jvte2 = isys.bottom[iblte.bottom];
     turb = false;
 
     //**** sweep downstream setting up bl equation linearizations
-    for (int ibl = 1; ibl < nbl.get(is); ++ibl) {
-      int ibl0 = ibl - 1;
-      int iv = isys.get(is)[ibl0];
+    for (int ibl = 0; ibl < nbl.get(is) - 1; ++ibl) {
+      
+      int iv = isys.get(is)[ibl];
 
-      simi = (ibl0 == 0);
-      wake = (ibl0 > iblte.get(is));
-      tran = (ibl0 == itran.get(is));
-      turb = (ibl0 > itran.get(is));
+      simi = (ibl == 0);
+      wake = (ibl > iblte.get(is));
+      tran = (ibl == itran.get(is));
+      turb = (ibl > itran.get(is));
 
       //---- set primary variables for current station
-      xsi = xssi.get(is)[ibl - 1];
-      if (ibl0 < itran.get(is))
-        ami = ctau.get(is)[ibl0];
+      xsi = xssi.get(is)[ibl];
+      if (ibl < itran.get(is))
+        ami = ctau.get(is)[ibl];
       else
-        cti = ctau.get(is)[ibl0];
-      uei = uedg.get(is)[ibl0];
-      thi = thet.get(is)[ibl0];
-      mdi = mass.get(is)[ibl0];
+        cti = ctau.get(is)[ibl];
+      uei = uedg.get(is)[ibl];
+      thi = thet.get(is)[ibl];
+      mdi = mass.get(is)[ibl];
 
       dsi = mdi / uei;
 
       if (wake) {
-        int iw = ibl0 - iblte.get(is);
+        int iw = ibl - iblte.get(is);
         dswaki = wgap[iw - 1];
       } else
         dswaki = 0.0;
@@ -3265,19 +3264,19 @@ jvte2 = isys.bottom[iblte.bottom];
       for (int js = 1; js <= 2; js++) {
         for (int jbl = 0; jbl < nbl.get(js) - 1; ++jbl) {
           int jv = isys.get(js)[jbl];
-          u2_m[jv] = -vti.get(is)[ibl0] * vti.get(js)[jbl] *
-                     dij(ipan.get(is)[ibl0], ipan.get(js)[jbl]);
+          u2_m[jv] = -vti.get(is)[ibl] * vti.get(js)[jbl] *
+                     dij(ipan.get(is)[ibl], ipan.get(js)[jbl]);
           d2_m[jv] = d2_u2 * u2_m[jv];
         }
       }
       d2_m[iv] = d2_m[iv] + d2_m2;
 
-      u2_a = uinv_a.get(is)[ibl0];
+      u2_a = uinv_a.get(is)[ibl];
       d2_a = d2_u2 * u2_a;
 
       //---- "forced" changes due to mismatch between uedg and
       // usav=uinv+dij*mass
-      due2 = uedg.get(is)[ibl0] - usav.get(is)[ibl0];
+      due2 = uedg.get(is)[ibl] - usav.get(is)[ibl];
       dds2 = d2_u2 * due2;
 
       blprv(xsi, ami, cti, thi, dsi, dswaki, uei); // cti
@@ -3289,7 +3288,7 @@ jvte2 = isys.bottom[iblte.bottom];
         ami = blData2.param.amplz;
       }
 
-      if (ibl0 == itran.get(is) && !tran) {
+      if (ibl == itran.get(is) && !tran) {
         // TRACE("setbl: xtr???  n1=%d n2=%d: \n", ampl1, ampl2);
 
         ss << "setbl: xtr???  n1=" << blData1.param.amplz
@@ -3301,7 +3300,7 @@ jvte2 = isys.bottom[iblte.bottom];
       //---- assemble 10x4 linearized system for dctau, dth, dds, due, dxi
       //	   at the previous "1" station and the current "2" station
 
-      if (ibl == iblte.get(is) + 2) {
+      if (ibl == iblte.get(is) + 1) {
         //----- define quantities at start of wake, adding te base thickness to
         // dstar
         tte = thet.get(1)[iblte.top] +
@@ -3354,7 +3353,7 @@ jvte2 = isys.bottom[iblte.bottom];
 
       //---- save wall shear and equil. max shear coefficient for plotting
       // output
-      ctq.get(is)[ibl - 1] = blData2.cqz.scalar;
+      ctq.get(is)[ibl] = blData2.cqz.scalar;
 
       //---- set xi sensitivities wrt le ue changes
       if (is == 1) {
@@ -3445,7 +3444,7 @@ jvte2 = isys.bottom[iblte.bottom];
                        (vs1(2, 4) + vs2(2, 4) + vsx[2]) *
                            (xi_ule1 * dule1 + xi_ule2 * dule2);
 
-      if (ibl0 == iblte.get(is) + 1) {
+      if (ibl == iblte.get(is) + 1) {
         //----- redefine coefficients for tte, dte, etc
         vz[0][0] = vs1(0, 0) * cte_cte1;
         vz[0][1] = vs1(0, 0) * cte_tte1 + vs1(0, 1) * tte_tte1;
@@ -3468,12 +3467,12 @@ jvte2 = isys.bottom[iblte.bottom];
         turb = true;
 
         //------ save transition location
-        itran.get(is) = ibl0;
+        itran.get(is) = ibl;
       }
 
       tran = false;
 
-      if (ibl0 == iblte.get(is)) {
+      if (ibl == iblte.get(is)) {
         //----- set "2" variables at te to wake correlations for next station
 
         turb = true;
