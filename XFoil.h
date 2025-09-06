@@ -286,36 +286,6 @@ class XFoil {
   double sign(double a, double b);
 
  public:
-  // Helpers to make BL indexing readable
-  // 0-based logical station index (use for logic; convert to +1 for array segments)
-  inline int bl_index(int ibl0) const { return ibl0; }
-  // 0-based TE/transition indices (logic用). 配列アクセス時は +1 してください。
-  // Note: tran_index remains 1-based for array-index comparisons in legacy code
-  inline int tran_index(int is) const { return itran.get(is) + 1; }
-  // Wake starts just after TE (0-based TE): logicでは iblte+1 が最初のwake
-  inline int wake_start_index(int is) const { return iblte.get(is) + 1; }
-  // 0-based logical indices for TE/transition (same as above; kept for clarity)
-  inline int tran0_index(int is) const { return itran.get(is); }
-  // Setters for 0-based logical indices (store as 0-based internally)
-  inline void set_tran0_index(int is, int tr0) { itran.get(is) = tr0; }
-
-  // 0-based BL-station to panel-index accessor
-  // ipan storage is 0-based (ibl0: 0..)
-  inline int ipan_from_ibl0(int is, int ibl0) const {
-    return ipan.get(is)[ibl0];
-  }
-
-  // (removed) 0-based accessors for BL arrays: use direct access
-  // thet: thet.get(is)[ibl0]
-  // ctau: ctau.get(is)[ibl0]
-  // dstr: dstr.get(is)[ibl0]
-  // mass: mass.get(is)[ibl0]
-  inline double ctq_from_ibl0(int is, int ibl0) const { return ctq.get(is)[ibl0 + 1]; }
-  inline void set_ctq_at_ibl0(int is, int ibl0, double val) { ctq.get(is)[ibl0 + 1] = val; }
-  inline double uinv_from_ibl0(int is, int ibl0) const { return uinv.get(is)[ibl0 + 1]; }
-  inline void set_uinv_at_ibl0(int is, int ibl0, double val) { uinv.get(is)[ibl0 + 1] = val; }
-  inline double uinv_a_from_ibl0(int is, int ibl0) const { return uinv_a.get(is)[ibl0 + 1]; }
-  inline void set_uinv_a_at_ibl0(int is, int ibl0, double val) { uinv_a.get(is)[ibl0 + 1] = val; }
 
   static double vaccel;
   static bool s_bCancel;
