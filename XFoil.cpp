@@ -1385,7 +1385,7 @@ bool XFoil::blsolve() {
       vdel[ivp](k, 1) -= D[k][0] * col[0] + D[k][1] * col[1] + D[k][2] * col[2];
 
     if (iv == ivte1) {
-      int ivz = isys.bottom[iblte.bottom + 1];
+      int ivz = isys.bottom[iblte.bottom];
       double Dz[3][2] = {{vz[0][0], vz[0][1]},
                          {vz[1][0], vz[1][1]},
                          {vz[2][0], vz[2][1]}};
@@ -1452,7 +1452,7 @@ bool XFoil::blsolve() {
     }
   };
 
-int ivte1 = isys.top[iblte.top + 1];
+int ivte1 = isys.top[iblte.top];
   for (int iv = 1; iv <= nsys; iv++) {
     int ivp = iv + 1;
     eliminateVaBlock(iv, ivp);
@@ -2041,9 +2041,10 @@ bool XFoil::iblpan() {
 bool XFoil::iblsys() {
   int iv = 0;
   for (int is = 1; is <= 2; is++) {
-    for (int ibl = 1; ibl < nbl.get(is); ++ibl) {
+    // 0-based: map BL station ibl0=0..nbl-2 to system line indices 1..nsys
+    for (int ibl0 = 0; ibl0 < nbl.get(is) - 1; ++ibl0) {
       iv++;
-      isys.get(is)[ibl] = iv;
+      isys.get(is)[ibl0] = iv;
     }
   }
 
@@ -3079,7 +3080,7 @@ void XFoil::computeLeTeSensitivities(int ile1, int ile2, int ite1, int ite2,
   for (int js = 1; js <= 2; ++js) {
     for (int jbl = 1; jbl < nbl.get(js); ++jbl) {
       int j = ipan.get(js)[jbl - 1];
-      int jv = isys.get(js)[jbl];
+      int jv = isys.get(js)[jbl - 1];
       ule1_m[jv] = -vti.get(1)[0] * vti.get(js)[jbl - 1] *
                    dij(ile1, j);
       ule2_m[jv] = -vti.get(2)[0] * vti.get(js)[jbl - 1] *
@@ -3095,7 +3096,7 @@ void XFoil::computeLeTeSensitivities(int ile1, int ile2, int ite1, int ite2,
 void XFoil::clearDerivativeVectors(VectorXd &u_m, VectorXd &d_m) {
   for (int js = 1; js <= 2; ++js) {
     for (int jbl = 1; jbl < nbl.get(js); ++jbl) {
-      int jv = isys.get(js)[jbl];
+      int jv = isys.get(js)[jbl - 1];
       u_m[jv] = 0.0;
       d_m[jv] = 0.0;
     }
@@ -3193,8 +3194,8 @@ bool XFoil::setbl() {
 
   ueset();
   swapEdgeVelocities(usav);
-jvte1 = isys.top[iblte.top + 1];
-jvte2 = isys.bottom[iblte.bottom + 1];
+jvte1 = isys.top[iblte.top];
+jvte2 = isys.bottom[iblte.bottom];
 
   dule1 = uedg.top[0] - usav.top[0];
   dule2 = uedg.bottom[0] - usav.bottom[0];
@@ -3232,7 +3233,7 @@ jvte2 = isys.bottom[iblte.bottom + 1];
     //**** sweep downstream setting up bl equation linearizations
     for (int ibl = 1; ibl < nbl.get(is); ++ibl) {
       int ibl0 = ibl - 1;
-      int iv = isys.get(is)[ibl];
+      int iv = isys.get(is)[ibl0];
 
       simi = (ibl0 == 0);
       wake = (ibl0 > iblte.get(is));
@@ -3263,7 +3264,7 @@ jvte2 = isys.bottom[iblte.bottom + 1];
 
       for (int js = 1; js <= 2; js++) {
         for (int jbl = 0; jbl < nbl.get(js) - 1; ++jbl) {
-          int jv = isys.get(js)[jbl + INDEX_START_WITH];
+          int jv = isys.get(js)[jbl];
           u2_m[jv] = -vti.get(is)[ibl0] * vti.get(js)[jbl] *
                      dij(ipan.get(is)[ibl0], ipan.get(js)[jbl]);
           d2_m[jv] = d2_u2 * u2_m[jv];
@@ -3331,7 +3332,7 @@ jvte2 = isys.bottom[iblte.bottom + 1];
         // values
       for (int js = 1; js <= 2; js++) {
         for (int jbl = 0; jbl < nbl.get(js) - 1; ++jbl) {
-            int jv = isys.get(js)[jbl + INDEX_START_WITH];
+            int jv = isys.get(js)[jbl];
             d1_m[jv] = dte_ute1 * ute1_m[jv] + dte_ute2 * ute2_m[jv];
           }
         }
@@ -4635,7 +4636,7 @@ void XFoil::computeNewUeDistribution(SidePair<VectorXd> &unew,
       for (int js = 1; js <= 2; js++) {
         for (int jbl = 0; jbl < nbl.get(js) - 1; ++jbl) {
           int j = ipan.get(js)[jbl];
-          int jv = isys.get(js)[jbl + INDEX_START_WITH];
+          int jv = isys.get(js)[jbl];
           double ue_m = -vti.get(is)[ibl] * vti.get(js)[jbl] *
                         dij(i, j);
           dui += ue_m * (mass.get(js)[jbl] + vdel[jv](2, 0));
@@ -4800,7 +4801,7 @@ bool XFoil::update() {
   SidePair<VectorXd> dctau_seg, dthet_seg, ddstr_seg, duedg_seg;
   for (int is = 1; is <= 2; ++is) {
     // Use 0-based BL indexing for segments (skip ibl=0)
-    int start = 1;
+    int start = 0;
     int len = nbl.get(is) - 1;
     if (len <= 0)
       continue;
