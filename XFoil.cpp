@@ -2225,8 +2225,8 @@ bool XFoil::mrchdu() {
       simi = (ibl == 1);
       wake = ibl > iblte.get(is) + 1;
 
-      //------ initialize current station to existing variables
-      xsi = xssi.get(is)[ibl];
+      //------ initialize current station to existing variables (xssi now 0-based)
+      xsi = xssi.get(is)[ibl0];
       uei = uedg.get(is)[ibl0];
       thi = thet.get(is)[ibl0];
       dsi = dstr.get(is)[ibl0];
@@ -2423,9 +2423,9 @@ bool XFoil::mrchdu() {
           if (ibl0 >= 2) {
             if (ibl0 <= iblte.get(is)) {
               thi = thet.get(is)[ibm - 1] *
-                    sqrt(xssi.get(is)[ibl] / xssi.get(is)[ibm]);
+                    sqrt(xssi.get(is)[ibl0] / xssi.get(is)[ibm - 1]);
               dsi = dstr.get(is)[ibm - 1] *
-                    sqrt(xssi.get(is)[ibl] / xssi.get(is)[ibm]);
+                    sqrt(xssi.get(is)[ibl0] / xssi.get(is)[ibm - 1]);
               uei = uedg.get(is)[ibm - 1];
             } else {
               if (ibl0 == iblte.get(is) + 1) {
@@ -2435,7 +2435,7 @@ bool XFoil::mrchdu() {
                 uei = uedg.get(is)[ibm - 1];
               } else {
                 thi = thet.get(is)[ibm - 1];
-                ratlen = (xssi.get(is)[ibl] - xssi.get(is)[ibm]) /
+                ratlen = (xssi.get(is)[ibl0] - xssi.get(is)[ibm - 1]) /
                          (10.0 * dstr.get(is)[ibm - 1]);
                 dsi = (dstr.get(is)[ibm - 1] +
                        thi * ratlen) /
@@ -2568,7 +2568,8 @@ bool XFoil::mrchue() {
     xiforc = xifset(is);
 
     //---- initialize similarity station with thwaites' formula (keep ibl=1)
-    xsi = xssi.get(is)[1];
+    // xssi is 0-based: first BL station arc length at index 0
+    xsi = xssi.get(is)[0];
     uei = uedg.get(is)[0];
 
     ucon = uei / xsi;
@@ -2591,8 +2592,8 @@ bool XFoil::mrchue() {
       simi = (ibl == 1);
       wake = ibl > iblte.get(is) + 1;
 
-      //------ prescribed quantities
-      xsi = xssi.get(is)[ibl];
+      //------ prescribed quantities (xssi now 0-based)
+      xsi = xssi.get(is)[ibl - 1];
       uei = uedg.get(is)[ibl - 1];
 
       if (wake) {
@@ -2764,9 +2765,9 @@ bool XFoil::mrchue() {
           if (ibl > 2) {
             if (ibl <= iblte.get(is) + 1) {
               thi = thet.get(is)[ibl - 2] *
-                    sqrt(xssi.get(is)[ibl] / xssi.get(is)[ibl - 1]);
+                    sqrt(xssi.get(is)[ibl - 1] / xssi.get(is)[(ibl - 1) - 1]);
               dsi = dstr.get(is)[(ibl - 1) - 1] *
-                    sqrt(xssi.get(is)[ibl] / xssi.get(is)[ibl - 1]);
+                    sqrt(xssi.get(is)[ibl - 1] / xssi.get(is)[(ibl - 1) - 1]);
             } else {
               if (ibl == iblte.get(is) + 2) {
                 cti = cte;
@@ -2774,7 +2775,7 @@ bool XFoil::mrchue() {
                 dsi = dte;
               } else {
                 thi = thet.get(is)[ibl - 2];
-                ratlen = (xssi.get(is)[ibl] - xssi.get(is)[ibl - 1]) /
+                ratlen = (xssi.get(is)[ibl - 1] - xssi.get(is)[(ibl - 1) - 1]) /
                          (10.0 * dstr.get(is)[(ibl - 1) - 1]);
                 dsi = (dstr.get(is)[(ibl - 1) - 1] +
                        thi * ratlen) /
@@ -3238,7 +3239,7 @@ jvte2 = isys.bottom[iblte.bottom + 1];
       turb = (ibl0 > tran0_index(is));
 
       //---- set primary variables for current station
-      xsi = xssi.get(is)[ibl];
+      xsi = xssi.get(is)[ibl - 1];
       if (ibl0 < tran0_index(is))
         ami = ctau.get(is)[ibl0];
       else
@@ -3835,12 +3836,12 @@ bool XFoil::stmove() {
 
       //---- set bl variables between old and new stagnation point
       const double dudx =
-          uedg.top[idif] / xssi.top[idif + 1];
+          uedg.top[idif] / xssi.top[idif];
       for (int ibl = idif; ibl >= 1; ibl--) {
         ctau.top[ibl - 1] = ctau.top[idif];
         thet.top[ibl - 1] = thet.top[idif];
         dstr.top[ibl - 1] = dstr.top[idif];
-        uedg.top[ibl - 1] = dudx * xssi.top[ibl];
+        uedg.top[ibl - 1] = dudx * xssi.top[ibl - 1];
       }
 
       //---- move bottom side bl variables upstream
@@ -3867,12 +3868,12 @@ bool XFoil::stmove() {
 
       //---- set bl variables between old and new stagnation point
       const double dudx =
-          uedg.bottom[idif] / xssi.bottom[idif + 1];
+          uedg.bottom[idif] / xssi.bottom[idif];
       for (int ibl = idif; ibl >= 1; ibl--) {
         ctau.bottom[ibl - 1] = ctau.bottom[idif];
         thet.bottom[ibl - 1] = thet.bottom[idif];
         dstr.bottom[ibl - 1] = dstr.bottom[idif];
-        uedg.bottom[ibl - 1] = dudx * xssi.bottom[ibl];
+        uedg.bottom[ibl - 1] = dudx * xssi.bottom[ibl - 1];
       }
 
       //---- move top side bl variables upstream
@@ -5077,29 +5078,27 @@ bool XFoil::xicalc() {
   //     sets bl arc length array on each airfoil side and wake
   //-------------------------------------------------------------
 
-  xssi.top[0] = 0.0;
+  // 0-based: fill surface arc lengths from stagnation to TE
   {
-    const int te0_top = iblte.top;
-    const int te_top = te0_top + 1; // 1-based array index at TE station
-    for (int ibl = 1; ibl <= te_top; ++ibl) {
-      xssi.top[ibl] = sst - spline_length[ipan_from_ibl0(1, ibl - 1)];
+    const int te0_top = iblte.top; // 0-based TE station index
+    for (int ibl0 = 0; ibl0 <= te0_top; ++ibl0) {
+      xssi.top[ibl0] = sst - spline_length[ipan_from_ibl0(1, ibl0)];
     }
   }
 
-  xssi.bottom[0] = 0.0;
   {
-    const int te0_bot = iblte.bottom;
-    const int te_bot = te0_bot + 1; // 1-based array index at TE station
-    for (int ibl = 1; ibl <= te_bot; ++ibl) {
-      xssi.bottom[ibl] = spline_length[ipan_from_ibl0(2, ibl - 1)] - sst;
+    const int te0_bot = iblte.bottom; // 0-based TE station index
+    for (int ibl0 = 0; ibl0 <= te0_bot; ++ibl0) {
+      xssi.bottom[ibl0] = spline_length[ipan_from_ibl0(2, ibl0)] - sst;
     }
 
-    xssi.bottom[te_bot + 1] = xssi.bottom[te_bot];
-    for (int ibl = te_bot + 2; ibl < nbl.bottom; ++ibl) {
-      xssi.bottom[ibl] = xssi.bottom[ibl - 1] +
-                         (points.col(ipan_from_ibl0(2, ibl - 1)) -
-                          points.col(ipan_from_ibl0(2, ibl - 1) - 1))
-                             .norm();
+    // Wake: start from TE, duplicate TE value at first wake station
+    xssi.bottom[te0_bot + 1] = xssi.bottom[te0_bot];
+    for (int ibl0 = te0_bot + 2; ibl0 < nbl.bottom; ++ibl0) {
+      xssi.bottom[ibl0] = xssi.bottom[ibl0 - 1] +
+                          (points.col(ipan_from_ibl0(2, ibl0 - 1)) -
+                           points.col(ipan_from_ibl0(2, (ibl0 - 1) - 1)))
+                              .norm();
     }
   }
 
@@ -5127,9 +5126,9 @@ bool XFoil::xicalc() {
   else {
     //----- set te flap (wake gap) array (0-based: iw0=0..nw-1)
     for (int iw0 = 0; iw0 < nw; iw0++) {
-      const int te_bot_1b = iblte.bottom + 1; // 1-based TE for array indexing
-      const double zn = 1.0 - (xssi.bottom[te_bot_1b + (iw0 + 1)] -
-                               xssi.bottom[te_bot_1b]) /
+      const int te_bot_0b = iblte.bottom; // 0-based TE for array indexing
+      const double zn = 1.0 - (xssi.bottom[te_bot_0b + (iw0 + 1)] -
+                               xssi.bottom[te_bot_0b]) /
                                   (telrat * ante);
       wgap[iw0] = 0.0;
       if (zn >= 0.0)
@@ -5151,7 +5150,7 @@ double XFoil::xifset(int is) {
   double str;
 
   if (xstrip.get(is) >= 1.0) {
-    return xssi.get(is)[iblte.get(is) + 1];
+    return xssi.get(is)[iblte.get(is)];
   }
 
   Vector2d point_chord = point_te - point_le;
@@ -5171,12 +5170,12 @@ double XFoil::xifset(int is) {
     str = sle + (spline_length[n - 1] - sle) * xstrip.bottom;
   }
   str = spline::sinvrt(str, xstrip.get(is), w1, w3, spline_length.head(n), n);
-  xiforc = std::min((str - sst), xssi.get(is)[iblte.get(is) + 1]);
+  xiforc = std::min((str - sst), xssi.get(is)[iblte.get(is)]);
   if (xiforc < 0.0) {
     ss << " ***  stagnation point is past trip on side " << is << "\n";
     writeString(ss.str());
 
-    xiforc = xssi.get(is)[iblte.get(is) + 1];
+    xiforc = xssi.get(is)[iblte.get(is)];
   }
 
   return xiforc;
