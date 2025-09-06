@@ -1385,7 +1385,7 @@ bool XFoil::blsolve() {
       vdel[ivp](k, 1) -= D[k][0] * col[0] + D[k][1] * col[1] + D[k][2] * col[2];
 
     if (iv == ivte1) {
-      int ivz = isys.bottom[te0_index(2) + 1];
+      int ivz = isys.bottom[iblte.get(2) + 1];
       double Dz[3][2] = {{vz[0][0], vz[0][1]},
                          {vz[1][0], vz[1][1]},
                          {vz[2][0], vz[2][1]}};
@@ -1452,7 +1452,7 @@ bool XFoil::blsolve() {
     }
   };
 
-int ivte1 = isys.top[te0_index(1) + 1];
+int ivte1 = isys.top[iblte.get(1) + 1];
   for (int iv = 1; iv <= nsys; iv++) {
     int ivp = iv + 1;
     eliminateVaBlock(iv, ivp);
@@ -1995,7 +1995,7 @@ bool XFoil::iblpan() {
   // store TE as 0-based logical index
   iblte.top = i_stagnation;
   // nbl exclusive upper bound (0-based TE -> 1-based TE station + 1)
-  nbl.top = te0_index(1) + 2;
+  nbl.top = iblte.get(1) + 2;
 
   //-- bottom surface next
   // Bottom side: station 0 just after stagnation on bottom
@@ -2009,20 +2009,20 @@ bool XFoil::iblpan() {
 
   for (int iw = 0; iw < nw; iw++) {
     int i = n + iw; // panel index in wake
-    int index = te0_index(2) + iw + 2; // 1-based BL station for wake (bottom)
+    int index = iblte.get(2) + iw + 2; // 1-based BL station for wake (bottom)
     ipan.bottom[index - 1] = i;        // ipan is 0-based in BL station
     vti.bottom[index - 1] = -1.0;
   }
 
-  nbl.bottom = te0_index(2) + nw + 2;
+  nbl.bottom = iblte.get(2) + nw + 2;
 
   //-- upper wake pointers (for plotting only)
   for (int iw = 0; iw < nw; iw++) {
     // copy wake panel pointer from bottom to top (for plotting)
-    ipan.top[te0_index(1) + iw + 1] = ipan.bottom[te0_index(2) + iw + 1]; // both sides are 0-based indices, hence -1 vs vti
-    vti.top[te0_index(1) + iw + 1] = 1.0;
+    ipan.top[iblte.get(1) + iw + 1] = ipan.bottom[iblte.get(2) + iw + 1]; // both sides are 0-based indices, hence -1 vs vti
+    vti.top[iblte.get(1) + iw + 1] = 1.0;
   }
-  int iblmax = std::max(te0_index(1), te0_index(2)) + nw + 2;
+  int iblmax = std::max(iblte.get(1), iblte.get(2)) + nw + 2;
   if (iblmax > IVX) {
     ss << "iblpan :  ***  bl array overflow\n";
     ss << "Increase IVX to at least " << iblmax << "\n";
@@ -2273,14 +2273,14 @@ bool XFoil::mrchdu() {
             set_tran0_index(is, ibl0 + 1);
         }
         if (ibl0 == iblte.get(is) + 1) {
-          tte = thet_from_ibl0(1, te0_index(1)) +
-                thet_from_ibl0(2, te0_index(2));
-          dte = dstr_from_ibl0(1, te0_index(1)) +
-                dstr_from_ibl0(2, te0_index(2)) + ante;
-          cte = (ctau_from_ibl0(1, te0_index(1)) *
-                     thet_from_ibl0(1, te0_index(1)) +
-                 ctau_from_ibl0(2, te0_index(2)) *
-                     thet_from_ibl0(2, te0_index(2))) /
+          tte = thet_from_ibl0(1, iblte.get(1)) +
+                thet_from_ibl0(2, iblte.get(2));
+          dte = dstr_from_ibl0(1, iblte.get(1)) +
+                dstr_from_ibl0(2, iblte.get(2)) + ante;
+          cte = (ctau_from_ibl0(1, iblte.get(1)) *
+                     thet_from_ibl0(1, iblte.get(1)) +
+                 ctau_from_ibl0(2, iblte.get(2)) *
+                     thet_from_ibl0(2, iblte.get(2))) /
                 tte;
           tesys(cte, tte, dte);
         } else {
@@ -2631,14 +2631,14 @@ bool XFoil::mrchue() {
         }
 
         if (ibl == iblte.get(is) + 2) {
-          tte = thet_from_ibl0(1, te0_index(1)) +
-                thet_from_ibl0(2, te0_index(2));
-          dte = dstr_from_ibl0(1, te0_index(1)) +
-                dstr_from_ibl0(2, te0_index(2)) + ante;
-          cte = (ctau_from_ibl0(1, te0_index(1)) *
-                     thet_from_ibl0(1, te0_index(1)) +
-                 ctau_from_ibl0(2, te0_index(2)) *
-                     thet_from_ibl0(2, te0_index(2))) /
+          tte = thet_from_ibl0(1, iblte.get(1)) +
+                thet_from_ibl0(2, iblte.get(2));
+          dte = dstr_from_ibl0(1, iblte.get(1)) +
+                dstr_from_ibl0(2, iblte.get(2)) + ante;
+          cte = (ctau_from_ibl0(1, iblte.get(1)) *
+                     thet_from_ibl0(1, iblte.get(1)) +
+                 ctau_from_ibl0(2, iblte.get(2)) *
+                     thet_from_ibl0(2, iblte.get(2))) /
                 tte;
           tesys(cte, tte, dte);
         } else
@@ -2845,10 +2845,10 @@ bool XFoil::mrchue() {
       tran = false;
 
       if (ibl == iblte.get(is) + 1) {
-        thi = thet_from_ibl0(1, te0_index(1)) +
-              thet_from_ibl0(2, te0_index(2));
-        dsi = dstr_from_ibl0(1, te0_index(1)) +
-              dstr_from_ibl0(2, te0_index(2)) + ante;
+        thi = thet_from_ibl0(1, iblte.get(1)) +
+              thet_from_ibl0(2, iblte.get(2));
+        dsi = dstr_from_ibl0(1, iblte.get(1)) +
+              dstr_from_ibl0(2, iblte.get(2)) + ante;
       }
     }
   }
@@ -3015,7 +3015,7 @@ bool XFoil::qvfue() {
   for (int is = 1; is <= 2; is++) {
     for (int ibl = 1; ibl < nbl.get(is); ++ibl) {
       int i = ipan_from_ibl0(is, ibl - 1);
-      qvis[i] = vti_from_ibl0(is, ibl - 1) * uedg.get(is)[ibl - 1];
+      qvis[i] = vti.get(is)[ibl - 1] * uedg.get(is)[ibl - 1];
     }
   }
 
@@ -3078,13 +3078,13 @@ void XFoil::computeLeTeSensitivities(int ile1, int ile2, int ite1, int ite2,
     for (int jbl = 1; jbl < nbl.get(js); ++jbl) {
       int j = ipan_from_ibl0(js, jbl - 1);
       int jv = isys.get(js)[jbl];
-      ule1_m[jv] = -vti_from_ibl0(1, 0) * vti_from_ibl0(js, jbl - 1) *
+      ule1_m[jv] = -vti.get(1)[0] * vti.get(js)[jbl - 1] *
                    dij(ile1, j);
-      ule2_m[jv] = -vti_from_ibl0(2, 0) * vti_from_ibl0(js, jbl - 1) *
+      ule2_m[jv] = -vti.get(2)[0] * vti.get(js)[jbl - 1] *
                    dij(ile2, j);
-      ute1_m[jv] = -vti_from_ibl0(1, te0_index(1)) * vti_from_ibl0(js, jbl - 1) *
+      ute1_m[jv] = -vti.get(1)[iblte.get(1)] * vti.get(js)[jbl - 1] *
                    dij(ite1, j);
-      ute2_m[jv] = -vti_from_ibl0(2, te0_index(2)) * vti_from_ibl0(js, jbl - 1) *
+      ute2_m[jv] = -vti.get(2)[iblte.get(2)] * vti.get(js)[jbl - 1] *
                    dij(ite2, j);
     }
   }
@@ -3197,8 +3197,8 @@ bool XFoil::setbl() {
 
   ueset();
   swapEdgeVelocities(usav);
-jvte1 = isys.top[te0_index(1) + 1];
-jvte2 = isys.bottom[te0_index(2) + 1];
+jvte1 = isys.top[iblte.get(1) + 1];
+jvte2 = isys.bottom[iblte.get(2) + 1];
 
   dule1 = uedg.get(1)[0] - usav.top[0];
   dule2 = uedg.get(2)[0] - usav.bottom[0];
@@ -3207,8 +3207,8 @@ jvte2 = isys.bottom[te0_index(2) + 1];
   computeLeTeSensitivities(
     ipan_from_ibl0(1, 0),
     ipan_from_ibl0(2, 0),
-    ipan_from_ibl0(1, te0_index(1)),
-    ipan_from_ibl0(2, te0_index(2)),
+    ipan_from_ibl0(1, iblte.get(1)),
+    ipan_from_ibl0(2, iblte.get(2)),
     ule1_m, ule2_m, ute1_m, ute2_m
   );
 
@@ -3268,7 +3268,7 @@ jvte2 = isys.bottom[te0_index(2) + 1];
       for (int js = 1; js <= 2; js++) {
         for (int jbl = 0; jbl < nbl.get(js) - 1; ++jbl) {
           int jv = isys.get(js)[jbl + INDEX_START_WITH];
-          u2_m[jv] = -vti_from_ibl0(is, ibl0) * vti_from_ibl0(js, jbl) *
+          u2_m[jv] = -vti.get(is)[ibl0] * vti.get(js)[jbl] *
                      dij(ipan_from_ibl0(is, ibl0), ipan_from_ibl0(js, jbl));
           d2_m[jv] = d2_u2 * u2_m[jv];
         }
@@ -3307,29 +3307,29 @@ jvte2 = isys.bottom[te0_index(2) + 1];
       if (ibl == iblte.get(is) + 2) {
         //----- define quantities at start of wake, adding te base thickness to
         // dstar
-        tte = thet_from_ibl0(1, te0_index(1)) +
-              thet_from_ibl0(2, te0_index(2));
-        dte = dstr_from_ibl0(1, te0_index(1)) +
-              dstr_from_ibl0(2, te0_index(2)) + ante;
-        cte = (ctau_from_ibl0(1, te0_index(1)) *
-                   thet_from_ibl0(1, te0_index(1)) +
-               ctau_from_ibl0(2, te0_index(2)) *
-                   thet_from_ibl0(2, te0_index(2))) /
+        tte = thet_from_ibl0(1, iblte.get(1)) +
+              thet_from_ibl0(2, iblte.get(2));
+        dte = dstr_from_ibl0(1, iblte.get(1)) +
+              dstr_from_ibl0(2, iblte.get(2)) + ante;
+        cte = (ctau_from_ibl0(1, iblte.get(1)) *
+                   thet_from_ibl0(1, iblte.get(1)) +
+               ctau_from_ibl0(2, iblte.get(2)) *
+                   thet_from_ibl0(2, iblte.get(2))) /
                tte;
         tesys(cte, tte, dte);
 
         tte_tte1 = 1.0;
         tte_tte2 = 1.0;
-        dte_mte1 = 1.0 / uedg.get(1)[te0_index(1)];
-        dte_ute1 = -dstr_from_ibl0(1, te0_index(1)) /
-                    uedg.get(1)[te0_index(1)];
-        dte_mte2 = 1.0 / uedg.get(2)[te0_index(2)];
-        dte_ute2 = -dstr_from_ibl0(2, te0_index(2)) /
-                    uedg.get(2)[te0_index(2)];
-        cte_cte1 = thet_from_ibl0(1, te0_index(1)) / tte;
-        cte_cte2 = thet_from_ibl0(2, te0_index(2)) / tte;
-        cte_tte1 = (ctau_from_ibl0(1, te0_index(1)) - cte) / tte;
-        cte_tte2 = (ctau_from_ibl0(2, te0_index(2)) - cte) / tte;
+        dte_mte1 = 1.0 / uedg.get(1)[iblte.get(1)];
+        dte_ute1 = -dstr_from_ibl0(1, iblte.get(1)) /
+                    uedg.get(1)[iblte.get(1)];
+        dte_mte2 = 1.0 / uedg.get(2)[iblte.get(2)];
+        dte_ute2 = -dstr_from_ibl0(2, iblte.get(2)) /
+                    uedg.get(2)[iblte.get(2)];
+        cte_cte1 = thet_from_ibl0(1, iblte.get(1)) / tte;
+        cte_cte2 = thet_from_ibl0(2, iblte.get(2)) / tte;
+        cte_tte1 = (ctau_from_ibl0(1, iblte.get(1)) - cte) / tte;
+        cte_tte2 = (ctau_from_ibl0(2, iblte.get(2)) - cte) / tte;
 
         //----- re-define d1 sensitivities wrt m since d1 depends on both te ds
         // values
@@ -3346,11 +3346,11 @@ jvte2 = isys.bottom[te0_index(2) + 1];
         due1 = 0.0;
         dds1 =
             dte_ute1 *
-                (uedg.get(1)[te0_index(1)] -
-                 usav.top[te0_index(1)]) +
+                (uedg.get(1)[iblte.get(1)] -
+                 usav.top[iblte.get(1)]) +
             dte_ute2 *
-                (uedg.get(2)[te0_index(2)] -
-                 usav.bottom[te0_index(2)]);
+                (uedg.get(2)[iblte.get(2)] -
+                 usav.bottom[iblte.get(2)]);
       } else {
         blsys();
       }
@@ -4597,7 +4597,7 @@ bool XFoil::ueset() {
       double dui = 0.0;
       for (int js = 1; js <= 2; js++) {
         for (int jbl = 1; jbl < nbl.get(js); ++jbl) {
-          double ue_m = -vti_from_ibl0(is, ibl - 1) * vti_from_ibl0(js, jbl - 1) *
+          double ue_m = -vti.get(is)[ibl - 1] * vti.get(js)[jbl - 1] *
                         dij(ipan_from_ibl0(is, ibl - 1),
                             ipan_from_ibl0(js, jbl - 1));
           dui += ue_m * mass_from_ibl0(js, jbl - 1);
@@ -4618,8 +4618,8 @@ bool XFoil::uicalc() {
     uinv_a.get(is)[0] = 0.0;
     for (int ibl = 1; ibl < nbl.get(is); ++ibl) {
       int i = ipan_from_ibl0(is, ibl - 1);
-      set_uinv_at_ibl0(is, ibl - 1, vti_from_ibl0(is, ibl - 1) * qinv[i]);
-      set_uinv_a_at_ibl0(is, ibl - 1, vti_from_ibl0(is, ibl - 1) * qinv_a[i]);
+      set_uinv_at_ibl0(is, ibl - 1, vti.get(is)[ibl - 1] * qinv[i]);
+      set_uinv_a_at_ibl0(is, ibl - 1, vti.get(is)[ibl - 1] * qinv_a[i]);
     }
   }
 
@@ -4640,7 +4640,7 @@ void XFoil::computeNewUeDistribution(SidePair<VectorXd> &unew,
         for (int jbl = 1; jbl < nbl.get(js); ++jbl) {
           int j = ipan_from_ibl0(js, jbl - 1);
           int jv = isys.get(js)[jbl];
-          double ue_m = -vti_from_ibl0(is, ibl - 1) * vti_from_ibl0(js, jbl - 1) *
+          double ue_m = -vti.get(is)[ibl - 1] * vti.get(js)[jbl - 1] *
                         dij(i, j);
           dui += ue_m * (mass_from_ibl0(js, jbl - 1) + vdel[jv](2, 0));
           dui_ac += ue_m * (-vdel[jv](2, 1));
@@ -4670,8 +4670,8 @@ void XFoil::computeQtan(const SidePair<VectorXd> &unew,
       const VectorXd &unew_vec = (is == 1) ? unew.top : unew.bottom;
       const VectorXd &uac_vec = (is == 1) ? u_ac.top : u_ac.bottom;
       // Read unew/u_ac at 0-based station index
-      qnew[i] = vti_from_ibl0(is, ibl - 1) * unew_vec[ibl - 1];
-      q_ac[i] = vti_from_ibl0(is, ibl - 1) * uac_vec[ibl - 1];
+      qnew[i] = vti.get(is)[ibl - 1] * unew_vec[ibl - 1];
+      q_ac[i] = vti.get(is)[ibl - 1] * uac_vec[ibl - 1];
     }
   }
 }
@@ -4951,17 +4951,17 @@ bool XFoil::update() {
   }
 
   //--- equate upper wake arrays to lower wake arrays
-  for (int kbl = 1; kbl <= nbl.bottom - (te0_index(2) + 1); kbl++) {
-    set_ctau_at_ibl0(1, te0_index(1) + kbl,
-        ctau_from_ibl0(2, te0_index(2) + kbl));
-    set_thet_at_ibl0(1, te0_index(1) + kbl,
-                     thet_from_ibl0(2, te0_index(2) + kbl));
-    set_dstr_at_ibl0(1, te0_index(1) + kbl,
-        dstr_from_ibl0(2, te0_index(2) + kbl));
-    uedg.get(1)[te0_index(1) + kbl] =
-                     uedg.get(2)[te0_index(2) + kbl];
-    set_ctq_at_ibl0(1, te0_index(1) + kbl,
-        ctq_from_ibl0(2, te0_index(2) + kbl));
+  for (int kbl = 1; kbl <= nbl.bottom - (iblte.get(2) + 1); kbl++) {
+    set_ctau_at_ibl0(1, iblte.get(1) + kbl,
+        ctau_from_ibl0(2, iblte.get(2) + kbl));
+    set_thet_at_ibl0(1, iblte.get(1) + kbl,
+                     thet_from_ibl0(2, iblte.get(2) + kbl));
+    set_dstr_at_ibl0(1, iblte.get(1) + kbl,
+        dstr_from_ibl0(2, iblte.get(2) + kbl));
+    uedg.get(1)[iblte.get(1) + kbl] =
+                     uedg.get(2)[iblte.get(2) + kbl];
+    set_ctq_at_ibl0(1, iblte.get(1) + kbl,
+        ctq_from_ibl0(2, iblte.get(2) + kbl));
   }
 
   return true;
@@ -5088,7 +5088,7 @@ bool XFoil::xicalc() {
 
   xssi.top[0] = 0.0;
   {
-    const int te0_top = te0_index(1);
+    const int te0_top = iblte.get(1);
     const int te_top = te0_top + 1; // 1-based array index at TE station
     for (int ibl = 1; ibl <= te_top; ++ibl) {
       xssi.top[ibl] = sst - spline_length[ipan_from_ibl0(1, ibl - 1)];
@@ -5097,7 +5097,7 @@ bool XFoil::xicalc() {
 
   xssi.bottom[0] = 0.0;
   {
-    const int te0_bot = te0_index(2);
+    const int te0_bot = iblte.get(2);
     const int te_bot = te0_bot + 1; // 1-based array index at TE station
     for (int ibl = 1; ibl <= te_bot; ++ibl) {
       xssi.bottom[ibl] = spline_length[ipan_from_ibl0(2, ibl - 1)] - sst;
@@ -5136,7 +5136,7 @@ bool XFoil::xicalc() {
   else {
     //----- set te flap (wake gap) array (0-based: iw0=0..nw-1)
     for (int iw0 = 0; iw0 < nw; iw0++) {
-      const int te_bot_1b = te0_index(2) + 1; // 1-based TE for array indexing
+      const int te_bot_1b = iblte.get(2) + 1; // 1-based TE for array indexing
       const double zn = 1.0 - (xssi.bottom[te_bot_1b + (iw0 + 1)] -
                                xssi.bottom[te_bot_1b]) /
                                   (telrat * ante);

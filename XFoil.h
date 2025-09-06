@@ -290,16 +290,13 @@ class XFoil {
   // 0-based logical station index (use for logic; convert to +1 for array segments)
   inline int bl_index(int ibl0) const { return ibl0; }
   // 0-based TE/transition indices (logic用). 配列アクセス時は +1 してください。
-  inline int te_index(int is) const { return iblte.get(is); }
   // Note: tran_index remains 1-based for array-index comparisons in legacy code
   inline int tran_index(int is) const { return itran.get(is) + 1; }
-  // Wake starts just after TE (0-based TE): logicでは te_index+1 が最初のwake
-  inline int wake_start_index(int is) const { return te_index(is) + 1; }
+  // Wake starts just after TE (0-based TE): logicでは iblte+1 が最初のwake
+  inline int wake_start_index(int is) const { return iblte.get(is) + 1; }
   // 0-based logical indices for TE/transition (same as above; kept for clarity)
-  inline int te0_index(int is) const { return iblte.get(is); }
   inline int tran0_index(int is) const { return itran.get(is); }
   // Setters for 0-based logical indices (store as 0-based internally)
-  inline void set_te0_index(int is, int te0) { iblte.get(is) = te0; }
   inline void set_tran0_index(int is, int tr0) { itran.get(is) = tr0; }
 
   // 0-based BL-station to panel-index accessor
@@ -309,7 +306,6 @@ class XFoil {
   }
 
   // 0-based accessors for BL arrays still stored 1-based internally
-  inline double vti_from_ibl0(int is, int ibl0) const { return vti.get(is)[ibl0]; }
   inline double thet_from_ibl0(int is, int ibl0) const { return thet.get(is)[ibl0 + 1]; }
   inline void set_thet_at_ibl0(int is, int ibl0, double val) { thet.get(is)[ibl0 + 1] = val; }
   // 0-based accessors for other BL arrays (currently 1-based storage)
@@ -325,7 +321,6 @@ class XFoil {
   inline void set_uinv_at_ibl0(int is, int ibl0, double val) { uinv.get(is)[ibl0 + 1] = val; }
   inline double uinv_a_from_ibl0(int is, int ibl0) const { return uinv_a.get(is)[ibl0 + 1]; }
   inline void set_uinv_a_at_ibl0(int is, int ibl0, double val) { uinv_a.get(is)[ibl0 + 1] = val; }
-  inline void set_vti_at_ibl0(int is, int ibl0, double val) { vti.get(is)[ibl0] = val; }
 
   static double vaccel;
   static bool s_bCancel;
