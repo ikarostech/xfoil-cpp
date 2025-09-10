@@ -5086,8 +5086,8 @@ bool XFoil::xicalc() {
     xssi.bottom[iblte.bottom + 1] = xssi.bottom[iblte.bottom];
     for (int ibl = iblte.bottom + 2; ibl < nbl.bottom; ++ibl) {
       xssi.bottom[ibl] = xssi.bottom[ibl - 1] +
-                          (points.col(ipan.get(2)[ibl - 1]) -
-                           points.col(ipan.get(2)[ibl - 2]))
+                          (points.col(ipan.get(2)[ibl]) -
+                           points.col(ipan.get(2)[ibl - 1]))
                               .norm();
     }
   
