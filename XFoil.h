@@ -365,8 +365,23 @@ class XFoil {
   
   MatrixXd bij, dij;
 
-  Matrix<double, 4, 5> vs1, vs2;
-  Vector<double, 4> vsrez, vsr, vsm, vsx;
+  // Grouped BL Newton system coefficients (Proposal A)
+  struct BlSystemCoeffs {
+    Matrix<double, 4, 5> a1;     // coefficients at station 1
+    Matrix<double, 4, 5> a2;     // coefficients at station 2
+    Vector<double, 4> rhs;       // residual vector
+    Vector<double, 4> d_msq;     // d(res)/d(Ma^2)
+    Vector<double, 4> d_re;      // d(res)/d(Re)
+    Vector<double, 4> d_xi;      // d(res)/d(xi)
+    void clear() {
+      a1.setZero();
+      a2.setZero();
+      rhs.setZero();
+      d_msq.setZero();
+      d_re.setZero();
+      d_xi.setZero();
+    }
+  } blc;
 
   bool trforc, simi, tran, turb, wake, trfree;
 
