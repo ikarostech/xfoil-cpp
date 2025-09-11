@@ -956,20 +956,31 @@ void XFoil::bldifMomentum(double xlog, double ulog, double tlog, double ddlog) {
   double z_u1 = -z_ul / blData1.param.uz;
   double z_u2 = z_ul / blData2.param.uz;
 
-  blc.a1(1, 1) = 0.5 * z_ha * blData1.param.hz_tz + z_cfm * cfm_t1 +
-              z_cf1 * blData1.cfz.t() + z_t1;
-  blc.a1(1, 2) = 0.5 * z_ha * blData1.param.hz_dz + z_cfm * cfm_d1 +
-              z_cf1 * blData1.cfz.d();
-  blc.a1(1, 3) = 0.5 * z_ma * blData1.param.mz_uz + z_cfm * cfm_u1 +
-              z_cf1 * blData1.cfz.u() + z_u1;
-  blc.a1(1, 4) = z_x1;
-  blc.a2(1, 1) = 0.5 * z_ha * blData2.param.hz_tz + z_cfm * cfm_t2 +
-              z_cf2 * blData2.cfz.t() + z_t2;
-  blc.a2(1, 2) = 0.5 * z_ha * blData2.param.hz_dz + z_cfm * cfm_d2 +
-              z_cf2 * blData2.cfz.d();
-  blc.a2(1, 3) = 0.5 * z_ma * blData2.param.mz_uz + z_cfm * cfm_u2 +
-              z_cf2 * blData2.cfz.u() + z_u2;
-  blc.a2(1, 4) = z_x2;
+  // Row k=1: build with vector operations (t,d,u columns as a segment)
+  {
+    RowVector<double, 5> row1_a1 = RowVector<double, 5>::Zero();
+    RowVector<double, 5> row1_a2 = RowVector<double, 5>::Zero();
+
+    Vector3d hterm1(blData1.param.hz_tz, blData1.param.hz_dz, 0.0);
+    Vector3d hterm2(blData2.param.hz_tz, blData2.param.hz_dz, 0.0);
+    Vector3d cfm1v(cfm_t1, cfm_d1, cfm_u1);
+    Vector3d cfm2v(cfm_t2, cfm_d2, cfm_u2);
+    Vector3d cfz1v = blData1.cfz.pos_vector();
+    Vector3d cfz2v = blData2.cfz.pos_vector();
+    Vector3d mz1(0.0, 0.0, 0.5 * z_ma * blData1.param.mz_uz);
+    Vector3d mz2(0.0, 0.0, 0.5 * z_ma * blData2.param.mz_uz);
+
+    Vector3d seg1 = 0.5 * z_ha * hterm1 + z_cfm * cfm1v + z_cf1 * cfz1v + mz1 + Vector3d(z_t1, 0.0, z_u1);
+    Vector3d seg2 = 0.5 * z_ha * hterm2 + z_cfm * cfm2v + z_cf2 * cfz2v + mz2 + Vector3d(z_t2, 0.0, z_u2);
+
+    row1_a1.segment<3>(1) = seg1;
+    row1_a2.segment<3>(1) = seg2;
+    row1_a1(4) = z_x1;
+    row1_a2(4) = z_x2;
+
+    blc.a1.row(1) = row1_a1;
+    blc.a2.row(1) = row1_a2;
+  }
 
   blc.d_msq[1] = 0.5 * z_ma * blData1.param.mz_ms + z_cfm * cfm_ms +
            z_cf1 * blData1.cfz.ms() + 0.5 * z_ma * blData2.param.mz_ms +
@@ -1045,22 +1056,30 @@ void XFoil::bldifShape(double upw, double xlog, double ulog, double hlog,
   z_t2 +=
       z_hwa * 0.5 * (-blData2.param.dwz / blData2.param.tz / blData2.param.tz);
 
-  blc.a1(2, 0) = z_di1 * blData1.diz.s();
-  blc.a1(2, 1) = z_hs1 * blData1.hsz.t() + z_cf1 * blData1.cfz.t() +
-              z_di1 * blData1.diz.t() + z_t1;
-  blc.a1(2, 2) = z_hs1 * blData1.hsz.d() + z_cf1 * blData1.cfz.d() +
-              z_di1 * blData1.diz.d();
-  blc.a1(2, 3) = z_hs1 * blData1.hsz.u() + z_cf1 * blData1.cfz.u() +
-              z_di1 * blData1.diz.u() + z_u1;
-  blc.a1(2, 4) = z_x1;
-  blc.a2(2, 0) = z_di2 * blData2.diz.s();
-  blc.a2(2, 1) = z_hs2 * blData2.hsz.t() + z_cf2 * blData2.cfz.t() +
-              z_di2 * blData2.diz.t() + z_t2;
-  blc.a2(2, 2) = z_hs2 * blData2.hsz.d() + z_cf2 * blData2.cfz.d() +
-              z_di2 * blData2.diz.d();
-  blc.a2(2, 3) = z_hs2 * blData2.hsz.u() + z_cf2 * blData2.cfz.u() +
-              z_di2 * blData2.diz.u() + z_u2;
-  blc.a2(2, 4) = z_x2;
+  // Row k=2: vector assembly
+  {
+    RowVector<double, 5> row2_a1 = RowVector<double, 5>::Zero();
+    RowVector<double, 5> row2_a2 = RowVector<double, 5>::Zero();
+
+    Vector3d base1 = z_hs1 * blData1.hsz.pos_vector() +
+                     z_cf1 * blData1.cfz.pos_vector() +
+                     z_di1 * blData1.diz.pos_vector() +
+                     Vector3d(z_t1, 0.0, z_u1);
+    Vector3d base2 = z_hs2 * blData2.hsz.pos_vector() +
+                     z_cf2 * blData2.cfz.pos_vector() +
+                     z_di2 * blData2.diz.pos_vector() +
+                     Vector3d(z_t2, 0.0, z_u2);
+
+    row2_a1(0) = z_di1 * blData1.diz.s();
+    row2_a2(0) = z_di2 * blData2.diz.s();
+    row2_a1.segment<3>(1) = base1;
+    row2_a2.segment<3>(1) = base2;
+    row2_a1(4) = z_x1;
+    row2_a2(4) = z_x2;
+
+    blc.a1.row(2) = row2_a1;
+    blc.a2.row(2) = row2_a2;
+  }
   blc.d_msq[2] = z_hs1 * blData1.hsz.ms() + z_cf1 * blData1.cfz.ms() +
            z_di1 * blData1.diz.ms() + z_hs2 * blData2.hsz.ms() +
            z_cf2 * blData2.cfz.ms() + z_di2 * blData2.diz.ms();
@@ -1068,16 +1087,17 @@ void XFoil::bldifShape(double upw, double xlog, double ulog, double hlog,
            z_di1 * blData1.diz.re() + z_hs2 * blData2.hsz.re() +
            z_cf2 * blData2.cfz.re() + z_di2 * blData2.diz.re();
 
-  blc.a1(2, 1) += 0.5 * (z_hca * blData1.hcz.t() + z_ha * blData1.param.hz_tz) +
-               z_upw * upw1.x();
-  blc.a1(2, 2) += 0.5 * (z_hca * blData1.hcz.d() + z_ha * blData1.param.hz_dz) +
-               z_upw * upw1.y();
-  blc.a1(2, 3) += 0.5 * (z_hca * blData1.hcz.u()) + z_upw * upw1.z();
-  blc.a2(2, 1) += 0.5 * (z_hca * blData2.hcz.t() + z_ha * blData2.param.hz_tz) +
-               z_upw * upw2.x();
-  blc.a2(2, 2) += 0.5 * (z_hca * blData2.hcz.d() + z_ha * blData2.param.hz_dz) +
-               z_upw * upw2.y();
-  blc.a2(2, 3) += 0.5 * (z_hca * blData2.hcz.u()) + z_upw * upw2.z();
+  // Column t,d,u increments as a vector
+  {
+    Vector3d inc1 = 0.5 * (z_hca * blData1.hcz.pos_vector() +
+                           z_ha * Vector3d(blData1.param.hz_tz, blData1.param.hz_dz, 0.0)) +
+                    z_upw * upw1;
+    Vector3d inc2 = 0.5 * (z_hca * blData2.hcz.pos_vector() +
+                           z_ha * Vector3d(blData2.param.hz_tz, blData2.param.hz_dz, 0.0)) +
+                    z_upw * upw2;
+    blc.a1.row(2).segment<3>(1) += inc1;
+    blc.a2.row(2).segment<3>(1) += inc2;
+  }
 
   blc.d_msq[2] = 0.5 * (z_hca * blData1.hcz.ms()) + z_upw * upw_ms +
            0.5 * (z_hca * blData2.hcz.ms());
