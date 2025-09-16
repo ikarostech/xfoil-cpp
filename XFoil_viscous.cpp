@@ -226,16 +226,16 @@ void XFoil::computeLeTeSensitivities(int ile1, int ile2, int ite1, int ite2,
                                      VectorXd &ule1_m, VectorXd &ule2_m,
                                      VectorXd &ute1_m, VectorXd &ute2_m) {
   for (int js = 1; js <= 2; ++js) {
-    for (int jbl = 1; jbl < nbl.get(js); ++jbl) {
-      int j = ipan.get(js)[jbl - 1];
-      int jv = isys.get(js)[jbl - 1];
-      ule1_m[jv] = -vti.get(1)[0] * vti.get(js)[jbl - 1] *
+    for (int jbl = 0; jbl < nbl.get(js) - 1; ++jbl) {
+      int j = ipan.get(js)[jbl];
+      int jv = isys.get(js)[jbl];
+      ule1_m[jv] = -vti.top[0] * vti.get(js)[jbl] *
                    dij(ile1, j);
-      ule2_m[jv] = -vti.get(2)[0] * vti.get(js)[jbl - 1] *
+      ule2_m[jv] = -vti.bottom[0] * vti.get(js)[jbl] *
                    dij(ile2, j);
-      ute1_m[jv] = -vti.get(1)[iblte.top] * vti.get(js)[jbl - 1] *
+      ute1_m[jv] = -vti.top[iblte.top] * vti.get(js)[jbl] *
                    dij(ite1, j);
-      ute2_m[jv] = -vti.get(2)[iblte.bottom] * vti.get(js)[jbl - 1] *
+      ute2_m[jv] = -vti.bottom[iblte.bottom] * vti.get(js)[jbl] *
                    dij(ite2, j);
     }
   }
@@ -244,8 +244,8 @@ void XFoil::computeLeTeSensitivities(int ile1, int ile2, int ite1, int ite2,
 
 void XFoil::clearDerivativeVectors(VectorXd &u_m, VectorXd &d_m) {
   for (int js = 1; js <= 2; ++js) {
-    for (int jbl = 1; jbl < nbl.get(js); ++jbl) {
-      int jv = isys.get(js)[jbl - 1];
+    for (int jbl = 0; jbl < nbl.get(js) - 1; ++jbl) {
+      int jv = isys.get(js)[jbl];
       u_m[jv] = 0.0;
       d_m[jv] = 0.0;
     }
