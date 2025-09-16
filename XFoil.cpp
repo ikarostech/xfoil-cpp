@@ -67,151 +67,22 @@ XFoil::~XFoil() {}
 /** ---------------------------------------------------
  *      variable initialization/default routine.
  * --------------------------------------------------- */
-bool XFoil::initialize() {
-  dtor = std::numbers::pi / 180.0;
-
-  // allocate arrays and clear containers
-  initializeDataStructures();
-
-  // reset numerical and physical variables
-  resetVariables();
-
-  //---- drop tolerance for bl system solver
-  vaccel = 0.01;
-
-  //---- set minf, reinf, based on current cl-dependence
-  minf_cl = getActualMach(1.0, mach_type);
-  reinf_cl = getActualReynolds(1.0, reynolds_type);
-
-  return true;
-}
+// moved to XFoil_init.cpp: initialize()
 
 /** -------------------------------------------------------
  * @brief Allocate and zero out large data containers.
  * ------------------------------------------------------- */
-void XFoil::initializeDataStructures() {
-  apanel = VectorXd::Zero(n + nw);
-  memset(blsav, 0, sizeof(blsav));
-
-  bij = MatrixXd::Zero(IQX, IZX);
-  dij = MatrixXd::Zero(IZX, IZX);
-  cpi = VectorXd::Zero(n + nw);
-  cpv = VectorXd::Zero(n);
-  ctau.top = VectorXd::Zero(IVX);
-  ctau.bottom = VectorXd::Zero(IVX);
-  ctq.top = VectorXd::Zero(IVX);
-  ctq.bottom = VectorXd::Zero(IVX);
-  dstr.top = VectorXd::Zero(IVX);
-  dstr.bottom = VectorXd::Zero(IVX);
-
-  ipan.top = VectorXi::Zero(IVX);
-  ipan.bottom = VectorXi::Zero(IVX);
-  isys.top = VectorXi::Zero(IVX);
-  isys.bottom = VectorXi::Zero(IVX);
-  itran.top = 0;
-  itran.bottom = 0;
-  mass.top = VectorXd::Zero(IVX);
-  mass.bottom = VectorXd::Zero(IVX);
-  normal_vectors = Matrix2Xd::Zero(2, n + nw);
-  gamu = Matrix2Xd::Zero(2, n + 1); // 境界層条件があるため +1 する
-  surface_vortex = Matrix2Xd::Zero(2, n);
-  memset(qf0, 0, sizeof(qf0));
-  memset(qf1, 0, sizeof(qf1));
-  memset(qf2, 0, sizeof(qf2));
-  memset(qf3, 0, sizeof(qf3));
-  qinv = VectorXd::Zero(n + nw);
-  qinv_a = VectorXd::Zero(n + nw);
-  qinvu = Matrix2Xd::Zero(2, n + nw);
-  qvis = VectorXd::Zero(n + nw);
-  spline_length.resize(n + nw + 1);
-  snew = VectorXd::Zero(4 * IBX);
-  thet.top = VectorXd::Zero(IVX);
-  thet.bottom = VectorXd::Zero(IVX);
-  uedg.top = VectorXd::Zero(IVX);
-  uedg.bottom = VectorXd::Zero(IVX);
-  uinv.top = VectorXd::Zero(IVX);
-  uinv.bottom = VectorXd::Zero(IVX);
-  uinv_a.top = VectorXd::Zero(IVX);
-  uinv_a.bottom = VectorXd::Zero(IVX);
-  vti.top = VectorXd::Zero(IVX);
-  vti.bottom = VectorXd::Zero(IVX);
-  dpoints_ds.resize(2, n);
-
-  xssi.top = VectorXd::Zero(IVX);
-  xssi.bottom = VectorXd::Zero(IVX);
-
-  memset(wgap, 0, sizeof(wgap));
-  va.resize(IVX, Matrix<double, 3, 2>::Zero());
-  vb.resize(IVX, Matrix<double, 3, 2>::Zero());
-  vdel.resize(IVX, Matrix<double, 3, 2>::Zero());
-  memset(vm, 0, sizeof(vm));
-  blc.clear();
-  memset(vz, 0, sizeof(vz));
-
-  memset(qgamm, 0, sizeof(qgamm));
-}
+// moved to XFoil_init.cpp: initializeDataStructures()
 
 /** -------------------------------------------------------
  * @brief Reset boolean state flags to defaults.
  * ------------------------------------------------------- */
-void XFoil::resetFlags() {
-  lgamu = lvisc = lwake = lblini = lipan = false;
-  lqaij = ladij = lwdij = lvconv = false;
-  sharp = lalfa = false;
-  trforc = simi = tran = turb = wake = trfree = false;
-}
+// moved to XFoil_init.cpp: resetFlags()
 
 /** -------------------------------------------------------
  * @brief Reset scalar state variables to default values.
  * ------------------------------------------------------- */
-void XFoil::resetVariables() {
-  // basic gas constants
-  gamma = 1.4;
-  gamm1 = gamma - 1.0;
-
-  // unity freestream speed
-  qinf = 1.0;
-
-  cl = cm = cd = 0.0;
-
-  sigte = gamte = 0.0;
-
-  awake = avisc = 0.0;
-
-  resetFlags();
-
-  // default reference location and wake length
-  cmref = Vector2d{0.25, 0.0};
-  waklen = 1.0;
-
-  i_stagnation = 0;
-
-  qinfbl = tkbl = tkbl_ms = 0.0;
-  rstbl = rstbl_ms = 0.0;
-  hstinv = hstinv_ms = 0.0;
-  reybl = reybl_ms = reybl_re = 0.0;
-  gm1bl = 0.0;
-  xiforc = 0.0;
-  amcrit = 0.0;
-
-  alfa = amax = rmxbl = rmsbl = rlx = ante = clspec = 0.0;
-  minf = reinf = 0.0;
-  minf_cl = reinf_cl = 0.0;
-
-  sle = chord = 0.0;
-  cl_alf = cl_msq = 0.0;
-  tklam = tkl_msq = 0.0;
-  sst = sst_go = sst_gp = 0.0;
-  dste = aste = 0.0;
-
-  cfm = cfm_ms = cfm_re = 0.0;
-  cfm_u1 = cfm_t1 = cfm_d1 = 0.0;
-  cfm_u2 = cfm_t2 = cfm_d2 = 0.0;
-
-  xt = xt_a1 = xt_ms = xt_re = xt_xf = 0.0;
-  xt_x1 = xt_t1 = xt_d1 = xt_u1 = 0.0;
-  xt_x2 = xt_t2 = xt_d2 = xt_u2 = 0.0;
-}
+// moved to XFoil_init.cpp: resetVariables()
 
 /**
  * @brief Compute shape-related boundary layer parameters.
@@ -465,83 +336,9 @@ void XFoil::computeDissipationAndThickness(blData &ref,
   }
 }
 
-bool XFoil::abcopy(Matrix2Xd copyFrom) {
+// moved to XFoil_geometry.cpp: abcopy()
 
-  if (n != copyFrom.cols() - 1)
-    lblini = false;
-
-  n = copyFrom.cols() - 1;
-
-  //---- strip out doubled points
-  int r = 1;
-
-  while (r < n) {
-    r++;
-    // FIXME double型の==比較
-    if (copyFrom.col(r - 1) == copyFrom.col(r)) {
-      for (int j = r; j <= n - 1; j++) {
-        copyFrom.col(j) = copyFrom.col(j + 1);
-      }
-      n = n - 1;
-    }
-  }
-  //--- number of wake points
-  nw = n / 8 + 2;
-  if (nw > IWX) {
-    writeString(" XYWake: array size (IWX) too small.\n  Last wake point index "
-                "reduced.");
-    nw = IWX;
-  }
-  points = Matrix2Xd::Zero(2, IZX);
-  for (int i = 1; i <= n; i++) {
-    points.col(i - 1) = copyFrom.col(i);
-  }
-
-  initialize();
-
-  spline_length.head(n) =
-      spline::scalc(points, n);
-  dpoints_ds.row(0) = spline::splind(points.row(0), spline_length.head(n));
-  dpoints_ds.row(1) = spline::splind(points.row(1), spline_length.head(n));
-  normal_vectors = ncalc(points, spline_length.head(n), n);
-  lefind(sle, points.leftCols(n), dpoints_ds,
-         spline_length.head(n), n);
-  point_le.x() = spline::seval(sle, points.row(0), dpoints_ds.row(0),
-                               spline_length.head(n), n);
-  point_le.y() = spline::seval(sle, points.row(1), dpoints_ds.row(1),
-                               spline_length.head(n), n);
-  point_te = 0.5 * (points.col(0) + points.col(n - 1));
-  chord = (point_le - point_te).norm();
-  tecalc();
-  apanel.head(n) = apcalc(points);
-
-  lgamu = false;
-  lwake = false;
-  lqaij = false;
-  ladij = false;
-  lwdij = false;
-  lipan = false;
-  lvconv = false;
-
-  return true;
-}
-
-VectorXd XFoil::apcalc(Matrix2Xd points) {
-  VectorXd result = VectorXd::Zero(n);
-  //---- set angles of airfoil panels
-  for (int i = 0; i < n; i++) {
-    Vector2d diff =
-        points.col((i + 1) % n) - points.col(i);
-    result[i] = atan2(diff.x(), -diff.y());
-  }
-
-  //---- TE panel
-  if (sharp) {
-    result[n - 1] = std::numbers::pi;
-  }
-
-  return result;
-}
+// moved to XFoil_geometry.cpp: apcalc()
 
 /** -------------------------------------------------------------
  *     atan2 function with branch cut checking.
@@ -571,21 +368,7 @@ VectorXd XFoil::apcalc(Matrix2Xd points) {
  *     output:
  *       atanc   position angle of x,y
  * -------------------------------------------------------------- */
-double XFoil::atanc(double y, double x, double thold) {
-  double tpi, thnew, dthet, dtcorr;
-  tpi = 6.2831853071795864769;
-
-  //---- set new position angle, ignoring branch cut in atan2 function for now
-
-  thnew = atan2(y, x);
-  dthet = thnew - thold;
-
-  //---- angle change cannot exceed +/- pi, so get rid of any multiples of 2 pi
-  dtcorr = dthet - tpi * int((dthet + sign(std::numbers::pi, dthet)) / tpi);
-
-  //---- set correct new angle
-  return thold + dtcorr;
-}
+// moved to XFoil_geometry.cpp: atanc()
 
 /** ----------------------------------------------------------
  *      returns average amplification ax over interval 1..2
@@ -1578,22 +1361,7 @@ bool XFoil::blsys() {
  * @return PairIndex index: index of max angle diff, value: angle of max angle
  * diff[degree]
  */
-double XFoil::cang(Matrix2Xd points) {
-
-  double max_angle = 0;
-  //---- go over each point, calculating corner angle
-  for (int i = 1; i < points.cols() - 1; i++) {
-    Vector2d delta_former = points.col(i) - points.col(i - 1);
-    Vector2d delta_later = points.col(i) - points.col(i + 1);
-
-    double sin = cross2(delta_later, delta_former) / delta_former.norm() /
-                 delta_later.norm();
-    double delta_angle = asin(sin) * 180.0 / std::numbers::pi;
-
-    max_angle = max(fabs(delta_angle), max_angle);
-  }
-  return max_angle;
-}
+// moved to XFoil_geometry.cpp: cang()
 
 bool XFoil::cdcalc() {
   // Ensure compressibility parameters reflect the current Mach number
@@ -1704,17 +1472,7 @@ bool XFoil::clcalc(Vector2d ref) {
   return true;
 }
 
-bool XFoil::comset() {
-  //---- set karman-tsien parameter tklam
-  double beta, beta_msq;
-  beta = sqrt(1.0 - minf * minf);
-  beta_msq = -0.5 / beta;
-
-  tklam = MathUtil::pow(minf / (1.0 + beta), 2);
-  tkl_msq = 1.0 / MathUtil::pow(1.0 + beta, 2) -
-            2.0 * tklam / (1.0 + beta) * beta_msq;
-  return true;
-}
+// moved to XFoil_init.cpp: comset()
 
 /** ---------------------------------------------
  *      sets compressible cp from speed.
@@ -1743,7 +1501,7 @@ VectorXd XFoil::cpcalc(int n, VectorXd q, double qinf, double minf) {
   return cp;
 }
 
-void XFoil::writeString(std::string str) { *m_pOutStream << str; }
+// moved to XFoil_init.cpp: writeString()
 
 /** ==============================================================
  *      amplification rate routine for envelope e^n method.
@@ -2134,61 +1892,7 @@ bool XFoil::initXFoilAnalysis(double Re, double alpha, double Mach,
  *     i.e. the surface tangent is normal to the chord
  *     line connecting x(sle),y(sle) and the te point.
 //------------------------------------------------------ */
-bool XFoil::lefind(double &sle, Matrix2Xd points, Matrix2Xd dpoints_ds,
-                   VectorXd s, int n) {
-  int i;
-  double dseps;
-  //---- convergence tolerance
-  dseps = (s[n - 1] - s[0]) * 0.00001;
-
-  //---- set trailing edge point coordinates
-  point_te = 0.5 * (points.col(0) + points.col(n - 1));
-
-  //---- get first guess for sle
-  for (i = 2; i < n - 2; i++) {
-    const Vector2d dpoint_te = points.col(i) - point_te;
-    const Vector2d dpoint = points.col(i + 1) - points.col(i);
-    const double dotp = dpoint_te.dot(dpoint);
-    if (dotp < 0.0)
-      break;
-  }
-
-  sle = s[i];
-
-  //---- check for sharp le case
-  if (s[i] == s[i - 1])
-    return false;
-
-  //---- newton iteration to get exact sle value
-  for (int iter = 1; iter <= 50; iter++) {
-    point_le.x() = spline::seval(sle, points.row(0), dpoints_ds.row(0), s, n);
-    point_le.y() = spline::seval(sle, points.row(1), dpoints_ds.row(1), s, n);
-    const Vector2d dpoint_ds = {
-        spline::deval(sle, points.row(0), dpoints_ds.row(0), s, n),
-        spline::deval(sle, points.row(1), dpoints_ds.row(1), s, n)};
-    const Vector2d dpoint_dd = {
-        spline::d2val(sle, points.row(0), dpoints_ds.row(0), s, n),
-        spline::d2val(sle, points.row(1), dpoints_ds.row(1), s, n)};
-
-    Vector2d chord = point_le - point_te;
-
-    //------ drive dot product between chord line and le tangent to zero
-    const double res = chord.dot(dpoint_ds);
-    const double ress = dpoint_ds.dot(dpoint_ds) + chord.dot(dpoint_dd);
-
-    //------ newton delta for sle
-    double dsle = -res / ress;
-
-    dsle = std::max(dsle, -0.02 * fabs(chord.x() + chord.y()));
-    dsle = std::min(dsle, 0.02 * fabs(chord.x() + chord.y()));
-    sle = sle + dsle;
-    if (fabs(dsle) < dseps)
-      return true;
-  }
-
-  sle = s[i];
-  return true;
-}
+// moved to XFoil_geometry.cpp: lefind()
 
 /** ----------------------------------------------------
  *      marches the bls and wake in mixed mode using
@@ -2872,60 +2576,9 @@ bool XFoil::mrchue() {
  *      from unit-cl values and specified cls
  *      depending on matyp,retyp flags.
  * -------------------------------------------- */
-double XFoil::getActualMach(double cls, MachType mach_type) {
-  const double cla = std::max(cls, 0.000001);
-  switch (mach_type) {
-  case MachType::CONSTANT: {
-    minf = minf1;
-    return 0.0;
-  }
-  case MachType::FIXED_LIFT: {
-    minf = minf1 / sqrt(cla);
-    return -0.5 * minf / cla;
-  }
-  case MachType::FIXED_LIFT_AND_DYNAMIC_PRESSURE: {
-    minf = minf1;
-    return 0.0;
-  }
-  default:
-    return 0;
-  }
-}
-double XFoil::getActualReynolds(double cls, ReynoldsType reynolds_type) {
-  const double cla = std::max(cls, 0.000001);
-  switch (reynolds_type) {
-  case ReynoldsType::CONSTANT: {
-    reinf = reinf1;
-    return 0.0;
-  }
-  case ReynoldsType::FIXED_LIFT: {
-    reinf = reinf1 / sqrt(cla);
-    return -0.5 * reinf / cla;
-  }
-  case ReynoldsType::FIXED_LIFT_AND_DYNAMIC_PRESSURE: {
-    reinf = reinf1 / cla;
-    return -reinf / cla;
-  }
-  default:
-    return 0;
-  }
-}
+// moved to XFoil_init.cpp: getActualMach()/getActualReynolds()
 
-Matrix2Xd XFoil::ncalc(Matrix2Xd points, VectorXd spline_length, int n) {
-
-  Matrix2Xd normal_vector = Matrix2Xd::Zero(2, IZX);
-  normal_vector.row(0).head(n) =
-      spline::splind(points.row(0).head(n), spline_length.head(n));
-  normal_vector.row(1).head(n) =
-      spline::splind(points.row(1).head(n), spline_length.head(n));
-  for (int i = 0; i < n; i++) {
-    Vector2d temp = normal_vector.col(i);
-    normal_vector.col(i).x() = temp.normalized().y();
-    normal_vector.col(i).y() = temp.normalized().x();
-  }
-
-  return normal_vector;
-}
+// moved to XFoil_geometry.cpp: ncalc()
 
 /** --------------------------------------------------------------------
  *	   Calculates current streamfunction psi and tangential velocity
@@ -3054,23 +2707,7 @@ bool XFoil::qwcalc() {
   return true;
 }
 
-bool XFoil::restoreblData(int icom) {
-  if (icom == 1) {
-    blData1 = blsav[icom];
-  } else if (icom == 2) {
-    blData2 = blsav[icom];
-  }
-  return true;
-}
-
-bool XFoil::saveblData(int icom) {
-  if (icom == 1) {
-    blsav[icom] = blData1;
-  } else {
-    blsav[icom] = blData2;
-  }
-  return true;
-}
+// moved to XFoil_init.cpp: restoreblData()/saveblData()
 
 void XFoil::swapEdgeVelocities(SidePair<VectorXd> &usav) {
   for (int is = 1; is <= 2; ++is) {
@@ -3578,27 +3215,10 @@ bool XFoil::setexp(double spline_length[], double ds1, double smax, int nn) {
   return true;
 }
 
-bool XFoil::setMach() {
-  minf_cl = getActualMach(1.0, mach_type);
-  reinf_cl = getActualReynolds(1.0, reynolds_type);
-  comset();
-  cpi = cpcalc(n, qinv, qinf, minf);
-  if (lvisc) {
-    cpv = cpcalc(n + nw, qvis, qinf, minf);
-  }
-  clcalc(cmref);
-  cdcalc();
-  lvconv = false;
-  return true;
-}
+// moved to XFoil_init.cpp: setMach()
 
 /** returns the absolute value of "a" x sign(b) */
-double XFoil::sign(double a, double b) {
-  if (b >= 0.0)
-    return fabs(a);
-  else
-    return -fabs(a);
-}
+// moved to XFoil_geometry.cpp: sign()
 
 /**
  *      Converges to specified alpha.
@@ -3907,41 +3527,7 @@ bool XFoil::stmove() {
   return true;
 }
 
-bool XFoil::tecalc() {
-  //-------------------------------------------
-  //     calculates total and projected TE
-  //     areas and TE panel strengths.
-  //-------------------------------------------
-
-  double scs, sds;
-  //---- set te base vector and te bisector components
-  Vector2d point_te = points.col(0) - points.col(n - 1);
-
-  Vector2d dpoint_ds_te = 0.5 * (-dpoints_ds.col(0) + dpoints_ds.col(n - 1));
-
-  //---- normal and streamwise projected TE gap areas
-  ante = cross2(dpoint_ds_te, point_te);
-  aste = point_te.dot(dpoint_ds_te);
-
-  //---- total TE gap area
-  dste = point_te.norm();
-
-  sharp = dste < 0.0001 * chord;
-
-  if (sharp) {
-    scs = 1.0;
-    sds = 0.0;
-  } else {
-    scs = ante / dste;
-    sds = aste / dste;
-  }
-
-  //---- TE panel source and vorticity strengths
-  sigte = 0.5 * (surface_vortex(0, 0) - surface_vortex(0, n - 1)) * scs;
-  gamte = -.5 * (surface_vortex(0, 0) - surface_vortex(0, n - 1)) * sds;
-
-  return true;
-}
+// moved to XFoil_geometry.cpp: tecalc()
 
 bool XFoil::tesys(double cte, double tte, double dte) {
   //--------------------------------------------------------
@@ -5176,73 +4762,7 @@ double XFoil::xifset(int is) {
   return xiforc;
 }
 
-bool XFoil::xyWake() {
-  //-----------------------------------------------------
-  //     sets wake coordinate array for current surface
-  //     vorticity and/or mass source distributions.
-  //-----------------------------------------------------
-  double ds1, sx, sy, smod;
-  //
-  writeString("   Calculating wake trajectory ...\n");
-  //
-
-  ds1 = 0.5 * (spline_length[1] - spline_length[0] + spline_length[n - 1] -
-               spline_length[n - 2]);
-  setexp(snew.data() + n, ds1, waklen * chord, nw);
-
-  point_te = 0.5 * (points.col(0) + points.col(n - 1));
-
-  //-- set first wake point a tiny distance behind te
-  sx = 0.5 * (dpoints_ds.col(n - 1).y() - dpoints_ds.col(0).y());
-  sy = 0.5 * (dpoints_ds.col(0).x() - dpoints_ds.col(n - 1).x());
-  smod = sqrt(sx * sx + sy * sy);
-  normal_vectors.col(n).x() = sx / smod;
-  normal_vectors.col(n).y() = sy / smod;
-  points.col(n).x() = point_te.x() - 0.0001 * normal_vectors.col(n).y();
-  points.col(n).y() = point_te.y() + 0.0001 * normal_vectors.col(n).x();
-  spline_length[n] = spline_length[n - 1];
-
-  //---- calculate streamfunction gradient components at first point
-  Vector2d psi = {psilin(points, n, points.col(n), {1.0, 0.0}, false).psi_ni,
-                  psilin(points, n, points.col(n), {0.0, 1.0}, false).psi_ni};
-
-  //---- set unit vector normal to wake at first point
-  normal_vectors.col(n + 1) = -psi.normalized();
-
-  //---- set angle of wake panel normal
-  apanel[n] = atan2(psi.y(), psi.x());
-
-  //---- set rest of wake points
-  for (int i = n + 1; i < n + nw; i++) {
-    const double ds = snew[i] - snew[i - 1];
-
-    //------ set new point ds downstream of last point
-    points.col(i).x() = points.col(i - 1).x() - ds * normal_vectors.col(i - 1).y();
-    points.col(i).y() = points.col(i - 1).y() + ds * normal_vectors.col(i - 1).x();
-    spline_length[i] = spline_length[i - 1] + ds;
-
-    if (i != n + nw - 1) {
-      //---- calculate streamfunction gradient components at first point
-      Vector2d psi = {psilin(points, i, points.col(i), {1.0, 0.0}, false).psi_ni,
-                      psilin(points, i, points.col(i), {0.0, 1.0}, false).psi_ni};
-
-      //---- set unit vector normal to wake at first point
-      normal_vectors.col(i + 1) = -psi.normalized();
-
-      //------- set angle of wake panel normal
-      apanel[i] = atan2(psi.y(), psi.x());
-    }
-  }
-
-  //---- set wake presence flag and corresponding alpha
-  lwake = true;
-  awake = alfa;
-
-  //---- old source influence matrix is invalid for the new wake geometry
-  lwdij = false;
-
-  return true;
-}
+// moved to XFoil_geometry.cpp: xyWake()
 
 bool XFoil::isValidFoilAngles(Matrix2Xd points) {
 

@@ -20,6 +20,8 @@ add_executable(testExe
     ./model/psi.cpp
     ./model/coefficient/dissipation.cpp
     ./model/coefficient/skin_friction.cpp
+    ./XFoil_geometry.cpp
+    ./XFoil_init.cpp
     ./XFoil.cpp
     ./main.cpp
 )
