@@ -22,6 +22,9 @@ add_executable(testExe
     ./model/coefficient/skin_friction.cpp
     ./XFoil_geometry.cpp
     ./XFoil_init.cpp
+    ./XFoil_boundary.cpp
+    ./XFoil_bldif.cpp
+    ./XFoil_blsolve.cpp
     ./XFoil.cpp
     ./main.cpp
 )
