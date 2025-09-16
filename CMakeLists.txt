@@ -25,6 +25,10 @@ add_executable(testExe
     ./XFoil_boundary.cpp
     ./XFoil_bldif.cpp
     ./XFoil_blsolve.cpp
+    ./XFoil_boundary_layer_core.cpp
+    ./XFoil_aerodynamics.cpp
+    ./XFoil_march.cpp
+    ./XFoil_viscous.cpp
     ./XFoil.cpp
     ./main.cpp
 )
