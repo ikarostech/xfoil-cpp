@@ -307,136 +307,110 @@ bool XFoil::ggcalc() {
 /**
  *      Converges to specified alpha.
  */
-bool XFoil::specal() {
-  double minf_clm;
-  double clm;
+namespace {
+enum class SpecTarget { AngleOfAttack, LiftCoefficient };
 
-  //---- calculate surface vorticity distributions for alpha = 0, 90 degrees
-  if (!lgamu || !lqaij)
-    ggcalc();
-
+void updateSurfaceVortexFromGamu(XFoil &foil) {
   Matrix2d rotateMatrix =
-      Matrix2d{{cos(alfa), sin(alfa)}, {-sin(alfa), cos(alfa)}};
+      Matrix2d{{cos(foil.alfa), sin(foil.alfa)}, {-sin(foil.alfa), cos(foil.alfa)}};
 
-  //---- superimpose suitably weighted  alpha = 0, 90  distributions
-  for (int i = 0; i < n; i++) {
-    surface_vortex(0, i) = rotateMatrix.row(0).dot(gamu.col(i));
-    surface_vortex(1, i) = rotateMatrix.row(1).dot(gamu.col(i));
+  for (int i = 0; i < foil.n; i++) {
+    foil.surface_vortex(0, i) = rotateMatrix.row(0).dot(foil.gamu.col(i));
+    foil.surface_vortex(1, i) = rotateMatrix.row(1).dot(foil.gamu.col(i));
   }
-
-  tecalc();
-  qiset();
-
-  //---- set initial guess for the newton variable clm
-  clm = 1.0;
-
-  //---- set corresponding  m(clm), re(clm)
-  minf_clm = getActualMach(clm, mach_type);
-
-  //---- set corresponding cl(m)
-  clcalc(cmref);
-  //---- iterate on clm
-  bool bConv = false;
-  for (int itcl = 1; itcl <= 20; itcl++) {
-    const double msq_clm = 2.0 * minf * minf_clm;
-    const double dclm = (cl - clm) / (1.0 - cl_msq * msq_clm);
-
-    const double clm1 = clm;
-    rlx = 1.0;
-
-    //------ under-relaxation loop to avoid driving m(cl) above 1
-    for (int irlx = 1; irlx <= 12; irlx++) {
-      clm = clm1 + rlx * dclm;
-
-      //-------- set new freestream mach m(clm)
-      minf_clm = getActualMach(clm, mach_type);
-
-      //-------- if mach is ok, go do next newton iteration
-      // FIXME double型の==比較
-      if (mach_type == MachType::CONSTANT || minf == 0.0 || minf_clm != 0.0)
-        break;
-
-      rlx = 0.5 * rlx;
-    }
-
-    //------ set new cl(m)
-    clcalc(cmref);
-
-    if (fabs(dclm) <= 1.0e-6) {
-      bConv = true;
-      break;
-    }
-  }
-  if (!bConv) {
-    writeString("Specal:  MInf convergence failed\n");
-    return false;
-  }
-
-  //---- set final mach, cl, cp distributions, and hinge moment
-  minf_cl = getActualMach(cl, mach_type);
-  reinf_cl = getActualReynolds(cl, reynolds_type);
-  comset();
-  clcalc(cmref);
-
-  cpi = cpcalc(n, qinv, qinf, minf);
-  if (lvisc) {
-    cpv = cpcalc(n + nw, qvis, qinf, minf);
-    cpi = cpcalc(n + nw, qinv, qinf, minf);
-  } else
-    cpi = cpcalc(n, qinv, qinf, minf);
-
-  for (int i = 0; i < n; i++) {
-    qgamm[i + INDEX_START_WITH] = surface_vortex(0, i);
-  }
-
-  return true;
 }
 
+bool specConverge(XFoil &foil, SpecTarget target) {
+  // Ensure unit vorticity distributions are available.
+  if (!foil.lgamu || !foil.lqaij)
+    foil.ggcalc();
 
-bool XFoil::speccl() {
-  //-----------------------------------------
-  //     converges to specified inviscid cl.
-  //-----------------------------------------
+  updateSurfaceVortexFromGamu(foil);
 
-  //---- calculate surface vorticity distributions for alpha = 0, 90 degrees
-  if (!lgamu || !lqaij)
-    ggcalc();
-
-  //---- set freestream mach from specified cl -- mach will be held fixed
-  minf_cl = getActualMach(clspec, mach_type);
-  reinf_cl = getActualReynolds(clspec, reynolds_type);
-  comset();
-
-  Matrix2d rotateMatrix =
-      Matrix2d{{cos(alfa), sin(alfa)}, {-sin(alfa), cos(alfa)}};
-
-  //---- superimpose suitably weighted  alpha = 0, 90  distributions
-  for (int i = 0; i < n; i++) {
-    surface_vortex(0, i) = rotateMatrix.row(0).dot(gamu.col(i));
-    surface_vortex(1, i) = rotateMatrix.row(1).dot(gamu.col(i));
+  if (target == SpecTarget::AngleOfAttack) {
+    foil.tecalc();
+    foil.qiset();
+  } else {
+    foil.minf_cl = foil.getActualMach(foil.clspec, foil.mach_type);
+    foil.reinf_cl = foil.getActualReynolds(foil.clspec, foil.reynolds_type);
+    foil.comset();
   }
 
-  //---- get corresponding cl, cl_alpha, cl_mach
-  clcalc(cmref);
+  foil.clcalc(foil.cmref);
 
-  //---- newton loop for alpha to get specified inviscid cl
   bool bConv = false;
-  for (int ital = 1; ital <= 20; ital++) {
-    const double dalfa = (clspec - cl) / cl_alf;
-    rlx = 1.0;
 
-    alfa = alfa + rlx * dalfa;
+  if (target == SpecTarget::AngleOfAttack) {
+    double clm = 1.0;
+    double minf_clm = foil.getActualMach(clm, foil.mach_type);
 
-    //------ set new surface speed distribution
-    Matrix2d rotateMatrix =
-        Matrix2d{{cos(alfa), sin(alfa)}, {-sin(alfa), cos(alfa)}};
-    for (int i = 0; i < n; i++) {
-      surface_vortex(0, i) = rotateMatrix.row(0).dot(gamu.col(i));
-      surface_vortex(1, i) = rotateMatrix.row(1).dot(gamu.col(i));
+    for (int itcl = 1; itcl <= 20; itcl++) {
+      const double msq_clm = 2.0 * foil.minf * minf_clm;
+      const double dclm = (foil.cl - clm) / (1.0 - foil.cl_msq * msq_clm);
+
+      const double clm1 = clm;
+      foil.rlx = 1.0;
+
+      //------ under-relaxation loop to avoid driving m(cl) above 1
+      for (int irlx = 1; irlx <= 12; irlx++) {
+        clm = clm1 + foil.rlx * dclm;
+
+        //-------- set new freestream mach m(clm)
+        minf_clm = foil.getActualMach(clm, foil.mach_type);
+
+        //-------- if mach is ok, go do next newton iteration
+        // FIXME double型の==比較
+        if (foil.mach_type == XFoil::MachType::CONSTANT || foil.minf == 0.0 ||
+            minf_clm != 0.0)
+          break;
+
+        foil.rlx = 0.5 * foil.rlx;
+      }
+
+      //------ set new cl(m)
+      foil.clcalc(foil.cmref);
+
+      if (fabs(dclm) <= 1.0e-6) {
+        bConv = true;
+        break;
+      }
     }
 
+    if (!bConv) {
+      foil.writeString("Specal:  MInf convergence failed\n");
+      return false;
+    }
+
+    //---- set final mach, cl, cp distributions, and hinge moment
+    foil.minf_cl = foil.getActualMach(foil.cl, foil.mach_type);
+    foil.reinf_cl = foil.getActualReynolds(foil.cl, foil.reynolds_type);
+    foil.comset();
+    foil.clcalc(foil.cmref);
+
+    foil.cpi = foil.cpcalc(foil.n, foil.qinv, foil.qinf, foil.minf);
+    if (foil.lvisc) {
+      foil.cpv = foil.cpcalc(foil.n + foil.nw, foil.qvis, foil.qinf, foil.minf);
+      foil.cpi = foil.cpcalc(foil.n + foil.nw, foil.qinv, foil.qinf, foil.minf);
+    } else
+      foil.cpi = foil.cpcalc(foil.n, foil.qinv, foil.qinf, foil.minf);
+
+    for (int i = 0; i < foil.n; i++) {
+      foil.qgamm[i + INDEX_START_WITH] = foil.surface_vortex(0, i);
+    }
+
+    return true;
+  }
+
+  for (int ital = 1; ital <= 20; ital++) {
+    const double dalfa = (foil.clspec - foil.cl) / foil.cl_alf;
+    foil.rlx = 1.0;
+
+    foil.alfa = foil.alfa + foil.rlx * dalfa;
+
+    updateSurfaceVortexFromGamu(foil);
+
     //------ set new cl(alpha)
-    clcalc(cmref);
+    foil.clcalc(foil.cmref);
 
     if (fabs(dalfa) <= 1.0e-6) {
       bConv = true;
@@ -444,21 +418,30 @@ bool XFoil::speccl() {
     }
   }
   if (!bConv) {
-    writeString("Speccl:  cl convergence failed");
+    foil.writeString("Speccl:  cl convergence failed");
     return false;
   }
 
   //---- set final surface speed and cp distributions
-  tecalc();
-  qiset();
+  foil.tecalc();
+  foil.qiset();
 
-  if (lvisc) {
-    cpv = cpcalc(n + nw, qvis, qinf, minf);
-    cpi = cpcalc(n + nw, qinv, qinf, minf);
+  if (foil.lvisc) {
+    foil.cpv = foil.cpcalc(foil.n + foil.nw, foil.qvis, foil.qinf, foil.minf);
+    foil.cpi = foil.cpcalc(foil.n + foil.nw, foil.qinv, foil.qinf, foil.minf);
 
   } else {
-    cpi = cpcalc(n, qinv, qinf, minf);
+    foil.cpi = foil.cpcalc(foil.n, foil.qinv, foil.qinf, foil.minf);
   }
 
   return true;
+}
+}  // namespace
+
+bool XFoil::specal() {
+  return specConverge(*this, SpecTarget::AngleOfAttack);
+}
+
+bool XFoil::speccl() {
+  return specConverge(*this, SpecTarget::LiftCoefficient);
 }
