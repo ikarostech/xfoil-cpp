@@ -362,6 +362,168 @@ void XFoil::computeClFromQtan(const VectorXd &qnew, const VectorXd &q_ac,
 }
 
 
+static void applyRelaxationLimit(const VectorXd &dn, double dhi, double dlo,
+                                 double &rlx) {
+  double max_pos = 0.0;
+  double min_neg = 0.0;
+  for (int i = 0; i < dn.size(); ++i) {
+    const double value = dn[i];
+    if (value > max_pos)
+      max_pos = value;
+    if (value < min_neg)
+      min_neg = value;
+  }
+  if (max_pos > 0.0)
+    rlx = std::min(rlx, dhi / max_pos);
+  if (min_neg < 0.0)
+    rlx = std::min(rlx, dlo / min_neg);
+}
+
+
+double XFoil::computeAcChange(double clnew, double cl_current,
+                              double cl_target, double cl_ac, double cl_a,
+                              double cl_ms) const {
+  if (lalfa) {
+    return (clnew - cl_current) /
+           (1.0 - cl_ac - cl_ms * 2.0 * minf * minf_cl);
+  }
+  return (clnew - cl_target) / (0.0 - cl_ac - cl_a);
+}
+
+
+double XFoil::clampRelaxationForGlobalChange(double rlx, double dac,
+                                             double lower,
+                                             double upper) const {
+  if (dac == 0.0)
+    return rlx;
+  if (rlx * dac > upper)
+    rlx = upper / dac;
+  if (rlx * dac < lower)
+    rlx = lower / dac;
+  return rlx;
+}
+
+
+XFoil::BoundaryLayerDelta XFoil::buildBoundaryLayerDelta(
+    int side, const VectorXd &unew_side, const VectorXd &u_ac_side,
+    double dac) const {
+  BoundaryLayerDelta delta;
+  const int len = nbl.get(side) - 1;
+  if (len <= 0)
+    return delta;
+
+  delta.dctau = VectorXd(len);
+  delta.dthet = VectorXd(len);
+  delta.ddstr = VectorXd(len);
+  delta.duedg = VectorXd(len);
+
+  const auto iv = isys.get(side).segment(0, len);
+  VectorXd dmass(len);
+  for (int j = 0; j < len; ++j) {
+    const int idx = iv[j];
+    delta.dctau[j] = vdel[idx](0, 0) - dac * vdel[idx](0, 1);
+    delta.dthet[j] = vdel[idx](1, 0) - dac * vdel[idx](1, 1);
+    dmass[j] = vdel[idx](2, 0) - dac * vdel[idx](2, 1);
+  }
+
+  const VectorXd uedg_segment = uedg.get(side).head(len);
+  const VectorXd dstr_segment = dstr.get(side).head(len);
+  const VectorXd unew_segment = unew_side.head(len);
+  const VectorXd uac_segment = u_ac_side.head(len);
+
+  delta.duedg = unew_segment + dac * uac_segment - uedg_segment;
+  delta.ddstr = (dmass - dstr_segment.cwiseProduct(delta.duedg))
+                    .cwiseQuotient(uedg_segment);
+
+  return delta;
+}
+
+
+XFoil::BoundaryLayerMetrics XFoil::evaluateSegmentRelaxation(
+    int side, const BoundaryLayerDelta &delta, double dhi, double dlo,
+    double &rlx) const {
+  BoundaryLayerMetrics metrics;
+  const int len = delta.dctau.size();
+  if (len <= 0)
+    return metrics;
+
+  const VectorXd ctau_segment = ctau.get(side).head(len);
+  const VectorXd thet_segment = thet.get(side).head(len);
+  const VectorXd dstr_segment = dstr.get(side).head(len);
+
+  VectorXd dn1(len);
+  const int transition_index = itran.get(side);
+  for (int idx = 0; idx < len; ++idx) {
+    dn1[idx] =
+        (idx < transition_index) ? delta.dctau[idx] / 10.0
+                                 : delta.dctau[idx] / ctau_segment[idx];
+  }
+  const VectorXd dn2 = delta.dthet.cwiseQuotient(thet_segment);
+  const VectorXd dn3 = delta.ddstr.cwiseQuotient(dstr_segment);
+  const VectorXd dn4 = delta.duedg.array().abs() / 0.25;
+
+  applyRelaxationLimit(dn1, dhi, dlo, rlx);
+  applyRelaxationLimit(dn2, dhi, dlo, rlx);
+  applyRelaxationLimit(dn3, dhi, dlo, rlx);
+  applyRelaxationLimit(dn4, dhi, dlo, rlx);
+
+  metrics.rmsContribution =
+      (dn1.array().square() + dn2.array().square() + dn3.array().square() +
+       dn4.array().square())
+          .sum();
+
+  double local_max = dn1.cwiseAbs().maxCoeff();
+  local_max = std::max(local_max, dn2.cwiseAbs().maxCoeff());
+  local_max = std::max(local_max, dn3.cwiseAbs().maxCoeff());
+  local_max = std::max(local_max, dn4.cwiseAbs().maxCoeff());
+  metrics.maxChange = local_max;
+
+  return metrics;
+}
+
+
+void XFoil::applyBoundaryLayerDelta(int side,
+                                    const BoundaryLayerDelta &delta,
+                                    double rlx) {
+  const int len = delta.dctau.size();
+  if (len <= 0)
+    return;
+
+  auto ctau_segment = ctau.get(side).head(len);
+  auto thet_segment = thet.get(side).head(len);
+  auto dstr_segment = dstr.get(side).head(len);
+  auto uedg_segment = uedg.get(side).head(len);
+
+  ctau_segment += rlx * delta.dctau;
+  thet_segment += rlx * delta.dthet;
+  dstr_segment += rlx * delta.ddstr;
+  uedg_segment += rlx * delta.duedg;
+
+  const int transition_index = std::max(0, itran.get(side));
+  for (int idx = transition_index; idx < len; ++idx) {
+    ctau_segment[idx] = std::min(ctau_segment[idx], 0.25);
+  }
+
+  for (int ibl = 0; ibl < len; ++ibl) {
+    double dswaki = 0.0;
+    if (ibl > iblte.get(side)) {
+      const int wake_index = ibl - (iblte.get(side) + 1);
+      dswaki = wgap[wake_index];
+    }
+
+    const double hklim = (ibl <= iblte.get(side)) ? 1.02 : 1.00005;
+    const double uedg_val = uedg.get(side)[ibl];
+    const double uedg_sq = uedg_val * uedg_val;
+    const double denom = 1.0 - 0.5 * uedg_sq * hstinv;
+    const double msq = uedg_sq * hstinv / (gamm1 * denom);
+    double dsw = dstr.get(side)[ibl] - dswaki;
+    dslim(dsw, thet.get(side)[ibl], msq, hklim);
+    dstr.get(side)[ibl] = dsw + dswaki;
+    mass.get(side)[ibl] = dstr.get(side)[ibl] * uedg.get(side)[ibl];
+  }
+}
+
+
 bool XFoil::update() {
   //------------------------------------------------------------------
   //      adds on newton deltas to boundary layer variables.
@@ -372,8 +534,6 @@ bool XFoil::update() {
   //        if lalfa=false, "ac" is alpha
   //------------------------------------------------------------------
 
-  // int i = 0, is = 0, iv, iw, j, js, jv, ibl, jbl, kbl = 0;
-
   SidePair<VectorXd> unew, u_ac;
   unew.top = VectorXd::Zero(IVX);
   unew.bottom = VectorXd::Zero(IVX);
@@ -382,17 +542,14 @@ bool XFoil::update() {
 
   VectorXd qnew = VectorXd::Zero(IQX);
   VectorXd q_ac = VectorXd::Zero(IQX);
-  double dalmax = 0.0, dalmin = 0.0, dclmax = 0.0, dclmin = 0.0;
-  double dac = 0.0, dhi = 0.0, dlo = 0.0;
-  double dswaki, hklim, msq, dsw;
   double clnew = 0.0, cl_a = 0.0, cl_ms = 0.0, cl_ac = 0.0;
 
   //---- max allowable alpha changes per iteration
-  dalmax = 0.5 * dtor;
-  dalmin = -0.5 * dtor;
+  const double dalmax = 0.5 * dtor;
+  const double dalmin = -0.5 * dtor;
   //---- max allowable cl change per iteration
-  dclmax = 0.5;
-  dclmin = -0.5;
+  double dclmax = 0.5;
+  double dclmin = -0.5;
   if (mach_type != MachType::CONSTANT)
     dclmin = std::max(-0.5, -0.9 * cl);
   hstinv =
@@ -405,178 +562,39 @@ bool XFoil::update() {
 
   //--- initialize under-relaxation factor
   rlx = 1.0;
+  const double cl_target = lalfa ? cl : clspec;
+  double dac = computeAcChange(clnew, cl, cl_target, cl_ac, cl_a, cl_ms);
 
-  if (lalfa) {
-    //===== alpha is prescribed: ac is cl
+  if (lalfa)
+    rlx = clampRelaxationForGlobalChange(rlx, dac, dclmin, dclmax);
+  else
+    rlx = clampRelaxationForGlobalChange(rlx, dac, dalmin, dalmax);
 
-    //---- set change in re to account for cl changing, since re = re(cl)
-    dac = (clnew - cl) / (1.0 - cl_ac - cl_ms * 2.0 * minf * minf_cl);
-
-    //---- set under-relaxation factor if re change is too large
-    if (rlx * dac > dclmax)
-      rlx = dclmax / dac;
-    if (rlx * dac < dclmin)
-      rlx = dclmin / dac;
-  } else {
-    //===== cl is prescribed: ac is alpha
-
-    //---- set change in alpha to drive cl to prescribed value
-    dac = (clnew - clspec) / (0.0 - cl_ac - cl_a);
-
-    //---- set under-relaxation factor if alpha change is too large
-    if (rlx * dac > dalmax)
-      rlx = dalmax / dac;
-    if (rlx * dac < dalmin)
-      rlx = dalmin / dac;
-  }
   rmsbl = 0.0;
   rmxbl = 0.0;
-  dhi = 1.5;
-  dlo = -.5;
+  const double dhi = 1.5;
+  const double dlo = -0.5;
 
-  SidePair<VectorXd> dctau_seg, dthet_seg, ddstr_seg, duedg_seg;
-  for (int is = 1; is <= 2; ++is) {
-    // Use 0-based BL indexing for segments (skip ibl=0)
-    int start = 0;
-    int len = nbl.get(is) - 1;
-    if (len <= 0)
-      continue;
-
-    dctau_seg.get(is) = VectorXd(len);
-    dthet_seg.get(is) = VectorXd(len);
-    ddstr_seg.get(is) = VectorXd(len);
-    duedg_seg.get(is) = VectorXd(len);
-
-    // Build 0-based local slices for calculations
-    VectorXd ctau_slice(len), thet_slice(len), dstr_slice(len), uedg_slice(len);
-    VectorXd unew_slice = unew.get(is).segment(0, len);
-    VectorXd uac_slice = u_ac.get(is).segment(0, len);
-    for (int j = 0; j < len; ++j) {
-      ctau_slice[j] = ctau.get(is)[j];
-      thet_slice[j] = thet.get(is)[j];
-      dstr_slice[j] = dstr.get(is)[j];
-      uedg_slice[j] = uedg.get(is)[j];
-    }
-
-    VectorXi iv = isys.get(is).segment(start, len);
-    VectorXd dmass(len);
-    for (int j = 0; j < len; ++j) {
-      int idx = iv[j];
-      dctau_seg.get(is)[j] = vdel[idx](0, 0) - dac * vdel[idx](0, 1);
-      dthet_seg.get(is)[j] = vdel[idx](1, 0) - dac * vdel[idx](1, 1);
-      dmass[j] = vdel[idx](2, 0) - dac * vdel[idx](2, 1);
-    }
-    duedg_seg.get(is) = unew_slice + dac * uac_slice - uedg_slice;
-    ddstr_seg.get(is) = (dmass - dstr_slice.cwiseProduct(duedg_seg.get(is)))
-                            .cwiseQuotient(uedg_slice);
-
-    VectorXi iblSeq = VectorXi::LinSpaced(len, 0, len - 1);
-    // Compare using 0-based logical indices
-    VectorXd dn1 =
-        ((iblSeq.array()) < itran.get(is))
-            .select(dctau_seg.get(is).array() / 10.0,
-                    dctau_seg.get(is).cwiseQuotient(ctau_slice).array())
-            .matrix();
-    VectorXd dn2 = dthet_seg.get(is).cwiseQuotient(thet_slice);
-    VectorXd dn3 = ddstr_seg.get(is).cwiseQuotient(dstr_slice);
-    VectorXd dn4 = duedg_seg.get(is).array().abs() / 0.25;
-
-    rmsbl += (dn1.array().square() + dn2.array().square() +
-              dn3.array().square() + dn4.array().square())
-                 .sum();
-
-    auto relax = [&](const VectorXd &dn) {
-      double max_pos = dn.cwiseMax(0.0).maxCoeff();
-      if (max_pos > 0.0)
-        rlx = std::min(rlx, dhi / max_pos);
-      double min_neg = dn.cwiseMin(0.0).minCoeff();
-      if (min_neg < 0.0)
-        rlx = std::min(rlx, dlo / min_neg);
-    };
-    relax(dn1);
-    relax(dn2);
-    relax(dn3);
-    relax(dn4);
-
-    double local_max = dn1.cwiseAbs().maxCoeff();
-    local_max = std::max(local_max, dn2.cwiseAbs().maxCoeff());
-    local_max = std::max(local_max, dn3.cwiseAbs().maxCoeff());
-    local_max = std::max(local_max, dn4.cwiseAbs().maxCoeff());
-    rmxbl = std::max(rmxbl, local_max);
+  SidePair<BoundaryLayerDelta> deltas;
+  SidePair<BoundaryLayerMetrics> metrics;
+  for (int side = 1; side <= 2; ++side) {
+    deltas.get(side) =
+        buildBoundaryLayerDelta(side, unew.get(side), u_ac.get(side), dac);
+    metrics.get(side) =
+        evaluateSegmentRelaxation(side, deltas.get(side), dhi, dlo, rlx);
+    rmsbl += metrics.get(side).rmsContribution;
+    rmxbl = std::max(rmxbl, metrics.get(side).maxChange);
   }
 
-  //--- set true rms change
   rmsbl = sqrt(rmsbl / (4.0 * double(nbl.top + nbl.bottom)));
 
-  if (lalfa) {
-    //---- set underrelaxed change in reynolds number from change in lift
+  if (lalfa)
     cl = cl + rlx * dac;
-  } else {
-    //---- set underrelaxed change in alpha
+  else
     alfa = alfa + rlx * dac;
-  }
 
-  //--- update bl variables with underrelaxed changes
-  for (int is = 1; is <= 2; ++is) {
-    // 0-based segments starting at ibl=1 (skip 0)
-    int start = 1;
-    int len = nbl.get(is) - 1;
-    if (len <= 0)
-      continue;
-
-    // Local 0-based slices, then write back to arrays
-    VectorXd ctau_slice(len), thet_slice(len), dstr_slice(len), uedg_slice(len);
-    for (int j = 0; j < len; ++j) {
-      ctau_slice[j] = ctau.get(is)[j];
-      thet_slice[j] = thet.get(is)[j];
-      dstr_slice[j] = dstr.get(is)[j];
-      uedg_slice[j] = uedg.get(is)[j];
-    }
-
-    ctau_slice += rlx * dctau_seg.get(is);
-    thet_slice += rlx * dthet_seg.get(is);
-    dstr_slice += rlx * ddstr_seg.get(is);
-    uedg_slice += rlx * duedg_seg.get(is);
-
-    VectorXi iblSeq = VectorXi::LinSpaced(len, 0, len - 1);
-    ctau_slice =
-        ((iblSeq.array()) >= itran.get(is))
-            .select(ctau_slice.array().cwiseMin(0.25), ctau_slice.array())
-            .matrix();
-
-    // Write back updated slices to arrays via 0-based accessors
-    for (int j = 0; j < len; ++j) {
-      ctau.get(is)[j] = ctau_slice[j];
-      thet.get(is)[j] = thet_slice[j];
-      dstr.get(is)[j] = dstr_slice[j];
-      uedg.get(is)[j] = uedg_slice[j];
-    }
-
-    for (int ibl = 0; ibl < nbl.get(is) - 1; ++ibl) {
-      if (ibl > iblte.get(is)) {
-        dswaki = wgap[ibl - (iblte.get(is) + 1)];
-      } else
-        dswaki = 0.0;
-
-      if (ibl <= iblte.get(is))
-        hklim = 1.02;
-      else
-        hklim = 1.00005;
-
-      msq = uedg.get(is)[ibl] *
-            uedg.get(is)[ibl] * hstinv /
-            (gamm1 *
-             (1.0 - 0.5 * uedg.get(is)[ibl] *
-                        uedg.get(is)[ibl] * hstinv));
-      dsw = dstr.get(is)[ibl] - dswaki;
-      dslim(dsw, thet.get(is)[ibl], msq, hklim);
-      dstr.get(is)[ibl] = dsw + dswaki;
-
-      //------- set new mass defect (nonlinear update)
-      mass.get(is)[ibl] =
-          dstr.get(is)[ibl] * uedg.get(is)[ibl];
-    }
-  }
+  for (int side = 1; side <= 2; ++side)
+    applyBoundaryLayerDelta(side, deltas.get(side), rlx);
 
   //--- equate upper wake arrays to lower wake arrays
   for (int kbl = 1; kbl <= nbl.bottom - (iblte.bottom + 1); kbl++) {

@@ -277,6 +277,30 @@ class XFoil {
   void computeClFromQtan(const VectorXd& qnew, const VectorXd& q_ac,
                          double& clnew, double& cl_a,
                          double& cl_ms, double& cl_ac);
+  struct BoundaryLayerDelta {
+    VectorXd dctau;
+    VectorXd dthet;
+    VectorXd ddstr;
+    VectorXd duedg;
+  };
+  struct BoundaryLayerMetrics {
+    double rmsContribution = 0.0;
+    double maxChange = 0.0;
+  };
+  double computeAcChange(double clnew, double cl_current, double cl_target,
+                         double cl_ac, double cl_a, double cl_ms) const;
+  double clampRelaxationForGlobalChange(double rlx, double dac, double lower,
+                                        double upper) const;
+  BoundaryLayerDelta buildBoundaryLayerDelta(int side,
+                                             const VectorXd& unew_side,
+                                             const VectorXd& u_ac_side,
+                                             double dac) const;
+  BoundaryLayerMetrics evaluateSegmentRelaxation(int side,
+                                                 const BoundaryLayerDelta& delta,
+                                                 double dhi, double dlo,
+                                                 double& rlx) const;
+  void applyBoundaryLayerDelta(int side, const BoundaryLayerDelta& delta,
+                               double rlx);
   bool xicalc();
   double xifset(int is);
   bool xyWake();
