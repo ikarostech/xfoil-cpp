@@ -11,7 +11,7 @@ struct AerodynamicsState {
 
 std::unordered_map<const XFoil*, AerodynamicsState> g_aerodynamics_state;
 
-AerodynamicsState& ensureAerodynamicsState(XFoil* foil) {
+AerodynamicsState& ensureAerodynamicsState(const XFoil* foil) {
   return g_aerodynamics_state[foil];
 }
 }  // namespace

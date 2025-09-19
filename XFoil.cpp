@@ -52,18 +52,19 @@ XFoil::PressureCoefficientResult XFoil::computePressureCoefficient(
   const double velocity_ratio = tangential_velocity / qinf;
   const double cginc = 1.0 - velocity_ratio * velocity_ratio;
   const double denom = params.beta + params.bfac * cginc;
-  const double cp = cginc / denom;
+  const double pressure_coefficient = cginc / denom;
   const double cp_msq =
-      -cp / denom * (params.beta_msq + params.bfac_msq * cginc);
+      -pressure_coefficient / denom *
+      (params.beta_msq + params.bfac_msq * cginc);
 
   double cp_velocity_derivative = 0.0;
   if (velocity_derivative != 0.0) {
     const double cpi = -2.0 * tangential_velocity / (qinf * qinf);
-    const double cpc_cpi = (1.0 - params.bfac * cp) / denom;
+    const double cpc_cpi = (1.0 - params.bfac * pressure_coefficient) / denom;
     cp_velocity_derivative = cpc_cpi * cpi * velocity_derivative;
   }
 
-  return {cp, cp_msq, cp_velocity_derivative};
+  return {pressure_coefficient, cp_msq, cp_velocity_derivative};
 }
 
 Matrix2d XFoil::buildBodyToFreestreamRotation() const {

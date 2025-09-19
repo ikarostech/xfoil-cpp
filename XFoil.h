@@ -334,8 +334,8 @@ class XFoil {
   };
   double computeAcChange(double clnew, double cl_current, double cl_target,
                          double cl_ac, double cl_a, double cl_ms) const;
-  double clampRelaxationForGlobalChange(double rlx, double dac, double lower,
-                                        double upper) const;
+  double clampRelaxationForGlobalChange(double relaxation, double dac,
+                                        double lower, double upper) const;
   BoundaryLayerDelta buildBoundaryLayerDelta(int side,
                                              const VectorXd& unew_side,
                                              const VectorXd& u_ac_side,
@@ -343,9 +343,9 @@ class XFoil {
   BoundaryLayerMetrics evaluateSegmentRelaxation(int side,
                                                  const BoundaryLayerDelta& delta,
                                                  double dhi, double dlo,
-                                                 double& rlx) const;
+                                                 double& relaxation) const;
   void applyBoundaryLayerDelta(int side, const BoundaryLayerDelta& delta,
-                               double rlx);
+                               double relaxation);
   bool xicalc();
   double xifset(int is);
   bool xyWake();

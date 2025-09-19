@@ -355,20 +355,19 @@ void XFoil::computeClFromQtan(const VectorXd &qnew, const VectorXd &q_ac,
 
 
 static void applyRelaxationLimit(const VectorXd &dn, double dhi, double dlo,
-                                 double &rlx) {
+                                 double &relaxation) {
   double max_pos = 0.0;
   double min_neg = 0.0;
-  for (int i = 0; i < dn.size(); ++i) {
-    const double value = dn[i];
+  for (const double value : dn) {
     if (value > max_pos)
       max_pos = value;
     if (value < min_neg)
       min_neg = value;
   }
   if (max_pos > 0.0)
-    rlx = std::min(rlx, dhi / max_pos);
+    relaxation = std::min(relaxation, dhi / max_pos);
   if (min_neg < 0.0)
-    rlx = std::min(rlx, dlo / min_neg);
+    relaxation = std::min(relaxation, dlo / min_neg);
 }
 
 
@@ -383,16 +382,16 @@ double XFoil::computeAcChange(double clnew, double cl_current,
 }
 
 
-double XFoil::clampRelaxationForGlobalChange(double rlx, double dac,
+double XFoil::clampRelaxationForGlobalChange(double relaxation, double dac,
                                              double lower,
                                              double upper) const {
   if (dac == 0.0)
-    return rlx;
-  if (rlx * dac > upper)
-    rlx = upper / dac;
-  if (rlx * dac < lower)
-    rlx = lower / dac;
-  return rlx;
+    return relaxation;
+  if (relaxation * dac > upper)
+    relaxation = upper / dac;
+  if (relaxation * dac < lower)
+    relaxation = lower / dac;
+  return relaxation;
 }
 
 
@@ -433,7 +432,7 @@ XFoil::BoundaryLayerDelta XFoil::buildBoundaryLayerDelta(
 
 XFoil::BoundaryLayerMetrics XFoil::evaluateSegmentRelaxation(
     int side, const BoundaryLayerDelta &delta, double dhi, double dlo,
-    double &rlx) const {
+    double &relaxation) const {
   BoundaryLayerMetrics metrics;
   const int len = delta.dctau.size();
   if (len <= 0)
@@ -454,10 +453,10 @@ XFoil::BoundaryLayerMetrics XFoil::evaluateSegmentRelaxation(
   const VectorXd dn3 = delta.ddstr.cwiseQuotient(dstr_segment);
   const VectorXd dn4 = delta.duedg.array().abs() / 0.25;
 
-  applyRelaxationLimit(dn1, dhi, dlo, rlx);
-  applyRelaxationLimit(dn2, dhi, dlo, rlx);
-  applyRelaxationLimit(dn3, dhi, dlo, rlx);
-  applyRelaxationLimit(dn4, dhi, dlo, rlx);
+  applyRelaxationLimit(dn1, dhi, dlo, relaxation);
+  applyRelaxationLimit(dn2, dhi, dlo, relaxation);
+  applyRelaxationLimit(dn3, dhi, dlo, relaxation);
+  applyRelaxationLimit(dn4, dhi, dlo, relaxation);
 
   metrics.rmsContribution =
       (dn1.array().square() + dn2.array().square() + dn3.array().square() +
@@ -476,7 +475,7 @@ XFoil::BoundaryLayerMetrics XFoil::evaluateSegmentRelaxation(
 
 void XFoil::applyBoundaryLayerDelta(int side,
                                     const BoundaryLayerDelta &delta,
-                                    double rlx) {
+                                    double relaxation) {
   const int len = delta.dctau.size();
   if (len <= 0)
     return;
@@ -486,10 +485,10 @@ void XFoil::applyBoundaryLayerDelta(int side,
   auto dstr_segment = dstr.get(side).head(len);
   auto uedg_segment = uedg.get(side).head(len);
 
-  ctau_segment += rlx * delta.dctau;
-  thet_segment += rlx * delta.dthet;
-  dstr_segment += rlx * delta.ddstr;
-  uedg_segment += rlx * delta.duedg;
+  ctau_segment += relaxation * delta.dctau;
+  thet_segment += relaxation * delta.dthet;
+  dstr_segment += relaxation * delta.ddstr;
+  uedg_segment += relaxation * delta.duedg;
 
   const int transition_index = std::max(0, itran.get(side));
   for (int idx = transition_index; idx < len; ++idx) {

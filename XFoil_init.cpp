@@ -1,7 +1,9 @@
 #include "XFoil.h"
 #include <algorithm>
+#include <array>
 #include <cstring>
 #include <numbers>
+#include <ranges>
 #include <unordered_map>
 
 // Initialization and global state related member functions split from XFoil.cpp
@@ -9,16 +11,16 @@
 namespace {
 struct InitState {
   double amax = 0.0;
-  double qf0[IQX + 1]{};
-  double qf1[IQX + 1]{};
-  double qf2[IQX + 1]{};
-  double qf3[IQX + 1]{};
-  blData blsav[3]{};
+  std::array<double, IQX + 1> qf0{};
+  std::array<double, IQX + 1> qf1{};
+  std::array<double, IQX + 1> qf2{};
+  std::array<double, IQX + 1> qf3{};
+  std::array<blData, 3> blsav{};
 };
 
 std::unordered_map<const XFoil*, InitState> g_init_state;
 
-InitState& ensureInitState(XFoil* foil) {
+InitState& ensureInitState(const XFoil* foil) {
   return g_init_state[foil];
 }
 }  // namespace
@@ -49,7 +51,7 @@ bool XFoil::initialize() {
 void XFoil::initializeDataStructures() {
   apanel = VectorXd::Zero(n + nw);
   auto& cache = ensureInitState(this);
-  std::fill(std::begin(cache.blsav), std::end(cache.blsav), blData{});
+  cache.blsav.fill(blData{});
 
   bij = MatrixXd::Zero(IQX, IZX);
   dij = MatrixXd::Zero(IZX, IZX);
@@ -73,10 +75,10 @@ void XFoil::initializeDataStructures() {
   normal_vectors = Matrix2Xd::Zero(2, n + nw);
   gamu = Matrix2Xd::Zero(2, n + 1);
   surface_vortex = Matrix2Xd::Zero(2, n);
-  std::fill(std::begin(cache.qf0), std::end(cache.qf0), 0.0);
-  std::fill(std::begin(cache.qf1), std::end(cache.qf1), 0.0);
-  std::fill(std::begin(cache.qf2), std::end(cache.qf2), 0.0);
-  std::fill(std::begin(cache.qf3), std::end(cache.qf3), 0.0);
+  std::ranges::fill(cache.qf0, 0.0);
+  std::ranges::fill(cache.qf1, 0.0);
+  std::ranges::fill(cache.qf2, 0.0);
+  std::ranges::fill(cache.qf3, 0.0);
   qinv = VectorXd::Zero(n + nw);
   qinv_a = VectorXd::Zero(n + nw);
   qinvu = Matrix2Xd::Zero(2, n + nw);
