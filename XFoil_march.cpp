@@ -108,327 +108,320 @@ bool XFoil::iblsys() {
  *      checking of transition onset is performed.
  * ----------------------------------------------------- */
 bool XFoil::mrchdu() {
-  std::stringstream ss;
-
   const double deps = 0.000005;
-  int itrold, iw = 0; // icom
+  const double senswt = 1000.0;
 
-  double senswt = 0.0, thi, uei, dsi, cti, dswaki, ratlen = 0.0;
-  double sens = 0.0, sennew = 0.0, msq = 0.0, thm = 0.0, dsm = 0.0, uem = 0.0;
-  double xsi, hklim = 0.0, dsw = 0.0;
-  double ami = 0.0, dte = 0.0, cte = 0.0, tte = 0.0, ueref = 0.0, hkref = 0.0,
-         dmax = 0.0;
+  double sens = 0.0;
+  double sennew = 0.0;
+  double ami = 0.0;
 
-  //---- constant controlling how far hk is allowed to deviate
-  //    from the specified value.
-  senswt = 1000.0;
-  sens = 0.0;
-  sennew = 0.0;
-
-  for (int is = 1; is <= 2; is++) {
-    //---- set forced transition arc length position
+  for (int is = 1; is <= 2; ++is) {
     xiforc = xifset(is);
-
-    //---- old transition station
-    itrold = itran.get(is);
+    int itrold = itran.get(is);
 
     tran = false;
     turb = false;
     itran.get(is) = iblte.get(is);
-    //---- march downstream
+
     for (int ibl = 0; ibl < nbl.get(is) - 1; ++ibl) {
-      //int ibl = ibl - 1;
-      //int ibm = ibl - 1;
-
-      simi = (ibl == 0);
-      wake = ibl > iblte.get(is);
-
-      //------ initialize current station to existing variables (xssi now 0-based)
-      xsi = xssi.get(is)[ibl];
-      uei = uedg.get(is)[ibl];
-      thi = thet.get(is)[ibl];
-      dsi = dstr.get(is)[ibl];
-
-      //------ fixed bug   md 7 june 99
-      if (ibl < itrold) {
-        ami = ctau.get(is)[ibl]; // ami must be initialized
-        cti = 0.03;
-      } else {
-        cti = ctau.get(is)[ibl];
-        if (cti <= 0.0)
-          cti = 0.03;
-      }
-
-      if (wake) {
-        iw = ibl - iblte.get(is);
-        dswaki = wgap[iw - 1];
-      } else
-        dswaki = 0.0;
-
-      if (ibl <= iblte.get(is))
-        dsi =std::max(dsi - dswaki, 1.02000 * thi) + dswaki;
-      if (ibl > iblte.get(is))
-        dsi = std::max(dsi - dswaki, 1.00005 * thi) + dswaki;
-
-      //------ newton iteration loop for current station
-
-      bool converged = false;
-      for (int itbl = 1; itbl <= 25; itbl++) {
-        //-------- assemble 10x3 linearized system for dctau, dth, dds, due, dxi
-        //         at the previous "1" station and the current "2" station
-        //         (the "1" station coefficients will be ignored)
-
-        blprv(xsi, ami, cti, thi, dsi, dswaki, uei);
-        blkin();
-
-        //-------- check for transition and set appropriate flags and things
-        if ((!simi) && (!turb)) {
-          trchek();
-          ami = blData2.param.amplz;
-          if (tran)
-            itran.get(is) = ibl;
-          if (!tran)
-            itran.get(is) = ibl + 1;
-        }
-        if (ibl == iblte.get(is) + 1) {
-          tte = thet.get(1)[iblte.top] +
-                thet.get(2)[iblte.bottom];
-          dte = dstr.get(1)[iblte.top] +
-                dstr.get(2)[iblte.bottom] + ante;
-          cte = (ctau.get(1)[iblte.top] *
-                     thet.get(1)[iblte.top] +
-                 ctau.get(2)[iblte.bottom] *
-                     thet.get(2)[iblte.bottom]) /
-                tte;
-          tesys(cte, tte, dte);
-        } else {
-          blsys();
-        }
-
-        //-------- set stuff at first iteration...
-        if (itbl == 1) {
-          //--------- set "baseline" ue and hk for forming  ue(hk)  relation
-          ueref = blData2.param.uz;
-          hkref = blData2.hkz.scalar;
-
-          //--------- if current point ibl was turbulent and is now laminar,
-          // then...
-          if (ibl < itran.get(is) && ibl >= itrold) {
-            //---------- extrapolate baseline hk
-            if (ibl > 0) {
-              uem = uedg.get(is)[ibl - 1];
-              dsm = dstr.get(is)[ibl - 1];
-              thm = thet.get(is)[ibl - 1];
-            } else {
-              uem = uedg.get(is)[ibl];
-              dsm = dstr.get(is)[ibl];
-              thm = thet.get(is)[ibl];
-            }
-            msq =
-                uem * uem * hstinv / (gm1bl * (1.0 - 0.5 * uem * uem * hstinv));
-            boundary_layer::KineticShapeParameterResult hkin_result =
-                boundary_layer::hkin(dsm / thm, msq);
-            hkref = hkin_result.hk;
-          }
-
-          //--------- if current point ibl was laminar, then...
-          if (ibl < itrold) {
-            //---------- reinitialize or extrapolate ctau if it's now turbulent
-            if (tran)
-              ctau.get(is)[ibl] = 0.03;
-            if (turb) {
-              double prev = (ibl >= 1) ? ctau.get(is)[ibl - 1]
-                                     : ctau.get(is)[ibl];
-              ctau.get(is)[ibl] = prev;
-            }
-            if (tran || turb) {
-              cti = ctau.get(is)[ibl - 1];
-              blData2.param.sz = cti;
-            }
-          }
-        }
-
-        if (simi || ibl == iblte.get(is) + 1) {
-          //--------- for similarity station or first wake point, prescribe ue
-          blc.a2(3, 0) = 0.0;
-          blc.a2(3, 1) = 0.0;
-          blc.a2(3, 2) = 0.0;
-          blc.a2(3, 3) = blData2.param.uz_uei;
-          blc.rhs[3] = ueref - blData2.param.uz;
-        } else {
-          //******** calculate ue-hk characteristic slope
-
-          //--------- set unit dhk
-          blc.a2(3, 0) = 0.0;
-          blc.a2(3, 1) = blData2.hkz.t();
-          blc.a2(3, 2) = blData2.hkz.d();
-          blc.a2(3, 3) = blData2.hkz.u() * blData2.param.uz_uei;
-          blc.rhs[3] = 1.0;
-
-          //--------- calculate due response
-          double delta_sen = blc.a2.block(0, 0, 4, 4).fullPivLu().solve(blc.rhs)[3];
-
-          //--------- set  senswt * (normalized due/dhk)
-          sennew = senswt * delta_sen * hkref / ueref;
-          if (itbl <= 5)
-            sens = sennew;
-          else if (itbl <= 15)
-            sens = 0.5 * (sens + sennew);
-
-          //--------- set prescribed ue-hk combination
-          blc.a2(3, 0) = 0.0;
-          blc.a2(3, 1) = blData2.hkz.t() * hkref;
-          blc.a2(3, 2) = blData2.hkz.d() * hkref;
-          blc.a2(3, 3) =
-              (blData2.hkz.u() * hkref + sens / ueref) * blData2.param.uz_uei;
-          blc.rhs[3] = -(hkref * hkref) * (blData2.hkz.scalar / hkref - 1.0) -
-                     sens * (blData2.param.uz / ueref - 1.0);
-        }
-
-        //-------- solve newton system for current "2" station
-        blc.rhs = blc.a2.block(0, 0, 4, 4).fullPivLu().solve(blc.rhs);
-
-        //-------- determine max changes and underrelax if necessary
-        dmax = std::max(fabs(blc.rhs[1] / thi), fabs(blc.rhs[2] / dsi));
-        if (ibl >= itran.get(is))
-          dmax = std::max(dmax, fabs(blc.rhs[0] / (10.0 * cti)));
-
-        rlx = 1.0;
-        if (dmax > 0.3)
-          rlx = 0.3 / dmax;
-
-        //-------- update as usual
-        if (ibl < itran.get(is))
-          ami = ami + rlx * blc.rhs[0];
-        if (ibl >= itran.get(is))
-          cti = cti + rlx * blc.rhs[0];
-        thi = thi + rlx * blc.rhs[1];
-        dsi = dsi + rlx * blc.rhs[2];
-        uei = uei + rlx * blc.rhs[3];
-
-        //-------- eliminate absurd transients
-        if (ibl >= itran.get(is)) {
-          cti = std::min(cti, 0.30);
-          cti = std::max(cti, 0.0000001);
-        }
-
-        if (ibl <= iblte.get(is))
-          hklim = 1.02;
-        else
-          hklim = 1.00005;
-
-        msq = uei * uei * hstinv / (gm1bl * (1.0 - 0.5 * uei * uei * hstinv));
-        dsw = dsi - dswaki;
-        dslim(dsw, thi, msq, hklim);
-        dsi = dsw + dswaki;
-
-        if (dmax <= deps) {
-          converged = true;
-          break;
-        }
-      }
-
+      MixedModeStationContext ctx = prepareMixedModeStation(is, ibl, itrold, ami);
+      bool converged = performMixedModeNewtonIteration(is, ibl, itrold, ctx, deps,
+                                                       senswt, sens, sennew, ami);
       if (!converged) {
-        ss << "     mrchdu: convergence failed at " << ibl << " ,  side " << is
-           << ", res=" << std::setw(4) << std::fixed << std::setprecision(3)
-           << dmax << "\n";
-        writeString(ss.str());
-        ss.str("");
-
-        //------ the current unconverged solution might still be reasonable...
-        if (dmax > 0.1) {
-          //------- the current solution is garbage --> extrapolate values
-          if (ibl >= 2) {
-            if (ibl <= iblte.get(is)) {
-              thi = thet.get(is)[ibl - 1] *
-                    sqrt(xssi.get(is)[ibl] / xssi.get(is)[ibl - 1]);
-              dsi = dstr.get(is)[ibl - 1] *
-                    sqrt(xssi.get(is)[ibl] / xssi.get(is)[ibl - 1]);
-              uei = uedg.get(is)[ibl - 1];
-            } else {
-              if (ibl == iblte.get(is) + 1) {
-                cti = cte;
-                thi = tte;
-                dsi = dte;
-                uei = uedg.get(is)[ibl - 1];
-              } else {
-                thi = thet.get(is)[ibl - 1];
-                ratlen = (xssi.get(is)[ibl] - xssi.get(is)[ibl - 1]) /
-                         (10.0 * dstr.get(is)[ibl - 1]);
-                dsi = (dstr.get(is)[ibl - 1] +
-                       thi * ratlen) /
-                      (1.0 + ratlen);
-                uei = uedg.get(is)[ibl - 1];
-              }
-            }
-            if (ibl == itran.get(is))
-              cti = 0.05;
-            if (ibl > itran.get(is))
-              cti = ctau.get(is)[ibl - 1];
-          }
-        }
-
-        blprv(xsi, ami, cti, thi, dsi, dswaki, uei);
-        blkin();
-
-        //------- check for transition and set appropriate flags and things
-        if ((!simi) && (!turb)) {
-          trchek();
-          ami = blData2.param.amplz;
-          if (tran)
-            itran.get(is) = ibl;
-          if (!tran)
-            itran.get(is) = ibl + 2;
-        }
-
-        //------- set all other extrapolated values for current station
-        if (ibl < itran.get(is))
-          blvar(blData2, FlowRegimeEnum::Laminar);
-        if (ibl >= itran.get(is))
-          blvar(blData2, FlowRegimeEnum::Turbulent);
-        if (wake)
-          blvar(blData2, FlowRegimeEnum::Wake);
-
-        if (ibl < itran.get(is))
-          blmid(FlowRegimeEnum::Laminar);
-        if (ibl >= itran.get(is))
-          blmid(FlowRegimeEnum::Turbulent);
-        if (wake)
-          blmid(FlowRegimeEnum::Wake);
+        handleMixedModeNonConvergence(is, ibl, ctx, ami);
       }
 
-      //------ pick up here after the newton iterations
       sens = sennew;
 
-      //------ store primary variables
-      if (ibl < itran.get(is))
-        ctau.get(is)[ibl] = ami;
-      else
-        ctau.get(is)[ibl] = cti;
-      thet.get(is)[ibl] = thi;
-      dstr.get(is)[ibl] = dsi;
-      uedg.get(is)[ibl] = uei;
-      mass.get(is)[ibl] = dsi * uei;
+      if (ibl < itran.get(is)) {
+        ctau.get(is)[ibl] = ctx.ami;
+      } else {
+        ctau.get(is)[ibl] = ctx.cti;
+      }
+      thet.get(is)[ibl] = ctx.thi;
+      dstr.get(is)[ibl] = ctx.dsi;
+      uedg.get(is)[ibl] = ctx.uei;
+      mass.get(is)[ibl] = ctx.dsi * ctx.uei;
       ctq.get(is)[ibl] = blData2.cqz.scalar;
 
-      //------ set "1" variables to "2" variables for next streamwise station
-      blprv(xsi, ami, cti, thi, dsi, dswaki, uei);
+      blprv(ctx.xsi, ctx.ami, ctx.cti, ctx.thi, ctx.dsi, ctx.dswaki, ctx.uei);
       blkin();
 
       stepbl();
 
-      //------ turbulent intervals will follow transition interval or te
       if (tran || ibl == iblte.get(is)) {
         turb = true;
       }
 
       tran = false;
-      //                        qApp->processEvents();
-      if (isCancelled())
+
+      if (isCancelled()) {
         return false;
+      }
     }
   }
   return true;
+}
+
+XFoil::MixedModeStationContext XFoil::prepareMixedModeStation(int side, int ibl,
+                                                              int itrold,
+                                                              double& ami) {
+  MixedModeStationContext ctx;
+
+  ctx.simi = (ibl == 0);
+  ctx.wake = ibl > iblte.get(side);
+  ctx.xsi = xssi.get(side)[ibl];
+  ctx.uei = uedg.get(side)[ibl];
+  ctx.thi = thet.get(side)[ibl];
+  ctx.dsi = dstr.get(side)[ibl];
+
+  if (ibl < itrold) {
+    ami = ctau.get(side)[ibl];
+    ctx.cti = 0.03;
+  } else {
+    ctx.cti = ctau.get(side)[ibl];
+    if (ctx.cti <= 0.0) {
+      ctx.cti = 0.03;
+    }
+  }
+  ctx.ami = ami;
+
+  if (ctx.wake) {
+    int iw = ibl - iblte.get(side);
+    ctx.dswaki = wgap[iw - 1];
+  } else {
+    ctx.dswaki = 0.0;
+  }
+
+  double thickness_limit = (ibl <= iblte.get(side)) ? 1.02 : 1.00005;
+  ctx.dsi = std::max(ctx.dsi - ctx.dswaki, thickness_limit * ctx.thi) + ctx.dswaki;
+
+  simi = ctx.simi;
+  wake = ctx.wake;
+
+  return ctx;
+}
+
+void XFoil::checkTransitionIfNeeded(int side, int ibl, bool skipCheck,
+                                    int laminarAdvance, double& ami) {
+  if (skipCheck || turb) {
+    return;
+  }
+
+  trchek();
+  ami = blData2.param.amplz;
+  if (tran) {
+    itran.get(side) = ibl;
+  } else {
+    itran.get(side) = ibl + laminarAdvance;
+  }
+}
+
+bool XFoil::performMixedModeNewtonIteration(int side, int ibl, int itrold,
+                                            MixedModeStationContext& ctx,
+                                            double deps, double senswt,
+                                            double& sens, double& sennew,
+                                            double& ami) {
+  bool converged = false;
+  double ueref = 0.0;
+  double hkref = 0.0;
+  double msq = 0.0;
+  double hklim = 0.0;
+
+  for (int itbl = 1; itbl <= 25; ++itbl) {
+    blprv(ctx.xsi, ami, ctx.cti, ctx.thi, ctx.dsi, ctx.dswaki, ctx.uei);
+    blkin();
+
+    checkTransitionIfNeeded(side, ibl, ctx.simi, 1, ami);
+
+    if (ibl == iblte.get(side) + 1) {
+      ctx.tte = thet.get(1)[iblte.top] + thet.get(2)[iblte.bottom];
+      ctx.dte = dstr.get(1)[iblte.top] + dstr.get(2)[iblte.bottom] + ante;
+      ctx.cte = (ctau.get(1)[iblte.top] * thet.get(1)[iblte.top] +
+                 ctau.get(2)[iblte.bottom] * thet.get(2)[iblte.bottom]) /
+                ctx.tte;
+      tesys(ctx.cte, ctx.tte, ctx.dte);
+    } else {
+      blsys();
+    }
+
+    if (itbl == 1) {
+      ueref = blData2.param.uz;
+      hkref = blData2.hkz.scalar;
+
+      if (ibl < itran.get(side) && ibl >= itrold) {
+        double uem;
+        double dsm;
+        double thm;
+        if (ibl > 0) {
+          uem = uedg.get(side)[ibl - 1];
+          dsm = dstr.get(side)[ibl - 1];
+          thm = thet.get(side)[ibl - 1];
+        } else {
+          uem = uedg.get(side)[ibl];
+          dsm = dstr.get(side)[ibl];
+          thm = thet.get(side)[ibl];
+        }
+        double uem_sq = uem * uem;
+        msq = uem_sq * hstinv /
+              (gm1bl * (1.0 - 0.5 * uem_sq * hstinv));
+        boundary_layer::KineticShapeParameterResult hkin_result =
+            boundary_layer::hkin(dsm / thm, msq);
+        hkref = hkin_result.hk;
+      }
+
+      if (ibl < itrold) {
+        if (tran) {
+          ctau.get(side)[ibl] = 0.03;
+        }
+        if (turb) {
+          double prev = (ibl >= 1) ? ctau.get(side)[ibl - 1]
+                                   : ctau.get(side)[ibl];
+          ctau.get(side)[ibl] = prev;
+        }
+        if (tran || turb) {
+          ctx.cti = ctau.get(side)[ibl - 1];
+          blData2.param.sz = ctx.cti;
+        }
+      }
+    }
+
+    if (ctx.simi || ibl == iblte.get(side) + 1) {
+      blc.a2(3, 0) = 0.0;
+      blc.a2(3, 1) = 0.0;
+      blc.a2(3, 2) = 0.0;
+      blc.a2(3, 3) = blData2.param.uz_uei;
+      blc.rhs[3] = ueref - blData2.param.uz;
+    } else {
+      blc.a2(3, 0) = 0.0;
+      blc.a2(3, 1) = blData2.hkz.t();
+      blc.a2(3, 2) = blData2.hkz.d();
+      blc.a2(3, 3) = blData2.hkz.u() * blData2.param.uz_uei;
+      blc.rhs[3] = 1.0;
+
+      double delta_sen =
+          blc.a2.block(0, 0, 4, 4).fullPivLu().solve(blc.rhs)[3];
+
+      sennew = senswt * delta_sen * hkref / ueref;
+      if (itbl <= 5) {
+        sens = sennew;
+      } else if (itbl <= 15) {
+        sens = 0.5 * (sens + sennew);
+      }
+
+      blc.a2(3, 1) = blData2.hkz.t() * hkref;
+      blc.a2(3, 2) = blData2.hkz.d() * hkref;
+      blc.a2(3, 3) =
+          (blData2.hkz.u() * hkref + sens / ueref) * blData2.param.uz_uei;
+      blc.rhs[3] = -(hkref * hkref) * (blData2.hkz.scalar / hkref - 1.0) -
+                   sens * (blData2.param.uz / ueref - 1.0);
+    }
+
+    blc.rhs = blc.a2.block(0, 0, 4, 4).fullPivLu().solve(blc.rhs);
+
+    ctx.dmax = std::max(fabs(blc.rhs[1] / ctx.thi), fabs(blc.rhs[2] / ctx.dsi));
+    if (ibl >= itran.get(side)) {
+      ctx.dmax =
+          std::max(ctx.dmax, fabs(blc.rhs[0] / (10.0 * ctx.cti)));
+    }
+
+    rlx = 1.0;
+    if (ctx.dmax > 0.3) {
+      rlx = 0.3 / ctx.dmax;
+    }
+
+    if (ibl < itran.get(side)) {
+      ami += rlx * blc.rhs[0];
+      ctx.ami = ami;
+    }
+    if (ibl >= itran.get(side)) {
+      ctx.cti += rlx * blc.rhs[0];
+    }
+    ctx.thi += rlx * blc.rhs[1];
+    ctx.dsi += rlx * blc.rhs[2];
+    ctx.uei += rlx * blc.rhs[3];
+
+    if (ibl >= itran.get(side)) {
+      ctx.cti = std::min(ctx.cti, 0.30);
+      ctx.cti = std::max(ctx.cti, 0.0000001);
+    }
+
+    hklim = (ibl <= iblte.get(side)) ? 1.02 : 1.00005;
+    double uei_sq = ctx.uei * ctx.uei;
+    msq = uei_sq * hstinv /
+          (gm1bl * (1.0 - 0.5 * uei_sq * hstinv));
+    double dsw = ctx.dsi - ctx.dswaki;
+    dslim(dsw, ctx.thi, msq, hklim);
+    ctx.dsi = dsw + ctx.dswaki;
+
+    if (ctx.dmax <= deps) {
+      converged = true;
+      break;
+    }
+  }
+
+  return converged;
+}
+
+void XFoil::handleMixedModeNonConvergence(int side, int ibl,
+                                          MixedModeStationContext& ctx,
+                                          double& ami) {
+  std::stringstream ss;
+  ss << "     mrchdu: convergence failed at " << ibl << " ,  side " << side
+     << ", res=" << std::setw(4) << std::fixed << std::setprecision(3)
+     << ctx.dmax << "\n";
+  writeString(ss.str());
+
+  if (ctx.dmax > 0.1 && ibl >= 2) {
+    if (ibl <= iblte.get(side)) {
+      ctx.thi = thet.get(side)[ibl - 1] *
+                sqrt(xssi.get(side)[ibl] / xssi.get(side)[ibl - 1]);
+      ctx.dsi = dstr.get(side)[ibl - 1] *
+                sqrt(xssi.get(side)[ibl] / xssi.get(side)[ibl - 1]);
+      ctx.uei = uedg.get(side)[ibl - 1];
+    } else {
+      if (ibl == iblte.get(side) + 1) {
+        ctx.cti = ctx.cte;
+        ctx.thi = ctx.tte;
+        ctx.dsi = ctx.dte;
+        ctx.uei = uedg.get(side)[ibl - 1];
+      } else {
+        ctx.thi = thet.get(side)[ibl - 1];
+        double ratlen = (xssi.get(side)[ibl] - xssi.get(side)[ibl - 1]) /
+                        (10.0 * dstr.get(side)[ibl - 1]);
+        ctx.dsi = (dstr.get(side)[ibl - 1] + ctx.thi * ratlen) /
+                  (1.0 + ratlen);
+        ctx.uei = uedg.get(side)[ibl - 1];
+      }
+    }
+
+    if (ibl == itran.get(side)) {
+      ctx.cti = 0.05;
+    }
+    if (ibl > itran.get(side)) {
+      ctx.cti = ctau.get(side)[ibl - 1];
+    }
+  }
+
+  blprv(ctx.xsi, ami, ctx.cti, ctx.thi, ctx.dsi, ctx.dswaki, ctx.uei);
+  blkin();
+
+  checkTransitionIfNeeded(side, ibl, ctx.simi, 2, ami);
+
+  if (ibl < itran.get(side)) {
+    blvar(blData2, FlowRegimeEnum::Laminar);
+    blmid(FlowRegimeEnum::Laminar);
+  }
+  if (ibl >= itran.get(side)) {
+    blvar(blData2, FlowRegimeEnum::Turbulent);
+    blmid(FlowRegimeEnum::Turbulent);
+  }
+  if (ctx.wake) {
+    blvar(blData2, FlowRegimeEnum::Wake);
+    blmid(FlowRegimeEnum::Wake);
+  }
+
+  ctx.ami = ami;
 }
 
 double XFoil::calcHtarg(int ibl, int is, bool wake) {

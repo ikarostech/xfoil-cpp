@@ -220,6 +220,22 @@ class XFoil {
       throw invalid_argument("invalid phase type");
     }
   };
+
+  struct MixedModeStationContext {
+    bool simi = false;
+    bool wake = false;
+    double xsi = 0.0;
+    double uei = 0.0;
+    double thi = 0.0;
+    double dsi = 0.0;
+    double cti = 0.0;
+    double ami = 0.0;
+    double dswaki = 0.0;
+    double cte = 0.0;
+    double dte = 0.0;
+    double tte = 0.0;
+    double dmax = 0.0;
+  };
   
   VectorXd cpcalc(int n, VectorXd q, double qinf, double minf);
   class EnvEnResult {
@@ -240,6 +256,16 @@ class XFoil {
   bool lefind(double &sle, Matrix2Xd points, Matrix2Xd dpoints_ds, VectorXd s, int n);
   
   bool mrchdu();
+  MixedModeStationContext prepareMixedModeStation(int side, int ibl, int itrold,
+                                                  double& ami);
+  bool performMixedModeNewtonIteration(int side, int ibl, int itrold,
+                                       MixedModeStationContext& ctx, double deps,
+                                       double senswt, double& sens,
+                                       double& sennew, double& ami);
+  void handleMixedModeNonConvergence(int side, int ibl,
+                                     MixedModeStationContext& ctx, double& ami);
+  void checkTransitionIfNeeded(int side, int ibl, bool skipCheck,
+                               int laminarAdvance, double& ami);
   bool mrchue();
   double calcHtarg(int ibl, int is, bool wake);
   Matrix2Xd ncalc(Matrix2Xd point, VectorXd spline_length, int n);
