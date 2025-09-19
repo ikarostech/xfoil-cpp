@@ -176,6 +176,25 @@ class XFoil {
   double cang(Matrix2Xd points);
   bool cdcalc();
 
+  struct CompressibilityParams {
+    double beta;
+    double beta_msq;
+    double bfac;
+    double bfac_msq;
+  };
+
+  struct PressureCoefficientResult {
+    double cp;
+    double cp_msq;
+    double cp_velocity_derivative;
+  };
+
+  CompressibilityParams buildCompressibilityParams() const;
+  PressureCoefficientResult computePressureCoefficient(double tangential_velocity,
+                                                       double velocity_derivative,
+                                                       const CompressibilityParams &params) const;
+  Matrix2d buildBodyToFreestreamRotation() const;
+
   enum class SideType {
     TOP = 1,
     BOTTOM = 2

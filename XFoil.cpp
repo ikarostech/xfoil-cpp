@@ -22,6 +22,7 @@
 
 #include "XFoil.h"
 #include "Eigen/Core"
+#include <cmath>
 using namespace Eigen;
 
 void ClearAerodynamicsState(const XFoil& foil);
@@ -35,6 +36,42 @@ double g_vaccel = 0.01;
 // determinant
 double cross2(const Eigen::Vector2d &a, const Eigen::Vector2d &b) {
   return a[0] * b[1] - a[1] * b[0];
+}
+
+XFoil::CompressibilityParams XFoil::buildCompressibilityParams() const {
+  const double beta = std::sqrt(1.0 - minf * minf);
+  const double beta_msq = -0.5 / beta;
+  const double bfac = 0.5 * minf * minf / (1.0 + beta);
+  const double bfac_msq = 0.5 / (1.0 + beta) - bfac / (1.0 + beta) * beta_msq;
+  return {beta, beta_msq, bfac, bfac_msq};
+}
+
+XFoil::PressureCoefficientResult XFoil::computePressureCoefficient(
+    double tangential_velocity, double velocity_derivative,
+    const CompressibilityParams &params) const {
+  const double velocity_ratio = tangential_velocity / qinf;
+  const double cginc = 1.0 - velocity_ratio * velocity_ratio;
+  const double denom = params.beta + params.bfac * cginc;
+  const double cp = cginc / denom;
+  const double cp_msq =
+      -cp / denom * (params.beta_msq + params.bfac_msq * cginc);
+
+  double cp_velocity_derivative = 0.0;
+  if (velocity_derivative != 0.0) {
+    const double cpi = -2.0 * tangential_velocity / (qinf * qinf);
+    const double cpc_cpi = (1.0 - params.bfac * cp) / denom;
+    cp_velocity_derivative = cpc_cpi * cpi * velocity_derivative;
+  }
+
+  return {cp, cp_msq, cp_velocity_derivative};
+}
+
+Matrix2d XFoil::buildBodyToFreestreamRotation() const {
+  const double ca = std::cos(alfa);
+  const double sa = std::sin(alfa);
+  Matrix2d rotation;
+  rotation << ca, sa, -sa, ca;
+  return rotation;
 }
 
 XFoil::XFoil() {

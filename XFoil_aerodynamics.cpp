@@ -78,11 +78,8 @@ bool XFoil::clcalc(Vector2d ref) {
   auto& aero = ensureAerodynamicsState(this);
   aero.xcp = 0.0;
 
-  const double beta = sqrt(1.0 - minf * minf);
-  const double beta_msq = -0.5 / beta;
-
-  const double bfac = 0.5 * minf * minf / (1.0 + beta);
-  const double bfac_msq = 0.5 / (1.0 + beta) - bfac / (1.0 + beta) * beta_msq;
+  const auto compressibility = buildCompressibilityParams();
+  const Matrix2d rotateMatrix = buildBodyToFreestreamRotation();
 
   cl = 0.0;
   cm = 0.0;
@@ -90,42 +87,31 @@ bool XFoil::clcalc(Vector2d ref) {
   cl_alf = 0.0;
   cl_msq = 0.0;
 
-  double cginc = 1.0 - MathUtil::pow((surface_vortex(0, 0) / qinf), 2);
-  double cpg1 = cginc / (beta + bfac * cginc);
-  double cpg1_msq =
-      -cpg1 / (beta + bfac * cginc) * (beta_msq + bfac_msq * cginc);
+  const PressureCoefficientResult cp_first = computePressureCoefficient(
+      surface_vortex(0, 0), surface_vortex(1, 0), compressibility);
 
-  double cpi_gam = -2.0 * surface_vortex(0, 0) / qinf / qinf;
-  double cpc_cpi = (1.0 - bfac * cpg1) / (beta + bfac * cginc);
-  double cpg1_alf = cpc_cpi * cpi_gam * surface_vortex(1, 0);
+  double cpg1 = cp_first.cp;
+  double cpg1_msq = cp_first.cp_msq;
+  double cpg1_alf = cp_first.cp_velocity_derivative;
 
   for (int i = 0; i < n; i++) {
     int ip = (i + 1) % n;
+    const PressureCoefficientResult cp_next = computePressureCoefficient(
+        surface_vortex(0, ip), surface_vortex(1, ip), compressibility);
 
-    cginc = 1.0 - MathUtil::pow((surface_vortex(0, ip) / qinf), 2);
-    double cpg2 = cginc / (beta + bfac * cginc);
-    double cpg2_msq =
-        -cpg2 / (beta + bfac * cginc) * (beta_msq + bfac_msq * cginc);
+    const double cpg2 = cp_next.cp;
+    const double cpg2_msq = cp_next.cp_msq;
+    const double cpg2_alf = cp_next.cp_velocity_derivative;
 
-    cpi_gam = -2.0 * surface_vortex(0, ip) / qinf / qinf;
-    cpc_cpi = (1.0 - bfac * cpg2) / (beta + bfac * cginc);
-    double cpg2_alf = cpc_cpi * cpi_gam * surface_vortex(1, ip);
-
-    Matrix2d rotateMatrix =
-        Matrix2d{{cos(alfa), sin(alfa)}, {-sin(alfa), cos(alfa)}};
-    const Vector2d dpoint = rotateMatrix * (points.col(ip) -
-                                            points.col(i));
+    const Vector2d delta = points.col(ip) - points.col(i);
+    const Vector2d dpoint = rotateMatrix * delta;
     const double dg = cpg2 - cpg1;
 
-    const Vector2d apoint = rotateMatrix * ((points.col(ip) +
-                                             points.col(i)) /
-                                                2 -
-                                            ref);
+    const Vector2d apoint =
+        rotateMatrix * ((points.col(ip) + points.col(i)) / 2 - ref);
     const double ag = 0.5 * (cpg2 + cpg1);
 
-    const double dx_alf = cross2(points.col(ip) -
-                                     points.col(i),
-                                 rotateMatrix.row(0));
+    const double dx_alf = cross2(delta, rotateMatrix.row(0));
     const double ag_alf = 0.5 * (cpg2_alf + cpg1_alf);
     const double ag_msq = 0.5 * (cpg2_msq + cpg1_msq);
 

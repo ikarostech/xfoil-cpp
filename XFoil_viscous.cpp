@@ -311,40 +311,32 @@ void XFoil::computeQtan(const SidePair<VectorXd> &unew,
 void XFoil::computeClFromQtan(const VectorXd &qnew, const VectorXd &q_ac,
                               double &clnew, double &cl_a, double &cl_ms,
                               double &cl_ac) {
-  double beta = sqrt(1.0 - minf * minf);
-  double beta_msq = -0.5 / beta;
-
-  double bfac = 0.5 * minf * minf / (1.0 + beta);
-  double bfac_msq = 0.5 / (1.0 + beta) - bfac / (1.0 + beta) * beta_msq;
+  const auto compressibility = buildCompressibilityParams();
+  const Matrix2d rotateMatrix = buildBodyToFreestreamRotation();
 
   clnew = 0.0;
   cl_a = 0.0;
   cl_ms = 0.0;
   cl_ac = 0.0;
 
-  double cginc = 1.0 - (qnew[0] / qinf) * (qnew[0] / qinf);
-  double cpg1 = cginc / (beta + bfac * cginc);
-  double cpg1_ms =
-      -cpg1 / (beta + bfac * cginc) * (beta_msq + bfac_msq * cginc);
+  const PressureCoefficientResult cp_first = computePressureCoefficient(
+      qnew[0], q_ac[0], compressibility);
 
-  double cpi_q = -2.0 * qnew[0] / qinf / qinf;
-  double cpc_cpi = (1.0 - bfac * cpg1) / (beta + bfac * cginc);
-  double cpg1_ac = cpc_cpi * cpi_q * q_ac[0];
+  double cpg1 = cp_first.cp;
+  double cpg1_ms = cp_first.cp_msq;
+  double cpg1_ac = cp_first.cp_velocity_derivative;
 
   for (int i = 0; i < n; i++) {
     int ip = (i + 1) % n;
-    cginc = 1.0 - (qnew[ip] / qinf) * (qnew[ip] / qinf);
-    double cpg2 = cginc / (beta + bfac * cginc);
-    double cpg2_ms =
-        -cpg2 / (beta + bfac * cginc) * (beta_msq + bfac_msq * cginc);
+    const PressureCoefficientResult cp_next = computePressureCoefficient(
+        qnew[ip], q_ac[ip], compressibility);
 
-    cpi_q = -2.0 * qnew[ip] / qinf / qinf;
-    cpc_cpi = (1.0 - bfac * cpg2) / (beta + bfac * cginc);
-    double cpg2_ac = cpc_cpi * cpi_q * q_ac[ip];
+    const double cpg2 = cp_next.cp;
+    const double cpg2_ms = cp_next.cp_msq;
+    const double cpg2_ac = cp_next.cp_velocity_derivative;
 
-    Matrix2d rotateMatrix =
-        Matrix2d{{cos(alfa), sin(alfa)}, {-sin(alfa), cos(alfa)}};
-    Vector2d dpoint = rotateMatrix * (points.col(ip) - points.col(i));
+    const Vector2d dpoint =
+        rotateMatrix * (points.col(ip) - points.col(i));
 
     const double ag = 0.5 * (cpg2 + cpg1);
     const double ag_ms = 0.5 * (cpg2_ms + cpg1_ms);
