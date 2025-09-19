@@ -273,8 +273,8 @@ class XFoil {
                                 SidePair<VectorXd>& u_ac);
   void computeQtan(const SidePair<VectorXd>& unew,
                    const SidePair<VectorXd>& u_ac,
-                   double qnew[], double q_ac[]);
-  void computeClFromQtan(const double qnew[], const double q_ac[],
+                   VectorXd& qnew, VectorXd& q_ac);
+  void computeClFromQtan(const VectorXd& qnew, const VectorXd& q_ac,
                          double& clnew, double& cl_a,
                          double& cl_ms, double& cl_ac);
   bool xicalc();

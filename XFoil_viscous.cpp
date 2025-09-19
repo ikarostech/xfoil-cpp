@@ -291,8 +291,8 @@ void XFoil::computeNewUeDistribution(SidePair<VectorXd> &unew,
  * @brief Convert edge velocities to tangential velocities.
  */
 void XFoil::computeQtan(const SidePair<VectorXd> &unew,
-                        const SidePair<VectorXd> &u_ac, double qnew[],
-                        double q_ac[]) {
+                        const SidePair<VectorXd> &u_ac, VectorXd &qnew,
+                        VectorXd &q_ac) {
   for (int is = 1; is <= 2; is++) {
     for (int ibl = 0; ibl < iblte.get(is); ++ibl) {
       int i = ipan.get(is)[ibl];
@@ -308,7 +308,7 @@ void XFoil::computeQtan(const SidePair<VectorXd> &unew,
 /**
  * @brief Calculate lift coefficient contributions from tangential velocity.
  */
-void XFoil::computeClFromQtan(const double qnew[], const double q_ac[],
+void XFoil::computeClFromQtan(const VectorXd &qnew, const VectorXd &q_ac,
                               double &clnew, double &cl_a, double &cl_ms,
                               double &cl_ac) {
   double beta = sqrt(1.0 - minf * minf);
@@ -380,9 +380,8 @@ bool XFoil::update() {
   u_ac.top = VectorXd::Zero(IVX);
   u_ac.bottom = VectorXd::Zero(IVX);
 
-  double qnew[IQX], q_ac[IQX];
-  memset(qnew, 0, IQX * sizeof(double));
-  memset(q_ac, 0, IQX * sizeof(double));
+  VectorXd qnew = VectorXd::Zero(IQX);
+  VectorXd q_ac = VectorXd::Zero(IQX);
   double dalmax = 0.0, dalmin = 0.0, dclmax = 0.0, dclmin = 0.0;
   double dac = 0.0, dhi = 0.0, dlo = 0.0;
   double dswaki, hklim, msq, dsw;
