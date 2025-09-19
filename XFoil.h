@@ -112,11 +112,12 @@ class XFoil {
 
   double ClSpec() const { return clspec; }
   void setClSpec(double cl) { clspec = cl; }
+  double getXcp() const;
 
-  static bool isCancelled() { return s_bCancel; }
-  static void setCancel(bool bCancel) { s_bCancel = bCancel; }
-  static double VAccel() { return vaccel; }
-  static void setVAccel(double accel) { vaccel = accel; }
+  static bool isCancelled();
+  static void setCancel(bool bCancel);
+  static double VAccel();
+  static void setVAccel(double accel);
 
   bool setMach();
 
@@ -289,8 +290,6 @@ class XFoil {
 
  public:
 
-  static double vaccel;
-  static bool s_bCancel;
   std::stringstream *m_pOutStream;
 
   double clspec;
@@ -299,14 +298,12 @@ class XFoil {
 
   double cl, cm, cd, acrit;
   VectorXd cpi, cpv;
-  double xcp;
   double alfa, avisc, awake, reinf1, qinf, mvisc, rmsbl, ante;
   double minf, reinf;
   bool lalfa, lvisc, lvconv, lwake;
   double qgamm[IBX + 1];
   double rmxbl;
 
-  double amax;  // needed for preprocessing
   double minf1;
   bool lblini, lipan;
   
@@ -329,14 +326,9 @@ class XFoil {
   SidePair<int> itran; // bl array index of transition interval
 
  public: //private:
-  double qf0[IQX + 1], qf1[IQX + 1], qf2[IQX + 1], qf3[IQX + 1];
-
   double rlx;
 
   double minf_cl, reinf_cl;
-  const double angtol = 40.0; // foil angle tolerance
-
-  blData blsav[3];
 
   bool lgamu, sharp, lqaij, ladij, lwdij;
 
@@ -823,4 +815,5 @@ class XFoil {
   //   EIW(..)    complex number  exp(inw)  array on the unit circle
 
   //-----End Specific Inverse MDES-------------------------------
+
 };

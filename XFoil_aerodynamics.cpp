@@ -1,7 +1,32 @@
 #include "XFoil.h"
 #include <algorithm>
 #include <cmath>
+#include <unordered_map>
 using namespace Eigen;
+
+namespace {
+struct AerodynamicsState {
+  double xcp = 0.0;
+};
+
+std::unordered_map<const XFoil*, AerodynamicsState> g_aerodynamics_state;
+
+AerodynamicsState& ensureAerodynamicsState(XFoil* foil) {
+  return g_aerodynamics_state[foil];
+}
+}  // namespace
+
+double XFoil::getXcp() const {
+  auto it = g_aerodynamics_state.find(this);
+  if (it == g_aerodynamics_state.end()) {
+    return 0.0;
+  }
+  return it->second.xcp;
+}
+
+void ClearAerodynamicsState(const XFoil& foil) {
+  g_aerodynamics_state.erase(&foil);
+}
 
 double cross2(const Eigen::Vector2d &a, const Eigen::Vector2d &b);
 
@@ -50,7 +75,8 @@ bool XFoil::clcalc(Vector2d ref) {
   //	   calculates dcl/dalpha for prescribed-cl routines.
   //-----------------------------------------------------------
 
-  xcp = 0.0;
+  auto& aero = ensureAerodynamicsState(this);
+  aero.xcp = 0.0;
 
   const double beta = sqrt(1.0 - minf * minf);
   const double beta_msq = -0.5 / beta;
@@ -106,10 +132,10 @@ bool XFoil::clcalc(Vector2d ref) {
     cl = cl + dpoint.x() * ag;
     cm = cm - dpoint.dot(ag * apoint + dg * dpoint / 12.0);
 
-    xcp += dpoint.x() * ag *
-           (points.col(ip).x() +
-            points.col(i).x()) /
-           2.0;
+    aero.xcp += dpoint.x() * ag *
+                (points.col(ip).x() +
+                 points.col(i).x()) /
+                2.0;
 
     cl_alf = cl_alf + dpoint.x() * ag_alf + ag * dx_alf;
     cl_msq = cl_msq + dpoint.x() * ag_msq;
@@ -120,9 +146,9 @@ bool XFoil::clcalc(Vector2d ref) {
   }
 
   if (fabs(cl) > 0.0)
-    xcp /= cl;
+    aero.xcp /= cl;
   else
-    xcp = 0.0;
+    aero.xcp = 0.0;
 
   return true;
 }

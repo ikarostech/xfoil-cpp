@@ -1,8 +1,31 @@
 #include "XFoil.h"
-#include <numbers>
+#include <algorithm>
 #include <cstring>
+#include <numbers>
+#include <unordered_map>
 
 // Initialization and global state related member functions split from XFoil.cpp
+
+namespace {
+struct InitState {
+  double amax = 0.0;
+  double qf0[IQX + 1]{};
+  double qf1[IQX + 1]{};
+  double qf2[IQX + 1]{};
+  double qf3[IQX + 1]{};
+  blData blsav[3]{};
+};
+
+std::unordered_map<const XFoil*, InitState> g_init_state;
+
+InitState& ensureInitState(XFoil* foil) {
+  return g_init_state[foil];
+}
+}  // namespace
+
+void ClearInitState(const XFoil& foil) {
+  g_init_state.erase(&foil);
+}
 
 bool XFoil::initialize() {
   dtor = std::numbers::pi / 180.0;
@@ -14,7 +37,7 @@ bool XFoil::initialize() {
   resetVariables();
 
   //---- drop tolerance for bl system solver
-  vaccel = 0.01;
+  setVAccel(0.01);
 
   //---- set minf, reinf, based on current cl-dependence
   minf_cl = getActualMach(1.0, mach_type);
@@ -25,7 +48,8 @@ bool XFoil::initialize() {
 
 void XFoil::initializeDataStructures() {
   apanel = VectorXd::Zero(n + nw);
-  memset(blsav, 0, sizeof(blsav));
+  auto& cache = ensureInitState(this);
+  std::fill(std::begin(cache.blsav), std::end(cache.blsav), blData{});
 
   bij = MatrixXd::Zero(IQX, IZX);
   dij = MatrixXd::Zero(IZX, IZX);
@@ -49,10 +73,10 @@ void XFoil::initializeDataStructures() {
   normal_vectors = Matrix2Xd::Zero(2, n + nw);
   gamu = Matrix2Xd::Zero(2, n + 1);
   surface_vortex = Matrix2Xd::Zero(2, n);
-  memset(qf0, 0, sizeof(qf0));
-  memset(qf1, 0, sizeof(qf1));
-  memset(qf2, 0, sizeof(qf2));
-  memset(qf3, 0, sizeof(qf3));
+  std::fill(std::begin(cache.qf0), std::end(cache.qf0), 0.0);
+  std::fill(std::begin(cache.qf1), std::end(cache.qf1), 0.0);
+  std::fill(std::begin(cache.qf2), std::end(cache.qf2), 0.0);
+  std::fill(std::begin(cache.qf3), std::end(cache.qf3), 0.0);
   qinv = VectorXd::Zero(n + nw);
   qinv_a = VectorXd::Zero(n + nw);
   qinvu = Matrix2Xd::Zero(2, n + nw);
@@ -110,7 +134,9 @@ void XFoil::resetVariables() {
   gm1bl = 0.0;
   xiforc = 0.0;
   amcrit = 0.0;
-  alfa = amax = rmxbl = rmsbl = rlx = ante = clspec = 0.0;
+  auto& cache = ensureInitState(this);
+  cache.amax = 0.0;
+  alfa = rmxbl = rmsbl = rlx = ante = clspec = 0.0;
   minf = reinf = 0.0;
   minf_cl = reinf_cl = 0.0;
   sle = chord = 0.0;
@@ -181,19 +207,21 @@ double XFoil::getActualReynolds(double cls, ReynoldsType reynolds_type) {
 }
 
 bool XFoil::restoreblData(int icom) {
+  auto& cache = ensureInitState(this);
   if (icom == 1) {
-    blData1 = blsav[icom];
+    blData1 = cache.blsav[icom];
   } else if (icom == 2) {
-    blData2 = blsav[icom];
+    blData2 = cache.blsav[icom];
   }
   return true;
 }
 
 bool XFoil::saveblData(int icom) {
+  auto& cache = ensureInitState(this);
   if (icom == 1) {
-    blsav[icom] = blData1;
+    cache.blsav[icom] = blData1;
   } else {
-    blsav[icom] = blData2;
+    cache.blsav[icom] = blData2;
   }
   return true;
 }
@@ -211,4 +239,3 @@ bool XFoil::setMach() {
   lvconv = false;
   return true;
 }
-

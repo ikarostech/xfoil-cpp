@@ -170,19 +170,19 @@ bool XFoil::blsolve() {
       double vtmp1 = vm[0][iv][kv];
       double vtmp2 = vm[1][iv][kv];
       double vtmp3 = vm[2][iv][kv];
-      if (fabs(vtmp1) > vaccel) {
+      if (fabs(vtmp1) > VAccel()) {
         for (int l = ivp; l <= nsys; l++)
           vm[0][l][kv] -= vtmp1 * vm[2][l][iv];
         vdel[kv](0, 0) -= vtmp1 * vdel[iv](2, 0);
         vdel[kv](0, 1) -= vtmp1 * vdel[iv](2, 1);
       }
-      if (fabs(vtmp2) > vaccel) {
+      if (fabs(vtmp2) > VAccel()) {
         for (int l = ivp; l <= nsys; l++)
           vm[1][l][kv] -= vtmp2 * vm[2][l][iv];
         vdel[kv](1, 0) -= vtmp2 * vdel[iv](2, 0);
         vdel[kv](1, 1) -= vtmp2 * vdel[iv](2, 1);
       }
-      if (fabs(vtmp3) > vaccel) {
+      if (fabs(vtmp3) > VAccel()) {
         for (int l = ivp; l <= nsys; l++)
           vm[2][l][kv] -= vtmp3 * vm[2][l][iv];
         vdel[kv](2, 0) -= vtmp3 * vdel[iv](2, 0);
@@ -222,4 +222,3 @@ bool XFoil::blsolve() {
   backSubstitute();
   return true;
 }
-

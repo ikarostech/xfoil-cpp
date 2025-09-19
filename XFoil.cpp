@@ -24,13 +24,18 @@
 #include "Eigen/Core"
 using namespace Eigen;
 
+void ClearAerodynamicsState(const XFoil& foil);
+void ClearInitState(const XFoil& foil);
+
+namespace {
+bool g_cancel_flag = false;
+double g_vaccel = 0.01;
+}  // namespace
+
 // determinant
 double cross2(const Eigen::Vector2d &a, const Eigen::Vector2d &b) {
   return a[0] * b[1] - a[1] * b[0];
 }
-
-bool XFoil::s_bCancel = false;
-double XFoil::vaccel = 0.01;
 
 XFoil::XFoil() {
   m_pOutStream = nullptr;
@@ -48,10 +53,29 @@ XFoil::XFoil() {
   minf1 = 0.0;
 
   //---- drop tolerance for bl system solver
-  vaccel = 0.01;
+  setVAccel(0.01);
   //---- default viscous parameters
   reynolds_type = ReynoldsType::CONSTANT;
   reinf1 = 0.0;
 }
 
-XFoil::~XFoil() {}
+XFoil::~XFoil() {
+  ClearAerodynamicsState(*this);
+  ClearInitState(*this);
+}
+
+double XFoil::VAccel() {
+  return g_vaccel;
+}
+
+void XFoil::setVAccel(double accel) {
+  g_vaccel = accel;
+}
+
+bool XFoil::isCancelled() {
+  return g_cancel_flag;
+}
+
+void XFoil::setCancel(bool bCancel) {
+  g_cancel_flag = bCancel;
+}

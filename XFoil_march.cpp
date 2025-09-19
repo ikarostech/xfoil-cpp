@@ -424,7 +424,7 @@ bool XFoil::mrchdu() {
 
       tran = false;
       //                        qApp->processEvents();
-      if (s_bCancel)
+      if (isCancelled())
         return false;
     }
   }
@@ -1558,7 +1558,7 @@ bool XFoil::trchek() {
   if (!iterateAmplification()) {
     // TRACE("trchek2 - n2 convergence failed\n");
     writeString("trchek2 - n2 convergence failed\n");
-    if (s_bCancel)
+    if (isCancelled())
       return false;
   }
 

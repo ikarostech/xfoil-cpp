@@ -145,7 +145,7 @@ int main() {
       std::cout << "  converged after " << m_Iterations << " iterations"
                 << std::endl;
       std::cout << "  cl : " << foil->cl << ", cd : " << foil->cd
-                << ", cm : " << foil->cm << ", xcp : " << foil->xcp
+                << ", cm : " << foil->cm << ", xcp : " << foil->getXcp()
                 << std::endl;
     } else {
       std::cout << "  unconverged" << std::endl;

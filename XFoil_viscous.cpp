@@ -7,6 +7,10 @@
 #include <iomanip>
 using namespace Eigen;
 
+namespace {
+constexpr double kAngleTolerance = 40.0;
+}  // namespace
+
 
 /** Loads the Foil's geometry in XFoil,
  *  calculates the normal vectors,
@@ -777,7 +781,7 @@ bool XFoil::setexp(double spline_length[], double ds1, double smax, int nn) {
 bool XFoil::isValidFoilAngles(Matrix2Xd points) {
 
   double max_angle = cang(points);
-  return max_angle <= angtol;
+  return max_angle <= kAngleTolerance;
 }
 
 
