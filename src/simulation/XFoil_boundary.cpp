@@ -4,8 +4,8 @@
 
 #include "XFoil.h"
 // dependencies are included by XFoil.h except coefficient headers
-#include "model/coefficient/skin_friction.hpp"
-#include "model/coefficient/dissipation.hpp"
+#include "domain/coefficient/skin_friction.hpp"
+#include "domain/coefficient/dissipation.hpp"
 
 using Eigen::Vector3d;
 

@@ -1,45 +1,84 @@
 cmake_minimum_required(VERSION 3.10)
 project(XFoil)
 
-# (1) C++の標準指定（必要に応じて変更）
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-# (2) 最適化フラグ -O2 の付与
-#     Releaseビルドの場合は CMAKE_BUILD_TYPE=Release でも自動的に -O2 が付与されますが、
-#     確実に指定したい場合は以下のように書くこともできます。
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
 
 find_package(Eigen3 3.4 REQUIRED NO_MODULE)
 
-# (4) 実行ファイルにするソースをまとめて指定
-add_executable(testExe
-    ./model/boundary_layer.cpp
-    ./model/math_util.cpp
-    ./model/spline.cpp
-    ./model/psi.cpp
-    ./model/coefficient/dissipation.cpp
-    ./model/coefficient/skin_friction.cpp
-    ./XFoil_geometry.cpp
-    ./XFoil_init.cpp
-    ./XFoil_boundary.cpp
-    ./XFoil_bldif.cpp
-    ./XFoil_blsolve.cpp
-    ./XFoil_boundary_layer_core.cpp
-    ./XFoil_aerodynamics.cpp
-    ./XFoil_march.cpp
-    ./XFoil_viscous.cpp
-    ./XFoil.cpp
-    ./main.cpp
+add_library(xfoil_core
+    src/core/math_util.cpp
+    src/core/spline.cpp
 )
-target_include_directories(testExe PRIVATE ${CMAKE_SOURCE_DIR}/src)
-list(APPEND CMAKE_PREFIX_PATH "/usr/inclucde/eigen3")
-target_link_libraries(testExe PRIVATE Eigen3::Eigen)
+target_include_directories(xfoil_core
+    PUBLIC
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/src/core
+)
+target_link_libraries(xfoil_core
+    PUBLIC
+        Eigen3::Eigen
+)
+
+add_library(xfoil_domain
+    src/domain/boundary_layer.cpp
+    src/domain/coefficient/dissipation.cpp
+    src/domain/coefficient/skin_friction.cpp
+)
+target_include_directories(xfoil_domain
+    PUBLIC
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/src/domain
+)
+target_link_libraries(xfoil_domain
+    PUBLIC
+        xfoil_core
+        Eigen3::Eigen
+)
+
+add_library(xfoil_simulation
+    src/simulation/XFoil.cpp
+    src/simulation/XFoil_aerodynamics.cpp
+    src/simulation/XFoil_bldif.cpp
+    src/simulation/XFoil_blsolve.cpp
+    src/simulation/XFoil_boundary.cpp
+    src/simulation/XFoil_boundary_layer_core.cpp
+    src/simulation/XFoil_geometry.cpp
+    src/simulation/XFoil_init.cpp
+    src/simulation/XFoil_march.cpp
+    src/simulation/XFoil_viscous.cpp
+    src/simulation/psi.cpp
+)
+target_include_directories(xfoil_simulation
+    PUBLIC
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/src/simulation
+        ${CMAKE_SOURCE_DIR}/src/infrastructure
+)
+target_link_libraries(xfoil_simulation
+    PUBLIC
+        xfoil_domain
+        xfoil_core
+        Eigen3::Eigen
+)
+
+add_executable(testExe
+    apps/cli/main.cpp
+)
+target_include_directories(testExe
+    PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/src/simulation
+)
+
+target_link_libraries(testExe
+    PRIVATE
+        xfoil_simulation
+)
 
 file(COPY sample/ DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/sample)
 
-# (5) 出力ファイル名を "test.exe" にしたい場合の設定 (Linuxでも .exe にできます)
-#     以下を追加すると、ビルド後に out/test.exe が生成されます。
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/out)
 set_target_properties(testExe PROPERTIES OUTPUT_NAME "test")
 set_target_properties(testExe PROPERTIES SUFFIX ".exe")

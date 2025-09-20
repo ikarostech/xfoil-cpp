@@ -5,6 +5,7 @@
 #include <string>
 
 #include "XFoil.h"
+#include "domain/flow_regime.hpp"
 
 class DatGoogleTest : public ::testing::Test {
 protected:
@@ -120,7 +121,7 @@ TEST_F(DatGoogleTest, test_blmid_turbulent) {
   foil->blData1.mz = foil->blData2.mz = 0.01;
   
   //when
-  foil->blmid(XFoil::FlowRegimeEnum::Laminar);
+  foil->blmid(FlowRegimeEnum::Laminar);
 
   //then
   ASSERT_DOUBLE_EQ(-6.8333333333333339e-07, foil->cfm);
@@ -143,7 +144,7 @@ TEST_F(DatGoogleTest, test_blmid_laminar) {
   foil->blData1.mz = foil->blData2.mz = 0.01;
   
   //when
-  foil->blmid(XFoil::FlowRegimeEnum::Turbulent);
+  foil->blmid(FlowRegimeEnum::Turbulent);
 
   //then
   ASSERT_DOUBLE_EQ(-6.8333333333333339e-07, foil->cfm);
@@ -166,7 +167,7 @@ TEST_F(DatGoogleTest, test_blmid_turbulent_wake) {
   foil->blData1.mz = foil->blData2.mz = 0.01;
   
   //when
-  foil->blmid(XFoil::FlowRegimeEnum::Wake);
+  foil->blmid(FlowRegimeEnum::Wake);
 
   //then
   ASSERT_DOUBLE_EQ(0, foil->cfm);
@@ -191,7 +192,7 @@ TEST_F(DatGoogleTest, test_blvar_cfz_wake) {
   foil->ViscousIter();
 
   //when
-  bool actual = foil->blvar(XFoil::FlowRegimeEnum::Laminar);
+  bool actual = foil->blvar(FlowRegimeEnum::Laminar);
 
   //then
   ASSERT_EQ(0, foil->blData2.cfz_uz);

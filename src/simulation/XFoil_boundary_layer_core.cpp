@@ -1,6 +1,6 @@
 #include "XFoil.h"
-#include "model/coefficient/skin_friction.hpp"
-#include "model/coefficient/dissipation.hpp"
+#include "domain/coefficient/skin_friction.hpp"
+#include "domain/coefficient/dissipation.hpp"
 #include <algorithm>
 #include <cmath>
 using namespace Eigen;

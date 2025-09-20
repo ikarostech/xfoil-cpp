@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
-#include "dissipation.hpp"
+#include "domain/coefficient/dissipation.hpp"
+#include "domain/flow_regime.hpp"
 
 TEST(DissipationTest, DilBelow4) {
     double hk = 3.0;
@@ -32,13 +33,13 @@ TEST(DissipationTest, DilwWake) {
 TEST(DissipationTest, GetDissipationFlowRegime) {
     double hk = 5.0;
     double rt = 1e5;
-    auto lam = dissipation::getDissipation(hk, rt, XFoil::FlowRegimeEnum::Laminar);
+    auto lam = dissipation::getDissipation(hk, rt, FlowRegimeEnum::Laminar);
     auto lamExp = dissipation::dil(hk, rt);
     EXPECT_DOUBLE_EQ(lamExp.di, lam.di);
     EXPECT_DOUBLE_EQ(lamExp.di_hk, lam.di_hk);
     EXPECT_DOUBLE_EQ(lamExp.di_rt, lam.di_rt);
 
-    auto wake = dissipation::getDissipation(hk, rt, XFoil::FlowRegimeEnum::Wake);
+    auto wake = dissipation::getDissipation(hk, rt, FlowRegimeEnum::Wake);
     auto wakeExp = dissipation::dilw(hk, rt);
     EXPECT_DOUBLE_EQ(wakeExp.di, wake.di);
     EXPECT_DOUBLE_EQ(wakeExp.di_hk, wake.di_hk);

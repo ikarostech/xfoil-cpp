@@ -1,7 +1,7 @@
 #include <numbers>
 #include <algorithm>
 #include <cmath>
-#include "../XFoil.h"
+#include "XFoil.h"
 
 static double cross2(const Vector2d& a, const Vector2d& b) {
   return a[0] * b[1] - a[1] * b[0];

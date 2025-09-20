@@ -2,7 +2,7 @@
 #define MODEL_PSI_RESULT_HPP
 
 #include <Eigen/Core>
-#include "../xfoil_params.h"
+#include "infrastructure/xfoil_params.h"
 
 using namespace Eigen;
 
