@@ -162,17 +162,20 @@ class XFoil {
   /**
    * @brief Calculate shape parameters and slip velocity.
    */
-  void computeShapeParameters(blData& ref, FlowRegimeEnum flowRegimeType);
+  blData computeShapeParameters(const blData& ref,
+                                FlowRegimeEnum flowRegimeType) const;
 
   /**
    * @brief Determine shear and skin friction coefficients.
    */
-  void computeCoefficients(blData& ref, FlowRegimeEnum flowRegimeType);
+  blData computeCoefficients(const blData& ref,
+                             FlowRegimeEnum flowRegimeType) const;
 
   /**
    * @brief Compute dissipation and boundary-layer thickness.
    */
-  void computeDissipationAndThickness(blData& ref, FlowRegimeEnum flowRegimeType);
+  blData computeDissipationAndThickness(const blData& ref,
+                                        FlowRegimeEnum flowRegimeType) const;
   double cang(Matrix2Xd points);
   bool cdcalc();
 
@@ -268,7 +271,7 @@ class XFoil {
 
   bool dslim(double &dstr, double thet, double msq, double hklim);
 
-  bool gamqv();
+  Matrix2Xd gamqv() const;
   bool ggcalc();
   bool iblpan();
   bool iblsys();
@@ -292,9 +295,14 @@ class XFoil {
 #include "model/psi.hpp"
 
   bool qdcalc();
-  bool qiset();
-  bool qvfue();
-  bool qwcalc();
+  struct TangentialVelocityResult {
+    VectorXd qinv;
+    VectorXd qinv_a;
+  };
+
+  TangentialVelocityResult qiset() const;
+  VectorXd qvfue() const;
+  Matrix2Xd qwcalc();
 
   bool setbl();
   void swapEdgeVelocities(SidePair<VectorXd>& usav);

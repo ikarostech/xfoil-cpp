@@ -360,9 +360,9 @@ bool XFoil::blprv(double xsi, double ami, double cti, double thi, double dsi,
 bool XFoil::blvar(blData &ref, FlowRegimeEnum flowRegimeType) {
   // This routine is now decomposed into helper functions to simplify
   // the original Fortran translation.
-  computeShapeParameters(ref, flowRegimeType);
-  computeCoefficients(ref, flowRegimeType);
-  computeDissipationAndThickness(ref, flowRegimeType);
+  ref = computeShapeParameters(ref, flowRegimeType);
+  ref = computeCoefficients(ref, flowRegimeType);
+  ref = computeDissipationAndThickness(ref, flowRegimeType);
   return true;
 }
 

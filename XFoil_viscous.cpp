@@ -5,6 +5,7 @@
 #include <numbers>
 #include <sstream>
 #include <iomanip>
+#include <utility>
 using namespace Eigen;
 
 namespace {
@@ -163,31 +164,39 @@ bool XFoil::qdcalc() {
  *     sets inviscid panel tangential velocity for
  *      current alpha.
  * -------------------------------------------------------- */
-bool XFoil::qiset() {
+XFoil::TangentialVelocityResult XFoil::qiset() const {
   Matrix2d rotateMatrix =
       Matrix2d{{cos(alfa), sin(alfa)}, {-sin(alfa), cos(alfa)}};
 
+  TangentialVelocityResult result;
+  result.qinv = VectorXd::Zero(n + nw);
+  result.qinv_a = VectorXd::Zero(n + nw);
+
   for (int i = 0; i < n + nw; i++) {
-    qinv[i] = rotateMatrix.row(0).dot(qinvu.col(i));
-    qinv_a[i] = rotateMatrix.row(1).dot(qinvu.col(i));
+    result.qinv[i] = rotateMatrix.row(0).dot(qinvu.col(i));
+    result.qinv_a[i] = rotateMatrix.row(1).dot(qinvu.col(i));
   }
 
-  return true;
+  return result;
 }
 
 
 /** -------------------------------------------------------------
  *     sets panel viscous tangential velocity from viscous ue
  * -------------------------------------------------------------- */
-bool XFoil::qvfue() {
+VectorXd XFoil::qvfue() const {
+  VectorXd updated_qvis = qvis;
   for (int is = 1; is <= 2; is++) {
-    for (int ibl = 0; ibl < nbl.get(is) - 1; ++ibl) {
+    const auto& vti_side = vti.get(is);
+    const auto& uedg_side = uedg.get(is);
+    const int limit = nbl.get(is) - 1;
+    for (int ibl = 0; ibl < limit; ++ibl) {
       int i = ipan.get(is)[ibl];
-      qvis[i] = vti.get(is)[ibl] * uedg.get(is)[ibl];
+      updated_qvis[i] = vti_side[ibl] * uedg_side[ibl];
     }
   }
 
-  return true;
+  return updated_qvis;
 }
 
 
@@ -195,20 +204,21 @@ bool XFoil::qvfue() {
  *      sets inviscid tangential velocity for alpha = 0, 90
  *      on wake due to freestream and airfoil surface vorticity.
  * --------------------------------------------------------------- */
-bool XFoil::qwcalc() {
+Matrix2Xd XFoil::qwcalc() {
+  Matrix2Xd updated_qinvu = qinvu;
 
-  //---- first wake point (same as te)
-  qinvu.col(n) = qinvu.col(n - 1);
+  if (n >= 1 && n < updated_qinvu.cols()) {
+    updated_qinvu.col(n) = updated_qinvu.col(n - 1);
+  }
 
-  //---- rest of wake
   for (int i = n + 1; i < n + nw; i++) {
-    qinvu.col(i) =
+    updated_qinvu.col(i) =
         psilin(points, i, points.col(i),
                normal_vectors.col(i), false)
             .qtan;
   }
 
-  return true;
+  return updated_qinvu;
 }
 
 
@@ -611,14 +621,18 @@ bool XFoil::viscal() {
     xyWake();
 
   //	---- set velocities on wake from airfoil vorticity for alpha=0, 90
-  qwcalc();
+  qinvu = qwcalc();
 
   //	---- set velocities on airfoil and wake for initial alpha
-  qiset();
+  {
+    auto qiset_result = qiset();
+    qinv = std::move(qiset_result.qinv);
+    qinv_a = std::move(qiset_result.qinv_a);
+  }
 
   if (!lipan) {
     if (lblini)
-      gamqv();
+      surface_vortex = gamqv();
 
     //	----- locate stagnation point arc length position and panel index
     stfind();
@@ -649,7 +663,7 @@ bool XFoil::viscal() {
 
   if (lvconv) {
     //	----- set correct cl if converged point exists
-    qvfue();
+    qvis = qvfue();
 
     if (lvisc) {
       cpv = cpcalc(n + nw, qvis, qinf, minf);
@@ -657,7 +671,7 @@ bool XFoil::viscal() {
     } else
       cpi = cpcalc(n, qinv, qinf, minf);
 
-    gamqv();
+    surface_vortex = gamqv();
     clcalc(cmref);
     cdcalc();
   }
@@ -695,12 +709,14 @@ bool XFoil::ViscousIter() {
     reinf_cl = getActualReynolds(cl, reynolds_type);
     comset();
   } else { //	------- set new inviscid speeds qinv and uinv for new alpha
-    qiset();
+    auto qiset_result = qiset();
+    qinv = std::move(qiset_result.qinv);
+    qinv_a = std::move(qiset_result.qinv_a);
     uicalc();
   }
 
-  qvfue();  //	------ calculate edge velocities qvis(.) from uedg(..)
-  gamqv();  //	------ set gam distribution from qvis
+  qvis = qvfue();  //	------ calculate edge velocities qvis(.) from uedg(..)
+  surface_vortex = gamqv();  //	------ set gam distribution from qvis
   stmove(); //	------ relocate stagnation point
 
   //	------ set updated cl,cd

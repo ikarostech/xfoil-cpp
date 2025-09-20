@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cmath>
 #include <unordered_map>
+#include <utility>
 using namespace Eigen;
 
 namespace {
@@ -173,13 +174,13 @@ VectorXd XFoil::cpcalc(int n, VectorXd q, double qinf, double minf) {
 /** Laminar dissipation function  ( 2 cd/h* )     (from Falkner-Skan)*/
 // moved to XFoil_boundary.cpp: dslim()
 
-bool XFoil::gamqv() {
+Matrix2Xd XFoil::gamqv() const {
+  Matrix2Xd updated_surface_vortex(2, n);
   for (int i = 0; i < n; i++) {
-    surface_vortex(0, i) = qvis[i];
-    surface_vortex(1, i) = qinv_a[i];
+    updated_surface_vortex(0, i) = qvis[i];
+    updated_surface_vortex(1, i) = qinv_a[i];
   }
-
-  return true;
+  return updated_surface_vortex;
 }
 
 
@@ -327,9 +328,15 @@ bool specConverge(XFoil &foil, SpecTarget target) {
 
   updateSurfaceVortexFromGamu(foil);
 
+  auto applyQiset = [&foil]() {
+    auto qiset_result = foil.qiset();
+    foil.qinv = std::move(qiset_result.qinv);
+    foil.qinv_a = std::move(qiset_result.qinv_a);
+  };
+
   if (target == SpecTarget::AngleOfAttack) {
     foil.tecalc();
-    foil.qiset();
+    applyQiset();
   } else {
     foil.minf_cl = foil.getActualMach(foil.clspec, foil.mach_type);
     foil.reinf_cl = foil.getActualReynolds(foil.clspec, foil.reynolds_type);
@@ -385,6 +392,7 @@ bool specConverge(XFoil &foil, SpecTarget target) {
     foil.minf_cl = foil.getActualMach(foil.cl, foil.mach_type);
     foil.reinf_cl = foil.getActualReynolds(foil.cl, foil.reynolds_type);
     foil.comset();
+    applyQiset();
     foil.clcalc(foil.cmref);
 
     foil.cpi = foil.cpcalc(foil.n, foil.qinv, foil.qinf, foil.minf);
@@ -424,7 +432,7 @@ bool specConverge(XFoil &foil, SpecTarget target) {
 
   //---- set final surface speed and cp distributions
   foil.tecalc();
-  foil.qiset();
+  applyQiset();
 
   if (foil.lvisc) {
     foil.cpv = foil.cpcalc(foil.n + foil.nw, foil.qvis, foil.qinf, foil.minf);
