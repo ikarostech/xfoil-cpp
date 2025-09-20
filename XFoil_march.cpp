@@ -861,7 +861,9 @@ bool XFoil::setbl() {
   SidePair<VectorXd> usav = uedg;
 
   ueset();
-  swapEdgeVelocities(usav);
+  const auto swapped_edge_velocities = swapEdgeVelocities(usav);
+  usav = swapped_edge_velocities.swappedUsav;
+  uedg = swapped_edge_velocities.restoredUedg;
 jvte1 = isys.top[iblte.top];
 jvte2 = isys.bottom[iblte.bottom];
 
@@ -869,13 +871,13 @@ jvte2 = isys.bottom[iblte.bottom];
   dule2 = uedg.bottom[0] - usav.bottom[0];
 
   //---- set le and te ue sensitivities wrt all m values
-  computeLeTeSensitivities(
-    ipan.get(1)[0],
-    ipan.get(2)[0],
-    ipan.get(1)[iblte.top],
-    ipan.get(2)[iblte.bottom],
-    ule1_m, ule2_m, ute1_m, ute2_m
-  );
+  const auto le_te_sensitivities = computeLeTeSensitivities(
+      ipan.get(1)[0], ipan.get(2)[0], ipan.get(1)[iblte.top],
+      ipan.get(2)[iblte.bottom]);
+  ule1_m = le_te_sensitivities.ule1_m;
+  ule2_m = le_te_sensitivities.ule2_m;
+  ute1_m = le_te_sensitivities.ute1_m;
+  ute2_m = le_te_sensitivities.ute2_m;
 
   ule1_a = uinv_a.get(1)[0];
   ule2_a = uinv_a.get(2)[0];
@@ -885,7 +887,9 @@ jvte2 = isys.bottom[iblte.bottom];
   //*** go over each boundary layer/wake
   for (int is = 1; is <= 2; is++) {
     //---- there is no station "1" at similarity, so zero everything out
-    clearDerivativeVectors(u1_m, d1_m);
+    const auto cleared_derivatives = clearDerivativeVectors(u1_m, d1_m);
+    u1_m = cleared_derivatives.u;
+    d1_m = cleared_derivatives.d;
     double u1_a = 0.0;
     double d1_a = 0.0;
 

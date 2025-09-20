@@ -17,18 +17,6 @@ AerodynamicsState& ensureAerodynamicsState(const XFoil* foil) {
 }
 }  // namespace
 
-double XFoil::getXcp() const {
-  auto it = g_aerodynamics_state.find(this);
-  if (it == g_aerodynamics_state.end()) {
-    return 0.0;
-  }
-  return it->second.xcp;
-}
-
-void ClearAerodynamicsState(const XFoil& foil) {
-  g_aerodynamics_state.erase(&foil);
-}
-
 double cross2(const Eigen::Vector2d &a, const Eigen::Vector2d &b);
 
 
@@ -43,32 +31,42 @@ double cross2(const Eigen::Vector2d &a, const Eigen::Vector2d &b);
  */
 // moved to XFoil_geometry.cpp: cang()
 
-bool XFoil::cdcalc() {
-  // Ensure compressibility parameters reflect the current Mach number
-  comset();
-
+double XFoil::cdcalc() const {
   if (!(lvisc && lblini)) {
-    cd = 0.0;
-    return true;
+    return 0.0;
   }
 
-  //---- set variables at the end of the wake
-  double thwake = thet.get(2)[nbl.bottom - 2];
-  double urat = uedg.bottom[nbl.bottom - 2] / qinf;
-  double uewake =
-      uedg.bottom[nbl.bottom - 2] * (1.0 - tklam) /
-      (1.0 - tklam * urat * urat);
-  double shwake = dstr.get(2)[nbl.bottom - 2] /
-                   thet.get(2)[nbl.bottom - 2];
+  const double beta = std::sqrt(std::max(0.0, 1.0 - minf * minf));
+  const double tklam_local = MathUtil::pow(minf / (1.0 + beta), 2);
 
-  //---- extrapolate wake to downstream infinity using squire-young relation
-  //      (reduces errors of the wake not being long enough)
-  cd = 2.0 * thwake * pow((uewake / qinf), (0.5 * (5.0 + shwake)));
+  const double thwake = thet.get(2)[nbl.bottom - 2];
+  const double uedg_bottom = uedg.bottom[nbl.bottom - 2];
+  const double urat = uedg_bottom / qinf;
+  const double uewake =
+      uedg_bottom * (1.0 - tklam_local) /
+      (1.0 - tklam_local * urat * urat);
+  const double shwake =
+      dstr.get(2)[nbl.bottom - 2] / thet.get(2)[nbl.bottom - 2];
 
-  return true;
+  const double exponent = 0.5 * (5.0 + shwake);
+  const double wake_ratio = uewake / qinf;
+  const double wake_term = std::pow(wake_ratio, exponent);
+  return 2.0 * thwake * wake_term;
 }
 
-bool XFoil::clcalc(Vector2d ref) {
+double XFoil::getXcp() const {
+  auto it = g_aerodynamics_state.find(this);
+  if (it == g_aerodynamics_state.end()) {
+    return 0.0;
+  }
+  return it->second.xcp;
+}
+
+void ClearAerodynamicsState(const XFoil& foil) {
+  g_aerodynamics_state.erase(&foil);
+}
+
+XFoil::ClComputation XFoil::clcalc(Vector2d ref) const {
 
   //-----------------------------------------------------------
   //	   integrates surface pressures to get cl and cm.
@@ -76,17 +74,11 @@ bool XFoil::clcalc(Vector2d ref) {
   //	   calculates dcl/dalpha for prescribed-cl routines.
   //-----------------------------------------------------------
 
-  auto& aero = ensureAerodynamicsState(this);
-  aero.xcp = 0.0;
+  ClComputation result;
+  double xcp_accumulator = 0.0;
 
   const auto compressibility = buildCompressibilityParams();
   const Matrix2d rotateMatrix = buildBodyToFreestreamRotation();
-
-  cl = 0.0;
-  cm = 0.0;
-
-  cl_alf = 0.0;
-  cl_msq = 0.0;
 
   const PressureCoefficientResult cp_first = computePressureCoefficient(
       surface_vortex(0, 0), surface_vortex(1, 0), compressibility);
@@ -96,7 +88,7 @@ bool XFoil::clcalc(Vector2d ref) {
   double cpg1_alf = cp_first.cp_velocity_derivative;
 
   for (int i = 0; i < n; i++) {
-    int ip = (i + 1) % n;
+    const int ip = (i + 1) % n;
     const PressureCoefficientResult cp_next = computePressureCoefficient(
         surface_vortex(0, ip), surface_vortex(1, ip), compressibility);
 
@@ -116,28 +108,38 @@ bool XFoil::clcalc(Vector2d ref) {
     const double ag_alf = 0.5 * (cpg2_alf + cpg1_alf);
     const double ag_msq = 0.5 * (cpg2_msq + cpg1_msq);
 
-    cl = cl + dpoint.x() * ag;
-    cm = cm - dpoint.dot(ag * apoint + dg * dpoint / 12.0);
+    result.cl += dpoint.x() * ag;
+    result.cm -= dpoint.dot(ag * apoint + dg * dpoint / 12.0);
 
-    aero.xcp += dpoint.x() * ag *
-                (points.col(ip).x() +
-                 points.col(i).x()) /
-                2.0;
+    xcp_accumulator += dpoint.x() * ag *
+                       (points.col(ip).x() +
+                        points.col(i).x()) /
+                       2.0;
 
-    cl_alf = cl_alf + dpoint.x() * ag_alf + ag * dx_alf;
-    cl_msq = cl_msq + dpoint.x() * ag_msq;
+    result.cl_alf += dpoint.x() * ag_alf + ag * dx_alf;
+    result.cl_msq += dpoint.x() * ag_msq;
 
     cpg1 = cpg2;
     cpg1_alf = cpg2_alf;
     cpg1_msq = cpg2_msq;
   }
 
-  if (fabs(cl) > 0.0)
-    aero.xcp /= cl;
+  if (fabs(result.cl) > 0.0)
+    result.xcp = xcp_accumulator / result.cl;
   else
-    aero.xcp = 0.0;
+    result.xcp = 0.0;
 
-  return true;
+  return result;
+}
+
+void XFoil::applyClComputation(const ClComputation &result) {
+  cl = result.cl;
+  cm = result.cm;
+  cl_alf = result.cl_alf;
+  cl_msq = result.cl_msq;
+
+  auto &aero = ensureAerodynamicsState(this);
+  aero.xcp = result.xcp;
 }
 
 
@@ -343,7 +345,7 @@ bool specConverge(XFoil &foil, SpecTarget target) {
     foil.comset();
   }
 
-  foil.clcalc(foil.cmref);
+  foil.applyClComputation(foil.clcalc(foil.cmref));
 
   bool bConv = false;
 
@@ -375,7 +377,7 @@ bool specConverge(XFoil &foil, SpecTarget target) {
       }
 
       //------ set new cl(m)
-      foil.clcalc(foil.cmref);
+      foil.applyClComputation(foil.clcalc(foil.cmref));
 
       if (fabs(dclm) <= 1.0e-6) {
         bConv = true;
@@ -393,7 +395,7 @@ bool specConverge(XFoil &foil, SpecTarget target) {
     foil.reinf_cl = foil.getActualReynolds(foil.cl, foil.reynolds_type);
     foil.comset();
     applyQiset();
-    foil.clcalc(foil.cmref);
+    foil.applyClComputation(foil.clcalc(foil.cmref));
 
     foil.cpi = foil.cpcalc(foil.n, foil.qinv, foil.qinf, foil.minf);
     if (foil.lvisc) {
@@ -418,7 +420,7 @@ bool specConverge(XFoil &foil, SpecTarget target) {
     updateSurfaceVortexFromGamu(foil);
 
     //------ set new cl(alpha)
-    foil.clcalc(foil.cmref);
+    foil.applyClComputation(foil.clcalc(foil.cmref));
 
     if (fabs(dalfa) <= 1.0e-6) {
       bConv = true;

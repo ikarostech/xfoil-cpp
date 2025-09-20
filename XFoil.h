@@ -90,13 +90,25 @@ class XFoil {
                          bool bViscous, std::stringstream &outStream);
 
 
-  bool clcalc(Vector2d ref);
+  struct ClComputation {
+    double cl = 0.0;
+    double cm = 0.0;
+    double cl_alf = 0.0;
+    double cl_msq = 0.0;
+    double xcp = 0.0;
+  };
+  ClComputation clcalc(Vector2d ref) const;
+  void applyClComputation(const ClComputation& result);
 
   void writeString(std::string str);
   bool specal();
   bool speccl();
   bool viscal();
-  bool ViscalEnd();
+  struct ViscalEndResult {
+    VectorXd inviscidCp;
+    VectorXd viscousCp;
+  };
+  ViscalEndResult ViscalEnd();
   bool ViscousIter();
   
   bool abcopy(Matrix2Xd copyFrom);
@@ -177,7 +189,7 @@ class XFoil {
   blData computeDissipationAndThickness(const blData& ref,
                                         FlowRegimeEnum flowRegimeType) const;
   double cang(Matrix2Xd points);
-  bool cdcalc();
+  double cdcalc() const;
 
   struct CompressibilityParams {
     double beta;
@@ -305,11 +317,25 @@ class XFoil {
   Matrix2Xd qwcalc();
 
   bool setbl();
-  void swapEdgeVelocities(SidePair<VectorXd>& usav);
-  void computeLeTeSensitivities(int ile1, int ile2, int ite1, int ite2,
-                                VectorXd& ule1_m, VectorXd& ule2_m,
-                                VectorXd& ute1_m, VectorXd& ute2_m);
-  void clearDerivativeVectors(VectorXd& u_m, VectorXd& d_m);
+  struct EdgeVelocitySwapResult {
+    SidePair<VectorXd> swappedUsav;
+    SidePair<VectorXd> restoredUedg;
+  };
+  EdgeVelocitySwapResult swapEdgeVelocities(const SidePair<VectorXd>& usav) const;
+  struct LeTeSensitivities {
+    VectorXd ule1_m;
+    VectorXd ule2_m;
+    VectorXd ute1_m;
+    VectorXd ute2_m;
+  };
+  LeTeSensitivities computeLeTeSensitivities(int ile1, int ile2, int ite1,
+                                             int ite2) const;
+  struct DerivativeVectors {
+    VectorXd u;
+    VectorXd d;
+  };
+  DerivativeVectors clearDerivativeVectors(const VectorXd& u_m,
+                                            const VectorXd& d_m) const;
   bool setexp(double s[], double ds1, double smax, int nn);
 
   bool stepbl();
@@ -322,14 +348,25 @@ class XFoil {
   bool ueset();
   bool uicalc();
   bool update();
-  void computeNewUeDistribution(SidePair<VectorXd>& unew,
-                                SidePair<VectorXd>& u_ac);
-  void computeQtan(const SidePair<VectorXd>& unew,
-                   const SidePair<VectorXd>& u_ac,
-                   VectorXd& qnew, VectorXd& q_ac);
-  void computeClFromQtan(const VectorXd& qnew, const VectorXd& q_ac,
-                         double& clnew, double& cl_a,
-                         double& cl_ms, double& cl_ac);
+  struct EdgeVelocityDistribution {
+    SidePair<VectorXd> unew;
+    SidePair<VectorXd> u_ac;
+  };
+  EdgeVelocityDistribution computeNewUeDistribution() const;
+  struct QtanResult {
+    VectorXd qnew;
+    VectorXd q_ac;
+  };
+  QtanResult computeQtan(const SidePair<VectorXd>& unew,
+                         const SidePair<VectorXd>& u_ac) const;
+  struct ClContributions {
+    double cl = 0.0;
+    double cl_a = 0.0;
+    double cl_ms = 0.0;
+    double cl_ac = 0.0;
+  };
+  ClContributions computeClFromQtan(const VectorXd& qnew,
+                                    const VectorXd& q_ac) const;
   struct BoundaryLayerDelta {
     VectorXd dctau;
     VectorXd dthet;
@@ -339,6 +376,13 @@ class XFoil {
   struct BoundaryLayerMetrics {
     double rmsContribution = 0.0;
     double maxChange = 0.0;
+  };
+  struct BoundaryLayerSideState {
+    VectorXd ctau;
+    VectorXd thet;
+    VectorXd dstr;
+    VectorXd uedg;
+    VectorXd mass;
   };
   double computeAcChange(double clnew, double cl_current, double cl_target,
                          double cl_ac, double cl_a, double cl_ms) const;
@@ -352,8 +396,9 @@ class XFoil {
                                                  const BoundaryLayerDelta& delta,
                                                  double dhi, double dlo,
                                                  double& relaxation) const;
-  void applyBoundaryLayerDelta(int side, const BoundaryLayerDelta& delta,
-                               double relaxation);
+  BoundaryLayerSideState applyBoundaryLayerDelta(int side,
+                                                 const BoundaryLayerDelta& delta,
+                                                 double relaxation);
   bool xicalc();
   double xifset(int is);
   bool xyWake();

@@ -236,8 +236,9 @@ bool XFoil::setMach() {
   if (lvisc) {
     cpv = cpcalc(n + nw, qvis, qinf, minf);
   }
-  clcalc(cmref);
-  cdcalc();
+  const auto cl_result = clcalc(cmref);
+  applyClComputation(cl_result);
+  cd = cdcalc();
   lvconv = false;
   return true;
 }

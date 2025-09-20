@@ -35,13 +35,10 @@ bool iterate(XFoil *foil) {
       m_Iterations = s_IterLim;
   }
 
-  if (!foil->ViscalEnd()) {
-    foil->lvconv = false;  // point is unconverged
-
-    foil->setBLInitialized(false);
-    foil->lipan = false;
-    m_bErrors = true;
-    return true;  // to exit loop
+  {
+    const auto viscal_end = foil->ViscalEnd();
+    foil->cpi = viscal_end.inviscidCp;
+    foil->cpv = viscal_end.viscousCp;
   }
 
   if (m_Iterations >= s_IterLim && !foil->lvconv) {

@@ -224,110 +224,122 @@ Matrix2Xd XFoil::qwcalc() {
 
 // moved to XFoil_init.cpp: restoreblData()/saveblData()
 
-void XFoil::swapEdgeVelocities(SidePair<VectorXd> &usav) {
+XFoil::EdgeVelocitySwapResult XFoil::swapEdgeVelocities(
+    const SidePair<VectorXd> &usav) const {
+  EdgeVelocitySwapResult result;
+  result.swappedUsav = usav;
+  result.restoredUedg = uedg;
   for (int is = 1; is <= 2; ++is) {
     for (int ibl = 0; ibl < nbl.get(is) - 1; ++ibl) {
-      double temp = usav.get(is)[ibl];
-      double cur = uedg.get(is)[ibl];
-      usav.get(is)[ibl] = cur;
-      uedg.get(is)[ibl] = temp;
+      result.swappedUsav.get(is)[ibl] = uedg.get(is)[ibl];
+      result.restoredUedg.get(is)[ibl] = usav.get(is)[ibl];
     }
   }
+  return result;
 }
 
 
-void XFoil::computeLeTeSensitivities(int ile1, int ile2, int ite1, int ite2,
-                                     VectorXd &ule1_m, VectorXd &ule2_m,
-                                     VectorXd &ute1_m, VectorXd &ute2_m) {
+XFoil::LeTeSensitivities XFoil::computeLeTeSensitivities(int ile1, int ile2,
+                                                          int ite1,
+                                                          int ite2) const {
+  LeTeSensitivities sensitivities;
+  sensitivities.ule1_m = VectorXd::Zero(2 * IVX + 1);
+  sensitivities.ule2_m = VectorXd::Zero(2 * IVX + 1);
+  sensitivities.ute1_m = VectorXd::Zero(2 * IVX + 1);
+  sensitivities.ute2_m = VectorXd::Zero(2 * IVX + 1);
   for (int js = 1; js <= 2; ++js) {
     for (int jbl = 0; jbl < nbl.get(js) - 1; ++jbl) {
-      int j = ipan.get(js)[jbl];
-      int jv = isys.get(js)[jbl];
-      ule1_m[jv] = -vti.top[0] * vti.get(js)[jbl] *
-                   dij(ile1, j);
-      ule2_m[jv] = -vti.bottom[0] * vti.get(js)[jbl] *
-                   dij(ile2, j);
-      ute1_m[jv] = -vti.top[iblte.top] * vti.get(js)[jbl] *
-                   dij(ite1, j);
-      ute2_m[jv] = -vti.bottom[iblte.bottom] * vti.get(js)[jbl] *
-                   dij(ite2, j);
+      const int j = ipan.get(js)[jbl];
+      const int jv = isys.get(js)[jbl];
+      const double vti_js = vti.get(js)[jbl];
+      sensitivities.ule1_m[jv] = -vti.top[0] * vti_js * dij(ile1, j);
+      sensitivities.ule2_m[jv] = -vti.bottom[0] * vti_js * dij(ile2, j);
+      sensitivities.ute1_m[jv] = -vti.top[iblte.top] * vti_js * dij(ite1, j);
+      sensitivities.ute2_m[jv] = -vti.bottom[iblte.bottom] * vti_js * dij(ite2, j);
     }
   }
+  return sensitivities;
 }
 
 
-void XFoil::clearDerivativeVectors(VectorXd &u_m, VectorXd &d_m) {
+XFoil::DerivativeVectors XFoil::clearDerivativeVectors(const VectorXd &u_m,
+                                                        const VectorXd &d_m) const {
+  DerivativeVectors result{u_m, d_m};
   for (int js = 1; js <= 2; ++js) {
     for (int jbl = 0; jbl < nbl.get(js) - 1; ++jbl) {
-      int jv = isys.get(js)[jbl];
-      u_m[jv] = 0.0;
-      d_m[jv] = 0.0;
+      const int jv = isys.get(js)[jbl];
+      result.u[jv] = 0.0;
+      result.d[jv] = 0.0;
     }
   }
+  return result;
 }
 
 
 /**
  * @brief Compute new edge velocities and their sensitivities.
  */
-void XFoil::computeNewUeDistribution(SidePair<VectorXd> &unew,
-                                     SidePair<VectorXd> &u_ac) {
+XFoil::EdgeVelocityDistribution XFoil::computeNewUeDistribution() const {
+  EdgeVelocityDistribution distribution;
+  distribution.unew.top = VectorXd::Zero(IVX);
+  distribution.unew.bottom = VectorXd::Zero(IVX);
+  distribution.u_ac.top = VectorXd::Zero(IVX);
+  distribution.u_ac.bottom = VectorXd::Zero(IVX);
   for (int is = 1; is <= 2; is++) {
     for (int ibl = 0; ibl < nbl.get(is) - 1; ++ibl) {
-      int i = ipan.get(is)[ibl];
+      const int i = ipan.get(is)[ibl];
       double dui = 0.0;
       double dui_ac = 0.0;
       for (int js = 1; js <= 2; js++) {
         for (int jbl = 0; jbl < nbl.get(js) - 1; ++jbl) {
-          int j = ipan.get(js)[jbl];
-          int jv = isys.get(js)[jbl];
-          double ue_m = -vti.get(is)[ibl] * vti.get(js)[jbl] *
-                        dij(i, j);
+          const int j = ipan.get(js)[jbl];
+          const int jv = isys.get(js)[jbl];
+          const double ue_m = -vti.get(is)[ibl] * vti.get(js)[jbl] *
+                              dij(i, j);
           dui += ue_m * (mass.get(js)[jbl] + vdel[jv](2, 0));
           dui_ac += ue_m * (-vdel[jv](2, 1));
         }
       }
 
-      double uinv_ac = lalfa ? 0.0 : uinv_a.get(is)[ibl];
+      const double uinv_ac = lalfa ? 0.0 : uinv_a.get(is)[ibl];
       // Store unew/u_ac at 0-based station index
-      unew.get(is)[ibl] = uinv.get(is)[ibl] + dui;
-      u_ac.get(is)[ibl] = uinv_ac + dui_ac;
+      distribution.unew.get(is)[ibl] = uinv.get(is)[ibl] + dui;
+      distribution.u_ac.get(is)[ibl] = uinv_ac + dui_ac;
     }
   }
+  return distribution;
 }
 
 
 /**
  * @brief Convert edge velocities to tangential velocities.
  */
-void XFoil::computeQtan(const SidePair<VectorXd> &unew,
-                        const SidePair<VectorXd> &u_ac, VectorXd &qnew,
-                        VectorXd &q_ac) {
+XFoil::QtanResult XFoil::computeQtan(const SidePair<VectorXd> &unew,
+                                      const SidePair<VectorXd> &u_ac) const {
+  QtanResult result;
+  result.qnew = VectorXd::Zero(IQX);
+  result.q_ac = VectorXd::Zero(IQX);
   for (int is = 1; is <= 2; is++) {
+    const VectorXd &unew_vec = (is == 1) ? unew.top : unew.bottom;
+    const VectorXd &uac_vec = (is == 1) ? u_ac.top : u_ac.bottom;
     for (int ibl = 0; ibl < iblte.get(is); ++ibl) {
-      int i = ipan.get(is)[ibl];
-      const VectorXd &unew_vec = (is == 1) ? unew.top : unew.bottom;
-      const VectorXd &uac_vec = (is == 1) ? u_ac.top : u_ac.bottom;
-      qnew[i] = vti.get(is)[ibl] * unew_vec[ibl];
-      q_ac[i] = vti.get(is)[ibl] * uac_vec[ibl];
+      const int i = ipan.get(is)[ibl];
+      result.qnew[i] = vti.get(is)[ibl] * unew_vec[ibl];
+      result.q_ac[i] = vti.get(is)[ibl] * uac_vec[ibl];
     }
   }
+  return result;
 }
 
 
 /**
  * @brief Calculate lift coefficient contributions from tangential velocity.
  */
-void XFoil::computeClFromQtan(const VectorXd &qnew, const VectorXd &q_ac,
-                              double &clnew, double &cl_a, double &cl_ms,
-                              double &cl_ac) {
+XFoil::ClContributions XFoil::computeClFromQtan(const VectorXd &qnew,
+                                                const VectorXd &q_ac) const {
+  ClContributions contributions;
   const auto compressibility = buildCompressibilityParams();
   const Matrix2d rotateMatrix = buildBodyToFreestreamRotation();
-
-  clnew = 0.0;
-  cl_a = 0.0;
-  cl_ms = 0.0;
-  cl_ac = 0.0;
 
   const PressureCoefficientResult cp_first = computePressureCoefficient(
       qnew[0], q_ac[0], compressibility);
@@ -337,7 +349,7 @@ void XFoil::computeClFromQtan(const VectorXd &qnew, const VectorXd &q_ac,
   double cpg1_ac = cp_first.cp_velocity_derivative;
 
   for (int i = 0; i < n; i++) {
-    int ip = (i + 1) % n;
+    const int ip = (i + 1) % n;
     const PressureCoefficientResult cp_next = computePressureCoefficient(
         qnew[ip], q_ac[ip], compressibility);
 
@@ -352,15 +364,17 @@ void XFoil::computeClFromQtan(const VectorXd &qnew, const VectorXd &q_ac,
     const double ag_ms = 0.5 * (cpg2_ms + cpg1_ms);
     const double ag_ac = 0.5 * (cpg2_ac + cpg1_ac);
 
-    clnew += dpoint.x() * ag;
-    cl_a += dpoint.y() * ag;
-    cl_ms += dpoint.x() * ag_ms;
-    cl_ac += dpoint.x() * ag_ac;
+    contributions.cl += dpoint.x() * ag;
+    contributions.cl_a += dpoint.y() * ag;
+    contributions.cl_ms += dpoint.x() * ag_ms;
+    contributions.cl_ac += dpoint.x() * ag_ac;
 
     cpg1 = cpg2;
     cpg1_ms = cpg2_ms;
     cpg1_ac = cpg2_ac;
   }
+
+  return contributions;
 }
 
 
@@ -483,26 +497,27 @@ XFoil::BoundaryLayerMetrics XFoil::evaluateSegmentRelaxation(
 }
 
 
-void XFoil::applyBoundaryLayerDelta(int side,
-                                    const BoundaryLayerDelta &delta,
-                                    double relaxation) {
+XFoil::BoundaryLayerSideState XFoil::applyBoundaryLayerDelta(
+    int side, const BoundaryLayerDelta &delta, double relaxation) {
+  BoundaryLayerSideState state;
+  state.ctau = ctau.get(side);
+  state.thet = thet.get(side);
+  state.dstr = dstr.get(side);
+  state.uedg = uedg.get(side);
+  state.mass = mass.get(side);
+
   const int len = delta.dctau.size();
   if (len <= 0)
-    return;
+    return state;
 
-  auto ctau_segment = ctau.get(side).head(len);
-  auto thet_segment = thet.get(side).head(len);
-  auto dstr_segment = dstr.get(side).head(len);
-  auto uedg_segment = uedg.get(side).head(len);
-
-  ctau_segment += relaxation * delta.dctau;
-  thet_segment += relaxation * delta.dthet;
-  dstr_segment += relaxation * delta.ddstr;
-  uedg_segment += relaxation * delta.duedg;
+  state.ctau.head(len) += relaxation * delta.dctau;
+  state.thet.head(len) += relaxation * delta.dthet;
+  state.dstr.head(len) += relaxation * delta.ddstr;
+  state.uedg.head(len) += relaxation * delta.duedg;
 
   const int transition_index = std::max(0, itran.get(side));
   for (int idx = transition_index; idx < len; ++idx) {
-    ctau_segment[idx] = std::min(ctau_segment[idx], 0.25);
+    state.ctau[idx] = std::min(state.ctau[idx], 0.25);
   }
 
   for (int ibl = 0; ibl < len; ++ibl) {
@@ -513,15 +528,17 @@ void XFoil::applyBoundaryLayerDelta(int side,
     }
 
     const double hklim = (ibl <= iblte.get(side)) ? 1.02 : 1.00005;
-    const double uedg_val = uedg.get(side)[ibl];
+    const double uedg_val = state.uedg[ibl];
     const double uedg_sq = uedg_val * uedg_val;
     const double denom = 1.0 - 0.5 * uedg_sq * hstinv;
     const double msq = uedg_sq * hstinv / (gamm1 * denom);
-    double dsw = dstr.get(side)[ibl] - dswaki;
-    dslim(dsw, thet.get(side)[ibl], msq, hklim);
-    dstr.get(side)[ibl] = dsw + dswaki;
-    mass.get(side)[ibl] = dstr.get(side)[ibl] * uedg.get(side)[ibl];
+    double dsw = state.dstr[ibl] - dswaki;
+    dslim(dsw, state.thet[ibl], msq, hklim);
+    state.dstr[ibl] = dsw + dswaki;
+    state.mass[ibl] = state.dstr[ibl] * state.uedg[ibl];
   }
+
+  return state;
 }
 
 
@@ -536,14 +553,7 @@ bool XFoil::update() {
   //------------------------------------------------------------------
 
   SidePair<VectorXd> unew, u_ac;
-  unew.top = VectorXd::Zero(IVX);
-  unew.bottom = VectorXd::Zero(IVX);
-  u_ac.top = VectorXd::Zero(IVX);
-  u_ac.bottom = VectorXd::Zero(IVX);
 
-  VectorXd qnew = VectorXd::Zero(IQX);
-  VectorXd q_ac = VectorXd::Zero(IQX);
-  double clnew = 0.0, cl_a = 0.0, cl_ms = 0.0, cl_ac = 0.0;
 
   //---- max allowable alpha changes per iteration
   const double dalmax = 0.5 * dtor;
@@ -557,14 +567,18 @@ bool XFoil::update() {
       gamm1 * (minf / qinf) * (minf / qinf) / (1.0 + 0.5 * gamm1 * minf * minf);
 
   //--- calculate new ue distribution and tangential velocities
-  computeNewUeDistribution(unew, u_ac);
-  computeQtan(unew, u_ac, qnew, q_ac);
-  computeClFromQtan(qnew, q_ac, clnew, cl_a, cl_ms, cl_ac);
+  const auto ue_distribution = computeNewUeDistribution();
+  unew = ue_distribution.unew;
+  u_ac = ue_distribution.u_ac;
+  const auto qtan = computeQtan(unew, u_ac);
+  const auto cl_contributions = computeClFromQtan(qtan.qnew, qtan.q_ac);
 
   //--- initialize under-relaxation factor
   rlx = 1.0;
   const double cl_target = lalfa ? cl : clspec;
-  double dac = computeAcChange(clnew, cl, cl_target, cl_ac, cl_a, cl_ms);
+  double dac = computeAcChange(cl_contributions.cl, cl, cl_target,
+                               cl_contributions.cl_ac, cl_contributions.cl_a,
+                               cl_contributions.cl_ms);
 
   if (lalfa)
     rlx = clampRelaxationForGlobalChange(rlx, dac, dclmin, dclmax);
@@ -578,6 +592,7 @@ bool XFoil::update() {
 
   SidePair<BoundaryLayerDelta> deltas;
   SidePair<BoundaryLayerMetrics> metrics;
+  SidePair<BoundaryLayerSideState> updated_boundary_layer;
   for (int side = 1; side <= 2; ++side) {
     deltas.get(side) =
         buildBoundaryLayerDelta(side, unew.get(side), u_ac.get(side), dac);
@@ -585,6 +600,8 @@ bool XFoil::update() {
         evaluateSegmentRelaxation(side, deltas.get(side), dhi, dlo, rlx);
     rmsbl += metrics.get(side).rmsContribution;
     rmxbl = std::max(rmxbl, metrics.get(side).maxChange);
+    updated_boundary_layer.get(side) =
+        applyBoundaryLayerDelta(side, deltas.get(side), rlx);
   }
 
   rmsbl = sqrt(rmsbl / (4.0 * double(nbl.top + nbl.bottom)));
@@ -594,8 +611,13 @@ bool XFoil::update() {
   else
     alfa = alfa + rlx * dac;
 
-  for (int side = 1; side <= 2; ++side)
-    applyBoundaryLayerDelta(side, deltas.get(side), rlx);
+  for (int side = 1; side <= 2; ++side) {
+    ctau.get(side) = updated_boundary_layer.get(side).ctau;
+    thet.get(side) = updated_boundary_layer.get(side).thet;
+    dstr.get(side) = updated_boundary_layer.get(side).dstr;
+    uedg.get(side) = updated_boundary_layer.get(side).uedg;
+    mass.get(side) = updated_boundary_layer.get(side).mass;
+  }
 
   //--- equate upper wake arrays to lower wake arrays
   for (int kbl = 1; kbl <= nbl.bottom - (iblte.bottom + 1); kbl++) {
@@ -672,8 +694,9 @@ bool XFoil::viscal() {
       cpi = cpcalc(n, qinv, qinf, minf);
 
     surface_vortex = gamqv();
-    clcalc(cmref);
-    cdcalc();
+    const auto cl_result = clcalc(cmref);
+    applyClComputation(cl_result);
+    cd = cdcalc();
   }
 
   //	---- set up source influence matrix if it doesn't exist
@@ -684,12 +707,11 @@ bool XFoil::viscal() {
 }
 
 
-bool XFoil::ViscalEnd() {
-
-  cpi = cpcalc(n + nw, qinv, qinf, minf);
-  cpv = cpcalc(n + nw, qvis, qinf, minf);
-
-  return true;
+XFoil::ViscalEndResult XFoil::ViscalEnd() {
+  ViscalEndResult result;
+  result.inviscidCp = cpcalc(n + nw, qinv, qinf, minf);
+  result.viscousCp = cpcalc(n + nw, qvis, qinf, minf);
+  return result;
 }
 
 
@@ -720,8 +742,9 @@ bool XFoil::ViscousIter() {
   stmove(); //	------ relocate stagnation point
 
   //	------ set updated cl,cd
-  clcalc(cmref);
-  cdcalc();
+  const auto cl_result = clcalc(cmref);
+  applyClComputation(cl_result);
+  cd = cdcalc();
 
   if (rmsbl < eps1) {
     lvconv = true;
