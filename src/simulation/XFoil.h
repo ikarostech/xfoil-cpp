@@ -51,6 +51,7 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 #include "core/math_util.hpp"
 #include "core/spline.hpp"
 #include "domain/boundary_layer.hpp"
+#include "domain/foil_shape.hpp"
 #include "simulation/psi_result.hpp"
 #include "infrastructure/xfoil_params.h"
 
@@ -428,14 +429,15 @@ class XFoil {
 
   double minf1;
   bool lblini, lipan;
-  
-  int n;
+
+  FoilShape foil_shape;          // geometric domain (airfoil points and count)
+  Matrix2Xd& points;             // alias for legacy access to foil_shape.points
+  int& n;                        // alias for legacy access to foil_shape.n
   SidePair<VectorXi> ipan, isys;
   SidePair<int> iblte, nbl;
-  
-  Matrix2Xd points; //formerly x,y
+
   SidePair<double> xstrip;
-  
+
   Vector2d cmref;
   double tklam; // karman-tsien parameter minf^2 / [1 + sqrt[1-minf^2]]^2 <- Prandtl-Glauert-Ackeret rule ?
   double tkl_msq;
