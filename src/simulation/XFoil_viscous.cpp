@@ -18,10 +18,10 @@ constexpr double kAngleTolerance = 40.0;
  *  and sets the results in current foil */
 bool XFoil::initXFoilGeometry(int fn, const double *fx, const double *fy) {
 
-  Matrix2Xd buffer_points = Matrix2Xd::Zero(2, fn + 1);
+  Matrix2Xd buffer_points = Matrix2Xd::Zero(2, fn);
   for (int i = 0; i < fn; i++) {
-    buffer_points.col(i + 1).x() = fx[i];
-    buffer_points.col(i + 1).y() = fy[i];
+    buffer_points.col(i).x() = fx[i];
+    buffer_points.col(i).y() = fy[i];
   }
 
   if (!isValidFoilPointSize(buffer_points) ||

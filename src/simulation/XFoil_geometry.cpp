@@ -13,21 +13,22 @@ inline double cross2(const Eigen::Vector2d &a, const Eigen::Vector2d &b) {
 }
 
 bool XFoil::abcopy(Matrix2Xd copyFrom) {
-  if (n != copyFrom.cols() - 1)
+  if (n != copyFrom.cols())
     lblini = false;
 
-  n = copyFrom.cols() - 1;
+  n = copyFrom.cols();
 
   //---- strip out doubled points
   int r = 1;
   while (r < n) {
-    r++;
     // FIXME double型の==比較
     if (copyFrom.col(r - 1) == copyFrom.col(r)) {
-      for (int j = r; j <= n - 1; j++) {
+      for (int j = r; j < n - 1; j++) {
         copyFrom.col(j) = copyFrom.col(j + 1);
       }
       n = n - 1;
+    } else {
+      r++;
     }
   }
   //--- number of wake points
@@ -37,8 +38,8 @@ bool XFoil::abcopy(Matrix2Xd copyFrom) {
     nw = IWX;
   }
   points = Matrix2Xd::Zero(2, IZX);
-  for (int i = 1; i <= n; i++) {
-    points.col(i - 1) = copyFrom.col(i);
+  for (int i = 0; i < n; i++) {
+    points.col(i) = copyFrom.col(i);
   }
 
   initialize();
@@ -237,4 +238,3 @@ double XFoil::sign(double a, double b) {
   else
     return -fabs(a);
 }
-
