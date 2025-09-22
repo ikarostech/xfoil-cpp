@@ -51,7 +51,7 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 #include "core/math_util.hpp"
 #include "core/spline.hpp"
 #include "domain/boundary_layer.hpp"
-#include "domain/foil_shape.hpp"
+#include "domain/foil.hpp"
 #include "simulation/psi_result.hpp"
 #include "infrastructure/xfoil_params.h"
 
@@ -429,8 +429,8 @@ class XFoil {
 
   double minf1;
   bool lblini, lipan;
-
-  FoilShape foil_shape;          // geometric domain (airfoil points and count)
+  
+  Foil foil;
   Matrix2Xd& points;             // alias for legacy access to foil_shape.points
   int& n;                        // alias for legacy access to foil_shape.n
   SidePair<VectorXi> ipan, isys;

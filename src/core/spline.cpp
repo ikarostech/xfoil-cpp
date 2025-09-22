@@ -1,15 +1,7 @@
 #include "spline.hpp"
 #include "math_util.hpp"
 #include <iostream>
-Eigen::VectorXd spline::scalc(Eigen::Matrix2Xd points, int n) {
-    Eigen::VectorXd s = Eigen::VectorXd::Zero(n);
-    
-    for (int i = 1; i < n; i++) {
-        s[i] = s[i - 1] + (points.col(i) - points.col(i - 1)).norm();
-    }
 
-    return s;
-}
 /**	  Calculates x(ss)
  *	   xs array must have been calculated by spline */
 double spline::seval(double ss, Eigen::VectorXd x, Eigen::VectorXd xs, Eigen::VectorXd s, int n) {

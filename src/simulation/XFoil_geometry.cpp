@@ -43,8 +43,11 @@ bool XFoil::abcopy(Matrix2Xd copyFrom) {
   }
 
   initialize();
-
-  spline_length.head(n) = spline::scalc(points, n);
+  //TODO foil側に寄せて最終的にfoilを返すようにする
+  
+  
+  foil.foil_shape.setFoilShape(points, n);
+  spline_length.head(n) = foil.foil_shape.spline_length;
   dpoints_ds.row(0) = spline::splind(points.row(0), spline_length.head(n));
   dpoints_ds.row(1) = spline::splind(points.row(1), spline_length.head(n));
   normal_vectors = ncalc(points, spline_length.head(n), n);
