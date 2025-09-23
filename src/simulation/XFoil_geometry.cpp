@@ -50,7 +50,7 @@ bool XFoil::abcopy(Matrix2Xd copyFrom) {
   spline_length.head(n) = foil.foil_shape.spline_length;
   dpoints_ds.row(0) = spline::splind(points.row(0), spline_length.head(n));
   dpoints_ds.row(1) = spline::splind(points.row(1), spline_length.head(n));
-  normal_vectors = ncalc(points, spline_length.head(n), n);
+  normal_vectors.block(0, 0, 2, n) = foil.foil_shape.normal_vector;
   lefind(sle, points.leftCols(n), dpoints_ds, spline_length.head(n), n);
   point_le.x() = spline::seval(sle, points.row(0), dpoints_ds.row(0), spline_length.head(n), n);
   point_le.y() = spline::seval(sle, points.row(1), dpoints_ds.row(1), spline_length.head(n), n);
@@ -145,18 +145,6 @@ bool XFoil::lefind(double &sle, Matrix2Xd points, Matrix2Xd dpoints_ds, VectorXd
   }
   sle = s[i];
   return true;
-}
-
-Matrix2Xd XFoil::ncalc(Matrix2Xd points, VectorXd spline_length, int n) {
-  Matrix2Xd normal_vector = Matrix2Xd::Zero(2, IZX);
-  normal_vector.row(0).head(n) = spline::splind(points.row(0).head(n), spline_length.head(n));
-  normal_vector.row(1).head(n) = spline::splind(points.row(1).head(n), spline_length.head(n));
-  for (int i = 0; i < n; i++) {
-    Vector2d temp = normal_vector.col(i);
-    normal_vector.col(i).x() = temp.normalized().y();
-    normal_vector.col(i).y() = temp.normalized().x();
-  }
-  return normal_vector;
 }
 
 bool XFoil::tecalc() {
