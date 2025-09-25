@@ -288,7 +288,7 @@ class XFoil {
   bool ggcalc();
   bool iblpan();
   bool iblsys();
-  bool lefind(double &sle, Matrix2Xd points, Matrix2Xd dpoints_ds, VectorXd s, int n);
+  double lefind(const Matrix2Xd &points, const Matrix2Xd &dpoints_ds, const VectorXd &s, int n) const;
   
   bool mrchdu();
   MixedModeStationContext prepareMixedModeStation(int side, int ibl, int itrold,

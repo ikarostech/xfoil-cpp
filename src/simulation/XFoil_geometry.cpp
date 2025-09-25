@@ -51,7 +51,7 @@ bool XFoil::abcopy(Matrix2Xd copyFrom) {
   dpoints_ds.row(0) = spline::splind(points.row(0), spline_length.head(n));
   dpoints_ds.row(1) = spline::splind(points.row(1), spline_length.head(n));
   normal_vectors.block(0, 0, 2, n) = foil.foil_shape.normal_vector;
-  lefind(sle, points.leftCols(n), dpoints_ds, spline_length.head(n), n);
+  sle = lefind(points, dpoints_ds, spline_length, n);
   point_le.x() = spline::seval(sle, points.row(0), dpoints_ds.row(0), spline_length.head(n), n);
   point_le.y() = spline::seval(sle, points.row(1), dpoints_ds.row(1), spline_length.head(n), n);
   point_te = 0.5 * (points.col(0) + points.col(n - 1));
@@ -106,45 +106,49 @@ double XFoil::cang(Matrix2Xd points) {
   return max_angle;
 }
 
-bool XFoil::lefind(double &sle, Matrix2Xd points, Matrix2Xd dpoints_ds, VectorXd s, int n) {
-  int i;
-  double dseps;
-  //---- convergence tolerance
-  dseps = (s[n - 1] - s[0]) * 0.00001;
-  //---- set trailing edge point coordinates
-  point_te = 0.5 * (points.col(0) + points.col(n - 1));
-  //---- get first guess for sle
-  for (i = 2; i < n - 2; i++) {
-    const Vector2d dpoint_te = points.col(i) - point_te;
+double XFoil::lefind(const Matrix2Xd &points, const Matrix2Xd &dpoints_ds, const VectorXd &s, int n) const {
+  const double dseps = (s[n - 1] - s[0]) * 0.00001;
+  const Vector2d point_te_local = 0.5 * (points.col(0) + points.col(n - 1));
+
+  int i = 2;
+  for (; i < n - 2; i++) {
+    const Vector2d dpoint_te = points.col(i) - point_te_local;
     const Vector2d dpoint = points.col(i + 1) - points.col(i);
-    const double dotp = dpoint_te.dot(dpoint);
-    if (dotp < 0.0)
+    if (dpoint_te.dot(dpoint) < 0.0)
       break;
   }
-  sle = s[i];
-  //---- check for sharp le case
+
+  const double sle_initial = s[i];
   if (s[i] == s[i - 1])
-    return false;
-  //---- newton iteration to get exact sle value
+    return sle_initial;
+
+  double sle_candidate = sle_initial;
+  Vector2d point_le_local;
   for (int iter = 1; iter <= 50; iter++) {
-    point_le.x() = spline::seval(sle, points.row(0), dpoints_ds.row(0), s, n);
-    point_le.y() = spline::seval(sle, points.row(1), dpoints_ds.row(1), s, n);
-    const Vector2d dpoint_ds = {spline::deval(sle, points.row(0), dpoints_ds.row(0), s, n),
-                                spline::deval(sle, points.row(1), dpoints_ds.row(1), s, n)};
-    const Vector2d dpoint_dd = {spline::d2val(sle, points.row(0), dpoints_ds.row(0), s, n),
-                                spline::d2val(sle, points.row(1), dpoints_ds.row(1), s, n)};
-    Vector2d chord_v = point_le - point_te;
-    const double res = chord_v.dot(dpoint_ds);
-    const double ress = dpoint_ds.dot(dpoint_ds) + chord_v.dot(dpoint_dd);
+    point_le_local.x() = spline::seval(sle_candidate, points.row(0), dpoints_ds.row(0), s, n);
+    point_le_local.y() = spline::seval(sle_candidate, points.row(1), dpoints_ds.row(1), s, n);
+
+    Vector2d dpoint_ds_vec;
+    dpoint_ds_vec.x() = spline::deval(sle_candidate, points.row(0), dpoints_ds.row(0), s, n);
+    dpoint_ds_vec.y() = spline::deval(sle_candidate, points.row(1), dpoints_ds.row(1), s, n);
+
+    Vector2d dpoint_dd_vec;
+    dpoint_dd_vec.x() = spline::d2val(sle_candidate, points.row(0), dpoints_ds.row(0), s, n);
+    dpoint_dd_vec.y() = spline::d2val(sle_candidate, points.row(1), dpoints_ds.row(1), s, n);
+
+    const Vector2d chord_v = point_le_local - point_te_local;
+    const double res = chord_v.dot(dpoint_ds_vec);
+    const double ress = dpoint_ds_vec.dot(dpoint_ds_vec) + chord_v.dot(dpoint_dd_vec);
     double dsle = -res / ress;
-    dsle = std::max(dsle, -0.02 * fabs(chord_v.x() + chord_v.y()));
-    dsle = std::min(dsle, 0.02 * fabs(chord_v.x() + chord_v.y()));
-    sle = sle + dsle;
+    const double chord_sum = fabs(chord_v.x() + chord_v.y());
+    dsle = std::max(dsle, -0.02 * chord_sum);
+    dsle = std::min(dsle, 0.02 * chord_sum);
+    sle_candidate += dsle;
     if (fabs(dsle) < dseps)
-      return true;
+      return sle_candidate;
   }
-  sle = s[i];
-  return true;
+
+  return sle_initial;
 }
 
 bool XFoil::tecalc() {
