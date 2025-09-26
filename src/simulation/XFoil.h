@@ -433,6 +433,7 @@ class XFoil {
   Foil foil;
   Matrix2Xd& points;             // alias for legacy access to foil_shape.points
   int& n;                        // alias for legacy access to foil_shape.n
+  Matrix2Xd& dpoints_ds;         // alias for legacy access to foil_shape.dpoints_ds
   SidePair<VectorXi> ipan, isys;
   SidePair<int> iblte, nbl;
 
@@ -441,7 +442,6 @@ class XFoil {
   Vector2d cmref;
   double tklam; // karman-tsien parameter minf^2 / [1 + sqrt[1-minf^2]]^2 <- Prandtl-Glauert-Ackeret rule ?
   double tkl_msq;
-  Matrix2Xd dpoints_ds; //formerly xp, yp
   VectorXd spline_length;
   double dtor;
 
