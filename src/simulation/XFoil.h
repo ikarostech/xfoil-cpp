@@ -433,7 +433,6 @@ class XFoil {
   Foil foil;
   Matrix2Xd& points;             // alias for legacy access to foil_shape.points
   int& n;                        // alias for legacy access to foil_shape.n
-  Matrix2Xd& dpoints_ds;         // alias for legacy access to foil_shape.dpoints_ds
   SidePair<VectorXi> ipan, isys;
   SidePair<int> iblte, nbl;
 

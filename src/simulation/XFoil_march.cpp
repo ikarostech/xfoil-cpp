@@ -2049,8 +2049,8 @@ bool XFoil::xicalc() {
 
   //---- set up parameters for te flap cubics
 
-  const double crosp = cross2(dpoints_ds.col(n - 1).normalized(),
-                              dpoints_ds.col(0).normalized());
+  const double crosp = cross2(foil.foil_shape.dpoints_ds.col(n - 1).normalized(),
+                              foil.foil_shape.dpoints_ds.col(0).normalized());
   double dwdxte = crosp / sqrt(1.0 - crosp * crosp);
 
   //---- limit cubic to avoid absurd te gap widths

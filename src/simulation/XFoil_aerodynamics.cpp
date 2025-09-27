@@ -240,9 +240,9 @@ bool XFoil::ggcalc() {
     //----- set zero internal velocity in TE corner
 
     //----- set TE bisector angle
-    const double ag1 = atan2(-dpoints_ds.col(0).y(), -dpoints_ds.col(0).x());
+    const double ag1 = atan2(-foil.foil_shape.dpoints_ds.col(0).y(), -foil.foil_shape.dpoints_ds.col(0).x());
     const double ag2 =
-        atanc(dpoints_ds.col(n - 1).y(), dpoints_ds.col(n - 1).x(), ag1);
+        atanc(foil.foil_shape.dpoints_ds.col(n - 1).y(), foil.foil_shape.dpoints_ds.col(n - 1).x(), ag1);
     const double abis = 0.5 * (ag1 + ag2);
 
     Vector2d bis_vector{cos(abis), sin(abis)};

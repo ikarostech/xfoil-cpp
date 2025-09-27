@@ -49,9 +49,9 @@ bool XFoil::abcopy(Matrix2Xd copyFrom) {
   foil.foil_shape.setFoilShape(points, n);
   spline_length.head(n) = foil.foil_shape.spline_length;
   normal_vectors.block(0, 0, 2, n) = foil.foil_shape.normal_vector;
-  sle = lefind(points, dpoints_ds, spline_length, n);
-  point_le.x() = spline::seval(sle, points.row(0), dpoints_ds.row(0), spline_length.head(n), n);
-  point_le.y() = spline::seval(sle, points.row(1), dpoints_ds.row(1), spline_length.head(n), n);
+  sle = lefind(points, foil.foil_shape.dpoints_ds, spline_length, n);
+  point_le.x() = spline::seval(sle, points.row(0), foil.foil_shape.dpoints_ds.row(0), spline_length.head(n), n);
+  point_le.y() = spline::seval(sle, points.row(1), foil.foil_shape.dpoints_ds.row(1), spline_length.head(n), n);
   point_te = 0.5 * (points.col(0) + points.col(n - 1));
   chord = (point_le - point_te).norm();
   tecalc();
@@ -157,7 +157,7 @@ bool XFoil::tecalc() {
   double scs, sds;
   //---- set te base vector and te bisector components
   Vector2d tevec = points.col(0) - points.col(n - 1);
-  Vector2d dpoint_ds_te = 0.5 * (-dpoints_ds.col(0) + dpoints_ds.col(n - 1));
+  Vector2d dpoint_ds_te = 0.5 * (-foil.foil_shape.dpoints_ds.col(0) + foil.foil_shape.dpoints_ds.col(n - 1));
   //---- normal and streamwise projected TE gap areas
   ante = cross2(dpoint_ds_te, tevec);
   aste = tevec.dot(dpoint_ds_te);
@@ -188,8 +188,8 @@ bool XFoil::xyWake() {
   setexp(snew.data() + n, ds1, waklen * chord, nw);
   point_te = 0.5 * (points.col(0) + points.col(n - 1));
   //-- set first wake point a tiny distance behind te
-  sx = 0.5 * (dpoints_ds.col(n - 1).y() - dpoints_ds.col(0).y());
-  sy = 0.5 * (dpoints_ds.col(0).x() - dpoints_ds.col(n - 1).x());
+  sx = 0.5 * (foil.foil_shape.dpoints_ds.col(n - 1).y() - foil.foil_shape.dpoints_ds.col(0).y());
+  sy = 0.5 * (foil.foil_shape.dpoints_ds.col(0).x() - foil.foil_shape.dpoints_ds.col(n - 1).x());
   smod = sqrt(sx * sx + sy * sy);
   normal_vectors.col(n).x() = sx / smod;
   normal_vectors.col(n).y() = sy / smod;

@@ -95,8 +95,6 @@ void XFoil::initializeDataStructures() {
   uinv_a.bottom = VectorXd::Zero(IVX);
   vti.top = VectorXd::Zero(IVX);
   vti.bottom = VectorXd::Zero(IVX);
-  dpoints_ds.resize(2, n);
-
   xssi.top = VectorXd::Zero(IVX);
   xssi.bottom = VectorXd::Zero(IVX);
 
