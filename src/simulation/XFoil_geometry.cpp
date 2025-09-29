@@ -177,6 +177,66 @@ bool XFoil::tecalc() {
   return true;
 }
 
+std::optional<VectorXd> XFoil::setexp(double ds1, double smax, int nn) const {
+  //........................................................
+  //     sets geometriy stretched array s:
+  //
+  //       s(i+1) - s(i)  =  r * [s(i) - s(i-1)]
+  //
+  //       ds1   (input)   first s increment:  spline_length[2] -
+  //       spline_length[1] smax  (input)   final s value:      s(nn) nn (input)
+  //       number of points
+  //........................................................
+  const int nex = nn - 1;
+  if (nex <= 1) {
+    return std::nullopt;
+  }
+
+  const double sigma = smax / ds1;
+  const double rnex = static_cast<double>(nex);
+  const double rni = 1.0 / rnex;
+
+  //-- solve quadratic for initial geometric ratio guess
+  const double aaa = rnex * (rnex - 1.0) * (rnex - 2.0) / 6.0;
+  const double bbb = rnex * (rnex - 1.0) / 2.0;
+  const double ccc = rnex - sigma;
+
+  double disc = std::max(0.0, bbb * bbb - 4.0 * aaa * ccc);
+  double ratio = 1.0;
+  if (nex == 2) {
+    ratio = -ccc / bbb + 1.0;
+  } else {
+    ratio = (-bbb + sqrt(disc)) / (2.0 * aaa) + 1.0;
+  }
+
+  //-- newton iteration for actual geometric ratio
+  for (int iter = 0; iter < 100; iter++) {
+    const double sigman = (pow(ratio, static_cast<double>(nex)) - 1.0) / (ratio - 1.0);
+    const double sigman_rni = pow(sigman, rni);
+    const double sigma_rni = pow(sigma, rni);
+    const double res = sigman_rni - sigma_rni;
+    const double numerator = rnex * pow(ratio, static_cast<double>(nex - 1)) - sigman;
+    const double denominator = pow(ratio, static_cast<double>(nex)) - 1.0;
+    const double dresdr = rni * sigman_rni * numerator / denominator;
+
+    const double dratio = -res / dresdr;
+    ratio += dratio;
+
+    if (fabs(dratio) < 1.0e-5) {
+      break;
+    }
+  }
+
+  VectorXd spline_length(nn);
+  spline_length[0] = 0.0;
+  double ds = ds1;
+  for (int i = 1; i < nn; i++) {
+    spline_length[i] = spline_length[i - 1] + ds;
+    ds *= ratio;
+  }
+  return spline_length;
+}
+
 bool XFoil::xyWake() {
   //-----------------------------------------------------
   //     sets wake coordinate array for current surface
@@ -185,8 +245,12 @@ bool XFoil::xyWake() {
   double ds1, sx, sy, smod;
   writeString("   Calculating wake trajectory ...\n");
   ds1 = 0.5 * (spline_length[1] - spline_length[0] + spline_length[n - 1] - spline_length[n - 2]);
-  setexp(snew.data() + n, ds1, waklen * chord, nw);
-  point_te = 0.5 * (points.col(0) + points.col(n - 1));
+  const auto wake_spacing = setexp(ds1, chord, nw);
+  if (!wake_spacing) {
+    writeString("setexp: cannot fill array.  n too small\n");
+    return false;
+  }
+  snew.segment(n, nw) = *wake_spacing;
   //-- set first wake point a tiny distance behind te
   sx = 0.5 * (foil.foil_shape.dpoints_ds.col(n - 1).y() - foil.foil_shape.dpoints_ds.col(0).y());
   sy = 0.5 * (foil.foil_shape.dpoints_ds.col(0).x() - foil.foil_shape.dpoints_ds.col(n - 1).x());

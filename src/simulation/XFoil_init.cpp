@@ -125,7 +125,6 @@ void XFoil::resetVariables() {
   awake = avisc = 0.0;
   resetFlags();
   cmref = Vector2d{0.25, 0.0};
-  waklen = 1.0;
   i_stagnation = 0;
   qinfbl = tkbl = tkbl_ms = 0.0;
   rstbl = rstbl_ms = 0.0;

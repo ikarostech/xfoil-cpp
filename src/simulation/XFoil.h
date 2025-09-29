@@ -42,6 +42,7 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 #include <vector>
 #include <iterator>
 #include <numeric>
+#include <optional>
 
 #include "Eigen/Core"
 #include "Eigen/Dense"
@@ -337,7 +338,7 @@ class XFoil {
   };
   DerivativeVectors clearDerivativeVectors(const VectorXd& u_m,
                                             const VectorXd& d_m) const;
-  bool setexp(double s[], double ds1, double smax, int nn);
+  std::optional<VectorXd> setexp(double ds1, double smax, int nn) const;
 
   bool stepbl();
   bool stfind();
@@ -463,7 +464,7 @@ class XFoil {
   double sle;
   Vector2d point_le;
   Vector2d point_te;
-  double chord, wgap[IWX], waklen;
+  double chord, wgap[IWX];
   int nw, i_stagnation;
 
 
