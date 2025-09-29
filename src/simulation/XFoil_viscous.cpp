@@ -17,7 +17,6 @@ constexpr double kAngleTolerance = 40.0;
  *  calculates the normal vectors,
  *  and sets the results in current foil */
 bool XFoil::initXFoilGeometry(int fn, const double *fx, const double *fy) {
-
   Matrix2Xd buffer_points = Matrix2Xd::Zero(2, fn);
   for (int i = 0; i < fn; i++) {
     buffer_points.col(i).x() = fx[i];

@@ -1,17 +1,33 @@
 #include "spline.hpp"
 #include "math_util.hpp"
-#include <iostream>
+#include <algorithm>
 
 /**	  Calculates x(ss)
  *	   xs array must have been calculated by spline */
 double spline::seval(double ss, Eigen::VectorXd x, Eigen::VectorXd xs, Eigen::VectorXd s, int n) {
+    Eigen::Index size = std::min<Eigen::Index>(n, x.size());
+    size = std::min(size, xs.size());
+    size = std::min(size, s.size());
 
-    int index = std::distance(s.begin(), std::lower_bound(s.begin(), s.begin() + n, ss));
+    if (size <= 0) {
+        return 0.0;
+    }
+    if (size == 1) {
+        return x[0];
+    }
 
-    double ds = s[index] - s[index - 1];
-    double t = (ss - s[index - 1]) / ds;
-    double cx_former = ds * xs[index - 1] - x[index] + x[index - 1];
-    double cx_later = ds * xs[index] - x[index] + x[index - 1];
+    Eigen::Index index = std::distance(s.begin(), std::lower_bound(s.begin(), s.begin() + size, ss));
+    if (index <= 0) {
+        return x[0];
+    }
+    if (index >= size) {
+        return x[size - 1];
+    }
+
+    const double ds = s[index] - s[index - 1];
+    const double t = (ss - s[index - 1]) / ds;
+    const double cx_former = ds * xs[index - 1] - x[index] + x[index - 1];
+    const double cx_later = ds * xs[index] - x[index] + x[index - 1];
     return t * x[index] + (1.0 - t) * x[index - 1] +
             (t - t * t) * ((1.0 - t) * cx_former - t * cx_later);
 }
@@ -21,9 +37,22 @@ double spline::seval(double ss, Eigen::VectorXd x, Eigen::VectorXd xs, Eigen::Ve
 *	   xs array must have been calculated by spline |
 * -------------------------------------------------- */
 double spline::deval(double ss, Eigen::VectorXd x, Eigen::VectorXd xs, Eigen::VectorXd s, int n) {
+    Eigen::Index size = std::min<Eigen::Index>(n, x.size());
+    size = std::min(size, xs.size());
+    size = std::min(size, s.size());
 
-    int i = std::distance(s.begin(), std::lower_bound(s.begin(), s.begin() + n, ss));
-    
+    if (size <= 1) {
+        return 0.0;
+    }
+
+    Eigen::Index i = std::distance(s.begin(), std::lower_bound(s.begin(), s.begin() + size, ss));
+    if (i <= 0) {
+        i = 1;
+    }
+    if (i >= size) {
+        i = size - 1;
+    }
+
     const double ds = s[i] - s[i - 1];
     const double dx = x[i] - x[i - 1];
     const double t = (ss - s[i - 1]) / ds;
@@ -38,9 +67,22 @@ double spline::deval(double ss, Eigen::VectorXd x, Eigen::VectorXd xs, Eigen::Ve
  *      xs array must have been calculated by spline    /
  * --------------------------------------------------- */
 double spline::d2val(double ss, Eigen::VectorXd x, Eigen::VectorXd xs, Eigen::VectorXd s, int n) {
+    Eigen::Index size = std::min<Eigen::Index>(n, x.size());
+    size = std::min(size, xs.size());
+    size = std::min(size, s.size());
 
-    int i = std::distance(s.begin(), std::lower_bound(s.begin(), s.begin() + n, ss));
-    
+    if (size <= 1) {
+        return 0.0;
+    }
+
+    Eigen::Index i = std::distance(s.begin(), std::lower_bound(s.begin(), s.begin() + size, ss));
+    if (i <= 0) {
+        i = 1;
+    }
+    if (i >= size) {
+        i = size - 1;
+    }
+
     const double ds = s[i] - s[i - 1];
     const double t = (ss - s[i - 1]) / ds;
     const double cx1 = ds * xs[i - 1] - x[i] + x[i - 1];

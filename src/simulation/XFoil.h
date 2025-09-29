@@ -460,9 +460,7 @@ class XFoil {
   VectorXd snew;
 
   double sle;
-  Vector2d point_le;
-  Vector2d point_te;
-  double chord, wgap[IWX];
+  double wgap[IWX];
   int nw, i_stagnation;
 
 
