@@ -60,8 +60,6 @@ using namespace std;
 using namespace Eigen;
 //------ derived dimensioning limit parameters
 
-inline constexpr int INDEX_START_WITH = 1;
-
 class XFoil {
  public:
   XFoil();

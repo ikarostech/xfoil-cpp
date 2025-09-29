@@ -405,7 +405,7 @@ bool specConverge(XFoil &foil, SpecTarget target) {
       foil.cpi = foil.cpcalc(foil.n, foil.qinv, foil.qinf, foil.minf);
 
     for (int i = 0; i < foil.n; i++) {
-      foil.qgamm[i + INDEX_START_WITH] = foil.surface_vortex(0, i);
+      foil.qgamm[i] = foil.surface_vortex(0, i);
     }
 
     return true;

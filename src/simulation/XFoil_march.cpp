@@ -28,12 +28,12 @@ bool XFoil::iblpan() {
   //-- bottom surface next
   // Bottom side: station 0 just after stagnation on bottom
   for (int index = 0; index <= n - i_stagnation; ++index) {
-    ipan.bottom[index] = i_stagnation + INDEX_START_WITH + index;
+    ipan.bottom[index] = i_stagnation + 1 + index;
     vti.bottom[index] = -1.0;
   }
 
   //-- wake
-  iblte.bottom = n - (i_stagnation + INDEX_START_WITH) - 1; // logical 0-based TE
+  iblte.bottom = n - i_stagnation - 2; // logical 0-based TE
 
   for (int iw = 0; iw < nw; iw++) {
     int i = n + iw; // panel index in wake
@@ -1230,12 +1230,12 @@ bool XFoil::stmove() {
   //--------------------------------------------------
   //    moves stagnation point location to new panel.
   //---------------------------------------------------
-  int istold;
+  
   //-- locate new stagnation point arc length sst from gam distribution
-  istold = i_stagnation + INDEX_START_WITH;
+  int istold = i_stagnation;
   stfind();
 
-  if (istold == i_stagnation + INDEX_START_WITH) {
+  if (istold == i_stagnation) {
     //--- recalculate new arc length array
     xicalc();
   } else {
@@ -1251,9 +1251,9 @@ bool XFoil::stmove() {
     //--- set  bl position -> system line  pointers
     iblsys();
 
-    if (i_stagnation + INDEX_START_WITH > istold) {
+    if (i_stagnation > istold) {
       //---- increase in number of points on top side (is=1)
-      int idif = i_stagnation + INDEX_START_WITH - istold;
+      int idif = i_stagnation - istold;
 
       itran.top += idif;
       itran.bottom -= idif;
@@ -1285,7 +1285,7 @@ bool XFoil::stmove() {
       }
     } else {
       //---- increase in number of points on bottom side (is=2)
-      int idif = istold - (i_stagnation + INDEX_START_WITH);
+      int idif = istold - i_stagnation;
 
       itran.top = itran.top - idif;
       itran.bottom = itran.bottom + idif;

@@ -7,7 +7,6 @@
 
 class spline {
     public:
-    const static int INDEX_START_WITH = 1;
 
     static double seval(double ss, Eigen::VectorXd x, Eigen::VectorXd xs, Eigen::VectorXd s, int n);
 
