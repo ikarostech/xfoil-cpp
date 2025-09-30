@@ -67,6 +67,26 @@ class Foil {
   public:
     FoilShape foil_shape;  // geometric domain (airfoil points and count)
     FoilShape wake_shape;  // geometric domain (wake points and count)
-    
-
+    class EdgeData {
+      public:
+      Eigen::Vector2d point_le;  // leading edge point
+      Eigen::Vector2d point_te;  // trailing edge point
+      double chord;       // chord length
+    };
+    EdgeData edge_data;
+  
+    EdgeData getEdgeData(FoilShape foilShape) {
+      EdgeData edgeData;
+      edgeData.point_le.x() = spline::seval(0.0, foil_shape.points.row(0), foil_shape.dpoints_ds.row(0), foil_shape.spline_length.head(foil_shape.n), foil_shape.n);
+      edgeData.point_le.y() = spline::seval(0.0, foil_shape.points.row(1), foil_shape.dpoints_ds.row(1), foil_shape.spline_length.head(foil_shape.n), foil_shape.n);
+      edgeData.point_te = 0.5 * (foil_shape.points.col(0) + foil_shape.points.col(foil_shape.n - 1));
+      edgeData.chord = (edgeData.point_le - edgeData.point_te).norm();
+      return edgeData;
+    }
+  
+    Foil() = default;
+    Foil(Eigen::Matrix2Xd points, int n) {
+      foil_shape.setFoilShape(points, n);
+      edge_data = getEdgeData(foil_shape);
+    }
 };
