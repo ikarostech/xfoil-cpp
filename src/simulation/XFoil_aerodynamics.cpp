@@ -256,7 +256,7 @@ bool XFoil::ggcalc() {
     const double bwt = 0.1;
 
     //----- control point on bisector just ahead of TE point
-    const Vector2d bis = foil.foil_shape.point_te - bwt * dsmin * bis_vector;
+    const Vector2d bis = point_te - bwt * dsmin * bis_vector;
     const Vector2d normal_bis{-bis_vector.y(), bis_vector.x()};
 
     //----- set velocity component along bisector line

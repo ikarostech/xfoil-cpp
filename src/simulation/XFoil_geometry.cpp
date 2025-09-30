@@ -50,7 +50,10 @@ bool XFoil::abcopy(Matrix2Xd copyFrom) {
   spline_length.head(n) = foil.foil_shape.spline_length;
   normal_vectors.block(0, 0, 2, n) = foil.foil_shape.normal_vector;
   sle = lefind(points, foil.foil_shape.dpoints_ds, spline_length, n);
-  foil.foil_shape.updateEdges(sle);
+  point_le.x() = spline::seval(sle, points.row(0), foil.foil_shape.dpoints_ds.row(0), spline_length.head(n), n);
+  point_le.y() = spline::seval(sle, points.row(1), foil.foil_shape.dpoints_ds.row(1), spline_length.head(n), n);
+  point_te = 0.5 * (points.col(0) + points.col(n - 1));
+  chord = (point_le - point_te).norm();
   tecalc();
   apanel.head(n) = apcalc(points);
 
@@ -160,7 +163,7 @@ bool XFoil::tecalc() {
   aste = tevec.dot(dpoint_ds_te);
   //---- total TE gap area
   dste = tevec.norm();
-  sharp = dste < 0.0001 * foil.foil_shape.chord;
+  sharp = dste < 0.0001 * chord;
   if (sharp) {
     scs = 1.0;
     sds = 0.0;
@@ -242,7 +245,7 @@ bool XFoil::xyWake() {
   double ds1, sx, sy, smod;
   writeString("   Calculating wake trajectory ...\n");
   ds1 = 0.5 * (spline_length[1] - spline_length[0] + spline_length[n - 1] - spline_length[n - 2]);
-  const auto wake_spacing = setexp(ds1, foil.foil_shape.chord, nw);
+  const auto wake_spacing = setexp(ds1, chord, nw);
   if (!wake_spacing) {
     writeString("setexp: cannot fill array.  n too small\n");
     return false;
@@ -254,8 +257,8 @@ bool XFoil::xyWake() {
   smod = sqrt(sx * sx + sy * sy);
   normal_vectors.col(n).x() = sx / smod;
   normal_vectors.col(n).y() = sy / smod;
-  points.col(n).x() = foil.foil_shape.point_te.x() - 0.0001 * normal_vectors.col(n).y();
-  points.col(n).y() = foil.foil_shape.point_te.y() + 0.0001 * normal_vectors.col(n).x();
+  points.col(n).x() = point_te.x() - 0.0001 * normal_vectors.col(n).y();
+  points.col(n).y() = point_te.y() + 0.0001 * normal_vectors.col(n).x();
   spline_length[n] = spline_length[n - 1];
   //---- calculate streamfunction gradient components at first point
   Vector2d psi = {psilin(points, n, points.col(n), {1.0, 0.0}, false).psi_ni,

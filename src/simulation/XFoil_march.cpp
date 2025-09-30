@@ -2096,12 +2096,12 @@ double XFoil::xifset(int is) {
     return xssi.get(is)[iblte.get(is)];
   }
 
-  Vector2d point_chord = foil.foil_shape.point_te - foil.foil_shape.point_le;
+  Vector2d point_chord = point_te - point_le;
 
   //---- calculate chord-based x/c, y/c
   for (int i = 0; i < n; i++) {
-    w1[i] = (points.col(i) - foil.foil_shape.point_le).dot(point_chord.normalized());
-    w2[i] = cross2(points.col(i) - foil.foil_shape.point_le, point_chord.normalized());
+    w1[i] = (points.col(i) - point_le).dot(point_chord.normalized());
+    w2[i] = cross2(points.col(i) - point_le, point_chord.normalized());
   }
 
   w3 = spline::splind(w1, spline_length.head(n));
