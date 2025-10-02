@@ -47,7 +47,6 @@ bool XFoil::abcopy(Matrix2Xd copyFrom) {
   
   
   foil = Foil(points, n);
-  spline_length.head(n) = foil.foil_shape.spline_length;
   normal_vectors.block(0, 0, 2, n) = foil.foil_shape.normal_vector;
   sle = lefind(points, foil.foil_shape.dpoints_ds, foil.foil_shape.spline_length, n);
   tecalc();
@@ -255,13 +254,13 @@ bool XFoil::xyWake() {
   normal_vectors.col(n).y() = sy / smod;
   points.col(n).x() = foil.edge_data.point_te.x() - 0.0001 * normal_vectors.col(n).y();
   points.col(n).y() = foil.edge_data.point_te.y() + 0.0001 * normal_vectors.col(n).x();
-  spline_length[n] = spline_length[n - 1];
+  foil.wake_shape.spline_length[n] = foil.wake_shape.spline_length[n - 1];
   //---- calculate streamfunction gradient components at first point
   Vector2d psi = {
-      psilin(points, n, points.col(n), {1.0, 0.0}, false, spline_length, n,
+      psilin(points, n, points.col(n), {1.0, 0.0}, false, foil.foil_shape.spline_length, n,
              gamu, surface_vortex, alfa, qinf, apanel, sharp, ante, dste, aste)
           .psi_ni,
-      psilin(points, n, points.col(n), {0.0, 1.0}, false, spline_length, n,
+      psilin(points, n, points.col(n), {0.0, 1.0}, false, foil.foil_shape.spline_length, n,
              gamu, surface_vortex, alfa, qinf, apanel, sharp, ante, dste, aste)
           .psi_ni};
   //---- set unit vector normal to wake at first point
@@ -274,14 +273,14 @@ bool XFoil::xyWake() {
     //------ set new point ds downstream of last point
     points.col(i).x() = points.col(i - 1).x() - ds * normal_vectors.col(i - 1).y();
     points.col(i).y() = points.col(i - 1).y() + ds * normal_vectors.col(i - 1).x();
-    spline_length[i] = spline_length[i - 1] + ds;
+    foil.wake_shape.spline_length[i] = foil.wake_shape.spline_length[i - 1] + ds;
     if (i != n + nw - 1) {
       Vector2d psi2 = {
-          psilin(points, i, points.col(i), {1.0, 0.0}, false, spline_length, n,
+          psilin(points, i, points.col(i), {1.0, 0.0}, false, foil.wake_shape.spline_length, n,
                  gamu, surface_vortex, alfa, qinf, apanel, sharp, ante, dste,
                  aste)
               .psi_ni,
-          psilin(points, i, points.col(i), {0.0, 1.0}, false, spline_length, n,
+          psilin(points, i, points.col(i), {0.0, 1.0}, false, foil.wake_shape.spline_length, n,
                  gamu, surface_vortex, alfa, qinf, apanel, sharp, ante, dste,
                  aste)
               .psi_ni};

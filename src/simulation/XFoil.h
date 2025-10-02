@@ -438,7 +438,6 @@ class XFoil {
   Vector2d cmref;
   double tklam; // karman-tsien parameter minf^2 / [1 + sqrt[1-minf^2]]^2 <- Prandtl-Glauert-Ackeret rule ?
   double tkl_msq;
-  VectorXd spline_length;
   double dtor;
 
   SidePair<VectorXd> thet, ctau, dstr, uedg, ctq;

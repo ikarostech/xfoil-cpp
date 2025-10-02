@@ -83,7 +83,6 @@ void XFoil::initializeDataStructures() {
   qinv_a = VectorXd::Zero(n + nw);
   qinvu = Matrix2Xd::Zero(2, n + nw);
   qvis = VectorXd::Zero(n + nw);
-  spline_length.resize(n + nw + 1);
   snew = VectorXd::Zero(4 * IBX);
   thet.top = VectorXd::Zero(IVX);
   thet.bottom = VectorXd::Zero(IVX);
