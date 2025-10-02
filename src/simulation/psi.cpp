@@ -8,17 +8,23 @@ static double cross2(const Vector2d& a, const Vector2d& b) {
 }
 
 PsiResult XFoil::psilin(Matrix2Xd points, int iNode, Vector2d point,
-                        Vector2d normal_vector, bool siglin) {
+                        Vector2d normal_vector, bool siglin,
+                        const VectorXd& spline_length_values, int total_nodes,
+                        const Matrix2Xd& gamu_values,
+                        const Matrix2Xd& surface_vortex_values,
+                        double alfa_value, double qinf_value) {
   PsiResult psi_result;
 
   //---- distance tolerance for determining if two points are the same
-  const double seps = (spline_length[n - 1] - spline_length[0]) * 0.00001;
+  const double seps = (spline_length_values[total_nodes - 1] -
+                       spline_length_values[0]) *
+                      0.00001;
 
   psi_result.psi = 0.0;
   psi_result.psi_ni = 0.0;
   psi_result.qtan = Vector2d::Zero();
 
-  const int panels = n - 1;
+  const int panels = total_nodes - 1;
 
   // panel end points
   Matrix2Xd p1 = points.leftCols(panels);
@@ -41,7 +47,7 @@ PsiResult XFoil::psilin(Matrix2Xd points, int iNode, Vector2d point,
   ArrayXd rs2 = r2.colwise().squaredNorm();
 
   ArrayXd sgn = ArrayXd::Ones(panels);
-  if (!(iNode >= 0 && iNode < n)) {
+  if (!(iNode >= 0 && iNode < total_nodes)) {
     sgn = (yy >= 0.0).select(ArrayXd::Ones(panels), ArrayXd::Constant(panels, -1.0));
   }
 
@@ -75,18 +81,20 @@ PsiResult XFoil::psilin(Matrix2Xd points, int iNode, Vector2d point,
   ArrayXd pdx2 = ((x1 + x2) * psx2 + psis + x2 * logr22 + psid) * dxinv;
   ArrayXd pdyy = ((x1 + x2) * psyy - yy * (logr12 - logr22)) * dxinv;
 
-  Matrix2Xd gam_jo = gamu.middleCols(0, panels);
+  Matrix2Xd gam_jo = gamu_values.middleCols(0, panels);
   Matrix2Xd gam_jp(2, panels);
-  gam_jp.leftCols(panels - 1) = gamu.middleCols(1, panels - 1);
-  gam_jp.col(panels - 1) = gamu.col(panels);
+  gam_jp.leftCols(panels - 1) = gamu_values.middleCols(1, panels - 1);
+  gam_jp.col(panels - 1) = gamu_values.col(panels);
 
   Matrix2Xd gsum_vector = gam_jp + gam_jo;
   Matrix2Xd gdif_vector = gam_jp - gam_jo;
 
-  ArrayXd sv_jo = surface_vortex.row(0).segment(0, panels).array();
+  ArrayXd sv_jo =
+      surface_vortex_values.row(0).segment(0, panels).array();
   ArrayXd sv_jp(panels);
-  sv_jp.head(panels - 1) = surface_vortex.row(0).segment(1, panels - 1).array();
-  sv_jp(panels - 1) = surface_vortex(0, panels);
+  sv_jp.head(panels - 1) =
+      surface_vortex_values.row(0).segment(1, panels - 1).array();
+  sv_jp(panels - 1) = surface_vortex_values(0, panels);
   ArrayXd gsum = sv_jp + sv_jo;
   ArrayXd gdif = sv_jp - sv_jo;
 
@@ -127,20 +135,20 @@ PsiResult XFoil::psilin(Matrix2Xd points, int iNode, Vector2d point,
     }
   }
 
-  if ((points.col(n - 1) - points.col(0)).norm() > seps) {
+  if ((points.col(total_nodes - 1) - points.col(0)).norm() > seps) {
     PsiResult te_result = psi_te(points, iNode, normal_vector);
     psi_result = PsiResult::sum(psi_result, te_result);
   }
 
   //**** freestream terms
-  Vector2d rotateVector = {cos(alfa), sin(alfa)};
-  psi_result.psi += qinf * cross2(rotateVector, point);
+  Vector2d rotateVector = {cos(alfa_value), sin(alfa_value)};
+  psi_result.psi += qinf_value * cross2(rotateVector, point);
 
   //---- dpsi/dn
-  psi_result.psi_ni += qinf * cross2(rotateVector, normal_vector);
+  psi_result.psi_ni += qinf_value * cross2(rotateVector, normal_vector);
 
-  psi_result.qtan.x() += qinf * normal_vector.y();
-  psi_result.qtan.y() += -qinf * normal_vector.x();
+  psi_result.qtan.x() += qinf_value * normal_vector.y();
+  psi_result.qtan.y() += -qinf_value * normal_vector.x();
 
   return psi_result;
 }
