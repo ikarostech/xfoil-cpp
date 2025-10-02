@@ -392,17 +392,18 @@ PsiResult psi_te(Matrix2Xd points, int iNode, Vector2d normal_vector,
  *			airfoil:  1   < i < n
  *			wake:	  n+1 < i < n+nw
  * ----------------------------------------------------------------------- */
-PsiResult XFoil::pswlin(Matrix2Xd points, int i, Vector2d point,
-                        Vector2d normal_vector) {
+PsiResult pswlin(Matrix2Xd points, int i, Vector2d point,
+                 Vector2d normal_vector, int total_nodes, int wake_nodes,
+                 const VectorXd& apanel_values) {
   PsiResult psi_result;
   psi_result.psi = 0.0;
   psi_result.psi_ni = 0.0;
   const int io = i;
-  const int segs = nw - 1;
+  const int segs = wake_nodes - 1;
   if (segs <= 0)
     return psi_result;
-  Matrix2Xd p0 = points.block(0, n, 2, segs);
-  Matrix2Xd p1 = points.block(0, n + 1, 2, segs);
+  Matrix2Xd p0 = points.block(0, total_nodes, 2, segs);
+  Matrix2Xd p1 = points.block(0, total_nodes + 1, 2, segs);
   Matrix2Xd svec = p1 - p0;
   VectorXd dso = svec.colwise().norm();
   ArrayXd dsio = dso.array().inverse();
@@ -416,10 +417,10 @@ PsiResult XFoil::pswlin(Matrix2Xd points, int i, Vector2d point,
   ArrayXd rs1 = r1.colwise().squaredNorm().array();
   ArrayXd rs2 = r2.colwise().squaredNorm().array();
   ArrayXd sgn = ArrayXd::Ones(segs);
-  if (!(io >= n + 1 && io <= n + nw)) {
+  if (!(io >= total_nodes + 1 && io <= total_nodes + wake_nodes)) {
     sgn = (yy >= 0).select(ArrayXd::Ones(segs), ArrayXd::Constant(segs, -1.0));
   }
-  VectorXi jo = VectorXi::LinSpaced(segs, n, n + segs - 1);
+  VectorXi jo = VectorXi::LinSpaced(segs, total_nodes, total_nodes + segs - 1);
   VectorXi jp = jo.array() + 1;
   VectorXi jm = jo.array() - 1;
   VectorXi jq = jp.array() + 1;
@@ -451,7 +452,7 @@ PsiResult XFoil::pswlin(Matrix2Xd points, int i, Vector2d point,
     return std::atan2(a, b);
   }) - (0.5 - 0.5 * sgn) * std::numbers::pi;
   ArrayXd dxinv = (x1 - x0).inverse();
-  ArrayXd apan = apanel.segment(n, segs).array();
+  ArrayXd apan = apanel_values.segment(total_nodes, segs).array();
   ArrayXd psum = x0 * (t0 - apan) - x1 * (t1 - apan) + 0.5 * yy * (g1 - g0);
   ArrayXd pdif = ((x1 + x0) * psum + rs1 * (t1 - apan) - rs0 * (t0 - apan) +
                   (x0 - x1) * yy) *
@@ -464,12 +465,12 @@ PsiResult XFoil::pswlin(Matrix2Xd points, int i, Vector2d point,
   ArrayXd pdx0 =
       ((x1 + x0) * psx0 + psum - 2.0 * x0 * (t0 - apan) + pdif) * dxinv;
   ArrayXd pdyy = ((x1 + x0) * psyy + 2.0 * (x0 - x1 + yy * (t1 - t0))) * dxinv;
-  Matrix2Xd jm_p = points.block(0, n - 1, 2, segs);
+  Matrix2Xd jm_p = points.block(0, total_nodes - 1, 2, segs);
   jm_p.col(0) = p0.col(0);
   Matrix2Xd jp_p = p1;
   VectorXd dsm = (jp_p - jm_p).colwise().norm();
   ArrayXd dsim = dsm.array().inverse();
-  Matrix2Xd jq_p = points.block(0, n + 2, 2, segs);
+  Matrix2Xd jq_p = points.block(0, total_nodes + 2, 2, segs);
   jq_p.col(segs - 1) = p1.col(segs - 1);
   VectorXd dsp = (jq_p - p0).colwise().norm();
   ArrayXd dsip = dsp.array().inverse();
@@ -504,8 +505,8 @@ PsiResult XFoil::pswlin(Matrix2Xd points, int i, Vector2d point,
   ArrayXd dqdm_jo2 = cfac * (-psni2 * (dsip + dsio) - pdni2 * (dsip - dsio));
   ArrayXd dqdm_jp2 = cfac * (psni2 / dso.array() - pdni2 / dso.array());
   ArrayXd dqdm_jq = cfac * (psni2 * dsip + pdni2 * dsip);
-  VectorXd dzdm_acc = VectorXd::Zero(n + nw);
-  VectorXd dqdm_acc = VectorXd::Zero(n + nw);
+  VectorXd dzdm_acc = VectorXd::Zero(total_nodes + wake_nodes);
+  VectorXd dqdm_acc = VectorXd::Zero(total_nodes + wake_nodes);
   dzdm_acc(jm) += dzdm_jm.matrix();
   MatrixXd dzdm_jo_mat(segs, 2);
   dzdm_jo_mat.col(0) = dzdm_jo1.matrix();
@@ -526,7 +527,7 @@ PsiResult XFoil::pswlin(Matrix2Xd points, int i, Vector2d point,
   dqdm_jp_mat.col(1) = dqdm_jp2.matrix();
   dqdm_acc(jp) += dqdm_jp_mat.rowwise().sum();
   dqdm_acc(jq) += dqdm_jq.matrix();
-  psi_result.dzdm.segment(0, n + nw) = dzdm_acc;
-  psi_result.dqdm.segment(0, n + nw) = dqdm_acc;
+  psi_result.dzdm.segment(0, total_nodes + wake_nodes) = dzdm_acc;
+  psi_result.dqdm.segment(0, total_nodes + wake_nodes) = dqdm_acc;
   return psi_result;
 }

@@ -113,8 +113,8 @@ bool XFoil::qdcalc() {
 
   //---- set up coefficient matrix of dpsi/dm on airfoil surface
   for (int i = 0; i < n; i++) {
-    PsiResult psi_result = pswlin(points, i, points.col(i),
-                                  normal_vectors.col(i));
+    PsiResult psi_result =
+        pswlin(points, i, points.col(i), normal_vectors.col(i), n, nw, apanel);
     bij.row(i).segment(n, nw) = -psi_result.dzdm.segment(n, nw).transpose();
   }
 
@@ -143,7 +143,8 @@ bool XFoil::qdcalc() {
     cij.row(iw) = psi_result.dqdg.head(n).transpose();
     dij.row(i).head(n) = psi_result.dqdm.head(n).transpose();
     //------ wake contribution
-    psi_result = pswlin(points, i, points.col(i), normal_vectors.col(i));
+    psi_result =
+        pswlin(points, i, points.col(i), normal_vectors.col(i), n, nw, apanel);
     dij.row(i).segment(n, nw) = psi_result.dqdm.segment(n, nw).transpose();
   }
 
