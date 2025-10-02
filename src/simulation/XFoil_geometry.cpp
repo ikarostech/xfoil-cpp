@@ -259,10 +259,10 @@ bool XFoil::xyWake() {
   //---- calculate streamfunction gradient components at first point
   Vector2d psi = {
       psilin(points, n, points.col(n), {1.0, 0.0}, false, spline_length, n,
-             gamu, surface_vortex, alfa, qinf)
+             gamu, surface_vortex, alfa, qinf, apanel, sharp, ante, dste, aste)
           .psi_ni,
       psilin(points, n, points.col(n), {0.0, 1.0}, false, spline_length, n,
-             gamu, surface_vortex, alfa, qinf)
+             gamu, surface_vortex, alfa, qinf, apanel, sharp, ante, dste, aste)
           .psi_ni};
   //---- set unit vector normal to wake at first point
   normal_vectors.col(n + 1) = -psi.normalized();
@@ -278,10 +278,12 @@ bool XFoil::xyWake() {
     if (i != n + nw - 1) {
       Vector2d psi2 = {
           psilin(points, i, points.col(i), {1.0, 0.0}, false, spline_length, n,
-                 gamu, surface_vortex, alfa, qinf)
+                 gamu, surface_vortex, alfa, qinf, apanel, sharp, ante, dste,
+                 aste)
               .psi_ni,
           psilin(points, i, points.col(i), {0.0, 1.0}, false, spline_length, n,
-                 gamu, surface_vortex, alfa, qinf)
+                 gamu, surface_vortex, alfa, qinf, apanel, sharp, ante, dste,
+                 aste)
               .psi_ni};
       normal_vectors.col(i + 1) = -psi2.normalized();
       apanel[i] = atan2(psi2.y(), psi2.x());

@@ -54,6 +54,7 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 #include "domain/boundary_layer.hpp"
 #include "domain/foil.hpp"
 #include "simulation/psi_result.hpp"
+#include "simulation/psi.hpp"
 #include "infrastructure/xfoil_params.h"
 
 using namespace std;
@@ -303,8 +304,9 @@ class XFoil {
   bool mrchue();
   double calcHtarg(int ibl, int is, bool wake);
   Matrix2Xd ncalc(Matrix2Xd point, VectorXd spline_length, int n);
-  
-#include "simulation/psi.hpp"
+
+  PsiResult pswlin(Matrix2Xd points, int i, Vector2d point,
+                   Vector2d normal_vector);
 
   bool qdcalc();
   struct TangentialVelocityResult {

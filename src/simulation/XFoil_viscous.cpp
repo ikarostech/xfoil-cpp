@@ -136,10 +136,10 @@ bool XFoil::qdcalc() {
   for (int i = n; i < n + nw; i++) {
     int iw = i - n;
     //------ airfoil contribution at wake panel node
-    PsiResult psi_result = psilin(points, i, points.col(i),
-                                  normal_vectors.col(i), true,
-                                  spline_length, n, gamu, surface_vortex,
-                                  alfa, qinf);
+    PsiResult psi_result =
+        psilin(points, i, points.col(i), normal_vectors.col(i), true,
+               spline_length, n, gamu, surface_vortex, alfa, qinf, apanel,
+               sharp, ante, dste, aste);
     cij.row(iw) = psi_result.dqdg.head(n).transpose();
     dij.row(i).head(n) = psi_result.dqdm.head(n).transpose();
     //------ wake contribution
@@ -215,7 +215,8 @@ Matrix2Xd XFoil::qwcalc() {
   for (int i = n + 1; i < n + nw; i++) {
     updated_qinvu.col(i) =
         psilin(points, i, points.col(i), normal_vectors.col(i), false,
-               spline_length, n, gamu, surface_vortex, alfa, qinf)
+               spline_length, n, gamu, surface_vortex, alfa, qinf, apanel,
+               sharp, ante, dste, aste)
             .qtan;
   }
 
