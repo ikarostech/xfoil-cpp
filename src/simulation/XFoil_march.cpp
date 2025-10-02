@@ -1205,22 +1205,22 @@ bool XFoil::stfind() {
 
   i_stagnation = i;
   const double dgam = surface_vortex(0, i + 1) - surface_vortex(0, i);
-  const double ds = spline_length[i + 1] - spline_length[i];
+  const double ds = foil.foil_shape.spline_length[i + 1] - foil.foil_shape.spline_length[i];
 
   //---- evaluate so as to minimize roundoff for very small gam[i] or gam[i+1]
   if (surface_vortex(0, i) < -surface_vortex(0, i + 1))
-    sst = spline_length[i] - ds * (surface_vortex(0, i) / dgam);
+    sst = foil.foil_shape.spline_length[i] - ds * (surface_vortex(0, i) / dgam);
   else
-    sst = spline_length[i + 1] - ds * (surface_vortex(0, i + 1) / dgam);
+    sst = foil.foil_shape.spline_length[i + 1] - ds * (surface_vortex(0, i + 1) / dgam);
 
   //---- tweak stagnation point if it falls right on a node (very unlikely)
-  if (sst <= spline_length[i])
-    sst = spline_length[i] + 0.0000001;
-  if (sst >= spline_length[i + 1])
-    sst = spline_length[i + 1] - 0.0000001;
+  if (sst <= foil.foil_shape.spline_length[i])
+    sst = foil.foil_shape.spline_length[i] + 0.0000001;
+  if (sst >= foil.foil_shape.spline_length[i + 1])
+    sst = foil.foil_shape.spline_length[i + 1] - 0.0000001;
 
-  sst_go = (sst - spline_length[i + 1]) / dgam;
-  sst_gp = (spline_length[i] - sst) / dgam;
+  sst_go = (sst - foil.foil_shape.spline_length[i + 1]) / dgam;
+  sst_gp = (foil.foil_shape.spline_length[i] - sst) / dgam;
 
   return true;
 }
@@ -2027,11 +2027,11 @@ bool XFoil::xicalc() {
 
   
     for (int ibl = 0; ibl <= iblte.top; ++ibl) {
-      xssi.top[ibl] = sst - spline_length[ipan.get(1)[ibl]];
+      xssi.top[ibl] = sst - foil.foil_shape.spline_length[ipan.get(1)[ibl]];
     }
   
     for (int ibl = 0; ibl <= iblte.bottom; ++ibl) {
-      xssi.bottom[ibl] = spline_length[ipan.get(2)[ibl]] - sst;
+      xssi.bottom[ibl] = foil.foil_shape.spline_length[ipan.get(2)[ibl]] - sst;
     }
 
     // Wake: start from TE, duplicate TE value at first wake station

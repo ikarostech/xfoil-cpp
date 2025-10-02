@@ -240,7 +240,7 @@ bool XFoil::xyWake() {
   //-----------------------------------------------------
   double ds1, sx, sy, smod;
   writeString("   Calculating wake trajectory ...\n");
-  ds1 = 0.5 * (spline_length[1] - spline_length[0] + spline_length[n - 1] - spline_length[n - 2]);
+  ds1 = 0.5 * (foil.foil_shape.spline_length[1] - foil.foil_shape.spline_length[0] + foil.foil_shape.spline_length[n - 1] - foil.foil_shape.spline_length[n - 2]);
   const auto wake_spacing = setexp(ds1, foil.edge_data.chord, nw);
   if (!wake_spacing) {
     writeString("setexp: cannot fill array.  n too small\n");
