@@ -96,12 +96,12 @@ XFoil::ClComputation XFoil::clcalc(Vector2d ref) const {
     const double cpg2_msq = cp_next.cp_msq;
     const double cpg2_alf = cp_next.cp_velocity_derivative;
 
-    const Vector2d delta = points.col(ip) - points.col(i);
+    const Vector2d delta = foil.foil_shape.points.col(ip) - foil.foil_shape.points.col(i);
     const Vector2d dpoint = rotateMatrix * delta;
     const double dg = cpg2 - cpg1;
 
     const Vector2d apoint =
-        rotateMatrix * ((points.col(ip) + points.col(i)) / 2 - ref);
+        rotateMatrix * ((foil.foil_shape.points.col(ip) + foil.foil_shape.points.col(i)) / 2 - ref);
     const double ag = 0.5 * (cpg2 + cpg1);
 
     const double dx_alf = cross2(delta, rotateMatrix.row(0));
@@ -112,8 +112,8 @@ XFoil::ClComputation XFoil::clcalc(Vector2d ref) const {
     result.cm -= dpoint.dot(ag * apoint + dg * dpoint / 12.0);
 
     xcp_accumulator += dpoint.x() * ag *
-                       (points.col(ip).x() +
-                        points.col(i).x()) /
+                       (foil.foil_shape.points.col(ip).x() +
+                        foil.foil_shape.points.col(i).x()) /
                        2.0;
 
     result.cl_alf += dpoint.x() * ag_alf + ag * dx_alf;
@@ -206,11 +206,11 @@ bool XFoil::ggcalc() {
   for (int i = 0; i < n; i++) {
     //------ calculate psi and dpsi/dgamma array for current node
     PsiResult psi_result =
-        psilin(points, i, points.col(i),
-               normal_vectors.col(i), true);
+        psilin(foil.foil_shape.points, i, foil.foil_shape.points.col(i),
+               foil.foil_shape.normal_vector.col(i), true);
 
-    const Vector2d res = qinf * Vector2d{points.col(i).y(),
-                                         -points.col(i).x()};
+    const Vector2d res = qinf * Vector2d{foil.foil_shape.points.col(i).y(),
+                                         -foil.foil_shape.points.col(i).x()};
 
     //------ dres/dgamma
     dpsi_dgam.row(i).head(n) = psi_result.dzdg.head(n);
@@ -248,8 +248,8 @@ bool XFoil::ggcalc() {
     Vector2d bis_vector{cos(abis), sin(abis)};
 
     //----- minimum panel length adjacent to TE
-    const double dsmin = std::min((points.col(0) - points.col(1)).norm(),
-                                  (points.col(n - 1) - points.col(n - 2)).norm());
+    const double dsmin = std::min((foil.foil_shape.points.col(0) - foil.foil_shape.points.col(1)).norm(),
+                                  (foil.foil_shape.points.col(foil.foil_shape.n - 1) - foil.foil_shape.points.col(foil.foil_shape.n - 2)).norm());
 
     //---- distance of internal control point ahead of sharp TE
     //-    (fraction of smaller panel length adjacent to TE)
@@ -260,7 +260,7 @@ bool XFoil::ggcalc() {
     const Vector2d normal_bis{-bis_vector.y(), bis_vector.x()};
 
     //----- set velocity component along bisector line
-    PsiResult psi_result = psilin(points, -1, bis, normal_bis, true);
+    PsiResult psi_result = psilin(foil.foil_shape.points, -1, bis, normal_bis, true);
 
     //----- dres/dgamma
     dpsi_dgam.row(n - 1).head(n) = psi_result.dzdg.head(n);

@@ -204,16 +204,27 @@ class Foil {
       double ds1 = 0.5 * (foil_shape.spline_length[1] - foil_shape.spline_length[0] + foil_shape.spline_length[foil_shape.n - 1] - foil_shape.spline_length[foil_shape.n - 2]);
       const auto wake_spacing = setexp(ds1, edge_data.chord, nw);
 
-      //snew.segment(foil_shape.n, nw) = *wake_spacing;
       //-- set first wake point a tiny distance behind te
       Eigen::Vector2d spacing = {
         (foil_shape.dpoints_ds.col(foil_shape.n - 1).y() - foil_shape.dpoints_ds.col(0).y()) / 2,
         (foil_shape.dpoints_ds.col(0).x() - foil_shape.dpoints_ds.col(foil_shape.n - 1).x()) / 2
       };
-      wake_shape.normal_vector.col(foil_shape.n) = spacing.normalized();
 
-      wake_shape.points.col(foil_shape.n).x() = edge_data.point_te.x() - 0.0001 * wake_shape.normal_vector.col(foil_shape.n).y();
-      wake_shape.points.col(foil_shape.n).y() = edge_data.point_te.y() + 0.0001 * wake_shape.normal_vector.col(foil_shape.n).x();
+      double spacing_norm = spacing.norm();
+      if (spacing_norm == 0.0) {
+        spacing = foil_shape.normal_vector.col(foil_shape.n - 1) + foil_shape.normal_vector.col(0);
+        spacing_norm = spacing.norm();
+      }
+      if (spacing_norm == 0.0) {
+        spacing = Eigen::Vector2d{0.0, 1.0};
+        spacing_norm = 1.0;
+      }
+
+      const Eigen::Vector2d wake_normal = spacing / spacing_norm;
+      wake_shape.normal_vector.col(foil_shape.n) = wake_normal;
+
+      wake_shape.points.col(foil_shape.n).x() = edge_data.point_te.x() - 0.0001 * wake_normal.y();
+      wake_shape.points.col(foil_shape.n).y() = edge_data.point_te.y() + 0.0001 * wake_normal.x();
       wake_shape.spline_length[foil_shape.n] = wake_shape.spline_length[foil_shape.n - 1];
       //---- calculate streamfunction gradient components at first point
       //Vector2d psi = {psilin(foil_shape.points, foil_shape.n, wake_shape.points.col(foil_shape.n), {1.0, 0.0}, false).psi_ni,
@@ -226,10 +237,12 @@ class Foil {
       for (int i = foil_shape.n + 1; i < wake_shape.n; i++) {
         const double ds = wake_spacing[i - foil_shape.n] - wake_spacing[i - 1 - foil_shape.n];
         //------ set new point ds downstream of last point
-        wake_shape.points.col(i).x() = wake_shape.points.col(i - 1).x() - ds * wake_shape.normal_vector.col(i - 1).y();
-        wake_shape.points.col(i).y() = wake_shape.points.col(i - 1).y() + ds * wake_shape.normal_vector.col(i - 1).x();
+        const Eigen::Vector2d previous_normal = wake_shape.normal_vector.col(i - 1);
+        wake_shape.points.col(i).x() = wake_shape.points.col(i - 1).x() - ds * previous_normal.y();
+        wake_shape.points.col(i).y() = wake_shape.points.col(i - 1).y() + ds * previous_normal.x();
         wake_shape.spline_length[i] = wake_shape.spline_length[i - 1] + ds;
         if (i != wake_shape.n - 1) {
+          wake_shape.normal_vector.col(i) = previous_normal;
           //Vector2d psi2 = {psilin(wake_shape.points, i, wake_shape.points.col(i), {1.0, 0.0}, false).psi_ni,
           //                psilin(wake_shape.points, i, wake_shape.points.col(i), {0.0, 1.0}, false).psi_ni};
           //wake_shape.normal_vector.col(i + 1) = -psi2.normalized();

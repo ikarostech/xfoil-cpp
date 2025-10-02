@@ -2038,8 +2038,8 @@ bool XFoil::xicalc() {
     xssi.bottom[iblte.bottom + 1] = xssi.bottom[iblte.bottom];
     for (int ibl = iblte.bottom + 2; ibl < nbl.bottom; ++ibl) {
       xssi.bottom[ibl] = xssi.bottom[ibl - 1] +
-                          (points.col(ipan.get(2)[ibl]) -
-                           points.col(ipan.get(2)[ibl - 1]))
+                          (foil.wake_shape.points.col(ipan.get(2)[ibl]) -
+                           foil.wake_shape.points.col(ipan.get(2)[ibl - 1]))
                               .norm();
     }
   
@@ -2100,19 +2100,19 @@ double XFoil::xifset(int is) {
 
   //---- calculate chord-based x/c, y/c
   for (int i = 0; i < n; i++) {
-    w1[i] = (points.col(i) - foil.edge_data.point_le).dot(point_chord.normalized());
-    w2[i] = cross2(points.col(i) - foil.edge_data.point_le, point_chord.normalized());
+    w1[i] = (foil.foil_shape.points.col(i) - foil.edge_data.point_le).dot(point_chord.normalized());
+    w2[i] = cross2(foil.foil_shape.points.col(i) - foil.edge_data.point_le, point_chord.normalized());
   }
 
-  w3 = spline::splind(w1, spline_length.head(n));
-  w4 = spline::splind(w2, spline_length.head(n));
+  w3 = spline::splind(w1, foil.foil_shape.spline_length.head(n));
+  w4 = spline::splind(w2, foil.foil_shape.spline_length.head(n));
 
   if (is == 1) {
-    str = sle + (spline_length[0] - sle) * xstrip.top;
+    str = sle + (foil.foil_shape.spline_length[0] - sle) * xstrip.top;
   } else {
-    str = sle + (spline_length[n - 1] - sle) * xstrip.bottom;
+    str = sle + (foil.foil_shape.spline_length[foil.foil_shape.n - 1] - sle) * xstrip.bottom;
   }
-  str = spline::sinvrt(str, xstrip.get(is), w1, w3, spline_length.head(n), n);
+  str = spline::sinvrt(str, xstrip.get(is), w1, w3, foil.foil_shape.spline_length.head(n), n);
   xiforc = std::min((str - sst), xssi.get(is)[iblte.get(is)]);
   if (xiforc < 0.0) {
     ss << " ***  stagnation point is past trip on side " << is << "\n";

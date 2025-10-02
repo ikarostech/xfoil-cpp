@@ -49,6 +49,7 @@ bool XFoil::abcopy(Matrix2Xd copyFrom) {
   foil = Foil(points, n);
   spline_length.head(n) = foil.foil_shape.spline_length;
   normal_vectors.block(0, 0, 2, n) = foil.foil_shape.normal_vector;
+  sle = lefind(points, foil.foil_shape.dpoints_ds, foil.foil_shape.spline_length, n);
   tecalc();
   apanel.head(n) = apcalc(points);
 
