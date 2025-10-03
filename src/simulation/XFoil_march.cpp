@@ -851,12 +851,12 @@ bool XFoil::setbl() {
     // TRACE(" initializing bl ...\n");
     writeString("   Initializing bl ...\n");
 
-    mrchue();
+    boundary_layer_facade.initializeWithCurrentUe();
     lblini = true;
   }
 
   //---- march bl with current ue and ds to establish transition
-  mrchdu();
+  boundary_layer_facade.marchDisplacement();
 
   SidePair<VectorXd> usav = uedg;
 

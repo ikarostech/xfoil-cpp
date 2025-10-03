@@ -47,6 +47,7 @@ add_library(xfoil_simulation
     src/simulation/XFoil_geometry.cpp
     src/simulation/XFoil_init.cpp
     src/simulation/XFoil_march.cpp
+    src/simulation/BoundaryLayerFacade.cpp
     src/simulation/XFoil_viscous.cpp
     src/simulation/psi.cpp
 )

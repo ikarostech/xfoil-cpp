@@ -54,6 +54,7 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 #include "domain/boundary_layer.hpp"
 #include "domain/foil.hpp"
 #include "simulation/psi.hpp"
+#include "simulation/BoundaryLayerFacade.hpp"
 #include "infrastructure/xfoil_params.h"
 
 using namespace std;
@@ -110,7 +111,18 @@ class XFoil {
   };
   ViscalEndResult ViscalEnd();
   bool ViscousIter();
-  
+
+ private:
+  friend class BoundaryLayerFacade;
+  bool setbl();
+  bool blsolve();
+  bool mrchdu();
+  bool mrchue();
+  bool stepbl();
+  bool update();
+  bool stmove();
+
+ public:
   bool abcopy(Matrix2Xd copyFrom);
 
   bool isBLInitialized() const { return lblini; }
@@ -168,7 +180,6 @@ class XFoil {
   bool blmid(FlowRegimeEnum flowRegimeType);
   bool blprv(double xsi, double ami, double cti, double thi, double dsi,
              double dswaki, double uei);
-  bool blsolve();
   bool blsys();
   bool blvar(blData& ref, FlowRegimeEnum flowRegimeType);
   /**
@@ -289,7 +300,6 @@ class XFoil {
   bool iblsys();
   double lefind(const Matrix2Xd &points, const Matrix2Xd &dpoints_ds, const VectorXd &s, int n) const;
   
-  bool mrchdu();
   MixedModeStationContext prepareMixedModeStation(int side, int ibl, int itrold,
                                                   double& ami);
   bool performMixedModeNewtonIteration(int side, int ibl, int itrold,
@@ -300,7 +310,6 @@ class XFoil {
                                      MixedModeStationContext& ctx, double& ami);
   void checkTransitionIfNeeded(int side, int ibl, bool skipCheck,
                                int laminarAdvance, double& ami);
-  bool mrchue();
   double calcHtarg(int ibl, int is, bool wake);
   Matrix2Xd ncalc(Matrix2Xd point, VectorXd spline_length, int n);
 
@@ -314,7 +323,6 @@ class XFoil {
   VectorXd qvfue() const;
   Matrix2Xd qwcalc();
 
-  bool setbl();
   struct EdgeVelocitySwapResult {
     SidePair<VectorXd> swappedUsav;
     SidePair<VectorXd> restoredUedg;
@@ -336,16 +344,13 @@ class XFoil {
                                             const VectorXd& d_m) const;
   std::optional<VectorXd> setexp(double ds1, double smax, int nn) const;
 
-  bool stepbl();
   bool stfind();
-  bool stmove();
   bool tecalc();
   bool tesys(double cte, double tte, double dte);
   bool trchek();
   bool trdif();
   bool ueset();
   bool uicalc();
-  bool update();
   struct EdgeVelocityDistribution {
     SidePair<VectorXd> unew;
     SidePair<VectorXd> u_ac;
@@ -410,12 +415,16 @@ class XFoil {
 
  public:
 
+  // --- IO / diagnostics ---
   std::stringstream *m_pOutStream;
 
+  // --- Operating point specification ---
   double clspec;
 
+  // --- Geometry-derived helpers ---
   Matrix2Xd normal_vectors;
 
+  // --- Global aerodynamic results ---
   double cl, cm, cd, acrit;
   VectorXd cpi, cpv;
   double alfa, avisc, awake, reinf1, qinf, mvisc, rmsbl, ante;
@@ -424,35 +433,48 @@ class XFoil {
   double qgamm[IBX + 1];
   double rmxbl;
 
+  // --- Solver state flags ---
   double minf1;
   bool lblini, lipan;
   
+  // --- Geometry and panel topology ---
   Foil foil;
   Matrix2Xd& points;             // alias for legacy access to foil_shape.points
   int& n;                        // alias for legacy access to foil_shape.n
   SidePair<VectorXi> ipan, isys;
   SidePair<int> iblte, nbl;
 
+  // --- Strip-wise metadata ---
   SidePair<double> xstrip;
 
+  // --- Reference frames & compressibility factors ---
   Vector2d cmref;
   double tklam; // karman-tsien parameter minf^2 / [1 + sqrt[1-minf^2]]^2 <- Prandtl-Glauert-Ackeret rule ?
   double tkl_msq;
   double dtor;
 
+  // --- Boundary-layer primary variables ---
   SidePair<VectorXd> thet, ctau, dstr, uedg, ctq;
   SidePair<VectorXd> xssi, uinv, uinv_a, mass, vti;  
   SidePair<int> itran; // bl array index of transition interval
 
+  // --- Boundary-layer orchestration ---
+  BoundaryLayerFacade boundary_layer_facade;
+
  public: //private:
+  // --- Relaxation parameters ---
   double rlx;
 
+  // --- Flight-condition derivatives ---
   double minf_cl, reinf_cl;
 
+  // --- Legacy solver flags ---
   bool lgamu, sharp, lqaij, ladij, lwdij;
 
+  // --- Boundary-layer closure constants ---
   const double sccon = 5.6, gacon = 6.70, gbcon = 0.75, gbc0 = 0.60, gbc1 = 0.40, gccon = 18.0, dlcon = 0.9, ctcon = 0.5/(gacon*gacon * gbcon);
 
+  // --- Panel/wake marching state ---
   int nsys;
   VectorXd snew;
 
@@ -461,10 +483,12 @@ class XFoil {
   int nw, i_stagnation;
 
 
+  // --- Aerodynamic sensitivities ---
   double cl_alf, cl_msq;
   double gamma, gamm1;
 
 
+  // --- Inviscid system matrices ---
   Matrix2Xd surface_vortex;
   Matrix2Xd gamu;
   VectorXd apanel;
@@ -494,15 +518,19 @@ class XFoil {
     }
   } blc;
 
+  // --- Boundary-layer flags ---
   bool trforc, simi, tran, turb, wake, trfree;
 
+  // --- Boundary-layer thermodynamic state ---
   double qinfbl, tkbl, tkbl_ms, rstbl, rstbl_ms, hstinv, hstinv_ms;
   double reybl, reybl_ms, reybl_re, gm1bl, xiforc, amcrit;
   //---- sutherland's const./to	(assumes stagnation conditions are at stp)
   const double hvrat = 0.35;
 
+  // --- Boundary-layer snapshots ---
   blData blData1, blData2;
 
+  // --- Boundary-layer derivatives ---
   double cfm, cfm_ms, cfm_re, cfm_u1, cfm_t1, cfm_d1, cfm_u2, cfm_t2, cfm_d2;
   double xt, xt_a1, xt_ms, xt_re, xt_xf, xt_x1, xt_t1, xt_d1, xt_u1, xt_x2,
       xt_t2, xt_d2, xt_u2;

@@ -44,6 +44,7 @@ bool XFoil::initXFoilAnalysis(double Re, double alpha, double Mach,
 
   lblini = false;
   lipan = false;
+  boundary_layer_facade.reset();
 
   reinf1 = Re;
   alfa = alpha * std::numbers::pi / 180.0;
@@ -706,6 +707,10 @@ bool XFoil::viscal() {
   if (!lwdij || !ladij)
     qdcalc();
 
+  if (lvisc) {
+    boundary_layer_facade.ensureInitialized();
+  }
+
   return true;
 }
 
@@ -719,44 +724,7 @@ XFoil::ViscalEndResult XFoil::ViscalEnd() {
 
 
 bool XFoil::ViscousIter() {
-  //	Performs one iteration
-  std::stringstream ss;
-  double eps1 = 0.0001;
-
-  setbl(); //	------ fill newton system for bl variables
-
-  blsolve(); //	------ solve newton system with custom solver
-
-  update(); //	------ update bl variables
-
-  if (lalfa) { //	------- set new freestream mach, re from new cl
-    minf_cl = getActualMach(cl, mach_type);
-    reinf_cl = getActualReynolds(cl, reynolds_type);
-    comset();
-  } else { //	------- set new inviscid speeds qinv and uinv for new alpha
-    auto qiset_result = qiset();
-    qinv = std::move(qiset_result.qinv);
-    qinv_a = std::move(qiset_result.qinv_a);
-    uicalc();
-  }
-
-  qvis = qvfue();  //	------ calculate edge velocities qvis(.) from uedg(..)
-  surface_vortex = gamqv();  //	------ set gam distribution from qvis
-  stmove(); //	------ relocate stagnation point
-
-  //	------ set updated cl,cd
-  const auto cl_result = clcalc(cmref);
-  applyClComputation(cl_result);
-  cd = cdcalc();
-
-  if (rmsbl < eps1) {
-    lvconv = true;
-    avisc = alfa;
-    mvisc = minf;
-    writeString("----------CONVERGED----------\n\n");
-  }
-
-  return true;
+  return boundary_layer_facade.iterateOnce();
 }
 
 // moved to XFoil_geometry.cpp: xyWake()
