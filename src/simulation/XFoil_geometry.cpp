@@ -234,12 +234,23 @@ bool XFoil::xyWake() {
   //     sets wake coordinate array for current surface
   //     vorticity and/or mass source distributions.
   //-----------------------------------------------------
+  foil.wake_shape.points = Eigen::Matrix2Xd::Zero(2, foil.foil_shape.n + nw);
+  foil.wake_shape.n = foil.foil_shape.n + nw;
+  foil.wake_shape.normal_vector = Eigen::Matrix2Xd::Zero(2, foil.foil_shape.n + nw);
+  foil.wake_shape.spline_length = Eigen::VectorXd::Zero(foil.foil_shape.n + nw);
+  foil.wake_shape.points.block(0, 0, 2, foil.foil_shape.n) = foil.foil_shape.points;
+  foil.wake_shape.normal_vector.block(0, 0, 2, foil.foil_shape.n) = foil.foil_shape.normal_vector;
+  foil.wake_shape.spline_length.head(foil.foil_shape.n) = foil.foil_shape.spline_length;
+
   double ds1 = 0.5 * (foil.foil_shape.spline_length[1] - foil.foil_shape.spline_length[0] + foil.foil_shape.spline_length[n - 1] - foil.foil_shape.spline_length[n - 2]);
   const auto wake_spacing = setexp(ds1, foil.edge_data.chord, nw);
 
   Vector2d tangent_vector = (foil.foil_shape.dpoints_ds.col(n - 1) - foil.foil_shape.dpoints_ds.col(0)).normalized();
-  normal_vectors.col(n) = Vector2d {tangent_vector.y(), -tangent_vector.x()};
-  points.col(n) = foil.edge_data.point_te + 0.0001 * tangent_vector.col(n);
+  foil.wake_shape.normal_vector.col(n) = Vector2d {tangent_vector.y(), -tangent_vector.x()};
+  normal_vectors.col(n) = foil.wake_shape.normal_vector.col(n);
+  
+  foil.wake_shape.points.col(n) = foil.edge_data.point_te + 0.0001 * tangent_vector.col(n);
+  points.col(n) = foil.wake_shape.points.col(n);
   foil.wake_shape.spline_length[n] = foil.wake_shape.spline_length[n - 1];
   //---- calculate streamfunction gradient components at first point
   Vector2d psi = {
@@ -250,15 +261,17 @@ bool XFoil::xyWake() {
              gamu, surface_vortex, alfa, qinf, apanel, sharp, ante, dste, aste)
           .psi_ni};
   //---- set unit vector normal to wake at first point
-  normal_vectors.col(n + 1) = -psi.normalized();
+  foil.wake_shape.normal_vector.col(n + 1) = -psi.normalized();
+  normal_vectors.col(n + 1) = foil.wake_shape.normal_vector.col(n + 1);
   //---- set angle of wake panel normal
   apanel[n] = atan2(psi.y(), psi.x());
   //---- set rest of wake points
   for (int i = n + 1; i < n + nw; i++) {
     const double ds = wake_spacing[i - n] - wake_spacing[i - n - 1];
     //------ set new point ds downstream of last point
-    points.col(i).x() = points.col(i - 1).x() - ds * normal_vectors.col(i - 1).y();
-    points.col(i).y() = points.col(i - 1).y() + ds * normal_vectors.col(i - 1).x();
+    foil.wake_shape.points.col(i).x() = points.col(i - 1).x() - ds * normal_vectors.col(i - 1).y();
+    foil.wake_shape.points.col(i).y() = points.col(i - 1).y() + ds * normal_vectors.col(i - 1).x();
+    points.col(i) = foil.wake_shape.points.col(i);
     foil.wake_shape.spline_length[i] = foil.wake_shape.spline_length[i - 1] + ds;
     if (i == n + nw - 1) {
       break;

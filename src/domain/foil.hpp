@@ -119,7 +119,6 @@ class Foil {
 
       return sle_initial;
     }
-
   
     EdgeData getEdgeData(FoilShape foilShape) {
       EdgeData edgeData;
@@ -130,136 +129,10 @@ class Foil {
       edgeData.chord = (edgeData.point_le - edgeData.point_te).norm();
       return edgeData;
     }
-    Eigen::VectorXd setexp(double ds, double chord, int nw) {
-    //........................................................
-    //     sets geometriy stretched array s:
-    //
-    //       s(i+1) - s(i)  =  r * [s(i) - s(i-1)]
-    //
-    //       ds1   (input)   first s increment:  spline_length[2] -
-    //       spline_length[1] smax  (input)   final s value:      s(nn) nn (input)
-    //       number of points
-    //........................................................
-    const int nex = nw - 1;
-
-    const double sigma = chord / ds;
-    const double rnex = static_cast<double>(nex);
-    const double rni = 1.0 / rnex;
-
-    //-- solve quadratic for initial geometric ratio guess
-    const double aaa = rnex * (rnex - 1.0) * (rnex - 2.0) / 6.0;
-    const double bbb = rnex * (rnex - 1.0) / 2.0;
-    const double ccc = rnex - sigma;
-
-    double disc = std::max(0.0, bbb * bbb - 4.0 * aaa * ccc);
-    double ratio = 1.0;
-    if (nex == 2) {
-      ratio = -ccc / bbb + 1.0;
-    } else {
-      ratio = (-bbb + sqrt(disc)) / (2.0 * aaa) + 1.0;
-    }
-
-    //-- newton iteration for actual geometric ratio
-    for (int iter = 0; iter < 100; iter++) {
-      const double sigman = (pow(ratio, static_cast<double>(nex)) - 1.0) / (ratio - 1.0);
-      const double sigman_rni = pow(sigman, rni);
-      const double sigma_rni = pow(sigma, rni);
-      const double res = sigman_rni - sigma_rni;
-      const double numerator = rnex * pow(ratio, static_cast<double>(nex - 1)) - sigman;
-      const double denominator = pow(ratio, static_cast<double>(nex)) - 1.0;
-      const double dresdr = rni * sigman_rni * numerator / denominator;
-
-      const double dratio = -res / dresdr;
-      ratio += dratio;
-
-      if (fabs(dratio) < 1.0e-5) {
-        break;
-      }
-    }
-
-    Eigen::VectorXd spline_length(nw);
-    spline_length[0] = 0.0;
-    double ds_i = ds;
-    for (int i = 1; i < nw; i++) {
-      spline_length[i] = spline_length[i - 1] + ds_i;
-      ds_i *= ratio;
-    }
-    return spline_length;
-  }
-    bool xyWake() {
-      //-----------------------------------------------------
-      //     sets wake coordinate array for current surface
-      //     vorticity and/or mass source distributions.
-      //-----------------------------------------------------
-
-      int nw = foil_shape.n / 8 + 2;
-      wake_shape.points = Eigen::Matrix2Xd::Zero(2, foil_shape.n + nw);
-      wake_shape.n = foil_shape.n + nw;
-      wake_shape.normal_vector = Eigen::Matrix2Xd::Zero(2, foil_shape.n + nw);
-      wake_shape.spline_length = Eigen::VectorXd::Zero(foil_shape.n + nw);
-      wake_shape.points.block(0, 0, 2, foil_shape.n) = foil_shape.points;
-      wake_shape.normal_vector.block(0, 0, 2, foil_shape.n) = foil_shape.normal_vector;
-      wake_shape.spline_length.head(foil_shape.n) = foil_shape.spline_length;
-
-      double ds1 = 0.5 * (foil_shape.spline_length[1] - foil_shape.spline_length[0] + foil_shape.spline_length[foil_shape.n - 1] - foil_shape.spline_length[foil_shape.n - 2]);
-      const auto wake_spacing = setexp(ds1, edge_data.chord, nw);
-
-      //-- set first wake point a tiny distance behind te
-      Eigen::Vector2d spacing = {
-        (foil_shape.dpoints_ds.col(foil_shape.n - 1).y() - foil_shape.dpoints_ds.col(0).y()) / 2,
-        (foil_shape.dpoints_ds.col(0).x() - foil_shape.dpoints_ds.col(foil_shape.n - 1).x()) / 2
-      };
-
-      double spacing_norm = spacing.norm();
-      if (spacing_norm == 0.0) {
-        spacing = foil_shape.normal_vector.col(foil_shape.n - 1) + foil_shape.normal_vector.col(0);
-        spacing_norm = spacing.norm();
-      }
-      if (spacing_norm == 0.0) {
-        spacing = Eigen::Vector2d{0.0, 1.0};
-        spacing_norm = 1.0;
-      }
-
-      const Eigen::Vector2d wake_normal = spacing / spacing_norm;
-      wake_shape.normal_vector.col(foil_shape.n) = wake_normal;
-
-      wake_shape.points.col(foil_shape.n).x() = edge_data.point_te.x() - 0.0001 * wake_normal.y();
-      wake_shape.points.col(foil_shape.n).y() = edge_data.point_te.y() + 0.0001 * wake_normal.x();
-      wake_shape.spline_length[foil_shape.n] = wake_shape.spline_length[foil_shape.n - 1];
-      //---- calculate streamfunction gradient components at first point
-      //Vector2d psi = {psilin(foil_shape.points, foil_shape.n, wake_shape.points.col(foil_shape.n), {1.0, 0.0}, false).psi_ni,
-      //                psilin(foil_shape.points, foil_shape.n, wake_shape.points.col(foil_shape.n), {0.0, 1.0}, false).psi_ni};
-      //---- set unit vector normal to wake at first point
-      //wake_shape.normal_vector.col(foil_shape.n + 1) = -psi.normalized();
-      //---- set angle of wake panel normal
-      //apanel[n] = atan2(psi.y(), psi.x());
-      //---- set rest of wake points
-      for (int i = foil_shape.n + 1; i < wake_shape.n; i++) {
-        const double ds = wake_spacing[i - foil_shape.n] - wake_spacing[i - 1 - foil_shape.n];
-        //------ set new point ds downstream of last point
-        const Eigen::Vector2d previous_normal = wake_shape.normal_vector.col(i - 1);
-        wake_shape.points.col(i).x() = wake_shape.points.col(i - 1).x() - ds * previous_normal.y();
-        wake_shape.points.col(i).y() = wake_shape.points.col(i - 1).y() + ds * previous_normal.x();
-        wake_shape.spline_length[i] = wake_shape.spline_length[i - 1] + ds;
-        if (i != wake_shape.n - 1) {
-          wake_shape.normal_vector.col(i) = previous_normal;
-          //Vector2d psi2 = {psilin(wake_shape.points, i, wake_shape.points.col(i), {1.0, 0.0}, false).psi_ni,
-          //                psilin(wake_shape.points, i, wake_shape.points.col(i), {0.0, 1.0}, false).psi_ni};
-          //wake_shape.normal_vector.col(i + 1) = -psi2.normalized();
-          //wake_shape.apanel[i] = atan2(psi2.y(), psi2.x());
-        }
-      }
-      //---- set wake presence flag and corresponding alpha
-      //lwake = true;
-      //awake = alfa;
-      //---- old source influence matrix is invalid for the new wake geometry
-      //lwdij = false;
-      return true;
-    }
     Foil() = default;
     Foil(Eigen::Matrix2Xd points, int n) {
       foil_shape.setFoilShape(points, n);
       edge_data = getEdgeData(foil_shape);
-      xyWake();
+      //xyWake();
     }
 };
