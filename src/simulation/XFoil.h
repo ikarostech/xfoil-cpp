@@ -334,7 +334,7 @@ class XFoil {
   };
   DerivativeVectors clearDerivativeVectors(const VectorXd& u_m,
                                             const VectorXd& d_m) const;
-  std::optional<VectorXd> setexp(double ds1, double smax, int nn) const;
+  VectorXd setexp(double ds1, double smax, int nn) const;
 
   bool stepbl();
   bool stfind();
@@ -454,7 +454,6 @@ class XFoil {
   const double sccon = 5.6, gacon = 6.70, gbcon = 0.75, gbc0 = 0.60, gbc1 = 0.40, gccon = 18.0, dlcon = 0.9, ctcon = 0.5/(gacon*gacon * gbcon);
 
   int nsys;
-  VectorXd snew;
 
   double sle;
   double wgap[IWX];
@@ -809,7 +808,6 @@ class XFoil {
   c   xbp[.]      dxb/dsb
   c   ybp[.]      dyb/dsb
   c   sb[.]       spline parameter for buffer airfoil
-  c   snew[.]     new panel endpoint arc length array
   c
   c   xbf,ybf     buffer  airfoil flap hinge coordinates
   c   xof,yof     current airfoil flap hinge coordinates

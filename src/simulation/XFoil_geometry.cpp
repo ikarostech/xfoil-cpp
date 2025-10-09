@@ -172,7 +172,7 @@ bool XFoil::tecalc() {
   return true;
 }
 
-std::optional<VectorXd> XFoil::setexp(double ds1, double smax, int nn) const {
+VectorXd XFoil::setexp(double ds1, double smax, int nn) const {
   //........................................................
   //     sets geometriy stretched array s:
   //
@@ -183,9 +183,6 @@ std::optional<VectorXd> XFoil::setexp(double ds1, double smax, int nn) const {
   //       number of points
   //........................................................
   const int nex = nn - 1;
-  if (nex <= 1) {
-    return std::nullopt;
-  }
 
   const double sigma = smax / ds1;
   const double rnex = static_cast<double>(nex);
@@ -237,23 +234,12 @@ bool XFoil::xyWake() {
   //     sets wake coordinate array for current surface
   //     vorticity and/or mass source distributions.
   //-----------------------------------------------------
-  double ds1, sx, sy, smod;
-  writeString("   Calculating wake trajectory ...\n");
-  ds1 = 0.5 * (foil.foil_shape.spline_length[1] - foil.foil_shape.spline_length[0] + foil.foil_shape.spline_length[n - 1] - foil.foil_shape.spline_length[n - 2]);
+  double ds1 = 0.5 * (foil.foil_shape.spline_length[1] - foil.foil_shape.spline_length[0] + foil.foil_shape.spline_length[n - 1] - foil.foil_shape.spline_length[n - 2]);
   const auto wake_spacing = setexp(ds1, foil.edge_data.chord, nw);
-  if (!wake_spacing) {
-    writeString("setexp: cannot fill array.  n too small\n");
-    return false;
-  }
-  snew.segment(n, nw) = *wake_spacing;
-  //-- set first wake point a tiny distance behind te
-  sx = 0.5 * (foil.foil_shape.dpoints_ds.col(n - 1).y() - foil.foil_shape.dpoints_ds.col(0).y());
-  sy = 0.5 * (foil.foil_shape.dpoints_ds.col(0).x() - foil.foil_shape.dpoints_ds.col(n - 1).x());
-  smod = sqrt(sx * sx + sy * sy);
-  normal_vectors.col(n).x() = sx / smod;
-  normal_vectors.col(n).y() = sy / smod;
-  points.col(n).x() = foil.edge_data.point_te.x() - 0.0001 * normal_vectors.col(n).y();
-  points.col(n).y() = foil.edge_data.point_te.y() + 0.0001 * normal_vectors.col(n).x();
+
+  Vector2d tangent_vector = (foil.foil_shape.dpoints_ds.col(n - 1) - foil.foil_shape.dpoints_ds.col(0)).normalized();
+  normal_vectors.col(n) = Vector2d {tangent_vector.y(), -tangent_vector.x()};
+  points.col(n) = foil.edge_data.point_te + 0.0001 * tangent_vector.col(n);
   foil.wake_shape.spline_length[n] = foil.wake_shape.spline_length[n - 1];
   //---- calculate streamfunction gradient components at first point
   Vector2d psi = {
@@ -269,24 +255,27 @@ bool XFoil::xyWake() {
   apanel[n] = atan2(psi.y(), psi.x());
   //---- set rest of wake points
   for (int i = n + 1; i < n + nw; i++) {
-    const double ds = snew[i] - snew[i - 1];
+    const double ds = wake_spacing[i - n] - wake_spacing[i - n - 1];
     //------ set new point ds downstream of last point
     points.col(i).x() = points.col(i - 1).x() - ds * normal_vectors.col(i - 1).y();
     points.col(i).y() = points.col(i - 1).y() + ds * normal_vectors.col(i - 1).x();
     foil.wake_shape.spline_length[i] = foil.wake_shape.spline_length[i - 1] + ds;
-    if (i != n + nw - 1) {
-      Vector2d psi2 = {
-          psilin(points, i, points.col(i), {1.0, 0.0}, false, foil.wake_shape.spline_length, n,
-                 gamu, surface_vortex, alfa, qinf, apanel, sharp, ante, dste,
-                 aste)
-              .psi_ni,
-          psilin(points, i, points.col(i), {0.0, 1.0}, false, foil.wake_shape.spline_length, n,
-                 gamu, surface_vortex, alfa, qinf, apanel, sharp, ante, dste,
-                 aste)
-              .psi_ni};
-      normal_vectors.col(i + 1) = -psi2.normalized();
-      apanel[i] = atan2(psi2.y(), psi2.x());
+    if (i == n + nw - 1) {
+      break;
     }
+
+    Vector2d psi2 = {
+        psilin(points, i, points.col(i), {1.0, 0.0}, false, foil.wake_shape.spline_length, n,
+                gamu, surface_vortex, alfa, qinf, apanel, sharp, ante, dste,
+                aste)
+            .psi_ni,
+        psilin(points, i, points.col(i), {0.0, 1.0}, false, foil.wake_shape.spline_length, n,
+                gamu, surface_vortex, alfa, qinf, apanel, sharp, ante, dste,
+                aste)
+            .psi_ni};
+    normal_vectors.col(i + 1) = -psi2.normalized();
+    apanel[i] = atan2(psi2.y(), psi2.x());
+    
   }
   //---- set wake presence flag and corresponding alpha
   lwake = true;
