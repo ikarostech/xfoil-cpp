@@ -72,7 +72,6 @@ void XFoil::initializeDataStructures() {
   itran.bottom = 0;
   mass.top = VectorXd::Zero(IVX);
   mass.bottom = VectorXd::Zero(IVX);
-  normal_vectors = Matrix2Xd::Zero(2, n + nw);
   gamu = Matrix2Xd::Zero(2, n + 1);
   surface_vortex = Matrix2Xd::Zero(2, n);
   std::ranges::fill(cache.qf0, 0.0);

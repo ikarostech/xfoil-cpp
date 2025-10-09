@@ -47,7 +47,6 @@ bool XFoil::abcopy(Matrix2Xd copyFrom) {
   
   
   foil = Foil(points, n);
-  normal_vectors.block(0, 0, 2, n) = foil.foil_shape.normal_vector;
   sle = lefind(points, foil.foil_shape.dpoints_ds, foil.foil_shape.spline_length, n);
   tecalc();
   apanel.head(n) = apcalc(points);
@@ -247,7 +246,6 @@ bool XFoil::xyWake() {
 
   Vector2d tangent_vector = (foil.foil_shape.dpoints_ds.col(n - 1) - foil.foil_shape.dpoints_ds.col(0)).normalized();
   foil.wake_shape.normal_vector.col(n) = Vector2d {tangent_vector.y(), -tangent_vector.x()};
-  normal_vectors.col(n) = foil.wake_shape.normal_vector.col(n);
   
   foil.wake_shape.points.col(n) = foil.edge_data.point_te + 0.0001 * tangent_vector.col(n);
   points.col(n) = foil.wake_shape.points.col(n);
@@ -262,15 +260,14 @@ bool XFoil::xyWake() {
           .psi_ni};
   //---- set unit vector normal to wake at first point
   foil.wake_shape.normal_vector.col(n + 1) = -psi.normalized();
-  normal_vectors.col(n + 1) = foil.wake_shape.normal_vector.col(n + 1);
   //---- set angle of wake panel normal
   apanel[n] = atan2(psi.y(), psi.x());
   //---- set rest of wake points
   for (int i = n + 1; i < n + nw; i++) {
     const double ds = wake_spacing[i - n] - wake_spacing[i - n - 1];
     //------ set new point ds downstream of last point
-    foil.wake_shape.points.col(i).x() = points.col(i - 1).x() - ds * normal_vectors.col(i - 1).y();
-    foil.wake_shape.points.col(i).y() = points.col(i - 1).y() + ds * normal_vectors.col(i - 1).x();
+    foil.wake_shape.points.col(i).x() = points.col(i - 1).x() - ds * foil.wake_shape.normal_vector.col(i - 1).y();
+    foil.wake_shape.points.col(i).y() = points.col(i - 1).y() + ds * foil.wake_shape.normal_vector.col(i - 1).x();
     points.col(i) = foil.wake_shape.points.col(i);
     foil.wake_shape.spline_length[i] = foil.wake_shape.spline_length[i - 1] + ds;
     if (i == n + nw - 1) {
@@ -286,7 +283,7 @@ bool XFoil::xyWake() {
                 gamu, surface_vortex, alfa, qinf, apanel, sharp, ante, dste,
                 aste)
             .psi_ni};
-    normal_vectors.col(i + 1) = -psi2.normalized();
+    foil.wake_shape.normal_vector.col(i + 1) = -psi2.normalized();
     apanel[i] = atan2(psi2.y(), psi2.x());
     
   }

@@ -414,8 +414,6 @@ class XFoil {
 
   double clspec;
 
-  Matrix2Xd normal_vectors;
-
   double cl, cm, cd, acrit;
   VectorXd cpi, cpv;
   double alfa, avisc, awake, reinf1, qinf, mvisc, rmsbl, ante;

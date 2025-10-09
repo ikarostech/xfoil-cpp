@@ -114,7 +114,7 @@ bool XFoil::qdcalc() {
   //---- set up coefficient matrix of dpsi/dm on airfoil surface
   for (int i = 0; i < n; i++) {
     PsiResult psi_result =
-        pswlin(points, i, points.col(i), normal_vectors.col(i), n, nw, apanel);
+        pswlin(points, i, points.col(i), foil.foil_shape.normal_vector.col(i), n, nw, apanel);
     bij.row(i).segment(n, nw) = -psi_result.dzdm.segment(n, nw).transpose();
   }
 
@@ -137,14 +137,14 @@ bool XFoil::qdcalc() {
     int iw = i - n;
     //------ airfoil contribution at wake panel node
     PsiResult psi_result =
-        psilin(points, i, points.col(i), normal_vectors.col(i), true,
+        psilin(points, i, points.col(i), foil.wake_shape.normal_vector.col(i), true,
                foil.wake_shape.spline_length, n, gamu, surface_vortex, alfa, qinf, apanel,
                sharp, ante, dste, aste);
     cij.row(iw) = psi_result.dqdg.head(n).transpose();
     dij.row(i).head(n) = psi_result.dqdm.head(n).transpose();
     //------ wake contribution
     psi_result =
-        pswlin(points, i, points.col(i), normal_vectors.col(i), n, nw, apanel);
+        pswlin(points, i, points.col(i), foil.wake_shape.normal_vector.col(i), n, nw, apanel);
     dij.row(i).segment(n, nw) = psi_result.dqdm.segment(n, nw).transpose();
   }
 
@@ -215,7 +215,7 @@ Matrix2Xd XFoil::qwcalc() {
 
   for (int i = n + 1; i < n + nw; i++) {
     updated_qinvu.col(i) =
-        psilin(points, i, points.col(i), normal_vectors.col(i), false,
+        psilin(points, i, points.col(i), foil.wake_shape.normal_vector.col(i), false,
                foil.wake_shape.spline_length, n, gamu, surface_vortex, alfa, qinf, apanel,
                sharp, ante, dste, aste)
             .qtan;
