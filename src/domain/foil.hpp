@@ -69,9 +69,10 @@ class Foil {
     FoilShape wake_shape;  // geometric domain (wake points and count)
     class EdgeData {
       public:
-      Eigen::Vector2d point_le;  // leading edge point
-      Eigen::Vector2d point_te;  // trailing edge point
-      double chord;       // chord length
+      Eigen::Vector2d point_le;
+      Eigen::Vector2d point_te;
+      double chord;
+      double sle;
     };
     EdgeData edge_data;
 
@@ -122,9 +123,9 @@ class Foil {
   
     EdgeData getEdgeData(FoilShape foilShape) {
       EdgeData edgeData;
-      double sle = lefind(foilShape.points, foilShape.dpoints_ds, foilShape.spline_length, foilShape.n);
-      edgeData.point_le.x() = spline::seval(sle, foil_shape.points.row(0), foil_shape.dpoints_ds.row(0), foil_shape.spline_length.head(foil_shape.n), foil_shape.n);
-      edgeData.point_le.y() = spline::seval(sle, foil_shape.points.row(1), foil_shape.dpoints_ds.row(1), foil_shape.spline_length.head(foil_shape.n), foil_shape.n);
+      edge_data.sle = lefind(foilShape.points, foilShape.dpoints_ds, foilShape.spline_length, foilShape.n);
+      edgeData.point_le.x() = spline::seval(edge_data.sle, foil_shape.points.row(0), foil_shape.dpoints_ds.row(0), foil_shape.spline_length.head(foil_shape.n), foil_shape.n);
+      edgeData.point_le.y() = spline::seval(edge_data.sle, foil_shape.points.row(1), foil_shape.dpoints_ds.row(1), foil_shape.spline_length.head(foil_shape.n), foil_shape.n);
       edgeData.point_te = 0.5 * (foil_shape.points.col(0) + foil_shape.points.col(foil_shape.n - 1));
       edgeData.chord = (edgeData.point_le - edgeData.point_te).norm();
       return edgeData;

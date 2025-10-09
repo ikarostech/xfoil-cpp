@@ -2108,9 +2108,9 @@ double XFoil::xifset(int is) {
   w4 = spline::splind(w2, foil.foil_shape.spline_length.head(n));
 
   if (is == 1) {
-    str = sle + (foil.foil_shape.spline_length[0] - sle) * xstrip.top;
+    str = foil.edge_data.sle + (foil.foil_shape.spline_length[0] - foil.edge_data.sle) * xstrip.top;
   } else {
-    str = sle + (foil.foil_shape.spline_length[foil.foil_shape.n - 1] - sle) * xstrip.bottom;
+    str = foil.edge_data.sle + (foil.foil_shape.spline_length[foil.foil_shape.n - 1] - foil.edge_data.sle) * xstrip.bottom;
   }
   str = spline::sinvrt(str, xstrip.get(is), w1, w3, foil.foil_shape.spline_length.head(n), n);
   xiforc = std::min((str - sst), xssi.get(is)[iblte.get(is)]);

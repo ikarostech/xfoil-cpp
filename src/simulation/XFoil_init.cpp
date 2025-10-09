@@ -135,7 +135,6 @@ void XFoil::resetVariables() {
   alfa = rmxbl = rmsbl = rlx = ante = clspec = 0.0;
   minf = reinf = 0.0;
   minf_cl = reinf_cl = 0.0;
-  sle = 0.0;
   cl_alf = cl_msq = 0.0;
   tklam = tkl_msq = 0.0;
   sst = sst_go = sst_gp = 0.0;
