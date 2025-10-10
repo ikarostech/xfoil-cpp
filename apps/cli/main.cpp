@@ -11,24 +11,24 @@ int s_IterLim = 100;
 bool m_bErrors = false;
 bool s_bAutoInitBL = true;
 
-bool iterate(XFoil *foil) {
-  if (!foil->viscal()) {
-    foil->lvconv = false;
+bool iterate(XFoil *xfoil) {
+  if (!xfoil->viscal()) {
+    xfoil->lvconv = false;
     std::cout
         << "CpCalc: local speed too large\nCompressibility corrections invalid"
         << std::endl;
     return false;
   }
 
-  while (m_Iterations < s_IterLim && !foil->lvconv /*&& !s_bCancel*/) {
-    if (foil->ViscousIter()) {
+  while (m_Iterations < s_IterLim && !xfoil->lvconv /*&& !s_bCancel*/) {
+    if (xfoil->ViscousIter()) {
       // if (m_x0 && m_y0) {
       //  m_x0->append((double)m_Iterations);
-      //  m_y0->append(foil->rmsbl);
+      //  m_y0->append(xfoil->rmsbl);
       //}
       // if (m_x1 && m_y1) {
       //  m_x1->append((double)m_Iterations);
-      //  m_y1->append(foil->rmxbl);
+      //  m_y1->append(xfoil->rmxbl);
       //}
       m_Iterations++;
     } else
@@ -36,19 +36,19 @@ bool iterate(XFoil *foil) {
   }
 
   {
-    const auto viscal_end = foil->ViscalEnd();
-    foil->cpi = viscal_end.inviscidCp;
-    foil->cpv = viscal_end.viscousCp;
+    const auto viscal_end = xfoil->ViscalEnd();
+    xfoil->cpi = viscal_end.inviscidCp;
+    xfoil->cpv = viscal_end.viscousCp;
   }
 
-  if (m_Iterations >= s_IterLim && !foil->lvconv) {
+  if (m_Iterations >= s_IterLim && !xfoil->lvconv) {
     if (s_bAutoInitBL) {
-      foil->setBLInitialized(false);
-      foil->lipan = false;
+      xfoil->setBLInitialized(false);
+      xfoil->lipan = false;
     }
     return true;
   }
-  if (!foil->lvconv) {
+  if (!xfoil->lvconv) {
     m_bErrors = true;
     return false;
   } else {

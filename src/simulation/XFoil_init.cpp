@@ -20,13 +20,13 @@ struct InitState {
 
 std::unordered_map<const XFoil*, InitState> g_init_state;
 
-InitState& ensureInitState(const XFoil* foil) {
-  return g_init_state[foil];
+InitState& ensureInitState(const XFoil* xfoil) {
+  return g_init_state[xfoil];
 }
 }  // namespace
 
-void ClearInitState(const XFoil& foil) {
-  g_init_state.erase(&foil);
+void ClearInitState(const XFoil& xfoil) {
+  g_init_state.erase(&xfoil);
 }
 
 bool XFoil::initialize() {

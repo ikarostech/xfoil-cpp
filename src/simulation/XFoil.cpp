@@ -25,8 +25,8 @@
 #include <cmath>
 using namespace Eigen;
 
-void ClearAerodynamicsState(const XFoil& foil);
-void ClearInitState(const XFoil& foil);
+void ClearAerodynamicsState(const XFoil& xfoil);
+void ClearInitState(const XFoil& xfoil);
 
 namespace {
 bool g_cancel_flag = false;

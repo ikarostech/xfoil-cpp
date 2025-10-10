@@ -12,8 +12,8 @@ struct AerodynamicsState {
 
 std::unordered_map<const XFoil*, AerodynamicsState> g_aerodynamics_state;
 
-AerodynamicsState& ensureAerodynamicsState(const XFoil* foil) {
-  return g_aerodynamics_state[foil];
+AerodynamicsState& ensureAerodynamicsState(const XFoil* xfoil) {
+  return g_aerodynamics_state[xfoil];
 }
 }  // namespace
 
@@ -62,8 +62,8 @@ double XFoil::getXcp() const {
   return it->second.xcp;
 }
 
-void ClearAerodynamicsState(const XFoil& foil) {
-  g_aerodynamics_state.erase(&foil);
+void ClearAerodynamicsState(const XFoil& xfoil) {
+  g_aerodynamics_state.erase(&xfoil);
 }
 
 XFoil::ClComputation XFoil::clcalc(Vector2d ref) const {
@@ -317,71 +317,71 @@ bool XFoil::ggcalc() {
 namespace {
 enum class SpecTarget { AngleOfAttack, LiftCoefficient };
 
-void updateSurfaceVortexFromGamu(XFoil &foil) {
+void updateSurfaceVortexFromGamu(XFoil &xfoil) {
   Matrix2d rotateMatrix =
-      Matrix2d{{cos(foil.alfa), sin(foil.alfa)}, {-sin(foil.alfa), cos(foil.alfa)}};
+      Matrix2d{{cos(xfoil.alfa), sin(xfoil.alfa)}, {-sin(xfoil.alfa), cos(xfoil.alfa)}};
 
-  for (int i = 0; i < foil.n; i++) {
-    foil.surface_vortex(0, i) = rotateMatrix.row(0).dot(foil.gamu.col(i));
-    foil.surface_vortex(1, i) = rotateMatrix.row(1).dot(foil.gamu.col(i));
+  for (int i = 0; i < xfoil.n; i++) {
+    xfoil.surface_vortex(0, i) = rotateMatrix.row(0).dot(xfoil.gamu.col(i));
+    xfoil.surface_vortex(1, i) = rotateMatrix.row(1).dot(xfoil.gamu.col(i));
   }
 }
 
-bool specConverge(XFoil &foil, SpecTarget target) {
+bool specConverge(XFoil &xfoil, SpecTarget target) {
   // Ensure unit vorticity distributions are available.
-  if (!foil.lgamu || !foil.lqaij)
-    foil.ggcalc();
+  if (!xfoil.lgamu || !xfoil.lqaij)
+    xfoil.ggcalc();
 
-  updateSurfaceVortexFromGamu(foil);
+  updateSurfaceVortexFromGamu(xfoil);
 
-  auto applyQiset = [&foil]() {
-    auto qiset_result = foil.qiset();
-    foil.qinv = std::move(qiset_result.qinv);
-    foil.qinv_a = std::move(qiset_result.qinv_a);
+  auto applyQiset = [&xfoil]() {
+    auto qiset_result = xfoil.qiset();
+    xfoil.qinv = std::move(qiset_result.qinv);
+    xfoil.qinv_a = std::move(qiset_result.qinv_a);
   };
 
   if (target == SpecTarget::AngleOfAttack) {
-    foil.tecalc();
+    xfoil.tecalc();
     applyQiset();
   } else {
-    foil.minf_cl = foil.getActualMach(foil.clspec, foil.mach_type);
-    foil.reinf_cl = foil.getActualReynolds(foil.clspec, foil.reynolds_type);
-    foil.comset();
+    xfoil.minf_cl = xfoil.getActualMach(xfoil.clspec, xfoil.mach_type);
+    xfoil.reinf_cl = xfoil.getActualReynolds(xfoil.clspec, xfoil.reynolds_type);
+    xfoil.comset();
   }
 
-  foil.applyClComputation(foil.clcalc(foil.cmref));
+  xfoil.applyClComputation(xfoil.clcalc(xfoil.cmref));
 
   bool bConv = false;
 
   if (target == SpecTarget::AngleOfAttack) {
     double clm = 1.0;
-    double minf_clm = foil.getActualMach(clm, foil.mach_type);
+    double minf_clm = xfoil.getActualMach(clm, xfoil.mach_type);
 
     for (int itcl = 1; itcl <= 20; itcl++) {
-      const double msq_clm = 2.0 * foil.minf * minf_clm;
-      const double dclm = (foil.cl - clm) / (1.0 - foil.cl_msq * msq_clm);
+      const double msq_clm = 2.0 * xfoil.minf * minf_clm;
+      const double dclm = (xfoil.cl - clm) / (1.0 - xfoil.cl_msq * msq_clm);
 
       const double clm1 = clm;
-      foil.rlx = 1.0;
+      xfoil.rlx = 1.0;
 
       //------ under-relaxation loop to avoid driving m(cl) above 1
       for (int irlx = 1; irlx <= 12; irlx++) {
-        clm = clm1 + foil.rlx * dclm;
+        clm = clm1 + xfoil.rlx * dclm;
 
         //-------- set new freestream mach m(clm)
-        minf_clm = foil.getActualMach(clm, foil.mach_type);
+        minf_clm = xfoil.getActualMach(clm, xfoil.mach_type);
 
         //-------- if mach is ok, go do next newton iteration
         // FIXME double型の==比較
-        if (foil.mach_type == XFoil::MachType::CONSTANT || foil.minf == 0.0 ||
+        if (xfoil.mach_type == XFoil::MachType::CONSTANT || xfoil.minf == 0.0 ||
             minf_clm != 0.0)
           break;
 
-        foil.rlx = 0.5 * foil.rlx;
+        xfoil.rlx = 0.5 * xfoil.rlx;
       }
 
       //------ set new cl(m)
-      foil.applyClComputation(foil.clcalc(foil.cmref));
+      xfoil.applyClComputation(xfoil.clcalc(xfoil.cmref));
 
       if (fabs(dclm) <= 1.0e-6) {
         bConv = true;
@@ -390,41 +390,38 @@ bool specConverge(XFoil &foil, SpecTarget target) {
     }
 
     if (!bConv) {
-      foil.writeString("Specal:  MInf convergence failed\n");
+      xfoil.writeString("Specal:  MInf convergence failed\n");
       return false;
     }
 
     //---- set final mach, cl, cp distributions, and hinge moment
-    foil.minf_cl = foil.getActualMach(foil.cl, foil.mach_type);
-    foil.reinf_cl = foil.getActualReynolds(foil.cl, foil.reynolds_type);
-    foil.comset();
     applyQiset();
-    foil.applyClComputation(foil.clcalc(foil.cmref));
+    xfoil.applyClComputation(xfoil.clcalc(xfoil.cmref));
 
-    foil.cpi = foil.cpcalc(foil.n, foil.qinv, foil.qinf, foil.minf);
-    if (foil.lvisc) {
-      foil.cpv = foil.cpcalc(foil.n + foil.nw, foil.qvis, foil.qinf, foil.minf);
-      foil.cpi = foil.cpcalc(foil.n + foil.nw, foil.qinv, foil.qinf, foil.minf);
+    xfoil.cpi = xfoil.cpcalc(xfoil.n, xfoil.qinv, xfoil.qinf, xfoil.minf);
+    if (xfoil.lvisc) {
+      xfoil.cpv = xfoil.cpcalc(xfoil.n + xfoil.nw, xfoil.qvis, xfoil.qinf, xfoil.minf);
+      xfoil.cpi = xfoil.cpcalc(xfoil.n + xfoil.nw, xfoil.qinv, xfoil.qinf, xfoil.minf);
     } else
-      foil.cpi = foil.cpcalc(foil.n, foil.qinv, foil.qinf, foil.minf);
+      xfoil.cpi = xfoil.cpcalc(xfoil.n, xfoil.qinv, xfoil.qinf, xfoil.minf);
 
-    for (int i = 0; i < foil.n; i++) {
-      foil.qgamm[i] = foil.surface_vortex(0, i);
+    for (int i = 0; i < xfoil.n; i++) {
+      xfoil.qgamm[i] = xfoil.surface_vortex(0, i);
     }
 
     return true;
   }
 
   for (int ital = 1; ital <= 20; ital++) {
-    const double dalfa = (foil.clspec - foil.cl) / foil.cl_alf;
-    foil.rlx = 1.0;
+    const double dalfa = (xfoil.clspec - xfoil.cl) / xfoil.cl_alf;
+    xfoil.rlx = 1.0;
 
-    foil.alfa = foil.alfa + foil.rlx * dalfa;
+    xfoil.alfa = xfoil.alfa + xfoil.rlx * dalfa;
 
-    updateSurfaceVortexFromGamu(foil);
+    updateSurfaceVortexFromGamu(xfoil);
 
     //------ set new cl(alpha)
-    foil.applyClComputation(foil.clcalc(foil.cmref));
+    xfoil.applyClComputation(xfoil.clcalc(xfoil.cmref));
 
     if (fabs(dalfa) <= 1.0e-6) {
       bConv = true;
@@ -432,20 +429,20 @@ bool specConverge(XFoil &foil, SpecTarget target) {
     }
   }
   if (!bConv) {
-    foil.writeString("Speccl:  cl convergence failed");
+    xfoil.writeString("Speccl:  cl convergence failed");
     return false;
   }
 
   //---- set final surface speed and cp distributions
-  foil.tecalc();
+  xfoil.tecalc();
   applyQiset();
 
-  if (foil.lvisc) {
-    foil.cpv = foil.cpcalc(foil.n + foil.nw, foil.qvis, foil.qinf, foil.minf);
-    foil.cpi = foil.cpcalc(foil.n + foil.nw, foil.qinv, foil.qinf, foil.minf);
+  if (xfoil.lvisc) {
+    xfoil.cpv = xfoil.cpcalc(xfoil.n + xfoil.nw, xfoil.qvis, xfoil.qinf, xfoil.minf);
+    xfoil.cpi = xfoil.cpcalc(xfoil.n + xfoil.nw, xfoil.qinv, xfoil.qinf, xfoil.minf);
 
   } else {
-    foil.cpi = foil.cpcalc(foil.n, foil.qinv, foil.qinf, foil.minf);
+    xfoil.cpi = xfoil.cpcalc(xfoil.n, xfoil.qinv, xfoil.qinf, xfoil.minf);
   }
 
   return true;
