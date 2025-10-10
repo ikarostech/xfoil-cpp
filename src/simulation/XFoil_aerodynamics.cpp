@@ -341,7 +341,7 @@ bool specConverge(XFoil &xfoil, SpecTarget target) {
   };
 
   if (target == SpecTarget::AngleOfAttack) {
-    xfoil.tecalc();
+    xfoil.updateTrailingEdgeState();
     applyQiset();
   } else {
     xfoil.minf_cl = xfoil.getActualMach(xfoil.clspec, xfoil.mach_type);
@@ -434,7 +434,7 @@ bool specConverge(XFoil &xfoil, SpecTarget target) {
   }
 
   //---- set final surface speed and cp distributions
-  xfoil.tecalc();
+  xfoil.updateTrailingEdgeState();
   applyQiset();
 
   if (xfoil.lvisc) {

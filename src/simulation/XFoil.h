@@ -155,6 +155,20 @@ class XFoil {
   };
   AxResult axset(double hk1, double thet1, double rt1, double a1, double hk2,
     double thet2, double rt2, double a2, double acrit);
+  struct TrailingEdgeData {
+    double ante = 0.0;
+    double aste = 0.0;
+    double dste = 0.0;
+    bool sharp = false;
+    double sigte = 0.0;
+    double gamte = 0.0;
+  };
+  static TrailingEdgeData tecalc(const Matrix2Xd& points,
+                                 const Matrix2Xd& dpoints_ds,
+                                 const Matrix2Xd& surface_vortex,
+                                 int n,
+                                 double chord);
+  void updateTrailingEdgeState();
   bool bldif(int flowRegimeType);
   // ---- Helper routines used by bldif ----
   void bldifLaminar();
@@ -339,7 +353,6 @@ class XFoil {
   bool stepbl();
   bool stfind();
   bool stmove();
-  bool tecalc();
   bool tesys(double cte, double tte, double dte);
   bool trchek();
   bool trdif();

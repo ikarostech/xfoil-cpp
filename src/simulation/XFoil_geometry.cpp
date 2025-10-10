@@ -42,12 +42,10 @@ bool XFoil::abcopy(Matrix2Xd copyFrom) {
     points.col(i) = copyFrom.col(i);
   }
 
-  initialize();
-  //TODO foil側に寄せて最終的にfoilを返すようにする
-  
+  initialize();  
   
   foil = Foil(points, n);
-  tecalc();
+  updateTrailingEdgeState();
   apanel.head(n) = apcalc(points);
 
   lgamu = false;
@@ -142,32 +140,57 @@ double XFoil::lefind(const Matrix2Xd &points, const Matrix2Xd &dpoints_ds, const
   return sle_initial;
 }
 
-bool XFoil::tecalc() {
-  //-------------------------------------------
-  //     calculates total and projected TE
-  //     areas and TE panel strengths.
-  //-------------------------------------------
-  double scs, sds;
-  //---- set te base vector and te bisector components
-  Vector2d tevec = points.col(0) - points.col(n - 1);
-  Vector2d dpoint_ds_te = 0.5 * (-foil.foil_shape.dpoints_ds.col(0) + foil.foil_shape.dpoints_ds.col(n - 1));
-  //---- normal and streamwise projected TE gap areas
-  ante = cross2(dpoint_ds_te, tevec);
-  aste = tevec.dot(dpoint_ds_te);
-  //---- total TE gap area
-  dste = tevec.norm();
-  sharp = dste < 0.0001 * foil.edge_data.chord;
-  if (sharp) {
+XFoil::TrailingEdgeData XFoil::tecalc(const Matrix2Xd& points,
+                                      const Matrix2Xd& dpoints_ds,
+                                      const Matrix2Xd& surface_vortex,
+                                      int n,
+                                      double chord) {
+  TrailingEdgeData data{};
+  if (n < 2 || points.cols() < n || dpoints_ds.cols() < n) {
+    return data;
+  }
+
+  const Vector2d tevec = points.col(0) - points.col(n - 1);
+  const Vector2d dpoint_ds_te =
+      0.5 * (-dpoints_ds.col(0) + dpoints_ds.col(n - 1));
+
+  data.ante = cross2(dpoint_ds_te, tevec);
+  data.aste = tevec.dot(dpoint_ds_te);
+  data.dste = tevec.norm();
+
+  const bool is_sharp = data.dste < 0.0001 * chord;
+  double scs = 0.0;
+  double sds = 0.0;
+  if (is_sharp) {
     scs = 1.0;
     sds = 0.0;
-  } else {
-    scs = ante / dste;
-    sds = aste / dste;
+  } else if (data.dste != 0.0) {
+    const double inv_dste = 1.0 / data.dste;
+    scs = data.ante * inv_dste;
+    sds = data.aste * inv_dste;
   }
-  //---- TE panel source and vorticity strengths
-  sigte = 0.5 * (surface_vortex(0, 0) - surface_vortex(0, n - 1)) * scs;
-  gamte = -.5 * (surface_vortex(0, 0) - surface_vortex(0, n - 1)) * sds;
-  return true;
+
+  double surface_delta = 0.0;
+  if (surface_vortex.rows() > 0 && surface_vortex.cols() >= n) {
+    surface_delta = surface_vortex(0, 0) - surface_vortex(0, n - 1);
+  }
+
+  data.sharp = is_sharp;
+  data.sigte = 0.5 * surface_delta * scs;
+  data.gamte = -0.5 * surface_delta * sds;
+
+  return data;
+}
+
+void XFoil::updateTrailingEdgeState() {
+  const auto data = tecalc(points, foil.foil_shape.dpoints_ds, surface_vortex,
+                           n, foil.edge_data.chord);
+  ante = data.ante;
+  aste = data.aste;
+  dste = data.dste;
+  sharp = data.sharp;
+  sigte = data.sigte;
+  gamte = data.gamte;
 }
 
 VectorXd XFoil::setexp(double ds1, double smax, int nn) const {
