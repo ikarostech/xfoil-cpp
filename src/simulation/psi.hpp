@@ -2,7 +2,7 @@
 
 #include <Eigen/Core>
 
-#include "domain/foil.hpp"
+#include "domain/foil/foil.hpp"
 #include "infrastructure/xfoil_params.h"
 
 using namespace Eigen;

@@ -2100,21 +2100,21 @@ double XFoil::xifset(int is) {
     return xssi.get(is)[iblte.get(is)];
   }
 
-  Vector2d point_chord = foil.edge_data.point_te - foil.edge_data.point_le;
+  Vector2d point_chord = foil.edge.point_te - foil.edge.point_le;
 
   //---- calculate chord-based x/c, y/c
   for (int i = 0; i < point_count; i++) {
-    w1[i] = (foil.foil_shape.points.col(i) - foil.edge_data.point_le).dot(point_chord.normalized());
-    w2[i] = cross2(foil.foil_shape.points.col(i) - foil.edge_data.point_le, point_chord.normalized());
+    w1[i] = (foil.foil_shape.points.col(i) - foil.edge.point_le).dot(point_chord.normalized());
+    w2[i] = cross2(foil.foil_shape.points.col(i) - foil.edge.point_le, point_chord.normalized());
   }
 
   w3 = spline::splind(w1, foil.foil_shape.spline_length.head(point_count));
   w4 = spline::splind(w2, foil.foil_shape.spline_length.head(point_count));
 
   if (is == 1) {
-    str = foil.edge_data.sle + (foil.foil_shape.spline_length[0] - foil.edge_data.sle) * xstrip.top;
+    str = foil.edge.sle + (foil.foil_shape.spline_length[0] - foil.edge.sle) * xstrip.top;
   } else {
-    str = foil.edge_data.sle + (foil.foil_shape.spline_length[foil.foil_shape.n - 1] - foil.edge_data.sle) * xstrip.bottom;
+    str = foil.edge.sle + (foil.foil_shape.spline_length[foil.foil_shape.n - 1] - foil.edge.sle) * xstrip.bottom;
   }
   str = spline::sinvrt(str, xstrip.get(is), w1, w3, foil.foil_shape.spline_length.head(point_count), point_count);
   xiforc = std::min((str - sst), xssi.get(is)[iblte.get(is)]);

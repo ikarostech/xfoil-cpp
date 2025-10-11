@@ -52,7 +52,7 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 #include "core/math_util.hpp"
 #include "core/spline.hpp"
 #include "domain/boundary_layer.hpp"
-#include "domain/foil.hpp"
+#include "domain/foil/foil.hpp"
 #include "simulation/psi.hpp"
 #include "infrastructure/xfoil_params.h"
 

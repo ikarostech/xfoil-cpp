@@ -187,7 +187,7 @@ XFoil::TrailingEdgeData XFoil::tecalc(const Matrix2Xd& points,
 
 void XFoil::updateTrailingEdgeState() {
   const auto data = tecalc(foil.foil_shape.points, foil.foil_shape.dpoints_ds, surface_vortex,
-                           foil.foil_shape.n, foil.edge_data.chord);
+                           foil.foil_shape.n, foil.edge.chord);
   ante = data.ante;
   aste = data.aste;
   dste = data.dste;
@@ -270,13 +270,13 @@ bool XFoil::xyWake() {
   double ds1 = 0.5 * (foil.foil_shape.spline_length[1] - foil.foil_shape.spline_length[0] +
                       foil.foil_shape.spline_length[point_count - 1] -
                       foil.foil_shape.spline_length[point_count - 2]);
-  const auto wake_spacing = setexp(ds1, foil.edge_data.chord, nw);
+  const auto wake_spacing = setexp(ds1, foil.edge.chord, nw);
 
   Vector2d tangent_vector =
       (foil.foil_shape.dpoints_ds.col(point_count - 1) - foil.foil_shape.dpoints_ds.col(0)).normalized();
   foil.wake_shape.normal_vector.col(point_count) = Vector2d{tangent_vector.y(), -tangent_vector.x()};
   
-  foil.wake_shape.points.col(point_count) = foil.edge_data.point_te + 0.0001 * tangent_vector.col(point_count);
+  foil.wake_shape.points.col(point_count) = foil.edge.point_te + 0.0001 * tangent_vector.col(point_count);
   foil.foil_shape.points.col(point_count) = foil.wake_shape.points.col(point_count);
   foil.wake_shape.spline_length[point_count] = foil.wake_shape.spline_length[point_count - 1];
   //---- calculate streamfunction gradient components at first point

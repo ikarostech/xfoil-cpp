@@ -25,6 +25,7 @@ add_library(xfoil_domain
     src/domain/boundary_layer.cpp
     src/domain/coefficient/dissipation.cpp
     src/domain/coefficient/skin_friction.cpp
+    src/domain/foil/edge.cpp
 )
 target_include_directories(xfoil_domain
     PUBLIC
