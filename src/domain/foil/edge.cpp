@@ -1,7 +1,6 @@
 #include "domain/foil/edge.hpp"
 
 #include "core/spline.hpp"
-#include "domain/foil/foil.hpp"
 
 #include <algorithm>
 #include <cmath>

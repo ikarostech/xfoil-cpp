@@ -1,8 +1,7 @@
 #pragma once
 
 #include <Eigen/Core>
-
-class FoilShape;
+#include "domain/foil/foil_shape.hpp"
 
 class Edge {
   public:
