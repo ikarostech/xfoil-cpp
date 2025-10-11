@@ -13,38 +13,39 @@ inline double cross2(const Eigen::Vector2d &a, const Eigen::Vector2d &b) {
 }
 
 bool XFoil::abcopy(Matrix2Xd copyFrom) {
-  if (n != copyFrom.cols())
+  const int original_point_count = foil.foil_shape.n;
+  int point_count = static_cast<int>(copyFrom.cols());
+  if (original_point_count != point_count)
     lblini = false;
-
-  n = copyFrom.cols();
 
   //---- strip out doubled points
   int r = 1;
-  while (r < n) {
+  while (r < point_count) {
     // FIXME double型の==比較
     if (copyFrom.col(r - 1) == copyFrom.col(r)) {
-      for (int j = r; j < n - 1; j++) {
+      for (int j = r; j < point_count - 1; j++) {
         copyFrom.col(j) = copyFrom.col(j + 1);
       }
-      n = n - 1;
+      point_count -= 1;
     } else {
       r++;
     }
   }
   //--- number of wake points
-  nw = n / 8 + 2;
+  nw = point_count / 8 + 2;
   if (nw > IWX) {
     writeString(" XYWake: array size (IWX) too small.\n  Last wake point index reduced.");
     nw = IWX;
   }
   Matrix2Xd foil_points = Matrix2Xd::Zero(2, IZX);
-  foil_points.leftCols(n) = copyFrom.leftCols(n);
+  foil_points.leftCols(point_count) = copyFrom.leftCols(point_count);
 
+  foil.foil_shape.n = point_count;
   initialize();  
   
-  foil = Foil(foil_points, n);
+  foil = Foil(foil_points, point_count);
   updateTrailingEdgeState();
-  apanel.head(n) = apcalc(foil.foil_shape.points);
+  apanel.head(point_count) = apcalc(foil.foil_shape.points);
 
   lgamu = false;
   lwake = false;
@@ -58,15 +59,19 @@ bool XFoil::abcopy(Matrix2Xd copyFrom) {
 }
 
 VectorXd XFoil::apcalc(Matrix2Xd points) {
-  VectorXd result = VectorXd::Zero(n);
+  const int point_count = foil.foil_shape.n;
+  VectorXd result = VectorXd::Zero(point_count);
+  if (point_count == 0) {
+    return result;
+  }
   //---- set angles of airfoil panels
-  for (int i = 0; i < n; i++) {
-    Vector2d diff = points.col((i + 1) % n) - points.col(i);
+  for (int i = 0; i < point_count; i++) {
+    Vector2d diff = points.col((i + 1) % point_count) - points.col(i);
     result[i] = atan2(diff.x(), -diff.y());
   }
   //---- TE panel
   if (sharp) {
-    result[n - 1] = std::numbers::pi;
+    result[point_count - 1] = std::numbers::pi;
   }
   return result;
 }
@@ -182,7 +187,7 @@ XFoil::TrailingEdgeData XFoil::tecalc(const Matrix2Xd& points,
 
 void XFoil::updateTrailingEdgeState() {
   const auto data = tecalc(foil.foil_shape.points, foil.foil_shape.dpoints_ds, surface_vortex,
-                           n, foil.edge_data.chord);
+                           foil.foil_shape.n, foil.edge_data.chord);
   ante = data.ante;
   aste = data.aste;
   dste = data.dste;
@@ -253,6 +258,7 @@ bool XFoil::xyWake() {
   //     sets wake coordinate array for current surface
   //     vorticity and/or mass source distributions.
   //-----------------------------------------------------
+  const int point_count = foil.foil_shape.n;
   foil.wake_shape.points = Eigen::Matrix2Xd::Zero(2, foil.foil_shape.n + nw);
   foil.wake_shape.n = foil.foil_shape.n + nw;
   foil.wake_shape.normal_vector = Eigen::Matrix2Xd::Zero(2, foil.foil_shape.n + nw);
@@ -261,45 +267,52 @@ bool XFoil::xyWake() {
   foil.wake_shape.normal_vector.block(0, 0, 2, foil.foil_shape.n) = foil.foil_shape.normal_vector;
   foil.wake_shape.spline_length.head(foil.foil_shape.n) = foil.foil_shape.spline_length;
 
-  double ds1 = 0.5 * (foil.foil_shape.spline_length[1] - foil.foil_shape.spline_length[0] + foil.foil_shape.spline_length[n - 1] - foil.foil_shape.spline_length[n - 2]);
+  double ds1 = 0.5 * (foil.foil_shape.spline_length[1] - foil.foil_shape.spline_length[0] +
+                      foil.foil_shape.spline_length[point_count - 1] -
+                      foil.foil_shape.spline_length[point_count - 2]);
   const auto wake_spacing = setexp(ds1, foil.edge_data.chord, nw);
 
-  Vector2d tangent_vector = (foil.foil_shape.dpoints_ds.col(n - 1) - foil.foil_shape.dpoints_ds.col(0)).normalized();
-  foil.wake_shape.normal_vector.col(n) = Vector2d {tangent_vector.y(), -tangent_vector.x()};
+  Vector2d tangent_vector =
+      (foil.foil_shape.dpoints_ds.col(point_count - 1) - foil.foil_shape.dpoints_ds.col(0)).normalized();
+  foil.wake_shape.normal_vector.col(point_count) = Vector2d{tangent_vector.y(), -tangent_vector.x()};
   
-  foil.wake_shape.points.col(n) = foil.edge_data.point_te + 0.0001 * tangent_vector.col(n);
-  foil.foil_shape.points.col(n) = foil.wake_shape.points.col(n);
-  foil.wake_shape.spline_length[n] = foil.wake_shape.spline_length[n - 1];
+  foil.wake_shape.points.col(point_count) = foil.edge_data.point_te + 0.0001 * tangent_vector.col(point_count);
+  foil.foil_shape.points.col(point_count) = foil.wake_shape.points.col(point_count);
+  foil.wake_shape.spline_length[point_count] = foil.wake_shape.spline_length[point_count - 1];
   //---- calculate streamfunction gradient components at first point
   Vector2d psi = {
-      psilin(foil.wake_shape.points, n, foil.wake_shape.points.col(n), {1.0, 0.0}, false, foil.foil_shape.spline_length, n,
+      psilin(foil.wake_shape.points, point_count, foil.wake_shape.points.col(point_count), {1.0, 0.0}, false,
+             foil.foil_shape.spline_length, point_count,
              gamu, surface_vortex, alfa, qinf, apanel, sharp, ante, dste, aste)
           .psi_ni,
-      psilin(foil.wake_shape.points, n, foil.wake_shape.points.col(n), {0.0, 1.0}, false, foil.foil_shape.spline_length, n,
+      psilin(foil.wake_shape.points, point_count, foil.wake_shape.points.col(point_count), {0.0, 1.0}, false,
+             foil.foil_shape.spline_length, point_count,
              gamu, surface_vortex, alfa, qinf, apanel, sharp, ante, dste, aste)
           .psi_ni};
   //---- set unit vector normal to wake at first point
-  foil.wake_shape.normal_vector.col(n + 1) = -psi.normalized();
+  foil.wake_shape.normal_vector.col(point_count + 1) = -psi.normalized();
   //---- set angle of wake panel normal
-  apanel[n] = atan2(psi.y(), psi.x());
+  apanel[point_count] = atan2(psi.y(), psi.x());
   //---- set rest of wake points
-  for (int i = n + 1; i < n + nw; i++) {
-    const double ds = wake_spacing[i - n] - wake_spacing[i - n - 1];
+  for (int i = point_count + 1; i < point_count + nw; i++) {
+    const double ds = wake_spacing[i - point_count] - wake_spacing[i - point_count - 1];
     //------ set new point ds downstream of last point
     foil.wake_shape.points.col(i).x() = foil.wake_shape.points.col(i - 1).x() - ds * foil.wake_shape.normal_vector.col(i - 1).y();
     foil.wake_shape.points.col(i).y() = foil.wake_shape.points.col(i - 1).y() + ds * foil.wake_shape.normal_vector.col(i - 1).x();
     foil.foil_shape.points.col(i) = foil.wake_shape.points.col(i);
     foil.wake_shape.spline_length[i] = foil.wake_shape.spline_length[i - 1] + ds;
-    if (i == n + nw - 1) {
+    if (i == point_count + nw - 1) {
       break;
     }
 
     Vector2d psi2 = {
-        psilin(foil.wake_shape.points, i, foil.wake_shape.points.col(i), {1.0, 0.0}, false, foil.wake_shape.spline_length, n,
+        psilin(foil.wake_shape.points, i, foil.wake_shape.points.col(i), {1.0, 0.0}, false,
+                foil.wake_shape.spline_length, point_count,
                 gamu, surface_vortex, alfa, qinf, apanel, sharp, ante, dste,
                 aste)
             .psi_ni,
-        psilin(foil.wake_shape.points, i, foil.wake_shape.points.col(i), {0.0, 1.0}, false, foil.wake_shape.spline_length, n,
+        psilin(foil.wake_shape.points, i, foil.wake_shape.points.col(i), {0.0, 1.0}, false,
+                foil.wake_shape.spline_length, point_count,
                 gamu, surface_vortex, alfa, qinf, apanel, sharp, ante, dste,
                 aste)
             .psi_ni};

@@ -13,6 +13,7 @@ double cross2(const Eigen::Vector2d &a, const Eigen::Vector2d &b);
  * -----------------------------------------------------------*/
 bool XFoil::iblpan() {
   std::stringstream ss;
+  const int point_count = foil.foil_shape.n;
 
   //-- top surface first
   // store ipan with 0-based BL station index, and set vti at 0-based
@@ -27,16 +28,16 @@ bool XFoil::iblpan() {
 
   //-- bottom surface next
   // Bottom side: station 0 just after stagnation on bottom
-  for (int index = 0; index <= n - i_stagnation; ++index) {
+  for (int index = 0; index <= point_count - i_stagnation; ++index) {
     ipan.bottom[index] = i_stagnation + 1 + index;
     vti.bottom[index] = -1.0;
   }
 
   //-- wake
-  iblte.bottom = n - i_stagnation - 2; // logical 0-based TE
+  iblte.bottom = point_count - i_stagnation - 2; // logical 0-based TE
 
   for (int iw = 0; iw < nw; iw++) {
-    int i = n + iw; // panel index in wake
+    int i = point_count + iw; // panel index in wake
     int index = iblte.bottom + iw + 2; // 1-based BL station for wake (bottom)
     ipan.bottom[index - 1] = i;        // ipan is 0-based in BL station
     vti.bottom[index - 1] = -1.0;
@@ -1191,7 +1192,8 @@ bool XFoil::stfind() {
 
   int i;
   bool bFound = false;
-  for (i = 0; i < n - 1; i++) {
+  const int point_count = foil.foil_shape.n;
+  for (i = 0; i < point_count - 1; i++) {
     if (surface_vortex(0, i) >= 0.0 && surface_vortex(0, i + 1) < 0.0) {
       bFound = true;
       break;
@@ -1200,7 +1202,7 @@ bool XFoil::stfind() {
 
   if (!bFound) {
     writeString("stfind: Stagnation point not found. Continuing ...\n");
-    i = n / 2;
+    i = point_count / 2;
   }
 
   i_stagnation = i;
@@ -2049,7 +2051,8 @@ bool XFoil::xicalc() {
 
   //---- set up parameters for te flap cubics
 
-  const double crosp = cross2(foil.foil_shape.dpoints_ds.col(n - 1).normalized(),
+  const int point_count = foil.foil_shape.n;
+  const double crosp = cross2(foil.foil_shape.dpoints_ds.col(point_count - 1).normalized(),
                               foil.foil_shape.dpoints_ds.col(0).normalized());
   double dwdxte = crosp / sqrt(1.0 - crosp * crosp);
 
@@ -2091,6 +2094,7 @@ double XFoil::xifset(int is) {
   VectorXd w3 = VectorXd::Zero(6 * IQX);
   VectorXd w4 = VectorXd::Zero(6 * IQX);
   double str;
+  const int point_count = foil.foil_shape.n;
 
   if (xstrip.get(is) >= 1.0) {
     return xssi.get(is)[iblte.get(is)];
@@ -2099,20 +2103,20 @@ double XFoil::xifset(int is) {
   Vector2d point_chord = foil.edge_data.point_te - foil.edge_data.point_le;
 
   //---- calculate chord-based x/c, y/c
-  for (int i = 0; i < n; i++) {
+  for (int i = 0; i < point_count; i++) {
     w1[i] = (foil.foil_shape.points.col(i) - foil.edge_data.point_le).dot(point_chord.normalized());
     w2[i] = cross2(foil.foil_shape.points.col(i) - foil.edge_data.point_le, point_chord.normalized());
   }
 
-  w3 = spline::splind(w1, foil.foil_shape.spline_length.head(n));
-  w4 = spline::splind(w2, foil.foil_shape.spline_length.head(n));
+  w3 = spline::splind(w1, foil.foil_shape.spline_length.head(point_count));
+  w4 = spline::splind(w2, foil.foil_shape.spline_length.head(point_count));
 
   if (is == 1) {
     str = foil.edge_data.sle + (foil.foil_shape.spline_length[0] - foil.edge_data.sle) * xstrip.top;
   } else {
     str = foil.edge_data.sle + (foil.foil_shape.spline_length[foil.foil_shape.n - 1] - foil.edge_data.sle) * xstrip.bottom;
   }
-  str = spline::sinvrt(str, xstrip.get(is), w1, w3, foil.foil_shape.spline_length.head(n), n);
+  str = spline::sinvrt(str, xstrip.get(is), w1, w3, foil.foil_shape.spline_length.head(point_count), point_count);
   xiforc = std::min((str - sst), xssi.get(is)[iblte.get(is)]);
   if (xiforc < 0.0) {
     ss << " ***  stagnation point is past trip on side " << is << "\n";

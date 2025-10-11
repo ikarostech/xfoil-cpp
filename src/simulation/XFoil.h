@@ -439,7 +439,6 @@ class XFoil {
   bool lblini, lipan;
   
   Foil foil;
-  int& n;                        // alias for legacy access to foil_shape.n
   SidePair<VectorXi> ipan, isys;
   SidePair<int> iblte, nbl;
 

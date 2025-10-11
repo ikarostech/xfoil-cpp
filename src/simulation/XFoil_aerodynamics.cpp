@@ -79,6 +79,7 @@ XFoil::ClComputation XFoil::clcalc(Vector2d ref) const {
 
   const auto compressibility = buildCompressibilityParams();
   const Matrix2d rotateMatrix = buildBodyToFreestreamRotation();
+  const int point_count = foil.foil_shape.n;
 
   const PressureCoefficientResult cp_first = computePressureCoefficient(
       surface_vortex(0, 0), surface_vortex(1, 0), compressibility);
@@ -87,8 +88,8 @@ XFoil::ClComputation XFoil::clcalc(Vector2d ref) const {
   double cpg1_msq = cp_first.cp_msq;
   double cpg1_alf = cp_first.cp_velocity_derivative;
 
-  for (int i = 0; i < n; i++) {
-    const int ip = (i + 1) % n;
+  for (int i = 0; i < point_count; i++) {
+    const int ip = (i + 1) % point_count;
     const PressureCoefficientResult cp_next = computePressureCoefficient(
         surface_vortex(0, ip), surface_vortex(1, ip), compressibility);
 
@@ -177,8 +178,9 @@ VectorXd XFoil::cpcalc(int n, VectorXd q, double qinf, double minf) {
 // moved to XFoil_boundary.cpp: dslim()
 
 Matrix2Xd XFoil::gamqv() const {
-  Matrix2Xd updated_surface_vortex(2, n);
-  for (int i = 0; i < n; i++) {
+  const int point_count = foil.foil_shape.n;
+  Matrix2Xd updated_surface_vortex(2, point_count);
+  for (int i = 0; i < point_count; i++) {
     updated_surface_vortex(0, i) = qvis[i];
     updated_surface_vortex(1, i) = qinv_a[i];
   }
@@ -196,18 +198,19 @@ bool XFoil::ggcalc() {
   double res;
 
   writeString("   Calculating unit vorticity distributions ...\n");
+  const int point_count = foil.foil_shape.n;
 
-  MatrixXd dpsi_dgam = MatrixXd::Zero(n + 1, n + 1);
+  MatrixXd dpsi_dgam = MatrixXd::Zero(point_count + 1, point_count + 1);
 
-  Matrix2Xd psi = Matrix2Xd::Zero(2, n + 1);
+  Matrix2Xd psi = Matrix2Xd::Zero(2, point_count + 1);
 
   //---- set up matrix system for  psi = psio  on airfoil surface.
   //-    the unknowns are (dgamma)i and dpsio.
-  for (int i = 0; i < n; i++) {
+  for (int i = 0; i < point_count; i++) {
     //------ calculate psi and dpsi/dgamma array for current node
     PsiResult psi_result =
         psilin(foil.foil_shape.points, i, foil.foil_shape.points.col(i),
-               foil.foil_shape.normal_vector.col(i), true, foil.foil_shape.spline_length, n,
+               foil.foil_shape.normal_vector.col(i), true, foil.foil_shape.spline_length, point_count,
                gamu, surface_vortex, alfa, qinf, apanel, sharp, ante, dste,
                aste);
 
@@ -215,11 +218,11 @@ bool XFoil::ggcalc() {
                                          -foil.foil_shape.points.col(i).x()};
 
     //------ dres/dgamma
-    dpsi_dgam.row(i).head(n) = psi_result.dzdg.head(n);
-    bij.row(i).head(n) = -psi_result.dzdm.head(n);
+    dpsi_dgam.row(i).head(point_count) = psi_result.dzdg.head(point_count);
+    bij.row(i).head(point_count) = -psi_result.dzdm.head(point_count);
 
     //------ dres/dpsio
-    dpsi_dgam(i, n) = -1.0;
+    dpsi_dgam(i, point_count) = -1.0;
 
     psi.col(i) = -res;
   }
@@ -228,15 +231,15 @@ bool XFoil::ggcalc() {
   //-    res = gam(1) + gam[n]
   res = 0.0;
 
-  dpsi_dgam.row(n).head(n + 1) = VectorXd::Zero(n + 1);
-  dpsi_dgam(n, 0) = 1;
-  dpsi_dgam(n, n - 1) = 1;
+  dpsi_dgam.row(point_count).head(point_count + 1) = VectorXd::Zero(point_count + 1);
+  dpsi_dgam(point_count, 0) = 1;
+  dpsi_dgam(point_count, point_count - 1) = 1;
 
-  psi.col(n).x() = -res;
-  psi.col(n).y() = -res;
+  psi.col(point_count).x() = -res;
+  psi.col(point_count).y() = -res;
 
   //---- set up Kutta condition (no direct source influence)
-  bij.row(n).head(n) = VectorXd::Zero(n);
+  bij.row(point_count).head(point_count) = VectorXd::Zero(point_count);
 
   if (sharp) {
     //----- set zero internal velocity in TE corner
@@ -244,7 +247,7 @@ bool XFoil::ggcalc() {
     //----- set TE bisector angle
     const double ag1 = atan2(-foil.foil_shape.dpoints_ds.col(0).y(), -foil.foil_shape.dpoints_ds.col(0).x());
     const double ag2 =
-        atanc(foil.foil_shape.dpoints_ds.col(n - 1).y(), foil.foil_shape.dpoints_ds.col(n - 1).x(), ag1);
+        atanc(foil.foil_shape.dpoints_ds.col(point_count - 1).y(), foil.foil_shape.dpoints_ds.col(point_count - 1).x(), ag1);
     const double abis = 0.5 * (ag1 + ag2);
 
     Vector2d bis_vector{cos(abis), sin(abis)};
@@ -263,40 +266,40 @@ bool XFoil::ggcalc() {
 
     //----- set velocity component along bisector line
     PsiResult psi_result = psilin(foil.foil_shape.points, -1, bis, normal_bis,
-                                  true, foil.foil_shape.spline_length, n, gamu, surface_vortex,
+                                  true, foil.foil_shape.spline_length, point_count, gamu, surface_vortex,
                                   alfa, qinf, apanel, sharp, ante, dste, aste);
 
     //----- dres/dgamma
-    dpsi_dgam.row(n - 1).head(n) = psi_result.dzdg.head(n);
+    dpsi_dgam.row(point_count - 1).head(point_count) = psi_result.dzdg.head(point_count);
     //----- -dres/dmass
-    bij.row(n - 1).head(n) = -psi_result.dzdm.head(n);
+    bij.row(point_count - 1).head(point_count) = -psi_result.dzdm.head(point_count);
 
     //----- dres/dpsio
-    dpsi_dgam(n - 1, n);
+    dpsi_dgam(point_count - 1, point_count);
 
     //----- -dres/duinf -dres/dvinf
-    psi.col(n - 1) = -bis_vector;
+    psi.col(point_count - 1) = -bis_vector;
   }
 
   //---- lu-factor coefficient matrix aij
   psi_gamma_lu = FullPivLU<MatrixXd>(dpsi_dgam);
   lqaij = true;
-  VectorXd gamu_temp(n + 1);
+  VectorXd gamu_temp(point_count + 1);
   //---- solve system for the two vorticity distributions
 
   gamu_temp = psi_gamma_lu.solve(psi.row(0).transpose());
 
-  for (int iu = 0; iu <= n; iu++) {
+  for (int iu = 0; iu <= point_count; iu++) {
     gamu.col(iu).x() = gamu_temp[iu];
   }
 
   gamu_temp = psi_gamma_lu.solve(psi.row(1).transpose());
-  for (int iu = 0; iu <= n; iu++) {
+  for (int iu = 0; iu <= point_count; iu++) {
     gamu.col(iu).y() = gamu_temp[iu];
   }
 
   //---- set inviscid alpha=0,90 surface speeds for this geometry
-  for (int i = 0; i <= n; i++) {
+  for (int i = 0; i <= point_count; i++) {
     qinvu.col(i) = gamu.col(i);
   }
 
@@ -321,7 +324,7 @@ void updateSurfaceVortexFromGamu(XFoil &xfoil) {
   Matrix2d rotateMatrix =
       Matrix2d{{cos(xfoil.alfa), sin(xfoil.alfa)}, {-sin(xfoil.alfa), cos(xfoil.alfa)}};
 
-  for (int i = 0; i < xfoil.n; i++) {
+  for (int i = 0; i < xfoil.foil.foil_shape.n; i++) {
     xfoil.surface_vortex(0, i) = rotateMatrix.row(0).dot(xfoil.gamu.col(i));
     xfoil.surface_vortex(1, i) = rotateMatrix.row(1).dot(xfoil.gamu.col(i));
   }
@@ -398,14 +401,14 @@ bool specConverge(XFoil &xfoil, SpecTarget target) {
     applyQiset();
     xfoil.applyClComputation(xfoil.clcalc(xfoil.cmref));
 
-    xfoil.cpi = xfoil.cpcalc(xfoil.n, xfoil.qinv, xfoil.qinf, xfoil.minf);
+    xfoil.cpi = xfoil.cpcalc(xfoil.foil.foil_shape.n, xfoil.qinv, xfoil.qinf, xfoil.minf);
     if (xfoil.lvisc) {
-      xfoil.cpv = xfoil.cpcalc(xfoil.n + xfoil.nw, xfoil.qvis, xfoil.qinf, xfoil.minf);
-      xfoil.cpi = xfoil.cpcalc(xfoil.n + xfoil.nw, xfoil.qinv, xfoil.qinf, xfoil.minf);
+      xfoil.cpv = xfoil.cpcalc(xfoil.foil.foil_shape.n + xfoil.nw, xfoil.qvis, xfoil.qinf, xfoil.minf);
+      xfoil.cpi = xfoil.cpcalc(xfoil.foil.foil_shape.n + xfoil.nw, xfoil.qinv, xfoil.qinf, xfoil.minf);
     } else
-      xfoil.cpi = xfoil.cpcalc(xfoil.n, xfoil.qinv, xfoil.qinf, xfoil.minf);
+      xfoil.cpi = xfoil.cpcalc(xfoil.foil.foil_shape.n, xfoil.qinv, xfoil.qinf, xfoil.minf);
 
-    for (int i = 0; i < xfoil.n; i++) {
+    for (int i = 0; i < xfoil.foil.foil_shape.n; i++) {
       xfoil.qgamm[i] = xfoil.surface_vortex(0, i);
     }
 
@@ -438,11 +441,11 @@ bool specConverge(XFoil &xfoil, SpecTarget target) {
   applyQiset();
 
   if (xfoil.lvisc) {
-    xfoil.cpv = xfoil.cpcalc(xfoil.n + xfoil.nw, xfoil.qvis, xfoil.qinf, xfoil.minf);
-    xfoil.cpi = xfoil.cpcalc(xfoil.n + xfoil.nw, xfoil.qinv, xfoil.qinf, xfoil.minf);
+    xfoil.cpv = xfoil.cpcalc(xfoil.foil.foil_shape.n + xfoil.nw, xfoil.qvis, xfoil.qinf, xfoil.minf);
+    xfoil.cpi = xfoil.cpcalc(xfoil.foil.foil_shape.n + xfoil.nw, xfoil.qinv, xfoil.qinf, xfoil.minf);
 
   } else {
-    xfoil.cpi = xfoil.cpcalc(xfoil.n, xfoil.qinv, xfoil.qinf, xfoil.minf);
+    xfoil.cpi = xfoil.cpcalc(xfoil.foil.foil_shape.n, xfoil.qinv, xfoil.qinf, xfoil.minf);
   }
 
   return true;

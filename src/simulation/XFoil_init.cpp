@@ -49,14 +49,16 @@ bool XFoil::initialize() {
 }
 
 void XFoil::initializeDataStructures() {
-  apanel = VectorXd::Zero(n + nw);
+  const int point_count = foil.foil_shape.n;
+  const int total_nodes_with_wake = point_count + nw;
+  apanel = VectorXd::Zero(total_nodes_with_wake);
   auto& cache = ensureInitState(this);
   cache.blsav.fill(blData{});
 
   bij = MatrixXd::Zero(IQX, IZX);
   dij = MatrixXd::Zero(IZX, IZX);
-  cpi = VectorXd::Zero(n + nw);
-  cpv = VectorXd::Zero(n);
+  cpi = VectorXd::Zero(total_nodes_with_wake);
+  cpv = VectorXd::Zero(point_count);
   ctau.top = VectorXd::Zero(IVX);
   ctau.bottom = VectorXd::Zero(IVX);
   ctq.top = VectorXd::Zero(IVX);
@@ -72,16 +74,16 @@ void XFoil::initializeDataStructures() {
   itran.bottom = 0;
   mass.top = VectorXd::Zero(IVX);
   mass.bottom = VectorXd::Zero(IVX);
-  gamu = Matrix2Xd::Zero(2, n + 1);
-  surface_vortex = Matrix2Xd::Zero(2, n);
+  gamu = Matrix2Xd::Zero(2, point_count + 1);
+  surface_vortex = Matrix2Xd::Zero(2, point_count);
   std::ranges::fill(cache.qf0, 0.0);
   std::ranges::fill(cache.qf1, 0.0);
   std::ranges::fill(cache.qf2, 0.0);
   std::ranges::fill(cache.qf3, 0.0);
-  qinv = VectorXd::Zero(n + nw);
-  qinv_a = VectorXd::Zero(n + nw);
-  qinvu = Matrix2Xd::Zero(2, n + nw);
-  qvis = VectorXd::Zero(n + nw);
+  qinv = VectorXd::Zero(total_nodes_with_wake);
+  qinv_a = VectorXd::Zero(total_nodes_with_wake);
+  qinvu = Matrix2Xd::Zero(2, total_nodes_with_wake);
+  qvis = VectorXd::Zero(total_nodes_with_wake);
   thet.top = VectorXd::Zero(IVX);
   thet.bottom = VectorXd::Zero(IVX);
   uedg.top = VectorXd::Zero(IVX);
@@ -225,9 +227,10 @@ bool XFoil::setMach() {
   minf_cl = getActualMach(1.0, mach_type);
   reinf_cl = getActualReynolds(1.0, reynolds_type);
   comset();
-  cpi = cpcalc(n, qinv, qinf, minf);
+  const int point_count = foil.foil_shape.n;
+  cpi = cpcalc(point_count, qinv, qinf, minf);
   if (lvisc) {
-    cpv = cpcalc(n + nw, qvis, qinf, minf);
+    cpv = cpcalc(point_count + nw, qvis, qinf, minf);
   }
   const auto cl_result = clcalc(cmref);
   applyClComputation(cl_result);
