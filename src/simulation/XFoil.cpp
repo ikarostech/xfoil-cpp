@@ -76,8 +76,7 @@ Matrix2d XFoil::buildBodyToFreestreamRotation() const {
 }
 
 XFoil::XFoil()
-    : points(foil.foil_shape.points),
-      n(foil.foil_shape.n) {
+    : n(foil.foil_shape.n) {
   m_pOutStream = nullptr;
 
   // fortran seems to initializes variables to 0

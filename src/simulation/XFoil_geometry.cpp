@@ -37,15 +37,12 @@ bool XFoil::abcopy(Matrix2Xd copyFrom) {
     writeString(" XYWake: array size (IWX) too small.\n  Last wake point index reduced.");
     nw = IWX;
   }
-  Matrix2Xd foil_points = copyFrom.leftCols(n);
-  points = Matrix2Xd::Zero(2, IZX);
-  points.leftCols(n) = foil_points;
+  Matrix2Xd foil_points = Matrix2Xd::Zero(2, IZX);
+  foil_points.leftCols(n) = copyFrom.leftCols(n);
 
   initialize();  
   
   foil = Foil(foil_points, n);
-  points = Matrix2Xd::Zero(2, IZX);
-  points.leftCols(n) = foil_points;
   updateTrailingEdgeState();
   apanel.head(n) = apcalc(foil.foil_shape.points);
 
@@ -271,7 +268,7 @@ bool XFoil::xyWake() {
   foil.wake_shape.normal_vector.col(n) = Vector2d {tangent_vector.y(), -tangent_vector.x()};
   
   foil.wake_shape.points.col(n) = foil.edge_data.point_te + 0.0001 * tangent_vector.col(n);
-  points.col(n) = foil.wake_shape.points.col(n);
+  foil.foil_shape.points.col(n) = foil.wake_shape.points.col(n);
   foil.wake_shape.spline_length[n] = foil.wake_shape.spline_length[n - 1];
   //---- calculate streamfunction gradient components at first point
   Vector2d psi = {
@@ -291,7 +288,7 @@ bool XFoil::xyWake() {
     //------ set new point ds downstream of last point
     foil.wake_shape.points.col(i).x() = foil.wake_shape.points.col(i - 1).x() - ds * foil.wake_shape.normal_vector.col(i - 1).y();
     foil.wake_shape.points.col(i).y() = foil.wake_shape.points.col(i - 1).y() + ds * foil.wake_shape.normal_vector.col(i - 1).x();
-    points.col(i) = foil.wake_shape.points.col(i);
+    foil.foil_shape.points.col(i) = foil.wake_shape.points.col(i);
     foil.wake_shape.spline_length[i] = foil.wake_shape.spline_length[i - 1] + ds;
     if (i == n + nw - 1) {
       break;
