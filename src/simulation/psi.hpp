@@ -1,5 +1,8 @@
 #pragma once
+
 #include <Eigen/Core>
+
+#include "domain/foil.hpp"
 #include "infrastructure/xfoil_params.h"
 
 using namespace Eigen;
@@ -37,17 +40,18 @@ class PsiResult {
   }
 };
 
-PsiResult psilin(Matrix2Xd points, int i, Vector2d point, Vector2d normal_vector,
-                 bool siglin, const VectorXd& spline_length, int total_nodes,
+PsiResult psilin(const Foil& foil, int i, Vector2d point,
+                 Vector2d normal_vector, bool siglin, int total_nodes,
                  const Matrix2Xd& gamu, const Matrix2Xd& surface_vortex,
                  double alfa, double qinf, const VectorXd& apanel, bool sharp,
                  double ante, double dste, double aste);
-PsiResult pswlin(Matrix2Xd points, int i, Vector2d point, Vector2d normal_vector,
-                 int total_nodes, int wake_nodes, const VectorXd& apanel);
-PsiResult psisig(Matrix2Xd points, int iNode, int jNode, Vector2d point,
+PsiResult pswlin(const Foil& foil, int i, Vector2d point,
+                 Vector2d normal_vector, int total_nodes, int wake_nodes,
+                 const VectorXd& apanel);
+PsiResult psisig(const Foil& foil, int iNode, int jNode, Vector2d point,
                  Vector2d normal_vector, int total_nodes,
                  const VectorXd& apanel);
-PsiResult psi_te(Matrix2Xd points, int i, Vector2d normal_vector,
+PsiResult psi_te(const Foil& foil, int i, Vector2d normal_vector,
                  int total_nodes, const VectorXd& apanel, bool sharp,
                  double ante, double dste, double aste, const Matrix2Xd& gamu,
                  const Matrix2Xd& surface_vortex);

@@ -281,13 +281,13 @@ bool XFoil::xyWake() {
   foil.wake_shape.spline_length[point_count] = foil.wake_shape.spline_length[point_count - 1];
   //---- calculate streamfunction gradient components at first point
   Vector2d psi = {
-      psilin(foil.wake_shape.points, point_count, foil.wake_shape.points.col(point_count), {1.0, 0.0}, false,
-             foil.foil_shape.spline_length, point_count,
-             gamu, surface_vortex, alfa, qinf, apanel, sharp, ante, dste, aste)
+      psilin(foil, point_count, foil.wake_shape.points.col(point_count),
+             {1.0, 0.0}, false, point_count, gamu, surface_vortex, alfa, qinf,
+             apanel, sharp, ante, dste, aste)
           .psi_ni,
-      psilin(foil.wake_shape.points, point_count, foil.wake_shape.points.col(point_count), {0.0, 1.0}, false,
-             foil.foil_shape.spline_length, point_count,
-             gamu, surface_vortex, alfa, qinf, apanel, sharp, ante, dste, aste)
+      psilin(foil, point_count, foil.wake_shape.points.col(point_count),
+             {0.0, 1.0}, false, point_count, gamu, surface_vortex, alfa, qinf,
+             apanel, sharp, ante, dste, aste)
           .psi_ni};
   //---- set unit vector normal to wake at first point
   foil.wake_shape.normal_vector.col(point_count + 1) = -psi.normalized();
@@ -306,15 +306,13 @@ bool XFoil::xyWake() {
     }
 
     Vector2d psi2 = {
-        psilin(foil.wake_shape.points, i, foil.wake_shape.points.col(i), {1.0, 0.0}, false,
-                foil.wake_shape.spline_length, point_count,
-                gamu, surface_vortex, alfa, qinf, apanel, sharp, ante, dste,
-                aste)
+        psilin(foil, i, foil.wake_shape.points.col(i), {1.0, 0.0}, false,
+               point_count, gamu, surface_vortex, alfa, qinf, apanel, sharp,
+               ante, dste, aste)
             .psi_ni,
-        psilin(foil.wake_shape.points, i, foil.wake_shape.points.col(i), {0.0, 1.0}, false,
-                foil.wake_shape.spline_length, point_count,
-                gamu, surface_vortex, alfa, qinf, apanel, sharp, ante, dste,
-                aste)
+        psilin(foil, i, foil.wake_shape.points.col(i), {0.0, 1.0}, false,
+               point_count, gamu, surface_vortex, alfa, qinf, apanel, sharp,
+               ante, dste, aste)
             .psi_ni};
     foil.wake_shape.normal_vector.col(i + 1) = -psi2.normalized();
     apanel[i] = atan2(psi2.y(), psi2.x());

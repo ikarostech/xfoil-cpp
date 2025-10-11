@@ -7,13 +7,32 @@ static double cross2(const Vector2d& a, const Vector2d& b) {
   return a[0] * b[1] - a[1] * b[0];
 }
 
-PsiResult psilin(Matrix2Xd points, int iNode, Vector2d point,
-                 Vector2d normal_vector, bool siglin,
-                 const VectorXd& spline_length_values, int total_nodes,
+static const FoilShape& resolveFoilShape(const Foil& foil, int node_index,
+                                         int required_nodes) {
+  const bool has_wake = foil.wake_shape.n > 0;
+  const bool node_in_wake =
+      has_wake && node_index >= 0 && node_index >= foil.foil_shape.n &&
+      node_index < foil.wake_shape.n;
+  const bool requires_wake_nodes =
+      has_wake && required_nodes > foil.foil_shape.n;
+
+  if (node_in_wake || requires_wake_nodes) {
+    return foil.wake_shape;
+  }
+
+  return foil.foil_shape;
+}
+
+PsiResult psilin(const Foil& foil, int iNode, Vector2d point,
+                 Vector2d normal_vector, bool siglin, int total_nodes,
                  const Matrix2Xd& gamu_values,
                  const Matrix2Xd& surface_vortex_values, double alfa_value,
                  double qinf_value, const VectorXd& apanel_values, bool sharp,
                  double ante, double dste, double aste) {
+  const FoilShape& foil_shape = resolveFoilShape(foil, iNode, total_nodes);
+  const Matrix2Xd& points = foil_shape.points;
+  const VectorXd& spline_length_values = foil_shape.spline_length;
+
   PsiResult psi_result;
 
   //---- distance tolerance for determining if two points are the same
@@ -131,7 +150,7 @@ PsiResult psilin(Matrix2Xd points, int iNode, Vector2d point,
   if (siglin) {
     for (int jo = 0; jo < panels; ++jo) {
       if (!valid_panel(jo)) continue;
-      PsiResult sig_result = psisig(points, iNode, jo, point, normal_vector,
+      PsiResult sig_result = psisig(foil, iNode, jo, point, normal_vector,
                                     total_nodes, apanel_values);
       psi_result = PsiResult::sum(psi_result, sig_result);
     }
@@ -139,7 +158,7 @@ PsiResult psilin(Matrix2Xd points, int iNode, Vector2d point,
 
   if ((points.col(total_nodes - 1) - points.col(0)).norm() > seps) {
     PsiResult te_result =
-        psi_te(points, iNode, normal_vector, total_nodes, apanel_values, sharp,
+        psi_te(foil, iNode, normal_vector, total_nodes, apanel_values, sharp,
                ante, dste, aste, gamu_values, surface_vortex_values);
     psi_result = PsiResult::sum(psi_result, te_result);
   }
@@ -157,9 +176,12 @@ PsiResult psilin(Matrix2Xd points, int iNode, Vector2d point,
   return psi_result;
 }
 
-PsiResult psisig(Matrix2Xd points, int iNode, int jo, Vector2d point,
+PsiResult psisig(const Foil& foil, int iNode, int jo, Vector2d point,
                  Vector2d normal_vector, int total_nodes,
                  const VectorXd& apanel_values) {
+  const FoilShape& foil_shape = resolveFoilShape(foil, iNode, total_nodes);
+  const Matrix2Xd& points = foil_shape.points;
+
   PsiResult psi_result;
   psi_result.psi = 0;
   psi_result.psi_ni = 0;
@@ -280,11 +302,14 @@ PsiResult psisig(Matrix2Xd points, int iNode, int jo, Vector2d point,
   return psi_result;
 }
 
-PsiResult psi_te(Matrix2Xd points, int iNode, Vector2d normal_vector,
+PsiResult psi_te(const Foil& foil, int iNode, Vector2d normal_vector,
                  int total_nodes, const VectorXd& apanel_values, bool sharp,
                  double ante, double dste, double aste,
                  const Matrix2Xd& gamu_values,
                  const Matrix2Xd& surface_vortex_values) {
+  const FoilShape& foil_shape = resolveFoilShape(foil, iNode, total_nodes);
+  const Matrix2Xd& points = foil_shape.points;
+
   const Vector2d point = points.col(iNode);
   PsiResult psi_result;
 
@@ -392,9 +417,14 @@ PsiResult psi_te(Matrix2Xd points, int iNode, Vector2d normal_vector,
  *			airfoil:  1   < i < n
  *			wake:	  n+1 < i < n+nw
  * ----------------------------------------------------------------------- */
-PsiResult pswlin(Matrix2Xd points, int i, Vector2d point,
+PsiResult pswlin(const Foil& foil, int i, Vector2d point,
                  Vector2d normal_vector, int total_nodes, int wake_nodes,
                  const VectorXd& apanel_values) {
+  const int required_nodes = total_nodes + wake_nodes;
+  const FoilShape& foil_shape =
+      resolveFoilShape(foil, i, required_nodes);
+  const Matrix2Xd& points = foil_shape.points;
+
   PsiResult psi_result;
   psi_result.psi = 0.0;
   psi_result.psi_ni = 0.0;
