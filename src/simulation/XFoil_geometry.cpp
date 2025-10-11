@@ -37,16 +37,17 @@ bool XFoil::abcopy(Matrix2Xd copyFrom) {
     writeString(" XYWake: array size (IWX) too small.\n  Last wake point index reduced.");
     nw = IWX;
   }
+  Matrix2Xd foil_points = copyFrom.leftCols(n);
   points = Matrix2Xd::Zero(2, IZX);
-  for (int i = 0; i < n; i++) {
-    points.col(i) = copyFrom.col(i);
-  }
+  points.leftCols(n) = foil_points;
 
   initialize();  
   
-  foil = Foil(points, n);
+  foil = Foil(foil_points, n);
+  points = Matrix2Xd::Zero(2, IZX);
+  points.leftCols(n) = foil_points;
   updateTrailingEdgeState();
-  apanel.head(n) = apcalc(points);
+  apanel.head(n) = apcalc(foil.foil_shape.points);
 
   lgamu = false;
   lwake = false;
@@ -183,7 +184,7 @@ XFoil::TrailingEdgeData XFoil::tecalc(const Matrix2Xd& points,
 }
 
 void XFoil::updateTrailingEdgeState() {
-  const auto data = tecalc(points, foil.foil_shape.dpoints_ds, surface_vortex,
+  const auto data = tecalc(foil.foil_shape.points, foil.foil_shape.dpoints_ds, surface_vortex,
                            n, foil.edge_data.chord);
   ante = data.ante;
   aste = data.aste;
@@ -274,10 +275,10 @@ bool XFoil::xyWake() {
   foil.wake_shape.spline_length[n] = foil.wake_shape.spline_length[n - 1];
   //---- calculate streamfunction gradient components at first point
   Vector2d psi = {
-      psilin(points, n, points.col(n), {1.0, 0.0}, false, foil.foil_shape.spline_length, n,
+      psilin(foil.wake_shape.points, n, foil.wake_shape.points.col(n), {1.0, 0.0}, false, foil.foil_shape.spline_length, n,
              gamu, surface_vortex, alfa, qinf, apanel, sharp, ante, dste, aste)
           .psi_ni,
-      psilin(points, n, points.col(n), {0.0, 1.0}, false, foil.foil_shape.spline_length, n,
+      psilin(foil.wake_shape.points, n, foil.wake_shape.points.col(n), {0.0, 1.0}, false, foil.foil_shape.spline_length, n,
              gamu, surface_vortex, alfa, qinf, apanel, sharp, ante, dste, aste)
           .psi_ni};
   //---- set unit vector normal to wake at first point
@@ -288,8 +289,8 @@ bool XFoil::xyWake() {
   for (int i = n + 1; i < n + nw; i++) {
     const double ds = wake_spacing[i - n] - wake_spacing[i - n - 1];
     //------ set new point ds downstream of last point
-    foil.wake_shape.points.col(i).x() = points.col(i - 1).x() - ds * foil.wake_shape.normal_vector.col(i - 1).y();
-    foil.wake_shape.points.col(i).y() = points.col(i - 1).y() + ds * foil.wake_shape.normal_vector.col(i - 1).x();
+    foil.wake_shape.points.col(i).x() = foil.wake_shape.points.col(i - 1).x() - ds * foil.wake_shape.normal_vector.col(i - 1).y();
+    foil.wake_shape.points.col(i).y() = foil.wake_shape.points.col(i - 1).y() + ds * foil.wake_shape.normal_vector.col(i - 1).x();
     points.col(i) = foil.wake_shape.points.col(i);
     foil.wake_shape.spline_length[i] = foil.wake_shape.spline_length[i - 1] + ds;
     if (i == n + nw - 1) {
@@ -297,11 +298,11 @@ bool XFoil::xyWake() {
     }
 
     Vector2d psi2 = {
-        psilin(points, i, points.col(i), {1.0, 0.0}, false, foil.wake_shape.spline_length, n,
+        psilin(foil.wake_shape.points, i, foil.wake_shape.points.col(i), {1.0, 0.0}, false, foil.wake_shape.spline_length, n,
                 gamu, surface_vortex, alfa, qinf, apanel, sharp, ante, dste,
                 aste)
             .psi_ni,
-        psilin(points, i, points.col(i), {0.0, 1.0}, false, foil.wake_shape.spline_length, n,
+        psilin(foil.wake_shape.points, i, foil.wake_shape.points.col(i), {0.0, 1.0}, false, foil.wake_shape.spline_length, n,
                 gamu, surface_vortex, alfa, qinf, apanel, sharp, ante, dste,
                 aste)
             .psi_ni};

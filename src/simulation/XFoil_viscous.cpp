@@ -114,7 +114,7 @@ bool XFoil::qdcalc() {
   //---- set up coefficient matrix of dpsi/dm on airfoil surface
   for (int i = 0; i < n; i++) {
     PsiResult psi_result =
-        pswlin(points, i, points.col(i), foil.foil_shape.normal_vector.col(i), n, nw, apanel);
+        pswlin(foil.foil_shape.points, i, foil.foil_shape.points.col(i), foil.foil_shape.normal_vector.col(i), n, nw, apanel);
     bij.row(i).segment(n, nw) = -psi_result.dzdm.segment(n, nw).transpose();
   }
 
@@ -137,14 +137,14 @@ bool XFoil::qdcalc() {
     int iw = i - n;
     //------ airfoil contribution at wake panel node
     PsiResult psi_result =
-        psilin(points, i, points.col(i), foil.wake_shape.normal_vector.col(i), true,
+        psilin(foil.wake_shape.points, i, foil.wake_shape.points.col(i), foil.wake_shape.normal_vector.col(i), true,
                foil.wake_shape.spline_length, n, gamu, surface_vortex, alfa, qinf, apanel,
                sharp, ante, dste, aste);
     cij.row(iw) = psi_result.dqdg.head(n).transpose();
     dij.row(i).head(n) = psi_result.dqdm.head(n).transpose();
     //------ wake contribution
     psi_result =
-        pswlin(points, i, points.col(i), foil.wake_shape.normal_vector.col(i), n, nw, apanel);
+        pswlin(foil.wake_shape.points, i, foil.wake_shape.points.col(i), foil.wake_shape.normal_vector.col(i), n, nw, apanel);
     dij.row(i).segment(n, nw) = psi_result.dqdm.segment(n, nw).transpose();
   }
 
@@ -215,7 +215,7 @@ Matrix2Xd XFoil::qwcalc() {
 
   for (int i = n + 1; i < n + nw; i++) {
     updated_qinvu.col(i) =
-        psilin(points, i, points.col(i), foil.wake_shape.normal_vector.col(i), false,
+        psilin(foil.wake_shape.points, i, foil.wake_shape.points.col(i), foil.wake_shape.normal_vector.col(i), false,
                foil.wake_shape.spline_length, n, gamu, surface_vortex, alfa, qinf, apanel,
                sharp, ante, dste, aste)
             .qtan;
@@ -361,7 +361,7 @@ XFoil::ClContributions XFoil::computeClFromQtan(const VectorXd &qnew,
     const double cpg2_ac = cp_next.cp_velocity_derivative;
 
     const Vector2d dpoint =
-        rotateMatrix * (points.col(ip) - points.col(i));
+        rotateMatrix * (foil.foil_shape.points.col(ip) - foil.foil_shape.points.col(i));
 
     const double ag = 0.5 * (cpg2 + cpg1);
     const double ag_ms = 0.5 * (cpg2_ms + cpg1_ms);
