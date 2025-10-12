@@ -160,14 +160,18 @@ class XFoil {
     double aste = 0.0;
     double dste = 0.0;
     bool sharp = false;
+  };
+  struct TrailingEdgeStrength {
     double sigte = 0.0;
     double gamte = 0.0;
   };
   static TrailingEdgeData tecalc(const Matrix2Xd& points,
                                  const Matrix2Xd& dpoints_ds,
-                                 const Matrix2Xd& surface_vortex,
                                  int n,
                                  double chord);
+  static TrailingEdgeStrength computeTrailingEdgeStrength(const TrailingEdgeData& data,
+                                                          const Matrix2Xd& surface_vortex,
+                                                          int n);
   void updateTrailingEdgeState();
   bool bldif(int flowRegimeType);
   // ---- Helper routines used by bldif ----

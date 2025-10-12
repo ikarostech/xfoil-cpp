@@ -145,7 +145,6 @@ double XFoil::lefind(const Matrix2Xd &points, const Matrix2Xd &dpoints_ds, const
 
 XFoil::TrailingEdgeData XFoil::tecalc(const Matrix2Xd& points,
                                       const Matrix2Xd& dpoints_ds,
-                                      const Matrix2Xd& surface_vortex,
                                       int n,
                                       double chord) {
   TrailingEdgeData data{};
@@ -161,10 +160,22 @@ XFoil::TrailingEdgeData XFoil::tecalc(const Matrix2Xd& points,
   data.aste = tevec.dot(dpoint_ds_te);
   data.dste = tevec.norm();
 
-  const bool is_sharp = data.dste < 0.0001 * chord;
+  data.sharp = data.dste < 0.0001 * chord;
+
+  return data;
+}
+
+XFoil::TrailingEdgeStrength XFoil::computeTrailingEdgeStrength(const TrailingEdgeData& data,
+                                                               const Matrix2Xd& surface_vortex,
+                                                               int n) {
+  TrailingEdgeStrength strength{};
+  if (n < 2) {
+    return strength;
+  }
+
   double scs = 0.0;
   double sds = 0.0;
-  if (is_sharp) {
+  if (data.sharp) {
     scs = 1.0;
     sds = 0.0;
   } else if (data.dste != 0.0) {
@@ -173,27 +184,27 @@ XFoil::TrailingEdgeData XFoil::tecalc(const Matrix2Xd& points,
     sds = data.aste * inv_dste;
   }
 
-  double surface_delta = 0.0;
   if (surface_vortex.rows() > 0 && surface_vortex.cols() >= n) {
-    surface_delta = surface_vortex(0, 0) - surface_vortex(0, n - 1);
+    const double surface_delta = surface_vortex(0, 0) - surface_vortex(0, n - 1);
+    strength.sigte = 0.5 * surface_delta * scs;
+    strength.gamte = -0.5 * surface_delta * sds;
   }
 
-  data.sharp = is_sharp;
-  data.sigte = 0.5 * surface_delta * scs;
-  data.gamte = -0.5 * surface_delta * sds;
-
-  return data;
+  return strength;
 }
 
 void XFoil::updateTrailingEdgeState() {
-  const auto data = tecalc(foil.foil_shape.points, foil.foil_shape.dpoints_ds, surface_vortex,
-                           foil.foil_shape.n, foil.edge.chord);
+  const auto data =
+      tecalc(foil.foil_shape.points, foil.foil_shape.dpoints_ds, foil.foil_shape.n,
+             foil.edge.chord);
   ante = data.ante;
   aste = data.aste;
   dste = data.dste;
   sharp = data.sharp;
-  sigte = data.sigte;
-  gamte = data.gamte;
+  const auto strength =
+      computeTrailingEdgeStrength(data, surface_vortex, foil.foil_shape.n);
+  sigte = strength.sigte;
+  gamte = strength.gamte;
 }
 
 VectorXd XFoil::setexp(double ds1, double smax, int nn) const {
