@@ -12,6 +12,10 @@ class Edge {
     Eigen::Vector2d point_te;
     double chord;
     double sle;
+    double ante;
+    double aste;
+    double dste;
+    bool sharp;
 
   private:
     static double lefind(const Eigen::Matrix2Xd& points,

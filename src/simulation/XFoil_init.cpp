@@ -111,7 +111,8 @@ void XFoil::initializeDataStructures() {
 void XFoil::resetFlags() {
   lgamu = lvisc = lwake = lblini = lipan = false;
   lqaij = ladij = lwdij = lvconv = false;
-  sharp = lalfa = false;
+  lalfa = false;
+  foil.edge.sharp = false;
   trforc = simi = tran = turb = wake = trfree = false;
 }
 
@@ -134,13 +135,15 @@ void XFoil::resetVariables() {
   amcrit = 0.0;
   auto& cache = ensureInitState(this);
   cache.amax = 0.0;
-  alfa = rmxbl = rmsbl = rlx = ante = clspec = 0.0;
+  alfa = rmxbl = rmsbl = rlx = clspec = 0.0;
+  foil.edge.ante = 0.0;
+  foil.edge.aste = 0.0;
+  foil.edge.dste = 0.0;
   minf = reinf = 0.0;
   minf_cl = reinf_cl = 0.0;
   cl_alf = cl_msq = 0.0;
   tklam = tkl_msq = 0.0;
   sst = sst_go = sst_gp = 0.0;
-  dste = aste = 0.0;
   cfm = cfm_ms = cfm_re = 0.0;
   cfm_u1 = cfm_t1 = cfm_d1 = 0.0;
   cfm_u2 = cfm_t2 = cfm_d2 = 0.0;

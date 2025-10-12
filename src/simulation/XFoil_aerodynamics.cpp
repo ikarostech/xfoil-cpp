@@ -211,7 +211,8 @@ bool XFoil::ggcalc() {
     PsiResult psi_result =
         psilin(foil, i, foil.foil_shape.points.col(i),
                foil.foil_shape.normal_vector.col(i), true, point_count, gamu,
-               surface_vortex, alfa, qinf, apanel, sharp, ante, dste, aste);
+               surface_vortex, alfa, qinf, apanel, foil.edge.sharp,
+               foil.edge.ante, foil.edge.dste, foil.edge.aste);
 
     const Vector2d res = qinf * Vector2d{foil.foil_shape.points.col(i).y(),
                                          -foil.foil_shape.points.col(i).x()};
@@ -240,7 +241,7 @@ bool XFoil::ggcalc() {
   //---- set up Kutta condition (no direct source influence)
   bij.row(point_count).head(point_count) = VectorXd::Zero(point_count);
 
-  if (sharp) {
+  if (foil.edge.sharp) {
     //----- set zero internal velocity in TE corner
 
     //----- set TE bisector angle
@@ -266,7 +267,8 @@ bool XFoil::ggcalc() {
     //----- set velocity component along bisector line
     PsiResult psi_result = psilin(foil, -1, bis, normal_bis, true, point_count,
                                   gamu, surface_vortex, alfa, qinf, apanel,
-                                  sharp, ante, dste, aste);
+                                  foil.edge.sharp, foil.edge.ante, foil.edge.dste,
+                                  foil.edge.aste);
 
     //----- dres/dgamma
     dpsi_dgam.row(point_count - 1).head(point_count) = psi_result.dzdg.head(point_count);

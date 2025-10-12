@@ -141,7 +141,8 @@ bool XFoil::qdcalc() {
     PsiResult psi_result =
         psilin(foil, i, foil.wake_shape.points.col(i),
                foil.wake_shape.normal_vector.col(i), true, point_count, gamu,
-               surface_vortex, alfa, qinf, apanel, sharp, ante, dste, aste);
+               surface_vortex, alfa, qinf, apanel, foil.edge.sharp,
+               foil.edge.ante, foil.edge.dste, foil.edge.aste);
     cij.row(iw) = psi_result.dqdg.head(point_count).transpose();
     dij.row(i).head(point_count) = psi_result.dqdm.head(point_count).transpose();
     //------ wake contribution
@@ -223,7 +224,8 @@ Matrix2Xd XFoil::qwcalc() {
     updated_qinvu.col(i) =
         psilin(foil, i, foil.wake_shape.points.col(i),
                foil.wake_shape.normal_vector.col(i), false, point_count, gamu,
-               surface_vortex, alfa, qinf, apanel, sharp, ante, dste, aste)
+               surface_vortex, alfa, qinf, apanel, foil.edge.sharp,
+               foil.edge.ante, foil.edge.dste, foil.edge.aste)
             .qtan;
   }
 

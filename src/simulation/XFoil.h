@@ -155,23 +155,6 @@ class XFoil {
   };
   AxResult axset(double hk1, double thet1, double rt1, double a1, double hk2,
     double thet2, double rt2, double a2, double acrit);
-  struct TrailingEdgeData {
-    double ante = 0.0;
-    double aste = 0.0;
-    double dste = 0.0;
-    bool sharp = false;
-  };
-  struct TrailingEdgeStrength {
-    double sigte = 0.0;
-    double gamte = 0.0;
-  };
-  static TrailingEdgeData tecalc(const Matrix2Xd& points,
-                                 const Matrix2Xd& dpoints_ds,
-                                 int n,
-                                 double chord);
-  static TrailingEdgeStrength computeTrailingEdgeStrength(const TrailingEdgeData& data,
-                                                          const Matrix2Xd& surface_vortex,
-                                                          int n);
   void updateTrailingEdgeState();
   bool bldif(int flowRegimeType);
   // ---- Helper routines used by bldif ----
@@ -433,7 +416,7 @@ class XFoil {
 
   double cl, cm, cd, acrit;
   VectorXd cpi, cpv;
-  double alfa, avisc, awake, reinf1, qinf, mvisc, rmsbl, ante;
+  double alfa, avisc, awake, reinf1, qinf, mvisc, rmsbl;
   double minf, reinf;
   bool lalfa, lvisc, lvconv, lwake;
   double qgamm[IBX + 1];
@@ -462,7 +445,7 @@ class XFoil {
 
   double minf_cl, reinf_cl;
 
-  bool lgamu, sharp, lqaij, ladij, lwdij;
+  bool lgamu, lqaij, ladij, lwdij;
 
   const double sccon = 5.6, gacon = 6.70, gbcon = 0.75, gbc0 = 0.60, gbc1 = 0.40, gccon = 18.0, dlcon = 0.9, ctcon = 0.5/(gacon*gacon * gbcon);
 
@@ -480,7 +463,6 @@ class XFoil {
   Matrix2Xd gamu;
   VectorXd apanel;
   double sst, sst_go, sst_gp, gamte, sigte;
-  double dste, aste;
   Matrix2Xd qinvu;
   VectorXd qinv, qinv_a, qvis;
   FullPivLU<MatrixXd> psi_gamma_lu;

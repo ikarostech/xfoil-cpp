@@ -237,7 +237,7 @@ bool XFoil::performMixedModeNewtonIteration(int side, int ibl, int itrold,
 
     if (ibl == iblte.get(side) + 1) {
       ctx.tte = thet.get(1)[iblte.top] + thet.get(2)[iblte.bottom];
-      ctx.dte = dstr.get(1)[iblte.top] + dstr.get(2)[iblte.bottom] + ante;
+      ctx.dte = dstr.get(1)[iblte.top] + dstr.get(2)[iblte.bottom] + foil.edge.ante;
       ctx.cte = (ctau.get(1)[iblte.top] * thet.get(1)[iblte.top] +
                  ctau.get(2)[iblte.bottom] * thet.get(2)[iblte.bottom]) /
                 ctx.tte;
@@ -550,7 +550,7 @@ bool XFoil::mrchue() {
           tte = thet.get(1)[iblte.top] +
                 thet.get(2)[iblte.bottom];
           dte = dstr.get(1)[iblte.top] +
-                dstr.get(2)[iblte.bottom] + ante;
+                dstr.get(2)[iblte.bottom] + foil.edge.ante;
           cte = (ctau.get(1)[iblte.top] *
                      thet.get(1)[iblte.top] +
                  ctau.get(2)[iblte.bottom] *
@@ -764,7 +764,7 @@ bool XFoil::mrchue() {
         thi = thet.get(1)[iblte.top] +
               thet.get(2)[iblte.bottom];
         dsi = dstr.get(1)[iblte.top] +
-              dstr.get(2)[iblte.bottom] + ante;
+              dstr.get(2)[iblte.bottom] + foil.edge.ante;
       }
     }
   }
@@ -980,7 +980,7 @@ jvte2 = isys.bottom[iblte.bottom];
         tte = thet.get(1)[iblte.top] +
               thet.get(2)[iblte.bottom];
         dte = dstr.get(1)[iblte.top] +
-              dstr.get(2)[iblte.bottom] + ante;
+              dstr.get(2)[iblte.bottom] + foil.edge.ante;
         cte = (ctau.get(1)[iblte.top] *
                    thet.get(1)[iblte.top] +
                ctau.get(2)[iblte.bottom] *
@@ -1331,7 +1331,7 @@ bool XFoil::stmove() {
 }
 
 
-// moved to XFoil_geometry.cpp: tecalc()
+// trailing-edge calculations handled by Edge::updateFromFoilShape()
 
 bool XFoil::tesys(double cte, double tte, double dte) {
   //--------------------------------------------------------
@@ -2063,7 +2063,7 @@ bool XFoil::xicalc() {
   const double aa = 3.0 + telrat * dwdxte;
   const double bb = -2.0 - telrat * dwdxte;
 
-  if (sharp) {
+  if (foil.edge.sharp) {
     for (int iw0 = 0; iw0 < nw; iw0++)
       wgap[iw0] = 0.0;
   }
@@ -2074,10 +2074,10 @@ bool XFoil::xicalc() {
       const int te_bot_0b = iblte.bottom; // 0-based TE for array indexing
       const double zn = 1.0 - (xssi.bottom[te_bot_0b + (iw0 + 1)] -
                                xssi.bottom[te_bot_0b]) /
-                                  (telrat * ante);
+                                (telrat * foil.edge.ante);
       wgap[iw0] = 0.0;
       if (zn >= 0.0)
-        wgap[iw0] = ante * (aa + bb * zn) * zn * zn;
+        wgap[iw0] = foil.edge.ante * (aa + bb * zn) * zn * zn;
     }
   }
   return true;

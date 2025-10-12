@@ -5,13 +5,25 @@
 #include <algorithm>
 #include <cmath>
 
+namespace {
+// 2D cross product (z-component)
+inline double cross2(const Eigen::Vector2d& a, const Eigen::Vector2d& b) {
+  return a[0] * b[1] - a[1] * b[0];
+}
+} // namespace
+
 Edge::Edge()
     : point_le(Eigen::Vector2d::Zero()),
       point_te(Eigen::Vector2d::Zero()),
       chord(0.0),
-      sle(0.0) {}
+      sle(0.0),
+      ante(0.0),
+      aste(0.0),
+      dste(0.0),
+      sharp(false) {}
 
 Edge::Edge(const FoilShape& foilShape) : Edge() {
+
   sle = lefind(foilShape.points,
                foilShape.dpoints_ds,
                foilShape.spline_length.head(foilShape.n),
@@ -29,6 +41,18 @@ Edge::Edge(const FoilShape& foilShape) : Edge() {
                                foilShape.n);
   point_te = 0.5 * (foilShape.points.col(0) + foilShape.points.col(foilShape.n - 1));
   chord = (point_le - point_te).norm();
+
+  const Eigen::Vector2d tevec =
+      foilShape.points.col(0) - foilShape.points.col(foilShape.n - 1);
+  const Eigen::Vector2d dpoint_ds_te =
+      0.5 * (-foilShape.dpoints_ds.col(0) +
+             foilShape.dpoints_ds.col(foilShape.n - 1));
+
+  ante = cross2(dpoint_ds_te, tevec);
+  aste = tevec.dot(dpoint_ds_te);
+  dste = tevec.norm();
+
+  sharp = dste < 0.0001 * chord;
 }
 
 double Edge::lefind(const Eigen::Matrix2Xd& points,

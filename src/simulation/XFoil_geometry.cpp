@@ -70,7 +70,7 @@ VectorXd XFoil::apcalc(Matrix2Xd points) {
     result[i] = atan2(diff.x(), -diff.y());
   }
   //---- TE panel
-  if (sharp) {
+  if (foil.edge.sharp) {
     result[point_count - 1] = std::numbers::pi;
   }
   return result;
@@ -143,68 +143,35 @@ double XFoil::lefind(const Matrix2Xd &points, const Matrix2Xd &dpoints_ds, const
   return sle_initial;
 }
 
-XFoil::TrailingEdgeData XFoil::tecalc(const Matrix2Xd& points,
-                                      const Matrix2Xd& dpoints_ds,
-                                      int n,
-                                      double chord) {
-  TrailingEdgeData data{};
-  if (n < 2 || points.cols() < n || dpoints_ds.cols() < n) {
-    return data;
-  }
+void XFoil::updateTrailingEdgeState() {
+  const int node_count = foil.foil_shape.n;
 
-  const Vector2d tevec = points.col(0) - points.col(n - 1);
-  const Vector2d dpoint_ds_te =
-      0.5 * (-dpoints_ds.col(0) + dpoints_ds.col(n - 1));
-
-  data.ante = cross2(dpoint_ds_te, tevec);
-  data.aste = tevec.dot(dpoint_ds_te);
-  data.dste = tevec.norm();
-
-  data.sharp = data.dste < 0.0001 * chord;
-
-  return data;
-}
-
-XFoil::TrailingEdgeStrength XFoil::computeTrailingEdgeStrength(const TrailingEdgeData& data,
-                                                               const Matrix2Xd& surface_vortex,
-                                                               int n) {
-  TrailingEdgeStrength strength{};
-  if (n < 2) {
-    return strength;
+  if (node_count < 2) {
+    sigte = 0.0;
+    gamte = 0.0;
+    return;
   }
 
   double scs = 0.0;
   double sds = 0.0;
-  if (data.sharp) {
+  if (foil.edge.sharp) {
     scs = 1.0;
     sds = 0.0;
-  } else if (data.dste != 0.0) {
-    const double inv_dste = 1.0 / data.dste;
-    scs = data.ante * inv_dste;
-    sds = data.aste * inv_dste;
+  } else if (foil.edge.dste != 0.0) {
+    const double inv_dste = 1.0 / foil.edge.dste;
+    scs = foil.edge.ante * inv_dste;
+    sds = foil.edge.aste * inv_dste;
   }
 
-  if (surface_vortex.rows() > 0 && surface_vortex.cols() >= n) {
-    const double surface_delta = surface_vortex(0, 0) - surface_vortex(0, n - 1);
-    strength.sigte = 0.5 * surface_delta * scs;
-    strength.gamte = -0.5 * surface_delta * sds;
+  if (surface_vortex.rows() > 0 && surface_vortex.cols() >= node_count) {
+    const double surface_delta =
+        surface_vortex(0, 0) - surface_vortex(0, node_count - 1);
+    sigte = 0.5 * surface_delta * scs;
+    gamte = -0.5 * surface_delta * sds;
+  } else {
+    sigte = 0.0;
+    gamte = 0.0;
   }
-
-  return strength;
-}
-
-void XFoil::updateTrailingEdgeState() {
-  const auto data =
-      tecalc(foil.foil_shape.points, foil.foil_shape.dpoints_ds, foil.foil_shape.n,
-             foil.edge.chord);
-  ante = data.ante;
-  aste = data.aste;
-  dste = data.dste;
-  sharp = data.sharp;
-  const auto strength =
-      computeTrailingEdgeStrength(data, surface_vortex, foil.foil_shape.n);
-  sigte = strength.sigte;
-  gamte = strength.gamte;
 }
 
 VectorXd XFoil::setexp(double ds1, double smax, int nn) const {
@@ -294,11 +261,13 @@ bool XFoil::xyWake() {
   Vector2d psi = {
       psilin(foil, point_count, foil.wake_shape.points.col(point_count),
              {1.0, 0.0}, false, point_count, gamu, surface_vortex, alfa, qinf,
-             apanel, sharp, ante, dste, aste)
+             apanel, foil.edge.sharp, foil.edge.ante, foil.edge.dste,
+             foil.edge.aste)
           .psi_ni,
       psilin(foil, point_count, foil.wake_shape.points.col(point_count),
              {0.0, 1.0}, false, point_count, gamu, surface_vortex, alfa, qinf,
-             apanel, sharp, ante, dste, aste)
+             apanel, foil.edge.sharp, foil.edge.ante, foil.edge.dste,
+             foil.edge.aste)
           .psi_ni};
   //---- set unit vector normal to wake at first point
   foil.wake_shape.normal_vector.col(point_count + 1) = -psi.normalized();
@@ -318,12 +287,12 @@ bool XFoil::xyWake() {
 
     Vector2d psi2 = {
         psilin(foil, i, foil.wake_shape.points.col(i), {1.0, 0.0}, false,
-               point_count, gamu, surface_vortex, alfa, qinf, apanel, sharp,
-               ante, dste, aste)
+               point_count, gamu, surface_vortex, alfa, qinf, apanel,
+               foil.edge.sharp, foil.edge.ante, foil.edge.dste, foil.edge.aste)
             .psi_ni,
         psilin(foil, i, foil.wake_shape.points.col(i), {0.0, 1.0}, false,
-               point_count, gamu, surface_vortex, alfa, qinf, apanel, sharp,
-               ante, dste, aste)
+               point_count, gamu, surface_vortex, alfa, qinf, apanel,
+               foil.edge.sharp, foil.edge.ante, foil.edge.dste, foil.edge.aste)
             .psi_ni};
     foil.wake_shape.normal_vector.col(i + 1) = -psi2.normalized();
     apanel[i] = atan2(psi2.y(), psi2.x());
