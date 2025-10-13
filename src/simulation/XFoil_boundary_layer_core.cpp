@@ -5,89 +5,6 @@
 #include <cmath>
 using namespace Eigen;
 
-
-/** ---------------------------------------------------
- *      variable initialization/default routine.
- * --------------------------------------------------- */
-// moved to XFoil_init.cpp: initialize()
-
-/** -------------------------------------------------------
- * @brief Allocate and zero out large data containers.
- * ------------------------------------------------------- */
-// moved to XFoil_init.cpp: initializeDataStructures()
-
-/** -------------------------------------------------------
- * @brief Reset boolean state flags to defaults.
- * ------------------------------------------------------- */
-// moved to XFoil_init.cpp: resetFlags()
-
-/** -------------------------------------------------------
- * @brief Reset scalar state variables to default values.
- * ------------------------------------------------------- */
-// moved to XFoil_init.cpp: resetVariables()
-
-// moved to XFoil_boundary.cpp: computeShapeParameters()
-
-/**
- * @brief Compute shear and skin friction coefficients.
- *
- * Determines the equilibrium shear coefficient (cq) and the
- * skin friction coefficient (cf) for the current flow regime.
- * Sensitivities with respect to the primary variables are also
- * accumulated in @p ref.
- *
- * @param ref           Boundary layer data container updated with the results.
- * @param flowRegimeType Flow regime type (1=laminar, 2=turbulent, 3=wake).
- */
-// moved to XFoil_boundary.cpp: computeCoefficients()
-
-/**
- * @brief Compute dissipation and boundary-layer thickness.
- *
- * Calculates the dissipation coefficient and boundary-layer thickness
- * based on the current flow regime.  This routine also accounts for
- * wake modifications and adds turbulent outer-layer contributions when
- * applicable.  Resulting derivatives are stored in @p ref.
- *
- * @param ref           Boundary layer data container updated with the results.
- * @param flowRegimeType Flow regime type (1=laminar, 2=turbulent, 3=wake).
- */
-// moved to XFoil_boundary.cpp: computeDissipationAndThickness()
-
-// moved to XFoil_geometry.cpp: abcopy()
-
-// moved to XFoil_geometry.cpp: apcalc()
-
-/** -------------------------------------------------------------
- *     atan2 function with branch cut checking.
- *
- *     increments position angle of point x,y from some previous
- *     value thold due to a change in position, ensuring that the
- *     position change does not cross the atan2 branch cut
- *     (which is in the -x direction).  for example:
- *
- *       atanc( -1.0 , -1.0 , 0.75*PI )  returns  1.25*PI , whereas
- *       atan2( -1.0 , -1.0 )            returns  -.75*PI .
- *
- *     typically, atanc is used to fill an array of angles:
- *
- *        theta(1) = atan2( y(1) , x(1) )
- *        do i=2, n
- *          theta[i] = atanc( y[i] , x[i] , theta(i-1) )
- *        end do
- *
- *     this will prevent the angle array theta(i) from jumping by
- *     +/- 2 pi when the path x(i),y(i) crosses the negative x axis.
- *
- *     input:
- *       x,y     point position coordinates
- *       thold   position angle of nearby point
- *
- *     output:
- *       atanc   position angle of x,y
- * -------------------------------------------------------------- */
-// moved to XFoil_geometry.cpp: atanc()
-
 /** ----------------------------------------------------------
  *      returns average amplification ax over interval 1..2
  * ----------------------------------------------------------- */
@@ -153,40 +70,6 @@ XFoil::AxResult XFoil::axset(double hk1, double t1, double rt1, double a1,
 
   return result;
 }
-
-
-/** -----------------------------------------------------------
- *     sets up the newton system coefficients and residuals
- *
- *         flowRegimeType = 0 :  similarity station
- *         flowRegimeType = 1 :  laminar interval
- *         flowRegimeType = 2 :  turbulent interval
- *         flowRegimeType = 3 :  wake interval
- *
- *      this routine knows nothing about a transition interval,
- *      which is taken care of by trdif.
- * ------------------------------------------------------------ */
-// moved to XFoil_bldif.cpp: bldif()
-
-/**
- * @brief Build laminar amplification equation coefficients.
- */
-// moved to XFoil_bldif.cpp: bldifLaminar()
-
-/**
- * @brief Build turbulent or wake shear lag equation coefficients.
- */
-// moved to XFoil_bldif.cpp: bldifTurbulent()
-
-/**
- * @brief Build momentum equation coefficients.
- */
-// moved to XFoil_bldif.cpp: bldifMomentum()
-
-/**
- * @brief Build shape parameter equation coefficients.
- */
-// moved to XFoil_bldif.cpp: bldifShape()
 
 bool XFoil::blkin(BoundaryLayerState& state) {
   //----------------------------------------------------------
@@ -339,29 +222,6 @@ bool XFoil::blprv(double xsi, double ami, double cti, double thi, double dsi,
   return blprv(boundaryLayerState, xsi, ami, cti, thi, dsi, dswaki, uei);
 }
 
-
-/** -----------------------------------------------------------------
- *      custom solver for coupled viscous-inviscid newton system:
- *
- *        a  |  |  .  |  |  .  |    d       r       s
- *        b  a  |  .  |  |  .  |    d       r       s
- *        |  b  a  .  |  |  .  |    d       r       s
- *        .  .  .  .  |  |  .  |    d   =   r - dre s
- *        |  |  |  b  a  |  .  |    d       r       s
- *        |  z  |  |  b  a  .  |    d       r       s
- *        .  .  .  .  .  .  .  |    d       r       s
- *        |  |  |  |  |  |  b  a    d       r       s
- *
- *       a, b, z  3x3  blocks containing linearized bl equation coefficients
- *       |        3x1  vectors containing mass defect influence
- *                     coefficients on ue
- *       d        3x1  unknown vectors (newton deltas for ctau][ theta][ m)
- *       r        3x1  residual vectors
- *       s        3x1  re influence vectors
- * ------------------------------------------------------------------ */
-// moved to XFoil_blsolve.cpp: plu/lu helpers and blsolve()
-// moved to XFoil_blsolve.cpp: blsolve()
-
 /** ----------------------------------------------------
  *      calculates all secondary "2" variables from
  *      the primary "2" variables x2, u2, t2, d2, s2.
@@ -456,13 +316,6 @@ bool XFoil::blsys(BoundaryLayerState& state, [[maybe_unused]] BoundaryLayerLatti
   }
   return true;
 }
-
-bool XFoil::blsys() {
-  return blsys(boundaryLayerState, boundaryLayerLattice);
-}
-
-
-// moved to XFoil_init.cpp: writeString()
 
 /** ==============================================================
  *      amplification rate routine for envelope e^n method.

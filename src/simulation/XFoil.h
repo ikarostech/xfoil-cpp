@@ -176,7 +176,6 @@ class XFoil {
   bool blprv(double xsi, double ami, double cti, double thi, double dsi,
              double dswaki, double uei);
   bool blsolve();
-  bool blsys();
   bool blsys(BoundaryLayerState& state, BoundaryLayerLattice& lattice);
   bool blvar(blData& ref, FlowRegimeEnum flowRegimeType);
   /**
