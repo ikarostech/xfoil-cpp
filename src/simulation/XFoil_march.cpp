@@ -84,19 +84,6 @@ bool XFoil::iblsys() {
   return true;
 }
 
-
-/** ------------------------------------------------------
- *     locates leading edge spline-parameter value sle
- *
- *     the defining condition is
- *
- *      (x-xte,y-yte) . (x',y') = 0     at  s = sle
- *
- *     i.e. the surface tangent is normal to the chord
- *     line connecting x(sle),y(sle) and the te point.
-//------------------------------------------------------ */
-// moved to XFoil_geometry.cpp: lefind()
-
 /** ----------------------------------------------------
  *      marches the bls and wake in mixed mode using
  *      the current ue and hk.  the calculated ue

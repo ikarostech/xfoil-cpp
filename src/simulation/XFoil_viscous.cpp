@@ -72,16 +72,6 @@ bool XFoil::initXFoilAnalysis(double Re, double alpha, double Mach,
   return true;
 }
 
-
-/** -------------------------------------------
- *      sets actual mach, reynolds numbers
- *      from unit-cl values and specified cls
- *      depending on matyp,retyp flags.
- * -------------------------------------------- */
-// moved to XFoil_init.cpp: getActualMach()/getActualReynolds()
-
-// moved to XFoil_geometry.cpp: ncalc()
-
 /** --------------------------------------------------------------------
  *	   Calculates current streamfunction psi and tangential velocity
  *	   qtan at panel node or wake node i due to freestream and wake
@@ -231,9 +221,6 @@ Matrix2Xd XFoil::qwcalc() {
 
   return updated_qinvu;
 }
-
-
-// moved to XFoil_init.cpp: restoreblData()/saveblData()
 
 XFoil::EdgeVelocitySwapResult XFoil::swapEdgeVelocities(
     const SidePair<VectorXd> &usav) const {
@@ -773,8 +760,6 @@ bool XFoil::ViscousIter() {
 
   return true;
 }
-
-// moved to XFoil_geometry.cpp: xyWake()
 
 bool XFoil::isValidFoilAngles(Matrix2Xd points) {
 

@@ -17,17 +17,6 @@ AerodynamicsState& ensureAerodynamicsState(const XFoil* xfoil) {
 }
 }  // namespace
 
-/**
- * @brief find index and angle of max foil curv diff
- *
- * @param x foil x parameters
- * @param y foil y parameters
- * @param n foil plot size
- * @return PairIndex index: index of max angle diff, value: angle of max angle
- * diff[degree]
- */
-// moved to XFoil_geometry.cpp: cang()
-
 double XFoil::cdcalc() const {
   if (!(lvisc && lblini)) {
     return 0.0;
@@ -140,9 +129,6 @@ void XFoil::applyClComputation(const ClComputation &result) {
   aero.xcp = result.xcp;
 }
 
-
-// moved to XFoil_init.cpp: comset()
-
 /** ---------------------------------------------
  *      sets compressible cp from speed.
  * ---------------------------------------------- */
@@ -169,10 +155,6 @@ VectorXd XFoil::cpcalc(int n, VectorXd q, double qinf, double minf) {
 
   return cp;
 }
-
-
-/** Laminar dissipation function  ( 2 cd/h* )     (from Falkner-Skan)*/
-// moved to XFoil_boundary.cpp: dslim()
 
 Matrix2Xd XFoil::gamqv() const {
   const int point_count = foil.foil_shape.n;
@@ -305,12 +287,6 @@ bool XFoil::ggcalc() {
 
   return true;
 }
-
-
-// moved to XFoil_init.cpp: setMach()
-
-/** returns the absolute value of "a" x sign(b) */
-// moved to XFoil_geometry.cpp: sign()
 
 /**
  *      Converges to specified alpha.
