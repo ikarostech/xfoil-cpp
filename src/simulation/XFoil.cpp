@@ -33,11 +33,6 @@ bool g_cancel_flag = false;
 double g_vaccel = 0.01;
 }  // namespace
 
-// determinant
-double cross2(const Eigen::Vector2d &a, const Eigen::Vector2d &b) {
-  return a[0] * b[1] - a[1] * b[0];
-}
-
 XFoil::CompressibilityParams XFoil::buildCompressibilityParams() const {
   const double beta = std::sqrt(1.0 - minf * minf);
   const double beta_msq = -0.5 / beta;

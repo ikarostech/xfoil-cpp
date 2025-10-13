@@ -1,16 +1,10 @@
 #include "domain/foil/edge.hpp"
 
+#include "core/math_util.hpp"
 #include "core/spline.hpp"
 
 #include <algorithm>
 #include <cmath>
-
-namespace {
-// 2D cross product (z-component)
-inline double cross2(const Eigen::Vector2d& a, const Eigen::Vector2d& b) {
-  return a[0] * b[1] - a[1] * b[0];
-}
-} // namespace
 
 Edge::Edge()
     : point_le(Eigen::Vector2d::Zero()),
@@ -48,7 +42,7 @@ Edge::Edge(const FoilShape& foilShape) : Edge() {
       0.5 * (-foilShape.dpoints_ds.col(0) +
              foilShape.dpoints_ds.col(foilShape.n - 1));
 
-  ante = cross2(dpoint_ds_te, tevec);
+  ante = MathUtil::cross2(dpoint_ds_te, tevec);
   aste = tevec.dot(dpoint_ds_te);
   dste = tevec.norm();
 

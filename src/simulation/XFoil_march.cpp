@@ -5,8 +5,6 @@
 #include <cmath>
 using namespace Eigen;
 
-double cross2(const Eigen::Vector2d &a, const Eigen::Vector2d &b);
-
 
 /** -----------------------------------------------------------
  *     sets  bl location -> panel location  pointer array ipan
@@ -2052,8 +2050,8 @@ bool XFoil::xicalc() {
   //---- set up parameters for te flap cubics
 
   const int point_count = foil.foil_shape.n;
-  const double crosp = cross2(foil.foil_shape.dpoints_ds.col(point_count - 1).normalized(),
-                              foil.foil_shape.dpoints_ds.col(0).normalized());
+  const double crosp = MathUtil::cross2(foil.foil_shape.dpoints_ds.col(point_count - 1).normalized(),
+                                        foil.foil_shape.dpoints_ds.col(0).normalized());
   double dwdxte = crosp / sqrt(1.0 - crosp * crosp);
 
   //---- limit cubic to avoid absurd te gap widths
@@ -2105,7 +2103,7 @@ double XFoil::xifset(int is) {
   //---- calculate chord-based x/c, y/c
   for (int i = 0; i < point_count; i++) {
     w1[i] = (foil.foil_shape.points.col(i) - foil.edge.point_le).dot(point_chord.normalized());
-    w2[i] = cross2(foil.foil_shape.points.col(i) - foil.edge.point_le, point_chord.normalized());
+    w2[i] = MathUtil::cross2(foil.foil_shape.points.col(i) - foil.edge.point_le, point_chord.normalized());
   }
 
   w3 = spline::splind(w1, foil.foil_shape.spline_length.head(point_count));

@@ -17,9 +17,6 @@ AerodynamicsState& ensureAerodynamicsState(const XFoil* xfoil) {
 }
 }  // namespace
 
-double cross2(const Eigen::Vector2d &a, const Eigen::Vector2d &b);
-
-
 /**
  * @brief find index and angle of max foil curv diff
  *
@@ -105,7 +102,7 @@ XFoil::ClComputation XFoil::clcalc(Vector2d ref) const {
         rotateMatrix * ((foil.foil_shape.points.col(ip) + foil.foil_shape.points.col(i)) / 2 - ref);
     const double ag = 0.5 * (cpg2 + cpg1);
 
-    const double dx_alf = cross2(delta, rotateMatrix.row(0));
+    const double dx_alf = MathUtil::cross2(delta, rotateMatrix.row(0).transpose());
     const double ag_alf = 0.5 * (cpg2_alf + cpg1_alf);
     const double ag_msq = 0.5 * (cpg2_msq + cpg1_msq);
 

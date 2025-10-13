@@ -5,13 +5,6 @@
 
 using namespace Eigen;
 
-namespace {
-// 2D cross product (z-component)
-inline double cross2(const Eigen::Vector2d &a, const Eigen::Vector2d &b) {
-  return a[0] * b[1] - a[1] * b[0];
-}
-}
-
 bool XFoil::abcopy(Matrix2Xd copyFrom) {
   const int original_point_count = foil.foil_shape.n;
   int point_count = static_cast<int>(copyFrom.cols());
@@ -91,7 +84,7 @@ double XFoil::cang(Matrix2Xd points) {
   for (int i = 1; i < points.cols() - 1; i++) {
     Vector2d delta_former = points.col(i) - points.col(i - 1);
     Vector2d delta_later = points.col(i) - points.col(i + 1);
-    double sin = cross2(delta_later, delta_former) / delta_former.norm() / delta_later.norm();
+    double sin = MathUtil::cross2(delta_later, delta_former) / delta_former.norm() / delta_later.norm();
     double delta_angle = asin(sin) * 180.0 / std::numbers::pi;
     max_angle = std::max(fabs(delta_angle), max_angle);
   }

@@ -3,10 +3,6 @@
 #include <cmath>
 #include "XFoil.h"
 
-static double cross2(const Vector2d& a, const Vector2d& b) {
-  return a[0] * b[1] - a[1] * b[0];
-}
-
 static const FoilShape& resolveFoilShape(const Foil& foil, int node_index,
                                          int required_nodes) {
   const bool has_wake = foil.wake_shape.n > 0;
@@ -165,10 +161,10 @@ PsiResult psilin(const Foil& foil, int iNode, Vector2d point,
 
   //**** freestream terms
   Vector2d rotateVector = {cos(alfa_value), sin(alfa_value)};
-  psi_result.psi += qinf_value * cross2(rotateVector, point);
+  psi_result.psi += qinf_value * MathUtil::cross2(rotateVector, point);
 
   //---- dpsi/dn
-  psi_result.psi_ni += qinf_value * cross2(rotateVector, normal_vector);
+  psi_result.psi_ni += qinf_value * MathUtil::cross2(rotateVector, normal_vector);
 
   psi_result.qtan.x() += qinf_value * normal_vector.y();
   psi_result.qtan.y() += -qinf_value * normal_vector.x();
@@ -203,7 +199,7 @@ PsiResult psisig(const Foil& foil, int iNode, int jo, Vector2d point,
 
   const double x1 = s.dot(r1);
   const double x2 = s.dot(r2);
-  const double yy = cross2(s, r1);
+  const double yy = MathUtil::cross2(s, r1);
 
   const double rs1 = r1.dot(r1);
   const double rs2 = r2.dot(r2);
@@ -226,7 +222,7 @@ PsiResult psisig(const Foil& foil, int iNode, int jo, Vector2d point,
 
   const double x1i = s.dot(normal_vector);
   const double x2i = s.dot(normal_vector);
-  const double yyi = cross2(s, normal_vector);
+  const double yyi = MathUtil::cross2(s, normal_vector);
 
   const double x0 = 0.5 * (x1 + x2);
   const double rs0 = x0 * x0 + yy * yy;
@@ -321,7 +317,7 @@ PsiResult psi_te(const Foil& foil, int iNode, Vector2d normal_vector,
 
   const double xz1 = s.dot(r1);
   const double xz2 = s.dot(r2);
-  const double yy = cross2(s, r1);
+  const double yy = MathUtil::cross2(s, r1);
 
   const double rs1 = r1.dot(r1);
   const double rs2 = r2.dot(r2);
@@ -352,7 +348,7 @@ PsiResult psi_te(const Foil& foil, int iNode, Vector2d normal_vector,
 
   const double x1i = s.dot(normal_vector);
   const double x2i = s.dot(normal_vector);
-  const double yyi = cross2(s, normal_vector);
+  const double yyi = MathUtil::cross2(s, normal_vector);
 
   const double psig = 0.5 * yy * (logr12 - logr22) +
                       xz2 * (tz2 - apan) - xz1 * (tz1 - apan);

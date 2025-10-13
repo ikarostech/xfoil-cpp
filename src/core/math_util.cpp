@@ -46,3 +46,7 @@ double MathUtil::pow(double a, int b) {
         return a * pow(a, b - 1);
     }
 }
+
+double MathUtil::cross2(const Eigen::Vector2d& a, const Eigen::Vector2d& b) {
+    return a[0] * b[1] - a[1] * b[0];
+}
