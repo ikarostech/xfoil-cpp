@@ -55,25 +55,40 @@ void XFoil::initializeDataStructures() {
   auto& cache = ensureInitState(this);
   cache.blsav.fill(blData{});
 
+  boundaryLayerLattice.clear();
+  boundaryLayerLattice.resizeSide(static_cast<int>(SideType::TOP), IVX);
+  boundaryLayerLattice.resizeSide(static_cast<int>(SideType::BOTTOM), IVX);
+  boundaryLayerLattice.stationToPanel.top.setZero();
+  boundaryLayerLattice.stationToPanel.bottom.setZero();
+  boundaryLayerLattice.stationToSystem.top.setZero();
+  boundaryLayerLattice.stationToSystem.bottom.setZero();
+  boundaryLayerLattice.transitionIndex.top = 0;
+  boundaryLayerLattice.transitionIndex.bottom = 0;
+  boundaryLayerLattice.ctau.top.setZero();
+  boundaryLayerLattice.ctau.bottom.setZero();
+  boundaryLayerLattice.ctq.top.setZero();
+  boundaryLayerLattice.ctq.bottom.setZero();
+  boundaryLayerLattice.dstr.top.setZero();
+  boundaryLayerLattice.dstr.bottom.setZero();
+  boundaryLayerLattice.thet.top.setZero();
+  boundaryLayerLattice.thet.bottom.setZero();
+  boundaryLayerLattice.uedg.top.setZero();
+  boundaryLayerLattice.uedg.bottom.setZero();
+  boundaryLayerLattice.xssi.top.setZero();
+  boundaryLayerLattice.xssi.bottom.setZero();
+  boundaryLayerLattice.uinv.top.setZero();
+  boundaryLayerLattice.uinv.bottom.setZero();
+  boundaryLayerLattice.uinv_a.top.setZero();
+  boundaryLayerLattice.uinv_a.bottom.setZero();
+  boundaryLayerLattice.mass.top.setZero();
+  boundaryLayerLattice.mass.bottom.setZero();
+  boundaryLayerLattice.vti.top.setZero();
+  boundaryLayerLattice.vti.bottom.setZero();
+
   bij = MatrixXd::Zero(IQX, IZX);
   dij = MatrixXd::Zero(IZX, IZX);
   cpi = VectorXd::Zero(total_nodes_with_wake);
   cpv = VectorXd::Zero(point_count);
-  ctau.top = VectorXd::Zero(IVX);
-  ctau.bottom = VectorXd::Zero(IVX);
-  ctq.top = VectorXd::Zero(IVX);
-  ctq.bottom = VectorXd::Zero(IVX);
-  dstr.top = VectorXd::Zero(IVX);
-  dstr.bottom = VectorXd::Zero(IVX);
-
-  ipan.top = VectorXi::Zero(IVX);
-  ipan.bottom = VectorXi::Zero(IVX);
-  isys.top = VectorXi::Zero(IVX);
-  isys.bottom = VectorXi::Zero(IVX);
-  itran.top = 0;
-  itran.bottom = 0;
-  mass.top = VectorXd::Zero(IVX);
-  mass.bottom = VectorXd::Zero(IVX);
   gamu = Matrix2Xd::Zero(2, point_count + 1);
   surface_vortex = Matrix2Xd::Zero(2, point_count);
   std::ranges::fill(cache.qf0, 0.0);
@@ -84,18 +99,6 @@ void XFoil::initializeDataStructures() {
   qinv_a = VectorXd::Zero(total_nodes_with_wake);
   qinvu = Matrix2Xd::Zero(2, total_nodes_with_wake);
   qvis = VectorXd::Zero(total_nodes_with_wake);
-  thet.top = VectorXd::Zero(IVX);
-  thet.bottom = VectorXd::Zero(IVX);
-  uedg.top = VectorXd::Zero(IVX);
-  uedg.bottom = VectorXd::Zero(IVX);
-  uinv.top = VectorXd::Zero(IVX);
-  uinv.bottom = VectorXd::Zero(IVX);
-  uinv_a.top = VectorXd::Zero(IVX);
-  uinv_a.bottom = VectorXd::Zero(IVX);
-  vti.top = VectorXd::Zero(IVX);
-  vti.bottom = VectorXd::Zero(IVX);
-  xssi.top = VectorXd::Zero(IVX);
-  xssi.bottom = VectorXd::Zero(IVX);
 
   memset(wgap, 0, sizeof(wgap));
   va.resize(IVX, Matrix<double, 3, 2>::Zero());
@@ -117,6 +120,15 @@ void XFoil::resetFlags() {
 }
 
 void XFoil::resetVariables() {
+  boundaryLayerState.station1 = blData{};
+  boundaryLayerState.station2 = blData{};
+  boundaryLayerLattice.transitionIndex.top = 0;
+  boundaryLayerLattice.transitionIndex.bottom = 0;
+  boundaryLayerLattice.stationCount.top = 0;
+  boundaryLayerLattice.stationCount.bottom = 0;
+  boundaryLayerLattice.trailingEdgeIndex.top = 0;
+  boundaryLayerLattice.trailingEdgeIndex.bottom = 0;
+
   gamma = 1.4;
   gamm1 = gamma - 1.0;
   qinf = 1.0;

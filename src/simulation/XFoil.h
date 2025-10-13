@@ -51,9 +51,11 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 #include "domain/flow_regime.hpp"
 #include "core/math_util.hpp"
 #include "core/spline.hpp"
+#include "core/side_pair.hpp"
 #include "domain/boundary_layer.hpp"
 #include "domain/foil/foil.hpp"
 #include "simulation/psi.hpp"
+#include "simulation/boundary_layer_state.hpp"
 #include "infrastructure/xfoil_params.h"
 
 using namespace std;
@@ -166,11 +168,16 @@ class XFoil {
                   double ddlog, const Vector3d &upw1, const Vector3d &upw2,
                   double upw_ms);
   bool blkin();
+  bool blkin(BoundaryLayerState& state);
   bool blmid(FlowRegimeEnum flowRegimeType);
+  bool blmid(BoundaryLayerState& state, FlowRegimeEnum flowRegimeType);
+  bool blprv(BoundaryLayerState& state, double xsi, double ami, double cti,
+             double thi, double dsi, double dswaki, double uei);
   bool blprv(double xsi, double ami, double cti, double thi, double dsi,
              double dswaki, double uei);
   bool blsolve();
   bool blsys();
+  bool blsys(BoundaryLayerState& state, BoundaryLayerLattice& lattice);
   bool blvar(blData& ref, FlowRegimeEnum flowRegimeType);
   /**
    * @brief Calculate shape parameters and slip velocity.
@@ -214,30 +221,6 @@ class XFoil {
   enum class SideType {
     TOP = 1,
     BOTTOM = 2
-  };
-  template <class T>
-  class SidePair {
-    public:
-    T top;
-    T bottom;
-    //FIXME deprecated
-    T& get(int side) {
-      if (side == 1) {
-        return top;
-      }
-      else if (side == 2) {
-        return bottom;
-      }
-      throw invalid_argument("invalid side type");
-    }
-    const T& get(int side) const {
-      if (side == 1) {
-        return top;
-      } else if (side == 2) {
-        return bottom;
-      }
-      throw invalid_argument("invalid side type");
-    }
   };
   template <class T>
   class IterPair {
@@ -291,6 +274,7 @@ class XFoil {
   double lefind(const Matrix2Xd &points, const Matrix2Xd &dpoints_ds, const VectorXd &s, int n) const;
   
   bool mrchdu();
+  bool mrchdu(BoundaryLayerState& state, BoundaryLayerLattice& lattice);
   MixedModeStationContext prepareMixedModeStation(int side, int ibl, int itrold,
                                                   double& ami);
   bool performMixedModeNewtonIteration(int side, int ibl, int itrold,
@@ -338,6 +322,7 @@ class XFoil {
   VectorXd setexp(double ds1, double smax, int nn) const;
 
   bool stepbl();
+  bool stepbl(BoundaryLayerState& state);
   bool stfind();
   bool stmove();
   bool tesys(double cte, double tte, double dte);
@@ -424,21 +409,37 @@ class XFoil {
 
   double minf1;
   bool lblini, lipan;
-  
-  Foil foil;
-  SidePair<VectorXi> ipan, isys;
-  SidePair<int> iblte, nbl;
 
-  SidePair<double> xstrip;
+  Foil foil;
+  BoundaryLayerState boundaryLayerState;
+  BoundaryLayerLattice boundaryLayerLattice;
+
+  blData& blData1;
+  blData& blData2;
+
+  SidePair<VectorXi>& ipan;
+  SidePair<VectorXi>& isys;
+  SidePair<int>& iblte;
+  SidePair<int>& nbl;
+
+  SidePair<double>& xstrip;
 
   Vector2d cmref;
   double tklam; // karman-tsien parameter minf^2 / [1 + sqrt[1-minf^2]]^2 <- Prandtl-Glauert-Ackeret rule ?
   double tkl_msq;
   double dtor;
 
-  SidePair<VectorXd> thet, ctau, dstr, uedg, ctq;
-  SidePair<VectorXd> xssi, uinv, uinv_a, mass, vti;  
-  SidePair<int> itran; // bl array index of transition interval
+  SidePair<VectorXd>& thet;
+  SidePair<VectorXd>& ctau;
+  SidePair<VectorXd>& dstr;
+  SidePair<VectorXd>& uedg;
+  SidePair<VectorXd>& ctq;
+  SidePair<VectorXd>& xssi;
+  SidePair<VectorXd>& uinv;
+  SidePair<VectorXd>& uinv_a;
+  SidePair<VectorXd>& mass;
+  SidePair<VectorXd>& vti;
+  SidePair<int>& itran; // bl array index of transition interval
 
  public: //private:
   double rlx;
@@ -493,8 +494,6 @@ class XFoil {
   double reybl, reybl_ms, reybl_re, gm1bl, xiforc, amcrit;
   //---- sutherland's const./to	(assumes stagnation conditions are at stp)
   const double hvrat = 0.35;
-
-  blData blData1, blData2;
 
   double cfm, cfm_ms, cfm_re, cfm_u1, cfm_t1, cfm_d1, cfm_u2, cfm_t2, cfm_d2;
   double xt, xt_a1, xt_ms, xt_re, xt_xf, xt_x1, xt_t1, xt_d1, xt_u1, xt_x2,

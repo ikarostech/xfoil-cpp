@@ -106,7 +106,8 @@ bool XFoil::iblsys() {
  *      singularity is never encountered.  continuous
  *      checking of transition onset is performed.
  * ----------------------------------------------------- */
-bool XFoil::mrchdu() {
+bool XFoil::mrchdu(BoundaryLayerState& state,
+                   [[maybe_unused]] BoundaryLayerLattice& lattice) {
   const double deps = 0.000005;
   const double senswt = 1000.0;
 
@@ -143,10 +144,11 @@ bool XFoil::mrchdu() {
       mass.get(is)[ibl] = ctx.dsi * ctx.uei;
       ctq.get(is)[ibl] = blData2.cqz.scalar;
 
-      blprv(ctx.xsi, ctx.ami, ctx.cti, ctx.thi, ctx.dsi, ctx.dswaki, ctx.uei);
-      blkin();
+      blprv(state, ctx.xsi, ctx.ami, ctx.cti, ctx.thi, ctx.dsi, ctx.dswaki,
+            ctx.uei);
+      blkin(state);
 
-      stepbl();
+      stepbl(state);
 
       if (tran || ibl == iblte.get(is)) {
         turb = true;
@@ -161,6 +163,8 @@ bool XFoil::mrchdu() {
   }
   return true;
 }
+
+bool XFoil::mrchdu() { return mrchdu(boundaryLayerState, boundaryLayerLattice); }
 
 XFoil::MixedModeStationContext XFoil::prepareMixedModeStation(int side, int ibl,
                                                               int itrold,
@@ -228,8 +232,9 @@ bool XFoil::performMixedModeNewtonIteration(int side, int ibl, int itrold,
   double hklim = 0.0;
 
   for (int itbl = 1; itbl <= 25; ++itbl) {
-    blprv(ctx.xsi, ami, ctx.cti, ctx.thi, ctx.dsi, ctx.dswaki, ctx.uei);
-    blkin();
+    blprv(boundaryLayerState, ctx.xsi, ami, ctx.cti, ctx.thi, ctx.dsi,
+          ctx.dswaki, ctx.uei);
+    blkin(boundaryLayerState);
 
     checkTransitionIfNeeded(side, ibl, ctx.simi, 1, ami);
 
@@ -241,7 +246,7 @@ bool XFoil::performMixedModeNewtonIteration(int side, int ibl, int itrold,
                 ctx.tte;
       tesys(ctx.cte, ctx.tte, ctx.dte);
     } else {
-      blsys();
+      blsys(boundaryLayerState, boundaryLayerLattice);
     }
 
     if (itbl == 1) {
@@ -402,22 +407,23 @@ void XFoil::handleMixedModeNonConvergence(int side, int ibl,
     }
   }
 
-  blprv(ctx.xsi, ami, ctx.cti, ctx.thi, ctx.dsi, ctx.dswaki, ctx.uei);
-  blkin();
+  blprv(boundaryLayerState, ctx.xsi, ami, ctx.cti, ctx.thi, ctx.dsi,
+        ctx.dswaki, ctx.uei);
+  blkin(boundaryLayerState);
 
   checkTransitionIfNeeded(side, ibl, ctx.simi, 2, ami);
 
   if (ibl < itran.get(side)) {
     blvar(blData2, FlowRegimeEnum::Laminar);
-    blmid(FlowRegimeEnum::Laminar);
+    blmid(boundaryLayerState, FlowRegimeEnum::Laminar);
   }
   if (ibl >= itran.get(side)) {
     blvar(blData2, FlowRegimeEnum::Turbulent);
-    blmid(FlowRegimeEnum::Turbulent);
+    blmid(boundaryLayerState, FlowRegimeEnum::Turbulent);
   }
   if (ctx.wake) {
     blvar(blData2, FlowRegimeEnum::Wake);
-    blmid(FlowRegimeEnum::Wake);
+    blmid(boundaryLayerState, FlowRegimeEnum::Wake);
   }
 
   ctx.ami = ami;
@@ -525,8 +531,8 @@ bool XFoil::mrchue() {
         //         at the previous "1" station and the current "2" station
         //         (the "1" station coefficients will be ignored)
 
-        blprv(xsi, ami, cti, thi, dsi, dswaki, uei);
-        blkin();
+        blprv(boundaryLayerState, xsi, ami, cti, thi, dsi, dswaki, uei);
+        blkin(boundaryLayerState);
 
         //-------- check for transition and set appropriate flags and things
         if ((!simi) && (!turb)) {
@@ -556,7 +562,7 @@ bool XFoil::mrchue() {
                 tte;
           tesys(cte, tte, dte);
         } else
-          blsys();
+          blsys(boundaryLayerState, boundaryLayerLattice);
 
         if (direct) {
           //--------- try direct mode (set due = 0 in currently empty 4th line)
@@ -709,8 +715,8 @@ bool XFoil::mrchue() {
           }
         }
         // 109
-        blprv(xsi, ami, cti, thi, dsi, dswaki, uei);
-        blkin();
+        blprv(boundaryLayerState, xsi, ami, cti, thi, dsi, dswaki, uei);
+        blkin(boundaryLayerState);
         //------- check for transition and set appropriate flags and things
         if ((!simi) && (!turb)) {
           trchek();
@@ -728,11 +734,11 @@ bool XFoil::mrchue() {
         if (wake)
           blvar(blData2, FlowRegimeEnum::Wake);
         if (ibl < itran.get(is))
-          blmid(FlowRegimeEnum::Laminar);
+          blmid(boundaryLayerState, FlowRegimeEnum::Laminar);
         if (ibl >= itran.get(is))
-          blmid(FlowRegimeEnum::Turbulent);
+          blmid(boundaryLayerState, FlowRegimeEnum::Turbulent);
         if (wake)
-          blmid(FlowRegimeEnum::Wake);
+          blmid(boundaryLayerState, FlowRegimeEnum::Wake);
       }
       //------ store primary variables
       if (ibl < itran.get(is))
@@ -746,10 +752,10 @@ bool XFoil::mrchue() {
       ctq.get(is)[ibl] = blData2.cqz.scalar;
 
       //------ set "1" variables to "2" variables for next streamwise station
-      blprv(xsi, ami, cti, thi, dsi, dswaki, uei);
-      blkin();
+      blprv(boundaryLayerState, xsi, ami, cti, thi, dsi, dswaki, uei);
+      blkin(boundaryLayerState);
 
-      stepbl();
+      stepbl(boundaryLayerState);
 
       //------ turbulent intervals will follow transition interval or te
       if (tran || ibl == iblte.get(is)) {
@@ -951,8 +957,8 @@ jvte2 = isys.bottom[iblte.bottom];
       due2 = uedg.get(is)[ibl] - usav.get(is)[ibl];
       dds2 = d2_u2 * due2;
 
-      blprv(xsi, ami, cti, thi, dsi, dswaki, uei); // cti
-      blkin();
+      blprv(boundaryLayerState, xsi, ami, cti, thi, dsi, dswaki, uei); // cti
+      blkin(boundaryLayerState);
 
       //---- check for transition and set tran, xt, etc. if found
       if (tran) {
@@ -1020,7 +1026,7 @@ jvte2 = isys.bottom[iblte.bottom];
                 (uedg.bottom[iblte.bottom] -
                  usav.bottom[iblte.bottom]);
       } else {
-        blsys();
+        blsys(boundaryLayerState, boundaryLayerLattice);
       }
 
       //---- save wall shear and equil. max shear coefficient for plotting
@@ -1150,7 +1156,7 @@ jvte2 = isys.bottom[iblte.bottom];
         turb = true;
         wake = true;
         blvar(blData2, FlowRegimeEnum::Wake);
-        blmid(FlowRegimeEnum::Wake);
+        blmid(boundaryLayerState, FlowRegimeEnum::Wake);
       }
       u1_m = u2_m;
       d1_m = d2_m;
@@ -1164,7 +1170,7 @@ jvte2 = isys.bottom[iblte.bottom];
       //---- set bl variables for next station
       //			for (icom=1; icom<= ncom;icom++)
       // com1[icom] = com2[icom];
-      stepbl();
+      stepbl(boundaryLayerState);
 
       //---- next streamwise station
     }
@@ -1176,10 +1182,12 @@ jvte2 = isys.bottom[iblte.bottom];
 }
 
 
-bool XFoil::stepbl() {
-  blData1 = blData2;
+bool XFoil::stepbl(BoundaryLayerState& state) {
+  state.previous() = state.current();
   return true;
 }
+
+bool XFoil::stepbl() { return stepbl(boundaryLayerState); }
 
 
 bool XFoil::stfind() {
@@ -1483,7 +1491,7 @@ bool XFoil::trchek() {
       blData2.param.uz = ut;
 
       //---- calculate laminar secondary "t" variables hkt, rtt
-      blkin();
+      blkin(boundaryLayerState);
 
       blData::blVector hkt = blData2.hkz;
       blData::blVector rtt = blData2.rtz;
@@ -1823,11 +1831,11 @@ bool XFoil::trdif() {
   blData2.param.sz = 0.0;
 
   //---- calculate laminar secondary "t" variables
-  blkin();
+  blkin(boundaryLayerState);
   blvar(blData2, FlowRegimeEnum::Laminar);
 
   //---- calculate x1-xt midpoint cfm value
-  blmid(FlowRegimeEnum::Laminar);
+  blmid(boundaryLayerState, FlowRegimeEnum::Laminar);
 
   //=    at this point, all "2" variables are really "t" variables at xt
 
@@ -1912,11 +1920,11 @@ bool XFoil::trdif() {
   //---- recalculate turbulent secondary "t" variables using proper cti
   blvar(blData2, FlowRegimeEnum::Turbulent);
 
-  stepbl();
+  stepbl(boundaryLayerState);
   restoreblData(2);
 
   //---- calculate xt-x2 midpoint cfm value
-  blmid(FlowRegimeEnum::Turbulent);
+  blmid(boundaryLayerState, FlowRegimeEnum::Turbulent);
 
   //---- set up newton system for dct, dth, dds, due, dxi  at  xt and x2
   bldif(2);

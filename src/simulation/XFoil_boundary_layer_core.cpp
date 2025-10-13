@@ -188,69 +188,72 @@ XFoil::AxResult XFoil::axset(double hk1, double t1, double rt1, double a1,
  */
 // moved to XFoil_bldif.cpp: bldifShape()
 
-bool XFoil::blkin() {
+bool XFoil::blkin(BoundaryLayerState& state) {
   //----------------------------------------------------------
   //     calculates turbulence-independent secondary "2"
   //     variables from the primary "2" variables.
   //----------------------------------------------------------
   double tr2, herat, he_u2, he_ms, v2_he;
+  blData& current = state.current();
   //---- set edge mach number ** 2
-  blData2.param.mz =
-      blData2.param.uz * blData2.param.uz * hstinv /
-      (gm1bl * (1.0 - 0.5 * blData2.param.uz * blData2.param.uz * hstinv));
-  tr2 = 1.0 + 0.5 * gm1bl * blData2.param.mz;
-  blData2.param.mz_uz = 2.0 * blData2.param.mz * tr2 / blData2.param.uz;
-  blData2.param.mz_ms =
-      blData2.param.uz * blData2.param.uz * tr2 /
-      (gm1bl * (1.0 - 0.5 * blData2.param.uz * blData2.param.uz * hstinv)) *
+  current.param.mz =
+      current.param.uz * current.param.uz * hstinv /
+      (gm1bl * (1.0 - 0.5 * current.param.uz * current.param.uz * hstinv));
+  tr2 = 1.0 + 0.5 * gm1bl * current.param.mz;
+  current.param.mz_uz = 2.0 * current.param.mz * tr2 / current.param.uz;
+  current.param.mz_ms =
+      current.param.uz * current.param.uz * tr2 /
+      (gm1bl * (1.0 - 0.5 * current.param.uz * current.param.uz * hstinv)) *
       hstinv_ms;
 
   //---- set edge density (isentropic relation)
-  blData2.param.rz = rstbl * pow(tr2, (-1.0 / gm1bl));
-  blData2.param.rz_uz = -blData2.param.rz / tr2 * 0.5 * blData2.param.mz_uz;
-  blData2.param.rz_ms = -blData2.param.rz / tr2 * 0.5 * blData2.param.mz_ms +
+  current.param.rz = rstbl * pow(tr2, (-1.0 / gm1bl));
+  current.param.rz_uz = -current.param.rz / tr2 * 0.5 * current.param.mz_uz;
+  current.param.rz_ms = -current.param.rz / tr2 * 0.5 * current.param.mz_ms +
                         rstbl_ms * pow(tr2, (-1.0 / gm1bl));
 
   //---- set shape parameter
-  blData2.param.hz = blData2.param.dz / blData2.param.tz;
-  blData2.param.hz_dz = 1.0 / blData2.param.tz;
-  blData2.param.hz_tz = -blData2.param.hz / blData2.param.tz;
+  current.param.hz = current.param.dz / current.param.tz;
+  current.param.hz_dz = 1.0 / current.param.tz;
+  current.param.hz_tz = -current.param.hz / current.param.tz;
 
   //---- set edge static/stagnation enthalpy
-  herat = 1.0 - 0.5 * blData2.param.uz * blData2.param.uz * hstinv;
-  he_u2 = -blData2.param.uz * hstinv;
-  he_ms = -0.5 * blData2.param.uz * blData2.param.uz * hstinv_ms;
+  herat = 1.0 - 0.5 * current.param.uz * current.param.uz * hstinv;
+  he_u2 = -current.param.uz * hstinv;
+  he_ms = -0.5 * current.param.uz * current.param.uz * hstinv_ms;
   //---- set molecular viscosity
   v2_he = (1.5 / herat - 1.0 / (herat + hvrat));
 
   //---- set kinematic shape parameter
   boundary_layer::KineticShapeParameterResult hkin_result =
-      boundary_layer::hkin(blData2.param.hz, blData2.param.mz);
-  blData2.hkz.scalar = hkin_result.hk;
+      boundary_layer::hkin(current.param.hz, current.param.mz);
+  current.hkz.scalar = hkin_result.hk;
 
-  blData2.hkz.u() = hkin_result.hk_msq * blData2.param.mz_uz;
-  blData2.hkz.t() = hkin_result.hk_h * blData2.param.hz_tz;
-  blData2.hkz.d() = hkin_result.hk_h * blData2.param.hz_dz;
-  blData2.hkz.ms() = hkin_result.hk_msq * blData2.param.mz_ms;
+  current.hkz.u() = hkin_result.hk_msq * current.param.mz_uz;
+  current.hkz.t() = hkin_result.hk_h * current.param.hz_tz;
+  current.hkz.d() = hkin_result.hk_h * current.param.hz_dz;
+  current.hkz.ms() = hkin_result.hk_msq * current.param.mz_ms;
 
   //---- set momentum thickness reynolds number
-  blData2.rtz.scalar =
-      blData2.param.rz * blData2.param.uz * blData2.param.tz /
+  current.rtz.scalar =
+      current.param.rz * current.param.uz * current.param.tz /
       (sqrt(herat * herat * herat) * (1.0 + hvrat) / (herat + hvrat) / reybl);
-  blData2.rtz.u() = blData2.rtz.scalar *
-                    (1.0 / blData2.param.uz +
-                     blData2.param.rz_uz / blData2.param.rz - v2_he * he_u2);
-  blData2.rtz.t() = blData2.rtz.scalar / blData2.param.tz;
-  blData2.rtz.ms() =
-      blData2.rtz.scalar * (blData2.param.rz_ms / blData2.param.rz +
+  current.rtz.u() = current.rtz.scalar *
+                    (1.0 / current.param.uz +
+                     current.param.rz_uz / current.param.rz - v2_he * he_u2);
+  current.rtz.t() = current.rtz.scalar / current.param.tz;
+  current.rtz.ms() =
+      current.rtz.scalar * (current.param.rz_ms / current.param.rz +
                             (1 / reybl * reybl_ms - v2_he * he_ms));
-  blData2.rtz.re() = blData2.rtz.scalar * (reybl_re / reybl);
+  current.rtz.re() = current.rtz.scalar * (reybl_re / reybl);
 
   return true;
 }
 
+bool XFoil::blkin() { return blkin(boundaryLayerState); }
 
-bool XFoil::blmid(FlowRegimeEnum flowRegimeType) {
+
+bool XFoil::blmid(BoundaryLayerState& state, FlowRegimeEnum flowRegimeType) {
   //----------------------------------------------------
   //     calculates midpoint skin friction cfm
   //
@@ -259,20 +262,22 @@ bool XFoil::blmid(FlowRegimeEnum flowRegimeType) {
   //      flowRegimeType = 3 :  turbulent wake
   //----------------------------------------------------
   //
+  blData& previous = state.previous();
+  blData& current = state.current();
 
   //---- set similarity variables if not defined
   if (simi) {
-    blData1.hkz = blData2.hkz;
-    blData1.rtz = blData2.rtz;
-    blData1.param.mz = blData2.param.mz;
-    blData1.param.mz_uz = blData2.param.mz_uz;
-    blData1.param.mz_ms = blData2.param.mz_ms;
+    previous.hkz = current.hkz;
+    previous.rtz = current.rtz;
+    previous.param.mz = current.param.mz;
+    previous.param.mz_uz = current.param.mz_uz;
+    previous.param.mz_ms = current.param.mz_ms;
   }
 
   //---- define stuff for midpoint cf
-  double hka = 0.5 * (blData1.hkz.scalar + blData2.hkz.scalar);
-  double rta = 0.5 * (blData1.rtz.scalar + blData2.rtz.scalar);
-  double ma = 0.5 * (blData1.param.mz + blData2.param.mz);
+  double hka = 0.5 * (previous.hkz.scalar + current.hkz.scalar);
+  double rta = 0.5 * (previous.rtz.scalar + current.rtz.scalar);
+  double ma = 0.5 * (previous.param.mz + current.param.mz);
 
   //---- compute midpoint skin friction coefficient
   skin_friction::C_f cf_res = skin_friction::getSkinFriction(hka, rta, ma, flowRegimeType);
@@ -282,46 +287,56 @@ bool XFoil::blmid(FlowRegimeEnum flowRegimeType) {
   double cfm_rta = cf_res.rt;
   double cfm_ma = cf_res.msq;
 
-  cfm_u1 = 0.5 * (cfm_hka * blData1.hkz.u() + cfm_ma * blData1.param.mz_uz +
-                  cfm_rta * blData1.rtz.u());
-  cfm_t1 = 0.5 * (cfm_hka * blData1.hkz.t() + cfm_rta * blData1.rtz.t());
-  cfm_d1 = 0.5 * (cfm_hka * blData1.hkz.d());
+  cfm_u1 = 0.5 * (cfm_hka * previous.hkz.u() + cfm_ma * previous.param.mz_uz +
+                  cfm_rta * previous.rtz.u());
+  cfm_t1 = 0.5 * (cfm_hka * previous.hkz.t() + cfm_rta * previous.rtz.t());
+  cfm_d1 = 0.5 * (cfm_hka * previous.hkz.d());
 
-  cfm_u2 = 0.5 * (cfm_hka * blData2.hkz.u() + cfm_ma * blData2.param.mz_uz +
-                  cfm_rta * blData2.rtz.u());
-  cfm_t2 = 0.5 * (cfm_hka * blData2.hkz.t() + cfm_rta * blData2.rtz.t());
-  cfm_d2 = 0.5 * (cfm_hka * blData2.hkz.d());
+  cfm_u2 = 0.5 * (cfm_hka * current.hkz.u() + cfm_ma * current.param.mz_uz +
+                  cfm_rta * current.rtz.u());
+  cfm_t2 = 0.5 * (cfm_hka * current.hkz.t() + cfm_rta * current.rtz.t());
+  cfm_d2 = 0.5 * (cfm_hka * current.hkz.d());
 
-  cfm_ms = 0.5 * (cfm_hka * blData1.hkz.ms() + cfm_ma * blData1.param.mz_ms +
-                  cfm_rta * blData1.rtz.ms() + cfm_hka * blData2.hkz.ms() +
-                  cfm_ma * blData2.param.mz_ms + cfm_rta * blData2.rtz.ms());
-  cfm_re = 0.5 * (cfm_rta * blData1.rtz.re() + cfm_rta * blData2.rtz.re());
+  cfm_ms = 0.5 * (cfm_hka * previous.hkz.ms() + cfm_ma * previous.param.mz_ms +
+                  cfm_rta * previous.rtz.ms() + cfm_hka * current.hkz.ms() +
+                  cfm_ma * current.param.mz_ms + cfm_rta * current.rtz.ms());
+  cfm_re = 0.5 * (cfm_rta * previous.rtz.re() + cfm_rta * current.rtz.re());
 
   return true;
+}
+
+bool XFoil::blmid(FlowRegimeEnum flowRegimeType) {
+  return blmid(boundaryLayerState, flowRegimeType);
 }
 
 
 /** ----------------------------------------------------------
  *     set bl primary "2" variables from parameter list
  *  ---------------------------------------------------------- */
-bool XFoil::blprv(double xsi, double ami, double cti, double thi, double dsi,
-                  double dswaki, double uei) {
-  blData2.param.xz = xsi;
-  blData2.param.amplz = ami;
-  blData2.param.sz = cti;
-  blData2.param.tz = thi;
-  blData2.param.dz = dsi - dswaki;
-  blData2.param.dwz = dswaki;
+bool XFoil::blprv(BoundaryLayerState& state, double xsi, double ami, double cti,
+                  double thi, double dsi, double dswaki, double uei) {
+  blData& current = state.current();
+  current.param.xz = xsi;
+  current.param.amplz = ami;
+  current.param.sz = cti;
+  current.param.tz = thi;
+  current.param.dz = dsi - dswaki;
+  current.param.dwz = dswaki;
 
-  blData2.param.uz =
+  current.param.uz =
       uei * (1.0 - tkbl) / (1.0 - tkbl * (uei / qinfbl) * (uei / qinfbl));
-  blData2.param.uz_uei =
-      (1.0 + tkbl * (2.0 * blData2.param.uz * uei / qinfbl / qinfbl - 1.0)) /
+  current.param.uz_uei =
+      (1.0 + tkbl * (2.0 * current.param.uz * uei / qinfbl / qinfbl - 1.0)) /
       (1.0 - tkbl * (uei / qinfbl) * (uei / qinfbl));
-  blData2.param.uz_ms =
-      (blData2.param.uz * (uei / qinfbl) * (uei / qinfbl) - uei) * tkbl_ms /
+  current.param.uz_ms =
+      (current.param.uz * (uei / qinfbl) * (uei / qinfbl) - uei) * tkbl_ms /
       (1.0 - tkbl * (uei / qinfbl) * (uei / qinfbl));
   return true;
+}
+
+bool XFoil::blprv(double xsi, double ami, double cti, double thi, double dsi,
+                  double dswaki, double uei) {
+  return blprv(boundaryLayerState, xsi, ami, cti, thi, dsi, dswaki, uei);
 }
 
 
@@ -384,26 +399,28 @@ bool XFoil::blvar(blData &ref, FlowRegimeEnum flowRegimeType) {
  *      if turb, then  ds1, ds2  replace  da1, da2
  *
  * ------------------------------------------------------------------ */
-bool XFoil::blsys() {
+bool XFoil::blsys(BoundaryLayerState& state, [[maybe_unused]] BoundaryLayerLattice& lattice) {
+  blData& previous = state.previous();
+  blData& current = state.current();
 
   //---- calculate secondary bl variables and their sensitivities
   if (wake) {
-    blvar(blData2, FlowRegimeEnum::Wake);
-    blmid(FlowRegimeEnum::Wake);
+    blvar(current, FlowRegimeEnum::Wake);
+    blmid(state, FlowRegimeEnum::Wake);
   } else {
     if (turb || tran) {
-      blvar(blData2, FlowRegimeEnum::Turbulent);
-      blmid(FlowRegimeEnum::Turbulent);
+      blvar(current, FlowRegimeEnum::Turbulent);
+      blmid(state, FlowRegimeEnum::Turbulent);
     } else {
-      blvar(blData2, FlowRegimeEnum::Laminar);
-      blmid(FlowRegimeEnum::Laminar);
+      blvar(current, FlowRegimeEnum::Laminar);
+      blmid(state, FlowRegimeEnum::Laminar);
     }
   }
 
   //---- for the similarity station, "1" and "2" variables are the same
   if (simi) {
     //		for(int icom=1;icom<= ncom;icom++) com1[icom] = com2[icom];
-    stepbl();
+    stepbl(state);
   }
 
   //---- set up appropriate finite difference system for current interval
@@ -432,12 +449,16 @@ bool XFoil::blsys() {
     double res_ms = blc.d_msq[k];
 
     //------ combine with derivatives of compressible  u1,u2 = uec(uei m)
-    blc.a1(k, 3) *= blData1.param.uz_uei;
-    blc.a2(k, 3) *= blData2.param.uz_uei;
+    blc.a1(k, 3) *= previous.param.uz_uei;
+    blc.a2(k, 3) *= current.param.uz_uei;
     blc.d_msq[k] =
-        res_u1 * blData1.param.uz_ms + res_u2 * blData2.param.uz_ms + res_ms;
+        res_u1 * previous.param.uz_ms + res_u2 * current.param.uz_ms + res_ms;
   }
   return true;
+}
+
+bool XFoil::blsys() {
+  return blsys(boundaryLayerState, boundaryLayerLattice);
 }
 
 

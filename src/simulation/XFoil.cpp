@@ -70,7 +70,25 @@ Matrix2d XFoil::buildBodyToFreestreamRotation() const {
   return rotation;
 }
 
-XFoil::XFoil() {
+XFoil::XFoil()
+    : blData1(boundaryLayerState.station1),
+      blData2(boundaryLayerState.station2),
+      ipan(boundaryLayerLattice.stationToPanel),
+      isys(boundaryLayerLattice.stationToSystem),
+      iblte(boundaryLayerLattice.trailingEdgeIndex),
+      nbl(boundaryLayerLattice.stationCount),
+      xstrip(boundaryLayerLattice.transitionLocation),
+      thet(boundaryLayerLattice.thet),
+      ctau(boundaryLayerLattice.ctau),
+      dstr(boundaryLayerLattice.dstr),
+      uedg(boundaryLayerLattice.uedg),
+      ctq(boundaryLayerLattice.ctq),
+      xssi(boundaryLayerLattice.xssi),
+      uinv(boundaryLayerLattice.uinv),
+      uinv_a(boundaryLayerLattice.uinv_a),
+      mass(boundaryLayerLattice.mass),
+      vti(boundaryLayerLattice.vti),
+      itran(boundaryLayerLattice.transitionIndex) {
   m_pOutStream = nullptr;
 
   // fortran seems to initializes variables to 0
