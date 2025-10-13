@@ -7,62 +7,62 @@
 using Eigen::RowVector;
 using Eigen::Vector3d;
 
-bool XFoil::bldif(int flowRegimeType) {
-
-  double hupwt, hdcon, hl, hd_hk1, hd_hk2, hlsq, ehh;
-  double upw, upw_hl, upw_hd, upw_hk1, upw_hk2;
-
-  double hl_hk1, hl_hk2;
-  double xlog, ulog, tlog, hlog, ddlog;
-  double f_arg; // ex arg
-
+struct LogarithmicDifferences {
+    double xlog;
+    double ulog;
+    double tlog;
+    double hlog;
+    double ddlog;
+  };
+LogarithmicDifferences getLogarithmicDifferences(int flowRegimeType, BoundaryLayerState boundaryLayerState) {
+  LogarithmicDifferences logDiffs;
   if (flowRegimeType == 0) {
-    //----- similarity logarithmic differences  (prescribed)
-    xlog = 1.0;
-    ulog = 1.0;
-    tlog = 0.0;
-    hlog = 0.0;
-    ddlog = 0.0;
+        //----- similarity logarithmic differences  (prescribed)
+    logDiffs.xlog = 1.0;
+    logDiffs.ulog = 1.0;
+    logDiffs.tlog = 0.0;
+    logDiffs.hlog = 0.0;
+    logDiffs.ddlog = 0.0;
+    logDiffs.ddlog = 0.0;
   } else {
-    //----- usual logarithmic differences
-    xlog = log(blData2.param.xz / blData1.param.xz);
-    ulog = log(blData2.param.uz / blData1.param.uz);
-    tlog = log(blData2.param.tz / blData1.param.tz);
-    hlog = log(blData2.hsz.scalar / blData1.hsz.scalar);
-    ddlog = 1.0;
+    logDiffs.xlog = log(boundaryLayerState.station2.param.xz / boundaryLayerState.station1.param.xz);
+    logDiffs.ulog = log(boundaryLayerState.station2.param.uz / boundaryLayerState.station1.param.uz);
+    logDiffs.tlog = log(boundaryLayerState.station2.param.tz / boundaryLayerState.station1.param.tz);
+    logDiffs.hlog = log(boundaryLayerState.station2.hsz.scalar / boundaryLayerState.station1.hsz.scalar);
+    logDiffs.ddlog = 1.0;
   }
+  return logDiffs;
+}
+bool XFoil::bldif(int flowRegimeType) {
+  LogarithmicDifferences logDiffs = getLogarithmicDifferences(flowRegimeType, boundaryLayerState);
 
   blc.clear();
 
   //---- set triggering constant for local upwinding
-  hupwt = 1.0;
-
-  hdcon = 5.0 * hupwt / blData2.hkz.scalar / blData2.hkz.scalar;
-  hd_hk1 = 0.0;
-  hd_hk2 = -hdcon * 2.0 / blData2.hkz.scalar;
-
   //---- use less upwinding in the wake
+  double hdcon;
   if (flowRegimeType == 3) {
-    hdcon = hupwt / blData2.hkz.scalar / blData2.hkz.scalar;
-    hd_hk1 = 0.0;
-    hd_hk2 = -hdcon * 2.0 / blData2.hkz.scalar;
+    hdcon = 1.0 / blData2.hkz.scalar / blData2.hkz.scalar;
+  } else {
+    hdcon = 5.0 / MathUtil::pow(blData2.hkz.scalar, 2);
   }
-  //
+  double hd_hk2 = -hdcon * 2.0 / blData2.hkz.scalar;
+
   //---- local upwinding is based on local change in  log(hk-1)
   //-    (mainly kicks in at transition)
-  f_arg = fabs((blData2.hkz.scalar - 1.0) / (blData1.hkz.scalar - 1.0));
-  hl = log(f_arg);
-  hl_hk1 = -1.0 / (blData1.hkz.scalar - 1.0);
-  hl_hk2 = 1.0 / (blData2.hkz.scalar - 1.0);
+  double hl = log(fabs((blData2.hkz.scalar - 1.0) / (blData1.hkz.scalar - 1.0)));
+  double hl_hk1 = -1.0 / (blData1.hkz.scalar - 1.0);
+  double hl_hk2 = 1.0 / (blData2.hkz.scalar - 1.0);
 
-  hlsq = std::min(hl * hl, 15.0);
-  ehh = exp(-hlsq * hdcon);
-  upw = 1.0 - 0.5 * ehh;
-  upw_hl = ehh * hl * hdcon;
-  upw_hd = 0.5 * ehh * hlsq;
+  double hlsq = std::min(hl * hl, 15.0);
+  double ehh = exp(-hlsq * hdcon);
 
-  upw_hk1 = upw_hl * hl_hk1 + upw_hd * hd_hk1;
-  upw_hk2 = upw_hl * hl_hk2 + upw_hd * hd_hk2;
+  double upw = 1.0 - 0.5 * ehh;
+  double upw_hl = ehh * hl * hdcon;
+  double upw_hd = ehh * hlsq / 2;
+
+  double upw_hk1 = upw_hl * hl_hk1;
+  double upw_hk2 = upw_hl * hl_hk2 + upw_hd * hd_hk2;
 
   Vector3d upw1 = upw_hk1 * blData1.hkz.pos_vector();
   Vector3d upw2 = upw_hk2 * blData2.hkz.pos_vector();
@@ -79,14 +79,14 @@ bool XFoil::bldif(int flowRegimeType) {
   } else {
     //----- build turbulent or wake shear lag equation
     bldifTurbulent(static_cast<FlowRegimeEnum>(flowRegimeType), upw, upw1, upw2,
-                   upw_ms, ulog);
+                   upw_ms, logDiffs.ulog);
   }
 
   //**** set up momentum equation
-  bldifMomentum(xlog, ulog, tlog, ddlog);
+  bldifMomentum(logDiffs.xlog, logDiffs.ulog, logDiffs.tlog, logDiffs.ddlog);
 
   //**** set up shape parameter equation
-  bldifShape(upw, xlog, ulog, hlog, ddlog, upw1, upw2, upw_ms);
+  bldifShape(upw, logDiffs.xlog, logDiffs.ulog, logDiffs.hlog, logDiffs.ddlog, upw1, upw2, upw_ms);
 
   return true;
 }
