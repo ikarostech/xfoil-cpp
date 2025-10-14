@@ -133,18 +133,9 @@ bool XFoil::blkin(BoundaryLayerState& state) {
   return true;
 }
 
-bool XFoil::blkin() { return blkin(boundaryLayerState); }
-
 
 bool XFoil::blmid(BoundaryLayerState& state, FlowRegimeEnum flowRegimeType) {
-  //----------------------------------------------------
-  //     calculates midpoint skin friction cfm
-  //
-  //      flowRegimeType = 1 :  laminar
-  //      flowRegimeType = 2 :  turbulent
-  //      flowRegimeType = 3 :  turbulent wake
-  //----------------------------------------------------
-  //
+
   blData& previous = state.previous();
   blData& current = state.current();
 
@@ -217,21 +208,6 @@ bool XFoil::blprv(BoundaryLayerState& state, double xsi, double ami, double cti,
   return true;
 }
 
-bool XFoil::blprv(double xsi, double ami, double cti, double thi, double dsi,
-                  double dswaki, double uei) {
-  return blprv(boundaryLayerState, xsi, ami, cti, thi, dsi, dswaki, uei);
-}
-
-/** ----------------------------------------------------
- *      calculates all secondary "2" variables from
- *      the primary "2" variables x2, u2, t2, d2, s2.
- *      also calculates the sensitivities of the
- *      secondary variables wrt the primary variables.
- *
- *       flowRegimeType = 1 :  laminar
- *       flowRegimeType = 2 :  turbulent
- *       flowRegimeType = 3 :  turbulent wake
- * ---------------------------------------------------- */
 bool XFoil::blvar(blData &ref, FlowRegimeEnum flowRegimeType) {
   // This routine is now decomposed into helper functions to simplify
   // the original Fortran translation.

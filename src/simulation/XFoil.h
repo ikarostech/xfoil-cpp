@@ -170,14 +170,11 @@ class XFoil {
   void bldifShape(BoundaryLayerState& boundaryLayerState, double upw, double xlog,
                   double ulog, double hlog, double ddlog, const Vector3d &upw1,
                   const Vector3d &upw2, double upw_ms, BlSystemCoeffs& coeffs) const;
-  bool blkin();
   bool blkin(BoundaryLayerState& state);
   bool blmid(FlowRegimeEnum flowRegimeType);
   bool blmid(BoundaryLayerState& state, FlowRegimeEnum flowRegimeType);
   bool blprv(BoundaryLayerState& state, double xsi, double ami, double cti,
              double thi, double dsi, double dswaki, double uei);
-  bool blprv(double xsi, double ami, double cti, double thi, double dsi,
-             double dswaki, double uei);
   bool blsolve();
   bool blsys(BoundaryLayerState& state, BoundaryLayerLattice& lattice);
   bool blvar(blData& ref, FlowRegimeEnum flowRegimeType);
