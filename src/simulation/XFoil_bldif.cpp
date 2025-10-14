@@ -33,7 +33,7 @@ LogarithmicDifferences getLogarithmicDifferences(int flowRegimeType, BoundaryLay
   }
   return logDiffs;
 }
-XFoil::BlSystemCoeffs XFoil::bldif(int flowRegimeType) const {
+XFoil::BlSystemCoeffs XFoil::bldif(int flowRegimeType, BoundaryLayerState boundaryLayerState) const {
   LogarithmicDifferences logDiffs = getLogarithmicDifferences(flowRegimeType, boundaryLayerState);
 
   BlSystemCoeffs coeffs;

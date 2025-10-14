@@ -287,13 +287,13 @@ bool XFoil::blsys(BoundaryLayerState& state, [[maybe_unused]] BoundaryLayerLatti
   if (tran)
     trdif();
   else if (simi)
-    blc = bldif(0);
+    blc = bldif(0, boundaryLayerState);
   else if (!turb)
-    blc = bldif(1);
+    blc = bldif(1, boundaryLayerState);
   else if (wake)
-    blc = bldif(3);
+    blc = bldif(3, boundaryLayerState);
   else
-    blc = bldif(2);
+    blc = bldif(2, boundaryLayerState);
 
   if (simi) {
     //----- at similarity station, "1" variables are really "2" variables
