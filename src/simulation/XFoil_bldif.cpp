@@ -33,10 +33,11 @@ LogarithmicDifferences getLogarithmicDifferences(int flowRegimeType, BoundaryLay
   }
   return logDiffs;
 }
-bool XFoil::bldif(int flowRegimeType) {
+XFoil::BlSystemCoeffs XFoil::bldif(int flowRegimeType) const {
   LogarithmicDifferences logDiffs = getLogarithmicDifferences(flowRegimeType, boundaryLayerState);
 
-  blc.clear();
+  BlSystemCoeffs coeffs;
+  coeffs.clear();
 
   //---- set triggering constant for local upwinding
   //---- use less upwinding in the wake
@@ -70,28 +71,28 @@ bool XFoil::bldif(int flowRegimeType) {
 
   if (flowRegimeType == 0) {
     //***** le point -->  set zero amplification factor
-    blc.a2(0, 0) = 1.0;
-    blc.d_re[0] = 0.0;
-    blc.rhs[0] = -blData2.param.amplz;
+    coeffs.a2(0, 0) = 1.0;
+    coeffs.d_re[0] = 0.0;
+    coeffs.rhs[0] = -blData2.param.amplz;
   } else if (flowRegimeType == 1) {
     //----- build laminar amplification equation
-    bldifLaminar();
+    bldifLaminar(coeffs);
   } else {
     //----- build turbulent or wake shear lag equation
     bldifTurbulent(static_cast<FlowRegimeEnum>(flowRegimeType), upw, upw1, upw2,
-                   upw_ms, logDiffs.ulog);
+                   upw_ms, logDiffs.ulog, coeffs);
   }
 
   //**** set up momentum equation
-  bldifMomentum(logDiffs.xlog, logDiffs.ulog, logDiffs.tlog, logDiffs.ddlog);
+  bldifMomentum(logDiffs.xlog, logDiffs.ulog, logDiffs.tlog, logDiffs.ddlog, coeffs);
 
   //**** set up shape parameter equation
-  bldifShape(upw, logDiffs.xlog, logDiffs.ulog, logDiffs.hlog, logDiffs.ddlog, upw1, upw2, upw_ms);
+  bldifShape(upw, logDiffs.xlog, logDiffs.ulog, logDiffs.hlog, logDiffs.ddlog, upw1, upw2, upw_ms, coeffs);
 
-  return true;
+  return coeffs;
 }
 
-void XFoil::bldifLaminar() {
+void XFoil::bldifLaminar(BlSystemCoeffs& coeffs) const {
   AxResult ax_result =
       axset(blData1.hkz.scalar, blData1.param.tz, blData1.rtz.scalar,
             blData1.param.amplz, blData2.hkz.scalar, blData2.param.tz,
@@ -101,33 +102,33 @@ void XFoil::bldifLaminar() {
                 ax_result.ax * (blData2.param.xz - blData1.param.xz);
   double z_ax = -(blData2.param.xz - blData1.param.xz);
 
-  blc.a1(0, 0) = z_ax * ax_result.ax_a1 - 1.0;
-  blc.a1(0, 1) = z_ax * (ax_result.ax_hk1 * blData1.hkz.t() + ax_result.ax_t1 +
+  coeffs.a1(0, 0) = z_ax * ax_result.ax_a1 - 1.0;
+  coeffs.a1(0, 1) = z_ax * (ax_result.ax_hk1 * blData1.hkz.t() + ax_result.ax_t1 +
                       ax_result.ax_rt1 * blData1.rtz.t());
-  blc.a1(0, 2) = z_ax * (ax_result.ax_hk1 * blData1.hkz.d());
-  blc.a1(0, 3) = z_ax * (ax_result.ax_hk1 * blData1.hkz.u() +
+  coeffs.a1(0, 2) = z_ax * (ax_result.ax_hk1 * blData1.hkz.d());
+  coeffs.a1(0, 3) = z_ax * (ax_result.ax_hk1 * blData1.hkz.u() +
                       ax_result.ax_rt1 * blData1.rtz.u());
-  blc.a1(0, 4) = ax_result.ax;
-  blc.a2(0, 0) = z_ax * ax_result.ax_a2 + 1.0;
-  blc.a2(0, 1) = z_ax * (ax_result.ax_hk2 * blData2.hkz.t() + ax_result.ax_t2 +
+  coeffs.a1(0, 4) = ax_result.ax;
+  coeffs.a2(0, 0) = z_ax * ax_result.ax_a2 + 1.0;
+  coeffs.a2(0, 1) = z_ax * (ax_result.ax_hk2 * blData2.hkz.t() + ax_result.ax_t2 +
                       ax_result.ax_rt2 * blData2.rtz.t());
-  blc.a2(0, 2) = z_ax * (ax_result.ax_hk2 * blData2.hkz.d());
-  blc.a2(0, 3) = z_ax * (ax_result.ax_hk2 * blData2.hkz.u() +
+  coeffs.a2(0, 2) = z_ax * (ax_result.ax_hk2 * blData2.hkz.d());
+  coeffs.a2(0, 3) = z_ax * (ax_result.ax_hk2 * blData2.hkz.u() +
                       ax_result.ax_rt2 * blData2.rtz.u());
-  blc.a2(0, 4) = -ax_result.ax;
-  blc.d_msq[0] = z_ax * (ax_result.ax_hk1 * blData1.hkz.ms() +
+  coeffs.a2(0, 4) = -ax_result.ax;
+  coeffs.d_msq[0] = z_ax * (ax_result.ax_hk1 * blData1.hkz.ms() +
                    ax_result.ax_rt1 * blData1.rtz.ms() +
                    ax_result.ax_hk2 * blData2.hkz.ms() +
                    ax_result.ax_rt2 * blData2.rtz.ms());
-  blc.d_re[0] = z_ax * (ax_result.ax_rt1 * blData1.rtz.re() +
+  coeffs.d_re[0] = z_ax * (ax_result.ax_rt1 * blData1.rtz.re() +
                    ax_result.ax_rt2 * blData2.rtz.re());
-  blc.d_xi[0] = 0.0;
-  blc.rhs[0] = -rezc;
+  coeffs.d_xi[0] = 0.0;
+  coeffs.rhs[0] = -rezc;
 }
 
 void XFoil::bldifTurbulent(FlowRegimeEnum flowRegimeType, double upw,
                            const Vector3d &upw1, const Vector3d &upw2,
-                           double upw_ms, double ulog) {
+                           double upw_ms, double ulog, BlSystemCoeffs& coeffs) const {
   double sa = (1.0 - upw) * blData1.param.sz + upw * blData2.param.sz;
   double cqa = (1.0 - upw) * blData1.cqz.scalar + upw * blData2.cqz.scalar;
   double cfa = (1.0 - upw) * blData1.cfz.scalar + upw * blData2.cfz.scalar;
@@ -221,22 +222,23 @@ void XFoil::bldifTurbulent(FlowRegimeEnum flowRegimeType, double upw,
   vs1_row.segment<3>(1) += vs1_vec;
   vs2_row.segment<3>(1) += vs2_vec;
 
-  blc.a1.row(0) = vs1_row;
-  blc.a2.row(0) = vs2_row;
+  coeffs.a1.row(0) = vs1_row;
+  coeffs.a2.row(0) = vs2_row;
 
-  blc.d_msq[0] = z_upw * upw_ms + z_de * blData1.dez.ms() + z_us * blData1.usz.ms() +
+  coeffs.d_msq[0] = z_upw * upw_ms + z_de * blData1.dez.ms() + z_us * blData1.usz.ms() +
            z_de * blData2.dez.ms() + z_us * blData2.usz.ms() +
            z_cq1 * blData1.cqz.ms() + z_cf1 * blData1.cfz.ms() +
            z_hk1 * blData1.hkz.ms() + z_cq2 * blData2.cqz.ms() +
            z_cf2 * blData2.cfz.ms() + z_hk2 * blData2.hkz.ms();
 
-  blc.d_re[0] = z_cq1 * blData1.cqz.re() + z_cf1 * blData1.cfz.re() +
+  coeffs.d_re[0] = z_cq1 * blData1.cqz.re() + z_cf1 * blData1.cfz.re() +
            z_cq2 * blData2.cqz.re() + z_cf2 * blData2.cfz.re();
-  blc.d_xi[0] = 0.0;
-  blc.rhs[0] = -rezc;
+  coeffs.d_xi[0] = 0.0;
+  coeffs.rhs[0] = -rezc;
 }
 
-void XFoil::bldifMomentum(double xlog, double ulog, double tlog, double ddlog) {
+void XFoil::bldifMomentum(double xlog, double ulog, double tlog, double ddlog,
+                          BlSystemCoeffs& coeffs) const {
   double ha = 0.5 * (blData1.param.hz + blData2.param.hz);
   double ma = 0.5 * (blData1.param.mz + blData2.param.mz);
   double xa = 0.5 * (blData1.param.xz + blData2.param.xz);
@@ -311,21 +313,21 @@ void XFoil::bldifMomentum(double xlog, double ulog, double tlog, double ddlog) {
     row1_a1(4) = z_x1;
     row1_a2(4) = z_x2;
 
-    blc.a1.row(1) = row1_a1;
-    blc.a2.row(1) = row1_a2;
+    coeffs.a1.row(1) = row1_a1;
+    coeffs.a2.row(1) = row1_a2;
   }
 
-  blc.d_msq[1] = 0.5 * z_ma * blData1.param.mz_ms + z_cfm * cfm_ms +
+  coeffs.d_msq[1] = 0.5 * z_ma * blData1.param.mz_ms + z_cfm * cfm_ms +
            z_cf1 * blData1.cfz.ms() + 0.5 * z_ma * blData2.param.mz_ms +
            z_cf2 * blData2.cfz.ms();
-  blc.d_re[1] = z_cfm * cfm_re + z_cf1 * blData1.cfz.re() + z_cf2 * blData2.cfz.re();
-  blc.d_xi[1] = 0.0;
-  blc.rhs[1] = -rezt;
+  coeffs.d_re[1] = z_cfm * cfm_re + z_cf1 * blData1.cfz.re() + z_cf2 * blData2.cfz.re();
+  coeffs.d_xi[1] = 0.0;
+  coeffs.rhs[1] = -rezt;
 }
 
 void XFoil::bldifShape(double upw, double xlog, double ulog, double hlog,
                        double ddlog, const Vector3d &upw1, const Vector3d &upw2,
-                       double upw_ms) {
+                       double upw_ms, BlSystemCoeffs& coeffs) const {
   double xot1 = blData1.param.xz / blData1.param.tz;
   double xot2 = blData2.param.xz / blData2.param.tz;
 
@@ -407,13 +409,13 @@ void XFoil::bldifShape(double upw, double xlog, double ulog, double hlog,
     row2_a1(4) = z_x1;
     row2_a2(4) = z_x2;
 
-    blc.a1.row(2) = row2_a1;
-    blc.a2.row(2) = row2_a2;
+    coeffs.a1.row(2) = row2_a1;
+    coeffs.a2.row(2) = row2_a2;
   }
-  blc.d_msq[2] = z_hs1 * blData1.hsz.ms() + z_cf1 * blData1.cfz.ms() +
+  coeffs.d_msq[2] = z_hs1 * blData1.hsz.ms() + z_cf1 * blData1.cfz.ms() +
            z_di1 * blData1.diz.ms() + z_hs2 * blData2.hsz.ms() +
            z_cf2 * blData2.cfz.ms() + z_di2 * blData2.diz.ms();
-  blc.d_re[2] = z_hs1 * blData1.hsz.re() + z_cf1 * blData1.cfz.re() +
+  coeffs.d_re[2] = z_hs1 * blData1.hsz.re() + z_cf1 * blData1.cfz.re() +
            z_di1 * blData1.diz.re() + z_hs2 * blData2.hsz.re() +
            z_cf2 * blData2.cfz.re() + z_di2 * blData2.diz.re();
 
@@ -425,14 +427,13 @@ void XFoil::bldifShape(double upw, double xlog, double ulog, double hlog,
     Vector3d inc2 = 0.5 * (z_hca * blData2.hcz.pos_vector() +
                            z_ha * Vector3d(blData2.param.hz_tz, blData2.param.hz_dz, 0.0)) +
                     z_upw * upw2;
-    blc.a1.row(2).segment<3>(1) += inc1;
-    blc.a2.row(2).segment<3>(1) += inc2;
+    coeffs.a1.row(2).segment<3>(1) += inc1;
+    coeffs.a2.row(2).segment<3>(1) += inc2;
   }
 
-  blc.d_msq[2] = 0.5 * (z_hca * blData1.hcz.ms()) + z_upw * upw_ms +
+  coeffs.d_msq[2] = 0.5 * (z_hca * blData1.hcz.ms()) + z_upw * upw_ms +
            0.5 * (z_hca * blData2.hcz.ms());
 
-  blc.d_xi[2] = 0.0;
-  blc.rhs[2] = -rezh;
+  coeffs.d_xi[2] = 0.0;
+  coeffs.rhs[2] = -rezh;
 }
-

@@ -156,17 +156,19 @@ class XFoil {
     double ax_a2;
   };
   AxResult axset(double hk1, double thet1, double rt1, double a1, double hk2,
-    double thet2, double rt2, double a2, double acrit);
+    double thet2, double rt2, double a2, double acrit) const;
   void updateTrailingEdgeState();
-  bool bldif(int flowRegimeType);
+  struct BlSystemCoeffs;
+  BlSystemCoeffs bldif(int flowRegimeType) const;
   // ---- Helper routines used by bldif ----
-  void bldifLaminar();
+  void bldifLaminar(BlSystemCoeffs& coeffs) const;
   void bldifTurbulent(FlowRegimeEnum flowRegimeType, double upw, const Vector3d &upw1,
-                      const Vector3d &upw2, double upw_ms, double ulog);
-  void bldifMomentum(double xlog, double ulog, double tlog, double ddlog);
+                      const Vector3d &upw2, double upw_ms, double ulog, BlSystemCoeffs& coeffs) const;
+  void bldifMomentum(double xlog, double ulog, double tlog, double ddlog,
+                     BlSystemCoeffs& coeffs) const;
   void bldifShape(double upw, double xlog, double ulog, double hlog,
                   double ddlog, const Vector3d &upw1, const Vector3d &upw2,
-                  double upw_ms);
+                  double upw_ms, BlSystemCoeffs& coeffs) const;
   bool blkin();
   bool blkin(BoundaryLayerState& state);
   bool blmid(FlowRegimeEnum flowRegimeType);
@@ -262,7 +264,7 @@ class XFoil {
     double ax_th;
     double ax_rt;
   };
-  EnvEnResult dampl(double hk, double th, double rt);
+  EnvEnResult dampl(double hk, double th, double rt) const;
 
   bool dslim(double &dstr, double thet, double msq, double hklim);
 

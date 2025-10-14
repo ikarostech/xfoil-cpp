@@ -10,7 +10,7 @@ using namespace Eigen;
  * ----------------------------------------------------------- */
 XFoil::AxResult XFoil::axset(double hk1, double t1, double rt1, double a1,
                              double hk2, double t2, double rt2, double a2,
-                             double acrit) {
+                             double acrit) const {
   AxResult result;
   //
   //==========================
@@ -287,13 +287,13 @@ bool XFoil::blsys(BoundaryLayerState& state, [[maybe_unused]] BoundaryLayerLatti
   if (tran)
     trdif();
   else if (simi)
-    bldif(0);
+    blc = bldif(0);
   else if (!turb)
-    bldif(1);
+    blc = bldif(1);
   else if (wake)
-    bldif(3);
+    blc = bldif(3);
   else
-    bldif(2);
+    blc = bldif(2);
 
   if (simi) {
     //----- at similarity station, "1" variables are really "2" variables
@@ -355,7 +355,7 @@ bool XFoil::blsys(BoundaryLayerState& state, [[maybe_unused]] BoundaryLayerLatti
  *             is below the critical rtheta.  transition occurs
  *             when n(x) reaches ncrit (ncrit= 9 is "standard").
  * ============================================================== */
-XFoil::EnvEnResult XFoil::dampl(double hk, double th, double rt) {
+XFoil::EnvEnResult XFoil::dampl(double hk, double th, double rt) const {
   EnvEnResult result;
   double dgr = 0.08;
 
