@@ -161,14 +161,15 @@ class XFoil {
   struct BlSystemCoeffs;
   BlSystemCoeffs bldif(int flowRegimeType, BoundaryLayerState boundaryLayerState) const;
   // ---- Helper routines used by bldif ----
-  void bldifLaminar(BlSystemCoeffs& coeffs) const;
-  void bldifTurbulent(FlowRegimeEnum flowRegimeType, double upw, const Vector3d &upw1,
-                      const Vector3d &upw2, double upw_ms, double ulog, BlSystemCoeffs& coeffs) const;
-  void bldifMomentum(double xlog, double ulog, double tlog, double ddlog,
-                     BlSystemCoeffs& coeffs) const;
-  void bldifShape(double upw, double xlog, double ulog, double hlog,
-                  double ddlog, const Vector3d &upw1, const Vector3d &upw2,
-                  double upw_ms, BlSystemCoeffs& coeffs) const;
+  void bldifLaminar(BoundaryLayerState& boundaryLayerState, BlSystemCoeffs& coeffs) const;
+  void bldifTurbulent(BoundaryLayerState& boundaryLayerState, FlowRegimeEnum flowRegimeType,
+                      double upw, const Vector3d &upw1, const Vector3d &upw2, double upw_ms,
+                      double ulog, BlSystemCoeffs& coeffs) const;
+  void bldifMomentum(BoundaryLayerState& boundaryLayerState, double xlog, double ulog,
+                     double tlog, double ddlog, BlSystemCoeffs& coeffs) const;
+  void bldifShape(BoundaryLayerState& boundaryLayerState, double upw, double xlog,
+                  double ulog, double hlog, double ddlog, const Vector3d &upw1,
+                  const Vector3d &upw2, double upw_ms, BlSystemCoeffs& coeffs) const;
   bool blkin();
   bool blkin(BoundaryLayerState& state);
   bool blmid(FlowRegimeEnum flowRegimeType);
