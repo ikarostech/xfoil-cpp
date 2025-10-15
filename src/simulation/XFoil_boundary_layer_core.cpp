@@ -263,13 +263,13 @@ bool XFoil::blsys(BoundaryLayerState& state, [[maybe_unused]] BoundaryLayerLatti
   if (tran)
     trdif();
   else if (simi)
-    blc = bldif(0, boundaryLayerState);
+    blc = bldif(FlowRegimeEnum::Similarity, boundaryLayerState);
   else if (!turb)
-    blc = bldif(1, boundaryLayerState);
+    blc = bldif(FlowRegimeEnum::Laminar, boundaryLayerState);
   else if (wake)
-    blc = bldif(3, boundaryLayerState);
+    blc = bldif(FlowRegimeEnum::Wake, boundaryLayerState);
   else
-    blc = bldif(2, boundaryLayerState);
+    blc = bldif(FlowRegimeEnum::Turbulent, boundaryLayerState);
 
   if (simi) {
     //----- at similarity station, "1" variables are really "2" variables

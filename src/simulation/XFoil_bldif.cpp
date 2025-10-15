@@ -14,9 +14,9 @@ struct LogarithmicDifferences {
     double hlog;
     double ddlog;
   };
-LogarithmicDifferences getLogarithmicDifferences(int flowRegimeType, BoundaryLayerState boundaryLayerState) {
+LogarithmicDifferences getLogarithmicDifferences(FlowRegimeEnum flowRegimeType, BoundaryLayerState boundaryLayerState) {
   LogarithmicDifferences logDiffs;
-  if (flowRegimeType == 0) {
+  if (flowRegimeType == FlowRegimeEnum::Similarity) {
         //----- similarity logarithmic differences  (prescribed)
     logDiffs.xlog = 1.0;
     logDiffs.ulog = 1.0;
@@ -33,7 +33,7 @@ LogarithmicDifferences getLogarithmicDifferences(int flowRegimeType, BoundaryLay
   }
   return logDiffs;
 }
-XFoil::BlSystemCoeffs XFoil::bldif(int flowRegimeType, BoundaryLayerState boundaryLayerState) const {
+XFoil::BlSystemCoeffs XFoil::bldif(FlowRegimeEnum flowRegimeType, BoundaryLayerState boundaryLayerState) const {
   LogarithmicDifferences logDiffs = getLogarithmicDifferences(flowRegimeType, boundaryLayerState);
 
   blData& station1 = boundaryLayerState.station1;
@@ -45,7 +45,7 @@ XFoil::BlSystemCoeffs XFoil::bldif(int flowRegimeType, BoundaryLayerState bounda
   //---- set triggering constant for local upwinding
   //---- use less upwinding in the wake
   double hdcon;
-  if (flowRegimeType == 3) {
+  if (flowRegimeType == FlowRegimeEnum::Wake) {
     hdcon = 1.0 / station2.hkz.scalar / station2.hkz.scalar;
   } else {
     hdcon = 5.0 / MathUtil::pow(station2.hkz.scalar, 2);
@@ -72,17 +72,17 @@ XFoil::BlSystemCoeffs XFoil::bldif(int flowRegimeType, BoundaryLayerState bounda
   Vector3d upw2 = upw_hk2 * station2.hkz.pos_vector();
   double upw_ms = upw_hk1 * station1.hkz.ms() + upw_hk2 * station2.hkz.ms();
 
-  if (flowRegimeType == 0) {
+  if (flowRegimeType == FlowRegimeEnum::Similarity) {
     //***** le point -->  set zero amplification factor
     coeffs.a2(0, 0) = 1.0;
     coeffs.d_re[0] = 0.0;
     coeffs.rhs[0] = -station2.param.amplz;
-  } else if (flowRegimeType == 1) {
+  } else if (flowRegimeType == FlowRegimeEnum::Laminar) {
     //----- build laminar amplification equation
     bldifLaminar(boundaryLayerState, coeffs);
   } else {
     //----- build turbulent or wake shear lag equation
-    bldifTurbulent(boundaryLayerState, static_cast<FlowRegimeEnum>(flowRegimeType), upw, upw1,
+    bldifTurbulent(boundaryLayerState, flowRegimeType, upw, upw1,
                    upw2, upw_ms, logDiffs.ulog, coeffs);
   }
 

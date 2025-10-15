@@ -159,7 +159,7 @@ class XFoil {
     double thet2, double rt2, double a2, double acrit) const;
   void updateTrailingEdgeState();
   struct BlSystemCoeffs;
-  BlSystemCoeffs bldif(int flowRegimeType, BoundaryLayerState boundaryLayerState) const;
+  BlSystemCoeffs bldif(FlowRegimeEnum flowRegimeType, BoundaryLayerState boundaryLayerState) const;
   // ---- Helper routines used by bldif ----
   void bldifLaminar(BoundaryLayerState& boundaryLayerState, BlSystemCoeffs& coeffs) const;
   void bldifTurbulent(BoundaryLayerState& boundaryLayerState, FlowRegimeEnum flowRegimeType,
