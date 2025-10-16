@@ -1822,12 +1822,13 @@ bool XFoil::trdif() {
   blvar(blData2, FlowRegimeEnum::Laminar);
 
   //---- calculate x1-xt midpoint cfm value
-  blmid(boundaryLayerState, FlowRegimeEnum::Laminar);
+  SkinFrictionCoefficients laminarSkinFriction =
+      blmid(boundaryLayerState, FlowRegimeEnum::Laminar);
 
   //=    at this point, all "2" variables are really "t" variables at xt
 
   //---- set up newton system for dam, dth, dds, due, dxi  at  x1 and xt
-  blc = bldif(FlowRegimeEnum::Laminar, boundaryLayerState);
+  blc = bldif(FlowRegimeEnum::Laminar, boundaryLayerState, laminarSkinFriction);
 
   //---- the current newton system is in terms of "1" and "t" variables,
   //-    so calculate its equivalent in terms of "1" and "2" variables.
@@ -1911,10 +1912,11 @@ bool XFoil::trdif() {
   restoreblData(2);
 
   //---- calculate xt-x2 midpoint cfm value
-  blmid(boundaryLayerState, FlowRegimeEnum::Turbulent);
+  SkinFrictionCoefficients turbulentSkinFriction =
+      blmid(boundaryLayerState, FlowRegimeEnum::Turbulent);
 
   //---- set up newton system for dct, dth, dds, due, dxi  at  xt and x2
-  blc = bldif(FlowRegimeEnum::Turbulent, boundaryLayerState);
+  blc = bldif(FlowRegimeEnum::Turbulent, boundaryLayerState, turbulentSkinFriction);
 
   //---- convert sensitivities wrt "t" variables into sensitivities
   //-    wrt "1" and "2" variables as done before for the laminar part

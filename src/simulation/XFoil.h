@@ -159,20 +159,33 @@ class XFoil {
     double thet2, double rt2, double a2, double acrit) const;
   void updateTrailingEdgeState();
   struct BlSystemCoeffs;
-  BlSystemCoeffs bldif(FlowRegimeEnum flowRegimeType, BoundaryLayerState boundaryLayerState) const;
+  struct SkinFrictionCoefficients {
+    double cfm = 0.0;
+    double cfm_ms = 0.0;
+    double cfm_re = 0.0;
+    double cfm_u1 = 0.0;
+    double cfm_t1 = 0.0;
+    double cfm_d1 = 0.0;
+    double cfm_u2 = 0.0;
+    double cfm_t2 = 0.0;
+    double cfm_d2 = 0.0;
+  };
+  BlSystemCoeffs bldif(FlowRegimeEnum flowRegimeType, BoundaryLayerState boundaryLayerState,
+                       const SkinFrictionCoefficients& skinFriction) const;
   // ---- Helper routines used by bldif ----
   void bldifLaminar(BoundaryLayerState& boundaryLayerState, BlSystemCoeffs& coeffs) const;
   void bldifTurbulent(BoundaryLayerState& boundaryLayerState, FlowRegimeEnum flowRegimeType,
                       double upw, const Vector3d &upw1, const Vector3d &upw2, double upw_ms,
                       double ulog, BlSystemCoeffs& coeffs) const;
   void bldifMomentum(BoundaryLayerState& boundaryLayerState, double xlog, double ulog,
-                     double tlog, double ddlog, BlSystemCoeffs& coeffs) const;
+                     double tlog, double ddlog, const SkinFrictionCoefficients& skinFriction,
+                     BlSystemCoeffs& coeffs) const;
   void bldifShape(BoundaryLayerState& boundaryLayerState, double upw, double xlog,
                   double ulog, double hlog, double ddlog, const Vector3d &upw1,
                   const Vector3d &upw2, double upw_ms, BlSystemCoeffs& coeffs) const;
   bool blkin(BoundaryLayerState& state);
-  bool blmid(FlowRegimeEnum flowRegimeType);
-  bool blmid(BoundaryLayerState& state, FlowRegimeEnum flowRegimeType);
+  SkinFrictionCoefficients blmid(FlowRegimeEnum flowRegimeType);
+  SkinFrictionCoefficients blmid(BoundaryLayerState& state, FlowRegimeEnum flowRegimeType);
   bool blprv(BoundaryLayerState& state, double xsi, double ami, double cti,
              double thi, double dsi, double dswaki, double uei);
   bool blsolve();
@@ -494,7 +507,6 @@ class XFoil {
   //---- sutherland's const./to	(assumes stagnation conditions are at stp)
   const double hvrat = 0.35;
 
-  double cfm, cfm_ms, cfm_re, cfm_u1, cfm_t1, cfm_d1, cfm_u2, cfm_t2, cfm_d2;
   double xt, xt_a1, xt_ms, xt_re, xt_xf, xt_x1, xt_t1, xt_d1, xt_u1, xt_x2,
       xt_t2, xt_d2, xt_u2;
   vector<Matrix<double, 3, 2>> va, vb, vdel;

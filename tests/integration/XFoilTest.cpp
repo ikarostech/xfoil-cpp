@@ -121,20 +121,21 @@ TEST_F(DatGoogleTest, test_blmid_turbulent) {
   foil->blData1.mz = foil->blData2.mz = 0.01;
   
   //when
-  foil->blmid(FlowRegimeEnum::Laminar);
+  XFoil::SkinFrictionCoefficients laminarCoeffs =
+      foil->blmid(FlowRegimeEnum::Laminar);
 
   //then
-  ASSERT_DOUBLE_EQ(-6.8333333333333339e-07, foil->cfm);
-  ASSERT_DOUBLE_EQ(0, foil->cfm_u1);
-  ASSERT_DOUBLE_EQ(0, foil->cfm_t1);
-  ASSERT_DOUBLE_EQ(0, foil->cfm_d1);
+  ASSERT_DOUBLE_EQ(-6.8333333333333339e-07, laminarCoeffs.cfm);
+  ASSERT_DOUBLE_EQ(0, laminarCoeffs.cfm_u1);
+  ASSERT_DOUBLE_EQ(0, laminarCoeffs.cfm_t1);
+  ASSERT_DOUBLE_EQ(0, laminarCoeffs.cfm_d1);
 
-  ASSERT_DOUBLE_EQ(0, foil->cfm_u2);
-  ASSERT_DOUBLE_EQ(0, foil->cfm_t2);
-  ASSERT_DOUBLE_EQ(0, foil->cfm_d2);
+  ASSERT_DOUBLE_EQ(0, laminarCoeffs.cfm_u2);
+  ASSERT_DOUBLE_EQ(0, laminarCoeffs.cfm_t2);
+  ASSERT_DOUBLE_EQ(0, laminarCoeffs.cfm_d2);
 
-  ASSERT_DOUBLE_EQ(0, foil->cfm_ms);
-  ASSERT_DOUBLE_EQ(0, foil->cfm_re);
+  ASSERT_DOUBLE_EQ(0, laminarCoeffs.cfm_ms);
+  ASSERT_DOUBLE_EQ(0, laminarCoeffs.cfm_re);
 }
 
 TEST_F(DatGoogleTest, test_blmid_laminar) {
@@ -144,20 +145,21 @@ TEST_F(DatGoogleTest, test_blmid_laminar) {
   foil->blData1.mz = foil->blData2.mz = 0.01;
   
   //when
-  foil->blmid(FlowRegimeEnum::Turbulent);
+  XFoil::SkinFrictionCoefficients turbulentCoeffs =
+      foil->blmid(FlowRegimeEnum::Turbulent);
 
   //then
-  ASSERT_DOUBLE_EQ(-6.8333333333333339e-07, foil->cfm);
-  ASSERT_DOUBLE_EQ(0, foil->cfm_u1);
-  ASSERT_DOUBLE_EQ(0, foil->cfm_t1);
-  ASSERT_DOUBLE_EQ(0, foil->cfm_d1);
+  ASSERT_DOUBLE_EQ(-6.8333333333333339e-07, turbulentCoeffs.cfm);
+  ASSERT_DOUBLE_EQ(0, turbulentCoeffs.cfm_u1);
+  ASSERT_DOUBLE_EQ(0, turbulentCoeffs.cfm_t1);
+  ASSERT_DOUBLE_EQ(0, turbulentCoeffs.cfm_d1);
 
-  ASSERT_DOUBLE_EQ(0, foil->cfm_u2);
-  ASSERT_DOUBLE_EQ(0, foil->cfm_t2);
-  ASSERT_DOUBLE_EQ(0, foil->cfm_d2);
+  ASSERT_DOUBLE_EQ(0, turbulentCoeffs.cfm_u2);
+  ASSERT_DOUBLE_EQ(0, turbulentCoeffs.cfm_t2);
+  ASSERT_DOUBLE_EQ(0, turbulentCoeffs.cfm_d2);
 
-  ASSERT_DOUBLE_EQ(0, foil->cfm_ms);
-  ASSERT_DOUBLE_EQ(0, foil->cfm_re);
+  ASSERT_DOUBLE_EQ(0, turbulentCoeffs.cfm_ms);
+  ASSERT_DOUBLE_EQ(0, turbulentCoeffs.cfm_re);
 }
 
 TEST_F(DatGoogleTest, test_blmid_turbulent_wake) {
@@ -167,20 +169,21 @@ TEST_F(DatGoogleTest, test_blmid_turbulent_wake) {
   foil->blData1.mz = foil->blData2.mz = 0.01;
   
   //when
-  foil->blmid(FlowRegimeEnum::Wake);
+  XFoil::SkinFrictionCoefficients wakeCoeffs =
+      foil->blmid(FlowRegimeEnum::Wake);
 
   //then
-  ASSERT_DOUBLE_EQ(0, foil->cfm);
-  ASSERT_DOUBLE_EQ(0, foil->cfm_u1);
-  ASSERT_DOUBLE_EQ(0, foil->cfm_t1);
-  ASSERT_DOUBLE_EQ(0, foil->cfm_d1);
+  ASSERT_DOUBLE_EQ(0, wakeCoeffs.cfm);
+  ASSERT_DOUBLE_EQ(0, wakeCoeffs.cfm_u1);
+  ASSERT_DOUBLE_EQ(0, wakeCoeffs.cfm_t1);
+  ASSERT_DOUBLE_EQ(0, wakeCoeffs.cfm_d1);
 
-  ASSERT_DOUBLE_EQ(0, foil->cfm_u2);
-  ASSERT_DOUBLE_EQ(0, foil->cfm_t2);
-  ASSERT_DOUBLE_EQ(0, foil->cfm_d2);
+  ASSERT_DOUBLE_EQ(0, wakeCoeffs.cfm_u2);
+  ASSERT_DOUBLE_EQ(0, wakeCoeffs.cfm_t2);
+  ASSERT_DOUBLE_EQ(0, wakeCoeffs.cfm_d2);
 
-  ASSERT_DOUBLE_EQ(0, foil->cfm_ms);
-  ASSERT_DOUBLE_EQ(0, foil->cfm_re);
+  ASSERT_DOUBLE_EQ(0, wakeCoeffs.cfm_ms);
+  ASSERT_DOUBLE_EQ(0, wakeCoeffs.cfm_re);
 }
 
 TEST_F(DatGoogleTest, test_blvar_cfz_wake) {

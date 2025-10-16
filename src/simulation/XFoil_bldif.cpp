@@ -33,7 +33,9 @@ LogarithmicDifferences getLogarithmicDifferences(FlowRegimeEnum flowRegimeType, 
   }
   return logDiffs;
 }
-XFoil::BlSystemCoeffs XFoil::bldif(FlowRegimeEnum flowRegimeType, BoundaryLayerState boundaryLayerState) const {
+XFoil::BlSystemCoeffs XFoil::bldif(FlowRegimeEnum flowRegimeType,
+                                   BoundaryLayerState boundaryLayerState,
+                                   const SkinFrictionCoefficients& skinFriction) const {
   LogarithmicDifferences logDiffs = getLogarithmicDifferences(flowRegimeType, boundaryLayerState);
 
   blData& station1 = boundaryLayerState.station1;
@@ -87,8 +89,8 @@ XFoil::BlSystemCoeffs XFoil::bldif(FlowRegimeEnum flowRegimeType, BoundaryLayerS
   }
 
   //**** set up momentum equation
-  bldifMomentum(boundaryLayerState, logDiffs.xlog, logDiffs.ulog, logDiffs.tlog, logDiffs.ddlog,
-                coeffs);
+  bldifMomentum(boundaryLayerState, logDiffs.xlog, logDiffs.ulog, logDiffs.tlog,
+                logDiffs.ddlog, skinFriction, coeffs);
 
   //**** set up shape parameter equation
   bldifShape(boundaryLayerState, upw, logDiffs.xlog, logDiffs.ulog, logDiffs.hlog,
@@ -251,7 +253,9 @@ void XFoil::bldifTurbulent(BoundaryLayerState& boundaryLayerState,
 }
 
 void XFoil::bldifMomentum(BoundaryLayerState& boundaryLayerState, double xlog, double ulog,
-                          double tlog, double ddlog, BlSystemCoeffs& coeffs) const {
+                          double tlog, double ddlog,
+                          const SkinFrictionCoefficients& skinFriction,
+                          BlSystemCoeffs& coeffs) const {
   blData& station1 = boundaryLayerState.station1;
   blData& station2 = boundaryLayerState.station2;
 
@@ -263,11 +267,11 @@ void XFoil::bldifMomentum(BoundaryLayerState& boundaryLayerState, double xlog, d
                       station2.param.dwz / station2.param.tz);
 
   double cfx =
-      0.50 * cfm * xa / ta +
+      0.50 * skinFriction.cfm * xa / ta +
       0.25 * (station1.cfz.scalar * station1.param.xz / station1.param.tz +
               station2.cfz.scalar * station2.param.xz / station2.param.tz);
-  double cfx_xa = 0.50 * cfm / ta;
-  double cfx_ta = -.50 * cfm * xa / ta / ta;
+  double cfx_xa = 0.50 * skinFriction.cfm / ta;
+  double cfx_ta = -.50 * skinFriction.cfm * xa / ta / ta;
 
   double cfx_x1 = 0.25 * station1.cfz.scalar / station1.param.tz + cfx_xa * 0.5;
   double cfx_x2 = 0.25 * station2.cfz.scalar / station2.param.tz + cfx_xa * 0.5;
@@ -314,8 +318,8 @@ void XFoil::bldifMomentum(BoundaryLayerState& boundaryLayerState, double xlog, d
 
     Vector3d hterm1(station1.param.hz_tz, station1.param.hz_dz, 0.0);
     Vector3d hterm2(station2.param.hz_tz, station2.param.hz_dz, 0.0);
-    Vector3d cfm1v(cfm_t1, cfm_d1, cfm_u1);
-    Vector3d cfm2v(cfm_t2, cfm_d2, cfm_u2);
+    Vector3d cfm1v(skinFriction.cfm_t1, skinFriction.cfm_d1, skinFriction.cfm_u1);
+    Vector3d cfm2v(skinFriction.cfm_t2, skinFriction.cfm_d2, skinFriction.cfm_u2);
     Vector3d cfz1v = station1.cfz.pos_vector();
     Vector3d cfz2v = station2.cfz.pos_vector();
     Vector3d mz1(0.0, 0.0, 0.5 * z_ma * station1.param.mz_uz);
@@ -335,10 +339,10 @@ void XFoil::bldifMomentum(BoundaryLayerState& boundaryLayerState, double xlog, d
     coeffs.a2.row(1) = row1_a2;
   }
 
-  coeffs.d_msq[1] = 0.5 * z_ma * station1.param.mz_ms + z_cfm * cfm_ms +
+  coeffs.d_msq[1] = 0.5 * z_ma * station1.param.mz_ms + z_cfm * skinFriction.cfm_ms +
            z_cf1 * station1.cfz.ms() + 0.5 * z_ma * station2.param.mz_ms +
            z_cf2 * station2.cfz.ms();
-  coeffs.d_re[1] = z_cfm * cfm_re + z_cf1 * station1.cfz.re() + z_cf2 * station2.cfz.re();
+  coeffs.d_re[1] = z_cfm * skinFriction.cfm_re + z_cf1 * station1.cfz.re() + z_cf2 * station2.cfz.re();
   coeffs.d_xi[1] = 0.0;
   coeffs.rhs[1] = -rezt;
 }
