@@ -171,9 +171,10 @@ class XFoil {
     double cfm_d2 = 0.0;
   };
   BlSystemCoeffs bldif(FlowRegimeEnum flowRegimeType, BoundaryLayerState boundaryLayerState,
-                       const SkinFrictionCoefficients& skinFriction) const;
+                       const SkinFrictionCoefficients& skinFriction, double amcrit) const;
   // ---- Helper routines used by bldif ----
-  void bldifLaminar(BoundaryLayerState& boundaryLayerState, BlSystemCoeffs& coeffs) const;
+  void bldifLaminar(BoundaryLayerState& boundaryLayerState, double amcrit,
+                    BlSystemCoeffs& coeffs) const;
   void bldifTurbulent(BoundaryLayerState& boundaryLayerState, FlowRegimeEnum flowRegimeType,
                       double upw, const Vector3d &upw1, const Vector3d &upw2, double upw_ms,
                       double ulog, BlSystemCoeffs& coeffs) const;
@@ -460,7 +461,14 @@ class XFoil {
 
   bool lgamu, lqaij, ladij, lwdij;
 
-  const double sccon = 5.6, gacon = 6.70, gbcon = 0.75, gbc0 = 0.60, gbc1 = 0.40, gccon = 18.0, dlcon = 0.9, ctcon = 0.5/(gacon*gacon * gbcon);
+  const double sccon = 5.6;
+  const double gacon = 6.70;
+  const double gbcon = 0.75;
+  const double gbc0 = 0.60;
+  const double gbc1 = 0.40;
+  const double gccon = 18.0;
+  const double dlcon = 0.9;
+  const double ctcon = 0.5 / (gacon * gacon * gbcon);
 
   int nsys;
 

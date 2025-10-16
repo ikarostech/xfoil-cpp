@@ -7,6 +7,14 @@
 using Eigen::RowVector;
 using Eigen::Vector3d;
 
+namespace {
+constexpr double kSccon = 5.6;
+constexpr double kGacon = 6.70;
+constexpr double kGbcon = 0.75;
+constexpr double kGccon = 18.0;
+constexpr double kDlcon = 0.9;
+}  // namespace
+
 struct LogarithmicDifferences {
     double xlog;
     double ulog;
@@ -35,7 +43,8 @@ LogarithmicDifferences getLogarithmicDifferences(FlowRegimeEnum flowRegimeType, 
 }
 XFoil::BlSystemCoeffs XFoil::bldif(FlowRegimeEnum flowRegimeType,
                                    BoundaryLayerState boundaryLayerState,
-                                   const SkinFrictionCoefficients& skinFriction) const {
+                                   const SkinFrictionCoefficients& skinFriction,
+                                   double amcrit) const {
   LogarithmicDifferences logDiffs = getLogarithmicDifferences(flowRegimeType, boundaryLayerState);
 
   blData& station1 = boundaryLayerState.station1;
@@ -81,7 +90,7 @@ XFoil::BlSystemCoeffs XFoil::bldif(FlowRegimeEnum flowRegimeType,
     coeffs.rhs[0] = -station2.param.amplz;
   } else if (flowRegimeType == FlowRegimeEnum::Laminar) {
     //----- build laminar amplification equation
-    bldifLaminar(boundaryLayerState, coeffs);
+    bldifLaminar(boundaryLayerState, amcrit, coeffs);
   } else {
     //----- build turbulent or wake shear lag equation
     bldifTurbulent(boundaryLayerState, flowRegimeType, upw, upw1,
@@ -99,7 +108,7 @@ XFoil::BlSystemCoeffs XFoil::bldif(FlowRegimeEnum flowRegimeType,
   return coeffs;
 }
 
-void XFoil::bldifLaminar(BoundaryLayerState& boundaryLayerState,
+void XFoil::bldifLaminar(BoundaryLayerState& boundaryLayerState, double amcrit,
                          BlSystemCoeffs& coeffs) const {
   blData& station1 = boundaryLayerState.station1;
   blData& station2 = boundaryLayerState.station2;
@@ -154,11 +163,11 @@ void XFoil::bldifTurbulent(BoundaryLayerState& boundaryLayerState,
   double dea = 0.5 * (station1.dez.scalar + station2.dez.scalar);
   double da = 0.5 * (station1.param.dz + station2.param.dz);
 
-  double ald = (flowRegimeType == FlowRegimeEnum::Wake) ? dlcon : 1.0;
+  double ald = (flowRegimeType == FlowRegimeEnum::Wake) ? kDlcon : 1.0;
 
   double gcc, hkc, hkc_hka;
   if (flowRegimeType == FlowRegimeEnum::Turbulent) {
-    gcc = gccon;
+    gcc = kGccon;
     hkc = hka - 1.0 - gcc / rta;
     hkc_hka = 1.0;
     if (hkc < 0.01) {
@@ -170,15 +179,15 @@ void XFoil::bldifTurbulent(BoundaryLayerState& boundaryLayerState,
     hkc_hka = 1.0;
   }
 
-  double hr = hkc / (gacon * ald * hka);
-  double hr_hka = hkc_hka / (gacon * ald * hka) - hr / hka;
+  double hr = hkc / (kGacon * ald * hka);
+  double hr_hka = hkc_hka / (kGacon * ald * hka) - hr / hka;
 
-  double uq = (0.5 * cfa - hr * hr) / (gbcon * da);
-  double uq_hka = -2.0 * hr * hr_hka / (gbcon * da);
-  double uq_cfa = 0.5 / (gbcon * da);
+  double uq = (0.5 * cfa - hr * hr) / (kGbcon * da);
+  double uq_hka = -2.0 * hr * hr_hka / (kGbcon * da);
+  double uq_cfa = 0.5 / (kGbcon * da);
   double uq_da = -uq / da;
 
-  double scc = sccon * 1.333 / (1.0 + usa);
+  double scc = kSccon * 1.333 / (1.0 + usa);
   double scc_usa = -scc / (1.0 + usa);
 
   double slog = log(station2.param.sz / station1.param.sz);
