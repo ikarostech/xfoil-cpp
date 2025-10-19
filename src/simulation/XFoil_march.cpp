@@ -1401,8 +1401,8 @@ bool XFoil::trchek() {
   saveblData(2);
 
   //---- calculate average amplification rate ax over x1..x2 interval
-  AxResult ax_result =
-      axset(blData1.hkz.scalar, blData1.param.tz, blData1.rtz.scalar,
+  BoundaryLayerUtil::AxResult ax_result =
+      BoundaryLayerUtil::axset(blData1.hkz.scalar, blData1.param.tz, blData1.rtz.scalar,
             blData1.param.amplz, blData2.hkz.scalar, blData2.param.tz,
             blData2.rtz.scalar, blData2.param.amplz, amcrit);
 
@@ -1491,7 +1491,7 @@ bool XFoil::trchek() {
       blData2.param.amplz = amsave;
 
       //---- calculate amplification rate ax over current x1-xt interval
-      ax_result = axset(blData1.hkz.scalar, blData1.param.tz,
+      ax_result = BoundaryLayerUtil::axset(blData1.hkz.scalar, blData1.param.tz,
                         blData1.rtz.scalar, blData1.param.amplz, hkt.scalar, tt, rtt.scalar,
                         amplt, amcrit);
 

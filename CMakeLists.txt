@@ -10,6 +10,7 @@ find_package(Eigen3 3.4 REQUIRED NO_MODULE)
 add_library(xfoil_core
     src/core/math_util.cpp
     src/core/spline.cpp
+    src/core/boundary_layer_util.cpp
 )
 target_include_directories(xfoil_core
     PUBLIC

@@ -113,8 +113,8 @@ void XFoil::bldifLaminar(BoundaryLayerState& boundaryLayerState, double amcrit,
   blData& station1 = boundaryLayerState.station1;
   blData& station2 = boundaryLayerState.station2;
 
-  AxResult ax_result =
-      axset(station1.hkz.scalar, station1.param.tz, station1.rtz.scalar,
+  BoundaryLayerUtil::AxResult ax_result =
+      BoundaryLayerUtil::axset(station1.hkz.scalar, station1.param.tz, station1.rtz.scalar,
             station1.param.amplz, station2.hkz.scalar, station2.param.tz,
             station2.rtz.scalar, station2.param.amplz, amcrit);
 

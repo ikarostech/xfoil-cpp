@@ -57,6 +57,7 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 #include "simulation/psi.hpp"
 #include "simulation/boundary_layer_state.hpp"
 #include "infrastructure/xfoil_params.h"
+#include "core/boundary_layer_util.hpp"
 
 using namespace std;
 using namespace Eigen;
@@ -143,20 +144,6 @@ class XFoil {
   bool saveblData(int icom);
 
   VectorXd apcalc(Matrix2Xd points);
-  class AxResult {
-    public:
-    double ax;
-    double ax_hk1;
-    double ax_hk2;
-    double ax_t1;
-    double ax_t2;
-    double ax_rt1;
-    double ax_rt2;
-    double ax_a1;
-    double ax_a2;
-  };
-  AxResult axset(double hk1, double thet1, double rt1, double a1, double hk2,
-    double thet2, double rt2, double a2, double acrit) const;
   void updateTrailingEdgeState();
   struct BlSystemCoeffs;
   struct SkinFrictionCoefficients {
@@ -269,14 +256,6 @@ class XFoil {
   };
   
   VectorXd cpcalc(int n, VectorXd q, double qinf, double minf);
-  class EnvEnResult {
-    public:
-    double ax;
-    double ax_hk;
-    double ax_th;
-    double ax_rt;
-  };
-  EnvEnResult dampl(double hk, double th, double rt) const;
 
   bool dslim(double &dstr, double thet, double msq, double hklim);
 
