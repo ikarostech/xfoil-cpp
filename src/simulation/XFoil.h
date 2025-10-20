@@ -160,17 +160,6 @@ class XFoil {
   BlSystemCoeffs bldif(FlowRegimeEnum flowRegimeType, BoundaryLayerState boundaryLayerState,
                        const SkinFrictionCoefficients& skinFriction, double amcrit) const;
   // ---- Helper routines used by bldif ----
-  void bldifLaminar(BoundaryLayerState& boundaryLayerState, double amcrit,
-                    BlSystemCoeffs& coeffs) const;
-  void bldifTurbulent(BoundaryLayerState& boundaryLayerState, FlowRegimeEnum flowRegimeType,
-                      double upw, const Vector3d &upw1, const Vector3d &upw2, double upw_ms,
-                      double ulog, BlSystemCoeffs& coeffs) const;
-  void bldifMomentum(BoundaryLayerState& boundaryLayerState, double xlog, double ulog,
-                     double tlog, double ddlog, const SkinFrictionCoefficients& skinFriction,
-                     BlSystemCoeffs& coeffs) const;
-  void bldifShape(BoundaryLayerState& boundaryLayerState, double upw, double xlog,
-                  double ulog, double hlog, double ddlog, const Vector3d &upw1,
-                  const Vector3d &upw2, double upw_ms, BlSystemCoeffs& coeffs) const;
   bool blkin(BoundaryLayerState& state);
   SkinFrictionCoefficients blmid(FlowRegimeEnum flowRegimeType);
   SkinFrictionCoefficients blmid(BoundaryLayerState& state, FlowRegimeEnum flowRegimeType);
