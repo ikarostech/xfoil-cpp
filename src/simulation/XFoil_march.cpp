@@ -1207,8 +1207,6 @@ bool XFoil::stepbl(BoundaryLayerState& state) {
   return true;
 }
 
-bool XFoil::stepbl() { return stepbl(boundaryLayerState); }
-
 
 bool XFoil::stfind() {
   //-----------------------------------------

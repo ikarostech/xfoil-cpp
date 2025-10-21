@@ -336,7 +336,6 @@ class XFoil {
                                             const VectorXd& d_m) const;
   VectorXd setexp(double ds1, double smax, int nn) const;
 
-  bool stepbl();
   bool stepbl(BoundaryLayerState& state);
   bool stfind();
   bool stmove();
