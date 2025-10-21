@@ -762,41 +762,53 @@ bool XFoil::mrchue() {
   return true;
 }
 
-XFoil::SetblStateView XFoil::makeSetblStateView() {
-  return SetblStateView{lblini,
-                        gm1bl,
-                        qinfbl,
-                        tkbl,
-                        tkbl_ms,
-                        rstbl,
-                        rstbl_ms,
-                        hstinv,
-                        hstinv_ms,
-                        reybl,
-                        reybl_re,
-                        reybl_ms,
-                        amcrit,
+XFoil::SetblInputView XFoil::makeSetblInputView() const {
+  return SetblInputView{lblini,
                         uedg,
                         ctau,
                         thet,
                         dstr,
                         mass,
                         ctq,
-                        itran,
-                        va,
-                        vb,
-                        vdel,
-                        vm,
-                        vz,
-                        tran,
-                        turb,
-                        wake,
-                        simi,
-                        xiforc};
+                        itran};
+}
+
+XFoil::SetblOutputView XFoil::makeSetblOutputView() {
+  return SetblOutputView{lblini,
+                         gm1bl,
+                         qinfbl,
+                         tkbl,
+                         tkbl_ms,
+                         rstbl,
+                         rstbl_ms,
+                         hstinv,
+                         hstinv_ms,
+                         reybl,
+                         reybl_re,
+                         reybl_ms,
+                         amcrit,
+                         uedg,
+                         ctau,
+                         thet,
+                         dstr,
+                         mass,
+                         ctq,
+                         itran,
+                         va,
+                         vb,
+                         vdel,
+                         vm,
+                         vz,
+                         tran,
+                         turb,
+                         wake,
+                         simi,
+                         xiforc};
 }
 
 
-XFoil::SetblStateView XFoil::setbl(SetblStateView state) {
+XFoil::SetblOutputView XFoil::setbl(const SetblInputView& input,
+                                    SetblOutputView output) {
   //-------------------------------------------------
   //	   sets up the bl newton system coefficients for the current bl
   // variables
@@ -845,55 +857,55 @@ XFoil::SetblStateView XFoil::setbl(SetblStateView state) {
   comset();
 
   //---- set gas constant (= cp/cv)
-  state.gm1bl = gamm1;
+  output.gm1bl = gamm1;
 
   //---- set parameters for compressibility correction
-  state.qinfbl = qinf;
-  state.tkbl = tklam;
-  state.tkbl_ms = tkl_msq;
+  output.qinfbl = qinf;
+  output.tkbl = tklam;
+  output.tkbl_ms = tkl_msq;
 
   //---- stagnation density and 1/enthalpy
-  state.rstbl = pow((1.0 + 0.5 * state.gm1bl * minf * minf), (1.0 / state.gm1bl));
-  state.rstbl_ms = 0.5 * state.rstbl / (1.0 + 0.5 * state.gm1bl * minf * minf);
-  state.hstinv = state.gm1bl * (minf / state.qinfbl) * (minf / state.qinfbl) /
-           (1.0 + 0.5 * state.gm1bl * minf * minf);
-  state.hstinv_ms = state.gm1bl * (1.0 / state.qinfbl) * (1.0 / state.qinfbl) /
-                  (1.0 + 0.5 * state.gm1bl * minf * minf) -
-              0.5 * state.gm1bl * state.hstinv / (1.0 + 0.5 * state.gm1bl * minf * minf);
+  output.rstbl = pow((1.0 + 0.5 * output.gm1bl * minf * minf), (1.0 / output.gm1bl));
+  output.rstbl_ms = 0.5 * output.rstbl / (1.0 + 0.5 * output.gm1bl * minf * minf);
+  output.hstinv = output.gm1bl * (minf / output.qinfbl) * (minf / output.qinfbl) /
+           (1.0 + 0.5 * output.gm1bl * minf * minf);
+  output.hstinv_ms = output.gm1bl * (1.0 / output.qinfbl) * (1.0 / output.qinfbl) /
+                  (1.0 + 0.5 * output.gm1bl * minf * minf) -
+              0.5 * output.gm1bl * output.hstinv / (1.0 + 0.5 * output.gm1bl * minf * minf);
 
   //---- set reynolds number based on freestream density, velocity, viscosity
-  herat = 1.0 - 0.5 * state.qinfbl * state.qinfbl * state.hstinv;
-  herat_ms = -0.5 * state.qinfbl * state.qinfbl * state.hstinv_ms;
+  herat = 1.0 - 0.5 * output.qinfbl * output.qinfbl * output.hstinv;
+  herat_ms = -0.5 * output.qinfbl * output.qinfbl * output.hstinv_ms;
 
-  state.reybl = reinf * sqrt(herat * herat * herat) * (1.0 + hvrat) / (herat + hvrat);
-  state.reybl_re = sqrt(herat * herat * herat) * (1.0 + hvrat) / (herat + hvrat);
-  state.reybl_ms = state.reybl * (1.5 / herat - 1.0 / (herat + hvrat)) * herat_ms;
+  output.reybl = reinf * sqrt(herat * herat * herat) * (1.0 + hvrat) / (herat + hvrat);
+  output.reybl_re = sqrt(herat * herat * herat) * (1.0 + hvrat) / (herat + hvrat);
+  output.reybl_ms = output.reybl * (1.5 / herat - 1.0 / (herat + hvrat)) * herat_ms;
 
-  state.amcrit = acrit;
+  output.amcrit = acrit;
 
-  if (!state.lblini) {
+  if (!input.lblini) {
     //----- initialize bl by marching with ue (fudge at separation)
     // TRACE(" initializing bl ...\n");
     writeString("   Initializing bl ...\n");
 
     mrchue();
-    state.lblini = true;
+    output.lblini = true;
   }
 
   //---- march bl with current ue and ds to establish transition
   mrchdu();
 
-  SidePair<VectorXd> usav = state.uedg;
+  SidePair<VectorXd> usav = input.uedg;
 
   ueset();
   const auto swapped_edge_velocities = swapEdgeVelocities(usav);
   usav = swapped_edge_velocities.swappedUsav;
-  state.uedg = swapped_edge_velocities.restoredUedg;
+  output.uedg = swapped_edge_velocities.restoredUedg;
   jvte1 = isys.top[iblte.top];
   jvte2 = isys.bottom[iblte.bottom];
 
-  dule1 = state.uedg.top[0] - usav.top[0];
-  dule2 = state.uedg.bottom[0] - usav.bottom[0];
+  dule1 = output.uedg.top[0] - usav.top[0];
+  dule2 = output.uedg.bottom[0] - usav.bottom[0];
 
   //---- set le and te ue sensitivities wrt all m values
   const auto le_te_sensitivities = computeLeTeSensitivities(
@@ -922,34 +934,34 @@ XFoil::SetblStateView XFoil::setbl(SetblStateView state) {
     double dds1 = 0.0;
 
     //---- set forced transition arc length position
-    state.xiforc = xifset(is);
+    output.xiforc = xifset(is);
 
-    state.tran = false;
-    state.turb = false;
+    output.tran = false;
+    output.turb = false;
 
     //**** sweep downstream setting up bl equation linearizations
     for (int ibl = 0; ibl < nbl.get(is) - 1; ++ibl) {
       
       int iv = isys.get(is)[ibl];
 
-      state.simi = (ibl == 0);
-      state.wake = (ibl > iblte.get(is));
-      state.tran = (ibl == state.itran.get(is));
-      state.turb = (ibl > state.itran.get(is));
+      output.simi = (ibl == 0);
+      output.wake = (ibl > iblte.get(is));
+      output.tran = (ibl == output.itran.get(is));
+      output.turb = (ibl > output.itran.get(is));
 
       //---- set primary variables for current station
       xsi = xssi.get(is)[ibl];
-      if (ibl < state.itran.get(is))
-        ami = state.ctau.get(is)[ibl];
+      if (ibl < output.itran.get(is))
+        ami = output.ctau.get(is)[ibl];
       else
-        cti = state.ctau.get(is)[ibl];
-      uei = state.uedg.get(is)[ibl];
-      thi = state.thet.get(is)[ibl];
-      mdi = state.mass.get(is)[ibl];
+        cti = output.ctau.get(is)[ibl];
+      uei = output.uedg.get(is)[ibl];
+      thi = output.thet.get(is)[ibl];
+      mdi = output.mass.get(is)[ibl];
 
       dsi = mdi / uei;
 
-      if (state.wake) {
+      if (output.wake) {
         int iw = ibl - iblte.get(is);
         dswaki = wgap[iw - 1];
       } else
@@ -972,21 +984,21 @@ XFoil::SetblStateView XFoil::setbl(SetblStateView state) {
       u2_a = uinv_a.get(is)[ibl];
       d2_a = d2_u2 * u2_a;
 
-      //---- "forced" changes due to mismatch between edge velocities and
-      // usav=uinv+dij*state.mass
-      due2 = state.uedg.get(is)[ibl] - usav.get(is)[ibl];
+  //---- "forced" changes due to mismatch between edge velocities and
+  // usav=uinv+dij*output.mass
+      due2 = output.uedg.get(is)[ibl] - usav.get(is)[ibl];
       dds2 = d2_u2 * due2;
 
       blprv(boundaryLayerState, xsi, ami, cti, thi, dsi, dswaki, uei); // cti
       blkin(boundaryLayerState);
 
-      //---- check for transition and set state.tran, xt, etc. if found
-      if (state.tran) {
+      //---- check for transition and set output.tran, xt, etc. if found
+      if (output.tran) {
         trchek();
         ami = blData2.param.amplz;
       }
 
-      if (ibl == state.itran.get(is) && !state.tran) {
+      if (ibl == output.itran.get(is) && !output.tran) {
         // TRACE("setbl: xtr???  n1=%d n2=%d: \n", ampl1, ampl2);
 
         ss << "setbl: xtr???  n1=" << blData1.param.amplz
@@ -999,31 +1011,31 @@ XFoil::SetblStateView XFoil::setbl(SetblStateView state) {
       //	   at the previous "1" station and the current "2" station
 
       if (ibl == iblte.get(is) + 1) {
-        //----- define quantities at start of state.wake, adding te base thickness to
+        //----- define quantities at start of output.wake, adding te base thickness to
         // dstar
-        tte = state.thet.get(1)[iblte.top] +
-              state.thet.get(2)[iblte.bottom];
-        dte = state.dstr.get(1)[iblte.top] +
-              state.dstr.get(2)[iblte.bottom] + foil.edge.ante;
-        cte = (state.ctau.get(1)[iblte.top] *
-                   state.thet.get(1)[iblte.top] +
-               state.ctau.get(2)[iblte.bottom] *
-                   state.thet.get(2)[iblte.bottom]) /
+        tte = output.thet.get(1)[iblte.top] +
+              output.thet.get(2)[iblte.bottom];
+        dte = output.dstr.get(1)[iblte.top] +
+              output.dstr.get(2)[iblte.bottom] + foil.edge.ante;
+        cte = (output.ctau.get(1)[iblte.top] *
+                   output.thet.get(1)[iblte.top] +
+               output.ctau.get(2)[iblte.bottom] *
+                   output.thet.get(2)[iblte.bottom]) /
                tte;
         tesys(cte, tte, dte);
 
         tte_tte1 = 1.0;
         tte_tte2 = 1.0;
-        dte_mte1 = 1.0 / state.uedg.top[iblte.top];
-        dte_ute1 = -state.dstr.get(1)[iblte.top] /
-                    state.uedg.top[iblte.top];
-        dte_mte2 = 1.0 / state.uedg.bottom[iblte.bottom];
-        dte_ute2 = -state.dstr.get(2)[iblte.bottom] /
-                    state.uedg.bottom[iblte.bottom];
-        cte_cte1 = state.thet.get(1)[iblte.top] / tte;
-        cte_cte2 = state.thet.get(2)[iblte.bottom] / tte;
-        cte_tte1 = (state.ctau.get(1)[iblte.top] - cte) / tte;
-        cte_tte2 = (state.ctau.get(2)[iblte.bottom] - cte) / tte;
+        dte_mte1 = 1.0 / output.uedg.top[iblte.top];
+        dte_ute1 = -output.dstr.get(1)[iblte.top] /
+                    output.uedg.top[iblte.top];
+        dte_mte2 = 1.0 / output.uedg.bottom[iblte.bottom];
+        dte_ute2 = -output.dstr.get(2)[iblte.bottom] /
+                    output.uedg.bottom[iblte.bottom];
+        cte_cte1 = output.thet.get(1)[iblte.top] / tte;
+        cte_cte2 = output.thet.get(2)[iblte.bottom] / tte;
+        cte_tte1 = (output.ctau.get(1)[iblte.top] - cte) / tte;
+        cte_tte2 = (output.ctau.get(2)[iblte.bottom] - cte) / tte;
 
         //----- re-define d1 sensitivities wrt m since d1 depends on both te ds
         // values
@@ -1036,14 +1048,14 @@ XFoil::SetblStateView XFoil::setbl(SetblStateView state) {
         d1_m[jvte1] = d1_m[jvte1] + dte_mte1;
         d1_m[jvte2] = d1_m[jvte2] + dte_mte2;
 
-        //----- "forced" changes from  state.uedg --- usav=uinv+dij*state.mass	mismatch
+        //----- "forced" changes from  output.uedg --- usav=uinv+dij*output.mass	mismatch
         due1 = 0.0;
         dds1 =
             dte_ute1 *
-                (state.uedg.top[iblte.top] -
+                (output.uedg.top[iblte.top] -
                  usav.top[iblte.top]) +
             dte_ute2 *
-                (state.uedg.bottom[iblte.bottom] -
+                (output.uedg.bottom[iblte.bottom] -
                  usav.bottom[iblte.bottom]);
       } else {
         blsys(boundaryLayerState, boundaryLayerLattice);
@@ -1051,7 +1063,7 @@ XFoil::SetblStateView XFoil::setbl(SetblStateView state) {
 
       //---- save wall shear and equil. max shear coefficient for plotting
       // output
-      state.ctq.get(is)[ibl] = blData2.cqz.scalar;
+      output.ctq.get(is)[ibl] = blData2.cqz.scalar;
 
       //---- set xi sensitivities wrt le ue changes
       if (is == 1) {
@@ -1065,116 +1077,116 @@ XFoil::SetblStateView XFoil::setbl(SetblStateView state) {
       //---- stuff bl system coefficients into main jacobian matrix
 
       for (int jv = 1; jv <= nsys; jv++) {
-        state.vm[0][jv][iv] = blc.a1(0, 2) * d1_m[jv] + blc.a1(0, 3) * u1_m[jv] +
+        output.vm[0][jv][iv] = blc.a1(0, 2) * d1_m[jv] + blc.a1(0, 3) * u1_m[jv] +
                         blc.a2(0, 2) * d2_m[jv] + blc.a2(0, 3) * u2_m[jv] +
                         (blc.a1(0, 4) + blc.a2(0, 4) + blc.d_xi[0]) *
                             (xi_ule1 * ule1_m[jv] + xi_ule2 * ule2_m[jv]);
       }
 
-      state.vb[iv](0, 0) = blc.a1(0, 0);
-      state.vb[iv](0, 1) = blc.a1(0, 1);
+      output.vb[iv](0, 0) = blc.a1(0, 0);
+      output.vb[iv](0, 1) = blc.a1(0, 1);
 
-      state.va[iv](0, 0) = blc.a2(0, 0);
-      state.va[iv](0, 1) = blc.a2(0, 1);
+      output.va[iv](0, 0) = blc.a2(0, 0);
+      output.va[iv](0, 1) = blc.a2(0, 1);
 
       if (lalfa)
-        state.vdel[iv](0, 1) = blc.d_re[0] * re_clmr + blc.d_msq[0] * msq_clmr;
+        output.vdel[iv](0, 1) = blc.d_re[0] * re_clmr + blc.d_msq[0] * msq_clmr;
       else
-        state.vdel[iv](0, 1) = (blc.a1(0, 3) * u1_a + blc.a1(0, 2) * d1_a) +
+        output.vdel[iv](0, 1) = (blc.a1(0, 3) * u1_a + blc.a1(0, 2) * d1_a) +
                          (blc.a2(0, 3) * u2_a + blc.a2(0, 2) * d2_a) +
                          (blc.a1(0, 4) + blc.a2(0, 4) + blc.d_xi[0]) *
                              (xi_ule1 * ule1_a + xi_ule2 * ule2_a);
 
-      state.vdel[iv](0, 0) = blc.rhs[0] + (blc.a1(0, 3) * due1 + blc.a1(0, 2) * dds1) +
+      output.vdel[iv](0, 0) = blc.rhs[0] + (blc.a1(0, 3) * due1 + blc.a1(0, 2) * dds1) +
                        (blc.a2(0, 3) * due2 + blc.a2(0, 2) * dds2) +
                        (blc.a1(0, 4) + blc.a2(0, 4) + blc.d_xi[0]) *
                            (xi_ule1 * dule1 + xi_ule2 * dule2);
 
       for (int jv = 1; jv <= nsys; jv++) {
-        state.vm[1][jv][iv] = blc.a1(1, 2) * d1_m[jv] + blc.a1(1, 3) * u1_m[jv] +
+        output.vm[1][jv][iv] = blc.a1(1, 2) * d1_m[jv] + blc.a1(1, 3) * u1_m[jv] +
                         blc.a2(1, 2) * d2_m[jv] + blc.a2(1, 3) * u2_m[jv] +
                         (blc.a1(1, 4) + blc.a2(1, 4) + blc.d_xi[1]) *
                             (xi_ule1 * ule1_m[jv] + xi_ule2 * ule2_m[jv]);
       }
-      state.vb[iv](1, 0) = blc.a1(1, 0);
-      state.vb[iv](1, 1) = blc.a1(1, 1);
+      output.vb[iv](1, 0) = blc.a1(1, 0);
+      output.vb[iv](1, 1) = blc.a1(1, 1);
 
-      state.va[iv](1, 0) = blc.a2(1, 0);
-      state.va[iv](1, 1) = blc.a2(1, 1);
+      output.va[iv](1, 0) = blc.a2(1, 0);
+      output.va[iv](1, 1) = blc.a2(1, 1);
 
       if (lalfa)
-        state.vdel[iv](1, 1) = blc.d_re[1] * re_clmr + blc.d_msq[1] * msq_clmr;
+        output.vdel[iv](1, 1) = blc.d_re[1] * re_clmr + blc.d_msq[1] * msq_clmr;
       else
-        state.vdel[iv](1, 1) = (blc.a1(1, 3) * u1_a + blc.a1(1, 2) * d1_a) +
+        output.vdel[iv](1, 1) = (blc.a1(1, 3) * u1_a + blc.a1(1, 2) * d1_a) +
                          (blc.a2(1, 3) * u2_a + blc.a2(1, 2) * d2_a) +
                          (blc.a1(1, 4) + blc.a2(1, 4) + blc.d_xi[1]) *
                              (xi_ule1 * ule1_a + xi_ule2 * ule2_a);
 
-      state.vdel[iv](1, 0) = blc.rhs[1] + (blc.a1(1, 3) * due1 + blc.a1(1, 2) * dds1) +
+      output.vdel[iv](1, 0) = blc.rhs[1] + (blc.a1(1, 3) * due1 + blc.a1(1, 2) * dds1) +
                        (blc.a2(1, 3) * due2 + blc.a2(1, 2) * dds2) +
                        (blc.a1(1, 4) + blc.a2(1, 4) + blc.d_xi[1]) *
                            (xi_ule1 * dule1 + xi_ule2 * dule2);
 
       // memory overlap problem
       for (int jv = 1; jv <= nsys; jv++) {
-        state.vm[2][jv][iv] = blc.a1(2, 2) * d1_m[jv] + blc.a1(2, 3) * u1_m[jv] +
+        output.vm[2][jv][iv] = blc.a1(2, 2) * d1_m[jv] + blc.a1(2, 3) * u1_m[jv] +
                         blc.a2(2, 2) * d2_m[jv] + blc.a2(2, 3) * u2_m[jv] +
                         (blc.a1(2, 4) + blc.a2(2, 4) + blc.d_xi[2]) *
                             (xi_ule1 * ule1_m[jv] + xi_ule2 * ule2_m[jv]);
       }
 
-      state.vb[iv](2, 0) = blc.a1(2, 0);
-      state.vb[iv](2, 1) = blc.a1(2, 1);
+      output.vb[iv](2, 0) = blc.a1(2, 0);
+      output.vb[iv](2, 1) = blc.a1(2, 1);
 
-      state.va[iv](2, 0) = blc.a2(2, 0);
-      state.va[iv](2, 1) = blc.a2(2, 1);
+      output.va[iv](2, 0) = blc.a2(2, 0);
+      output.va[iv](2, 1) = blc.a2(2, 1);
 
       if (lalfa)
-        state.vdel[iv](2, 1) = blc.d_re[2] * re_clmr + blc.d_msq[2] * msq_clmr;
+        output.vdel[iv](2, 1) = blc.d_re[2] * re_clmr + blc.d_msq[2] * msq_clmr;
       else
-        state.vdel[iv](2, 1) = (blc.a1(2, 3) * u1_a + blc.a1(2, 2) * d1_a) +
+        output.vdel[iv](2, 1) = (blc.a1(2, 3) * u1_a + blc.a1(2, 2) * d1_a) +
                          (blc.a2(2, 3) * u2_a + blc.a2(2, 2) * d2_a) +
                          (blc.a1(2, 4) + blc.a2(2, 4) + blc.d_xi[2]) *
                              (xi_ule1 * ule1_a + xi_ule2 * ule2_a);
 
-      state.vdel[iv](2, 0) = blc.rhs[2] + (blc.a1(2, 3) * due1 + blc.a1(2, 2) * dds1) +
+      output.vdel[iv](2, 0) = blc.rhs[2] + (blc.a1(2, 3) * due1 + blc.a1(2, 2) * dds1) +
                        (blc.a2(2, 3) * due2 + blc.a2(2, 2) * dds2) +
                        (blc.a1(2, 4) + blc.a2(2, 4) + blc.d_xi[2]) *
                            (xi_ule1 * dule1 + xi_ule2 * dule2);
 
       if (ibl == iblte.get(is) + 1) {
         //----- redefine coefficients for tte, dte, etc
-        state.vz[0][0] = blc.a1(0, 0) * cte_cte1;
-        state.vz[0][1] = blc.a1(0, 0) * cte_tte1 + blc.a1(0, 1) * tte_tte1;
-        state.vb[iv](0, 0) = blc.a1(0, 0) * cte_cte2;
-        state.vb[iv](0, 1) = blc.a1(0, 0) * cte_tte2 + blc.a1(0, 1) * tte_tte2;
+        output.vz[0][0] = blc.a1(0, 0) * cte_cte1;
+        output.vz[0][1] = blc.a1(0, 0) * cte_tte1 + blc.a1(0, 1) * tte_tte1;
+        output.vb[iv](0, 0) = blc.a1(0, 0) * cte_cte2;
+        output.vb[iv](0, 1) = blc.a1(0, 0) * cte_tte2 + blc.a1(0, 1) * tte_tte2;
 
-        state.vz[1][0] = blc.a1(1, 0) * cte_cte1;
-        state.vz[1][1] = blc.a1(1, 0) * cte_tte1 + blc.a1(1, 1) * tte_tte1;
-        state.vb[iv](1, 0) = blc.a1(1, 0) * cte_cte2;
-        state.vb[iv](1, 1) = blc.a1(1, 0) * cte_tte2 + blc.a1(1, 1) * tte_tte2;
+        output.vz[1][0] = blc.a1(1, 0) * cte_cte1;
+        output.vz[1][1] = blc.a1(1, 0) * cte_tte1 + blc.a1(1, 1) * tte_tte1;
+        output.vb[iv](1, 0) = blc.a1(1, 0) * cte_cte2;
+        output.vb[iv](1, 1) = blc.a1(1, 0) * cte_tte2 + blc.a1(1, 1) * tte_tte2;
 
-        state.vz[2][0] = blc.a1(2, 0) * cte_cte1;
-        state.vz[2][1] = blc.a1(2, 0) * cte_tte1 + blc.a1(2, 1) * tte_tte1;
-        state.vb[iv](2, 0) = blc.a1(2, 0) * cte_cte2;
-        state.vb[iv](2, 1) = blc.a1(2, 0) * cte_tte2 + blc.a1(2, 1) * tte_tte2;
+        output.vz[2][0] = blc.a1(2, 0) * cte_cte1;
+        output.vz[2][1] = blc.a1(2, 0) * cte_tte1 + blc.a1(2, 1) * tte_tte1;
+        output.vb[iv](2, 0) = blc.a1(2, 0) * cte_cte2;
+        output.vb[iv](2, 1) = blc.a1(2, 0) * cte_tte2 + blc.a1(2, 1) * tte_tte2;
       }
 
       //---- turbulent intervals will follow if currently at transition interval
-      if (state.tran) {
-        state.turb = true;
+      if (output.tran) {
+        output.turb = true;
 
         //------ save transition location
-        state.itran.get(is) = ibl;
+        output.itran.get(is) = ibl;
       }
 
-      state.tran = false;
+      output.tran = false;
 
       if (ibl == iblte.get(is)) {
-        //----- set "2" variables at te to state.wake correlations for next station
+        //----- set "2" variables at te to output.wake correlations for next station
 
-        state.turb = true;
-        state.wake = true;
+        output.turb = true;
+        output.wake = true;
         blvar(blData2, FlowRegimeEnum::Wake);
         blmid(boundaryLayerState, FlowRegimeEnum::Wake);
       }
@@ -1198,7 +1210,7 @@ XFoil::SetblStateView XFoil::setbl(SetblStateView state) {
     //---- next airfoil side
   }
 
-  return state;
+  return output;
 }
 
 
