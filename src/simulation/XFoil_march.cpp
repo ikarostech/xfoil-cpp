@@ -762,8 +762,41 @@ bool XFoil::mrchue() {
   return true;
 }
 
+XFoil::SetblStateView XFoil::makeSetblStateView() {
+  return SetblStateView{lblini,
+                        gm1bl,
+                        qinfbl,
+                        tkbl,
+                        tkbl_ms,
+                        rstbl,
+                        rstbl_ms,
+                        hstinv,
+                        hstinv_ms,
+                        reybl,
+                        reybl_re,
+                        reybl_ms,
+                        amcrit,
+                        uedg,
+                        ctau,
+                        thet,
+                        dstr,
+                        mass,
+                        ctq,
+                        itran,
+                        va,
+                        vb,
+                        vdel,
+                        vm,
+                        vz,
+                        tran,
+                        turb,
+                        wake,
+                        simi,
+                        xiforc};
+}
 
-bool XFoil::setbl() {
+
+XFoil::SetblStateView XFoil::setbl(SetblStateView state) {
   //-------------------------------------------------
   //	   sets up the bl newton system coefficients for the current bl
   // variables
@@ -812,55 +845,55 @@ bool XFoil::setbl() {
   comset();
 
   //---- set gas constant (= cp/cv)
-  gm1bl = gamm1;
+  state.gm1bl = gamm1;
 
   //---- set parameters for compressibility correction
-  qinfbl = qinf;
-  tkbl = tklam;
-  tkbl_ms = tkl_msq;
+  state.qinfbl = qinf;
+  state.tkbl = tklam;
+  state.tkbl_ms = tkl_msq;
 
   //---- stagnation density and 1/enthalpy
-  rstbl = pow((1.0 + 0.5 * gm1bl * minf * minf), (1.0 / gm1bl));
-  rstbl_ms = 0.5 * rstbl / (1.0 + 0.5 * gm1bl * minf * minf);
-  hstinv = gm1bl * (minf / qinfbl) * (minf / qinfbl) /
-           (1.0 + 0.5 * gm1bl * minf * minf);
-  hstinv_ms = gm1bl * (1.0 / qinfbl) * (1.0 / qinfbl) /
-                  (1.0 + 0.5 * gm1bl * minf * minf) -
-              0.5 * gm1bl * hstinv / (1.0 + 0.5 * gm1bl * minf * minf);
+  state.rstbl = pow((1.0 + 0.5 * state.gm1bl * minf * minf), (1.0 / state.gm1bl));
+  state.rstbl_ms = 0.5 * state.rstbl / (1.0 + 0.5 * state.gm1bl * minf * minf);
+  state.hstinv = state.gm1bl * (minf / state.qinfbl) * (minf / state.qinfbl) /
+           (1.0 + 0.5 * state.gm1bl * minf * minf);
+  state.hstinv_ms = state.gm1bl * (1.0 / state.qinfbl) * (1.0 / state.qinfbl) /
+                  (1.0 + 0.5 * state.gm1bl * minf * minf) -
+              0.5 * state.gm1bl * state.hstinv / (1.0 + 0.5 * state.gm1bl * minf * minf);
 
   //---- set reynolds number based on freestream density, velocity, viscosity
-  herat = 1.0 - 0.5 * qinfbl * qinfbl * hstinv;
-  herat_ms = -0.5 * qinfbl * qinfbl * hstinv_ms;
+  herat = 1.0 - 0.5 * state.qinfbl * state.qinfbl * state.hstinv;
+  herat_ms = -0.5 * state.qinfbl * state.qinfbl * state.hstinv_ms;
 
-  reybl = reinf * sqrt(herat * herat * herat) * (1.0 + hvrat) / (herat + hvrat);
-  reybl_re = sqrt(herat * herat * herat) * (1.0 + hvrat) / (herat + hvrat);
-  reybl_ms = reybl * (1.5 / herat - 1.0 / (herat + hvrat)) * herat_ms;
+  state.reybl = reinf * sqrt(herat * herat * herat) * (1.0 + hvrat) / (herat + hvrat);
+  state.reybl_re = sqrt(herat * herat * herat) * (1.0 + hvrat) / (herat + hvrat);
+  state.reybl_ms = state.reybl * (1.5 / herat - 1.0 / (herat + hvrat)) * herat_ms;
 
-  amcrit = acrit;
+  state.amcrit = acrit;
 
-  if (!lblini) {
+  if (!state.lblini) {
     //----- initialize bl by marching with ue (fudge at separation)
     // TRACE(" initializing bl ...\n");
     writeString("   Initializing bl ...\n");
 
     mrchue();
-    lblini = true;
+    state.lblini = true;
   }
 
   //---- march bl with current ue and ds to establish transition
   mrchdu();
 
-  SidePair<VectorXd> usav = uedg;
+  SidePair<VectorXd> usav = state.uedg;
 
   ueset();
   const auto swapped_edge_velocities = swapEdgeVelocities(usav);
   usav = swapped_edge_velocities.swappedUsav;
-  uedg = swapped_edge_velocities.restoredUedg;
-jvte1 = isys.top[iblte.top];
-jvte2 = isys.bottom[iblte.bottom];
+  state.uedg = swapped_edge_velocities.restoredUedg;
+  jvte1 = isys.top[iblte.top];
+  jvte2 = isys.bottom[iblte.bottom];
 
-  dule1 = uedg.top[0] - usav.top[0];
-  dule2 = uedg.bottom[0] - usav.bottom[0];
+  dule1 = state.uedg.top[0] - usav.top[0];
+  dule2 = state.uedg.bottom[0] - usav.bottom[0];
 
   //---- set le and te ue sensitivities wrt all m values
   const auto le_te_sensitivities = computeLeTeSensitivities(
@@ -876,7 +909,7 @@ jvte2 = isys.bottom[iblte.bottom];
 
   writeString(" \n");
 
-  //*** go over each boundary layer/wake
+  //*** process each boundary layer side
   for (int is = 1; is <= 2; is++) {
     //---- there is no station "1" at similarity, so zero everything out
     const auto cleared_derivatives = clearDerivativeVectors(u1_m, d1_m);
@@ -889,34 +922,34 @@ jvte2 = isys.bottom[iblte.bottom];
     double dds1 = 0.0;
 
     //---- set forced transition arc length position
-    xiforc = xifset(is);
+    state.xiforc = xifset(is);
 
-    tran = false;
-    turb = false;
+    state.tran = false;
+    state.turb = false;
 
     //**** sweep downstream setting up bl equation linearizations
     for (int ibl = 0; ibl < nbl.get(is) - 1; ++ibl) {
       
       int iv = isys.get(is)[ibl];
 
-      simi = (ibl == 0);
-      wake = (ibl > iblte.get(is));
-      tran = (ibl == itran.get(is));
-      turb = (ibl > itran.get(is));
+      state.simi = (ibl == 0);
+      state.wake = (ibl > iblte.get(is));
+      state.tran = (ibl == state.itran.get(is));
+      state.turb = (ibl > state.itran.get(is));
 
       //---- set primary variables for current station
       xsi = xssi.get(is)[ibl];
-      if (ibl < itran.get(is))
-        ami = ctau.get(is)[ibl];
+      if (ibl < state.itran.get(is))
+        ami = state.ctau.get(is)[ibl];
       else
-        cti = ctau.get(is)[ibl];
-      uei = uedg.get(is)[ibl];
-      thi = thet.get(is)[ibl];
-      mdi = mass.get(is)[ibl];
+        cti = state.ctau.get(is)[ibl];
+      uei = state.uedg.get(is)[ibl];
+      thi = state.thet.get(is)[ibl];
+      mdi = state.mass.get(is)[ibl];
 
       dsi = mdi / uei;
 
-      if (wake) {
+      if (state.wake) {
         int iw = ibl - iblte.get(is);
         dswaki = wgap[iw - 1];
       } else
@@ -939,21 +972,21 @@ jvte2 = isys.bottom[iblte.bottom];
       u2_a = uinv_a.get(is)[ibl];
       d2_a = d2_u2 * u2_a;
 
-      //---- "forced" changes due to mismatch between uedg and
-      // usav=uinv+dij*mass
-      due2 = uedg.get(is)[ibl] - usav.get(is)[ibl];
+      //---- "forced" changes due to mismatch between edge velocities and
+      // usav=uinv+dij*state.mass
+      due2 = state.uedg.get(is)[ibl] - usav.get(is)[ibl];
       dds2 = d2_u2 * due2;
 
       blprv(boundaryLayerState, xsi, ami, cti, thi, dsi, dswaki, uei); // cti
       blkin(boundaryLayerState);
 
-      //---- check for transition and set tran, xt, etc. if found
-      if (tran) {
+      //---- check for transition and set state.tran, xt, etc. if found
+      if (state.tran) {
         trchek();
         ami = blData2.param.amplz;
       }
 
-      if (ibl == itran.get(is) && !tran) {
+      if (ibl == state.itran.get(is) && !state.tran) {
         // TRACE("setbl: xtr???  n1=%d n2=%d: \n", ampl1, ampl2);
 
         ss << "setbl: xtr???  n1=" << blData1.param.amplz
@@ -966,31 +999,31 @@ jvte2 = isys.bottom[iblte.bottom];
       //	   at the previous "1" station and the current "2" station
 
       if (ibl == iblte.get(is) + 1) {
-        //----- define quantities at start of wake, adding te base thickness to
+        //----- define quantities at start of state.wake, adding te base thickness to
         // dstar
-        tte = thet.get(1)[iblte.top] +
-              thet.get(2)[iblte.bottom];
-        dte = dstr.get(1)[iblte.top] +
-              dstr.get(2)[iblte.bottom] + foil.edge.ante;
-        cte = (ctau.get(1)[iblte.top] *
-                   thet.get(1)[iblte.top] +
-               ctau.get(2)[iblte.bottom] *
-                   thet.get(2)[iblte.bottom]) /
+        tte = state.thet.get(1)[iblte.top] +
+              state.thet.get(2)[iblte.bottom];
+        dte = state.dstr.get(1)[iblte.top] +
+              state.dstr.get(2)[iblte.bottom] + foil.edge.ante;
+        cte = (state.ctau.get(1)[iblte.top] *
+                   state.thet.get(1)[iblte.top] +
+               state.ctau.get(2)[iblte.bottom] *
+                   state.thet.get(2)[iblte.bottom]) /
                tte;
         tesys(cte, tte, dte);
 
         tte_tte1 = 1.0;
         tte_tte2 = 1.0;
-        dte_mte1 = 1.0 / uedg.top[iblte.top];
-        dte_ute1 = -dstr.get(1)[iblte.top] /
-                    uedg.top[iblte.top];
-        dte_mte2 = 1.0 / uedg.bottom[iblte.bottom];
-        dte_ute2 = -dstr.get(2)[iblte.bottom] /
-                    uedg.bottom[iblte.bottom];
-        cte_cte1 = thet.get(1)[iblte.top] / tte;
-        cte_cte2 = thet.get(2)[iblte.bottom] / tte;
-        cte_tte1 = (ctau.get(1)[iblte.top] - cte) / tte;
-        cte_tte2 = (ctau.get(2)[iblte.bottom] - cte) / tte;
+        dte_mte1 = 1.0 / state.uedg.top[iblte.top];
+        dte_ute1 = -state.dstr.get(1)[iblte.top] /
+                    state.uedg.top[iblte.top];
+        dte_mte2 = 1.0 / state.uedg.bottom[iblte.bottom];
+        dte_ute2 = -state.dstr.get(2)[iblte.bottom] /
+                    state.uedg.bottom[iblte.bottom];
+        cte_cte1 = state.thet.get(1)[iblte.top] / tte;
+        cte_cte2 = state.thet.get(2)[iblte.bottom] / tte;
+        cte_tte1 = (state.ctau.get(1)[iblte.top] - cte) / tte;
+        cte_tte2 = (state.ctau.get(2)[iblte.bottom] - cte) / tte;
 
         //----- re-define d1 sensitivities wrt m since d1 depends on both te ds
         // values
@@ -1003,14 +1036,14 @@ jvte2 = isys.bottom[iblte.bottom];
         d1_m[jvte1] = d1_m[jvte1] + dte_mte1;
         d1_m[jvte2] = d1_m[jvte2] + dte_mte2;
 
-        //----- "forced" changes from  uedg --- usav=uinv+dij*mass	mismatch
+        //----- "forced" changes from  state.uedg --- usav=uinv+dij*state.mass	mismatch
         due1 = 0.0;
         dds1 =
             dte_ute1 *
-                (uedg.top[iblte.top] -
+                (state.uedg.top[iblte.top] -
                  usav.top[iblte.top]) +
             dte_ute2 *
-                (uedg.bottom[iblte.bottom] -
+                (state.uedg.bottom[iblte.bottom] -
                  usav.bottom[iblte.bottom]);
       } else {
         blsys(boundaryLayerState, boundaryLayerLattice);
@@ -1018,7 +1051,7 @@ jvte2 = isys.bottom[iblte.bottom];
 
       //---- save wall shear and equil. max shear coefficient for plotting
       // output
-      ctq.get(is)[ibl] = blData2.cqz.scalar;
+      state.ctq.get(is)[ibl] = blData2.cqz.scalar;
 
       //---- set xi sensitivities wrt le ue changes
       if (is == 1) {
@@ -1032,116 +1065,116 @@ jvte2 = isys.bottom[iblte.bottom];
       //---- stuff bl system coefficients into main jacobian matrix
 
       for (int jv = 1; jv <= nsys; jv++) {
-        vm[0][jv][iv] = blc.a1(0, 2) * d1_m[jv] + blc.a1(0, 3) * u1_m[jv] +
+        state.vm[0][jv][iv] = blc.a1(0, 2) * d1_m[jv] + blc.a1(0, 3) * u1_m[jv] +
                         blc.a2(0, 2) * d2_m[jv] + blc.a2(0, 3) * u2_m[jv] +
                         (blc.a1(0, 4) + blc.a2(0, 4) + blc.d_xi[0]) *
                             (xi_ule1 * ule1_m[jv] + xi_ule2 * ule2_m[jv]);
       }
 
-      vb[iv](0, 0) = blc.a1(0, 0);
-      vb[iv](0, 1) = blc.a1(0, 1);
+      state.vb[iv](0, 0) = blc.a1(0, 0);
+      state.vb[iv](0, 1) = blc.a1(0, 1);
 
-      va[iv](0, 0) = blc.a2(0, 0);
-      va[iv](0, 1) = blc.a2(0, 1);
+      state.va[iv](0, 0) = blc.a2(0, 0);
+      state.va[iv](0, 1) = blc.a2(0, 1);
 
       if (lalfa)
-        vdel[iv](0, 1) = blc.d_re[0] * re_clmr + blc.d_msq[0] * msq_clmr;
+        state.vdel[iv](0, 1) = blc.d_re[0] * re_clmr + blc.d_msq[0] * msq_clmr;
       else
-        vdel[iv](0, 1) = (blc.a1(0, 3) * u1_a + blc.a1(0, 2) * d1_a) +
+        state.vdel[iv](0, 1) = (blc.a1(0, 3) * u1_a + blc.a1(0, 2) * d1_a) +
                          (blc.a2(0, 3) * u2_a + blc.a2(0, 2) * d2_a) +
                          (blc.a1(0, 4) + blc.a2(0, 4) + blc.d_xi[0]) *
                              (xi_ule1 * ule1_a + xi_ule2 * ule2_a);
 
-      vdel[iv](0, 0) = blc.rhs[0] + (blc.a1(0, 3) * due1 + blc.a1(0, 2) * dds1) +
+      state.vdel[iv](0, 0) = blc.rhs[0] + (blc.a1(0, 3) * due1 + blc.a1(0, 2) * dds1) +
                        (blc.a2(0, 3) * due2 + blc.a2(0, 2) * dds2) +
                        (blc.a1(0, 4) + blc.a2(0, 4) + blc.d_xi[0]) *
                            (xi_ule1 * dule1 + xi_ule2 * dule2);
 
       for (int jv = 1; jv <= nsys; jv++) {
-        vm[1][jv][iv] = blc.a1(1, 2) * d1_m[jv] + blc.a1(1, 3) * u1_m[jv] +
+        state.vm[1][jv][iv] = blc.a1(1, 2) * d1_m[jv] + blc.a1(1, 3) * u1_m[jv] +
                         blc.a2(1, 2) * d2_m[jv] + blc.a2(1, 3) * u2_m[jv] +
                         (blc.a1(1, 4) + blc.a2(1, 4) + blc.d_xi[1]) *
                             (xi_ule1 * ule1_m[jv] + xi_ule2 * ule2_m[jv]);
       }
-      vb[iv](1, 0) = blc.a1(1, 0);
-      vb[iv](1, 1) = blc.a1(1, 1);
+      state.vb[iv](1, 0) = blc.a1(1, 0);
+      state.vb[iv](1, 1) = blc.a1(1, 1);
 
-      va[iv](1, 0) = blc.a2(1, 0);
-      va[iv](1, 1) = blc.a2(1, 1);
+      state.va[iv](1, 0) = blc.a2(1, 0);
+      state.va[iv](1, 1) = blc.a2(1, 1);
 
       if (lalfa)
-        vdel[iv](1, 1) = blc.d_re[1] * re_clmr + blc.d_msq[1] * msq_clmr;
+        state.vdel[iv](1, 1) = blc.d_re[1] * re_clmr + blc.d_msq[1] * msq_clmr;
       else
-        vdel[iv](1, 1) = (blc.a1(1, 3) * u1_a + blc.a1(1, 2) * d1_a) +
+        state.vdel[iv](1, 1) = (blc.a1(1, 3) * u1_a + blc.a1(1, 2) * d1_a) +
                          (blc.a2(1, 3) * u2_a + blc.a2(1, 2) * d2_a) +
                          (blc.a1(1, 4) + blc.a2(1, 4) + blc.d_xi[1]) *
                              (xi_ule1 * ule1_a + xi_ule2 * ule2_a);
 
-      vdel[iv](1, 0) = blc.rhs[1] + (blc.a1(1, 3) * due1 + blc.a1(1, 2) * dds1) +
+      state.vdel[iv](1, 0) = blc.rhs[1] + (blc.a1(1, 3) * due1 + blc.a1(1, 2) * dds1) +
                        (blc.a2(1, 3) * due2 + blc.a2(1, 2) * dds2) +
                        (blc.a1(1, 4) + blc.a2(1, 4) + blc.d_xi[1]) *
                            (xi_ule1 * dule1 + xi_ule2 * dule2);
 
       // memory overlap problem
       for (int jv = 1; jv <= nsys; jv++) {
-        vm[2][jv][iv] = blc.a1(2, 2) * d1_m[jv] + blc.a1(2, 3) * u1_m[jv] +
+        state.vm[2][jv][iv] = blc.a1(2, 2) * d1_m[jv] + blc.a1(2, 3) * u1_m[jv] +
                         blc.a2(2, 2) * d2_m[jv] + blc.a2(2, 3) * u2_m[jv] +
                         (blc.a1(2, 4) + blc.a2(2, 4) + blc.d_xi[2]) *
                             (xi_ule1 * ule1_m[jv] + xi_ule2 * ule2_m[jv]);
       }
 
-      vb[iv](2, 0) = blc.a1(2, 0);
-      vb[iv](2, 1) = blc.a1(2, 1);
+      state.vb[iv](2, 0) = blc.a1(2, 0);
+      state.vb[iv](2, 1) = blc.a1(2, 1);
 
-      va[iv](2, 0) = blc.a2(2, 0);
-      va[iv](2, 1) = blc.a2(2, 1);
+      state.va[iv](2, 0) = blc.a2(2, 0);
+      state.va[iv](2, 1) = blc.a2(2, 1);
 
       if (lalfa)
-        vdel[iv](2, 1) = blc.d_re[2] * re_clmr + blc.d_msq[2] * msq_clmr;
+        state.vdel[iv](2, 1) = blc.d_re[2] * re_clmr + blc.d_msq[2] * msq_clmr;
       else
-        vdel[iv](2, 1) = (blc.a1(2, 3) * u1_a + blc.a1(2, 2) * d1_a) +
+        state.vdel[iv](2, 1) = (blc.a1(2, 3) * u1_a + blc.a1(2, 2) * d1_a) +
                          (blc.a2(2, 3) * u2_a + blc.a2(2, 2) * d2_a) +
                          (blc.a1(2, 4) + blc.a2(2, 4) + blc.d_xi[2]) *
                              (xi_ule1 * ule1_a + xi_ule2 * ule2_a);
 
-      vdel[iv](2, 0) = blc.rhs[2] + (blc.a1(2, 3) * due1 + blc.a1(2, 2) * dds1) +
+      state.vdel[iv](2, 0) = blc.rhs[2] + (blc.a1(2, 3) * due1 + blc.a1(2, 2) * dds1) +
                        (blc.a2(2, 3) * due2 + blc.a2(2, 2) * dds2) +
                        (blc.a1(2, 4) + blc.a2(2, 4) + blc.d_xi[2]) *
                            (xi_ule1 * dule1 + xi_ule2 * dule2);
 
       if (ibl == iblte.get(is) + 1) {
         //----- redefine coefficients for tte, dte, etc
-        vz[0][0] = blc.a1(0, 0) * cte_cte1;
-        vz[0][1] = blc.a1(0, 0) * cte_tte1 + blc.a1(0, 1) * tte_tte1;
-        vb[iv](0, 0) = blc.a1(0, 0) * cte_cte2;
-        vb[iv](0, 1) = blc.a1(0, 0) * cte_tte2 + blc.a1(0, 1) * tte_tte2;
+        state.vz[0][0] = blc.a1(0, 0) * cte_cte1;
+        state.vz[0][1] = blc.a1(0, 0) * cte_tte1 + blc.a1(0, 1) * tte_tte1;
+        state.vb[iv](0, 0) = blc.a1(0, 0) * cte_cte2;
+        state.vb[iv](0, 1) = blc.a1(0, 0) * cte_tte2 + blc.a1(0, 1) * tte_tte2;
 
-        vz[1][0] = blc.a1(1, 0) * cte_cte1;
-        vz[1][1] = blc.a1(1, 0) * cte_tte1 + blc.a1(1, 1) * tte_tte1;
-        vb[iv](1, 0) = blc.a1(1, 0) * cte_cte2;
-        vb[iv](1, 1) = blc.a1(1, 0) * cte_tte2 + blc.a1(1, 1) * tte_tte2;
+        state.vz[1][0] = blc.a1(1, 0) * cte_cte1;
+        state.vz[1][1] = blc.a1(1, 0) * cte_tte1 + blc.a1(1, 1) * tte_tte1;
+        state.vb[iv](1, 0) = blc.a1(1, 0) * cte_cte2;
+        state.vb[iv](1, 1) = blc.a1(1, 0) * cte_tte2 + blc.a1(1, 1) * tte_tte2;
 
-        vz[2][0] = blc.a1(2, 0) * cte_cte1;
-        vz[2][1] = blc.a1(2, 0) * cte_tte1 + blc.a1(2, 1) * tte_tte1;
-        vb[iv](2, 0) = blc.a1(2, 0) * cte_cte2;
-        vb[iv](2, 1) = blc.a1(2, 0) * cte_tte2 + blc.a1(2, 1) * tte_tte2;
+        state.vz[2][0] = blc.a1(2, 0) * cte_cte1;
+        state.vz[2][1] = blc.a1(2, 0) * cte_tte1 + blc.a1(2, 1) * tte_tte1;
+        state.vb[iv](2, 0) = blc.a1(2, 0) * cte_cte2;
+        state.vb[iv](2, 1) = blc.a1(2, 0) * cte_tte2 + blc.a1(2, 1) * tte_tte2;
       }
 
       //---- turbulent intervals will follow if currently at transition interval
-      if (tran) {
-        turb = true;
+      if (state.tran) {
+        state.turb = true;
 
         //------ save transition location
-        itran.get(is) = ibl;
+        state.itran.get(is) = ibl;
       }
 
-      tran = false;
+      state.tran = false;
 
       if (ibl == iblte.get(is)) {
-        //----- set "2" variables at te to wake correlations for next station
+        //----- set "2" variables at te to state.wake correlations for next station
 
-        turb = true;
-        wake = true;
+        state.turb = true;
+        state.wake = true;
         blvar(blData2, FlowRegimeEnum::Wake);
         blmid(boundaryLayerState, FlowRegimeEnum::Wake);
       }
@@ -1165,7 +1198,7 @@ jvte2 = isys.bottom[iblte.bottom];
     //---- next airfoil side
   }
 
-  return true;
+  return state;
 }
 
 

@@ -280,7 +280,41 @@ class XFoil {
   VectorXd qvfue() const;
   Matrix2Xd qwcalc();
 
-  bool setbl();
+  struct SetblStateView {
+    bool& lblini;
+    double& gm1bl;
+    double& qinfbl;
+    double& tkbl;
+    double& tkbl_ms;
+    double& rstbl;
+    double& rstbl_ms;
+    double& hstinv;
+    double& hstinv_ms;
+    double& reybl;
+    double& reybl_re;
+    double& reybl_ms;
+    double& amcrit;
+    SidePair<VectorXd>& uedg;
+    SidePair<VectorXd>& ctau;
+    SidePair<VectorXd>& thet;
+    SidePair<VectorXd>& dstr;
+    SidePair<VectorXd>& mass;
+    SidePair<VectorXd>& ctq;
+    SidePair<int>& itran;
+    std::vector<Eigen::Matrix<double, 3, 2>>& va;
+    std::vector<Eigen::Matrix<double, 3, 2>>& vb;
+    std::vector<Eigen::Matrix<double, 3, 2>>& vdel;
+    double (&vm)[3][IZX][IZX];
+    double (&vz)[3][2];
+    bool& tran;
+    bool& turb;
+    bool& wake;
+    bool& simi;
+    double& xiforc;
+  };
+
+  SetblStateView makeSetblStateView();
+  SetblStateView setbl(SetblStateView state);
   struct EdgeVelocitySwapResult {
     SidePair<VectorXd> swappedUsav;
     SidePair<VectorXd> restoredUedg;

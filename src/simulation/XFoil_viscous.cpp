@@ -725,7 +725,7 @@ bool XFoil::ViscousIter() {
   std::stringstream ss;
   double eps1 = 0.0001;
 
-  setbl(); //	------ fill newton system for bl variables
+  setbl(makeSetblStateView()); //	------ fill newton system for bl variables
 
   blsolve(); //	------ solve newton system with custom solver
 
