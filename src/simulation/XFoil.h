@@ -53,6 +53,7 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 #include "core/spline.hpp"
 #include "core/side_pair.hpp"
 #include "domain/boundary_layer.hpp"
+#include "domain/boundary_layer/boundary_layer_builder.hpp"
 #include "domain/foil/foil.hpp"
 #include "simulation/psi.hpp"
 #include "simulation/boundary_layer_state.hpp"
@@ -279,50 +280,6 @@ class XFoil {
   TangentialVelocityResult qiset() const;
   VectorXd qvfue() const;
   Matrix2Xd qwcalc();
-
-  struct SetblInputView {
-    const bool& lblini;
-    const SidePair<VectorXd>& uedg;
-    const SidePair<VectorXd>& ctau;
-    const SidePair<VectorXd>& thet;
-    const SidePair<VectorXd>& dstr;
-    const SidePair<VectorXd>& mass;
-    const SidePair<VectorXd>& ctq;
-    const SidePair<int>& itran;
-  };
-
-  struct SetblOutputView {
-    bool& lblini;
-    double& gm1bl;
-    double& qinfbl;
-    double& tkbl;
-    double& tkbl_ms;
-    double& rstbl;
-    double& rstbl_ms;
-    double& hstinv;
-    double& hstinv_ms;
-    double& reybl;
-    double& reybl_re;
-    double& reybl_ms;
-    double& amcrit;
-    SidePair<VectorXd>& uedg;
-    SidePair<VectorXd>& ctau;
-    SidePair<VectorXd>& thet;
-    SidePair<VectorXd>& dstr;
-    SidePair<VectorXd>& mass;
-    SidePair<VectorXd>& ctq;
-    SidePair<int>& itran;
-    std::vector<Eigen::Matrix<double, 3, 2>>& va;
-    std::vector<Eigen::Matrix<double, 3, 2>>& vb;
-    std::vector<Eigen::Matrix<double, 3, 2>>& vdel;
-    double (&vm)[3][IZX][IZX];
-    double (&vz)[3][2];
-    bool& tran;
-    bool& turb;
-    bool& wake;
-    bool& simi;
-    double& xiforc;
-  };
 
   SetblInputView makeSetblInputView() const;
   SetblOutputView makeSetblOutputView();

@@ -3,6 +3,7 @@
 #include <sstream>
 #include <iomanip>
 #include <cmath>
+#include "domain/boundary_layer/boundary_layer_builder.hpp"
 using namespace Eigen;
 
 
@@ -762,7 +763,7 @@ bool XFoil::mrchue() {
   return true;
 }
 
-XFoil::SetblInputView XFoil::makeSetblInputView() const {
+SetblInputView XFoil::makeSetblInputView() const {
   return SetblInputView{lblini,
                         uedg,
                         ctau,
@@ -773,7 +774,7 @@ XFoil::SetblInputView XFoil::makeSetblInputView() const {
                         itran};
 }
 
-XFoil::SetblOutputView XFoil::makeSetblOutputView() {
+SetblOutputView XFoil::makeSetblOutputView() {
   return SetblOutputView{lblini,
                          gm1bl,
                          qinfbl,
@@ -807,7 +808,7 @@ XFoil::SetblOutputView XFoil::makeSetblOutputView() {
 }
 
 
-XFoil::SetblOutputView XFoil::setbl(const SetblInputView& input,
+SetblOutputView XFoil::setbl(const SetblInputView& input,
                                     SetblOutputView output) {
   //-------------------------------------------------
   //	   sets up the bl newton system coefficients for the current bl
