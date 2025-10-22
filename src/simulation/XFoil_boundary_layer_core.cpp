@@ -10,13 +10,12 @@ bool XFoil::blkin(BoundaryLayerState& state) {
   //     calculates turbulence-independent secondary "2"
   //     variables from the primary "2" variables.
   //----------------------------------------------------------
-  double tr2, herat, he_u2, he_ms, v2_he;
   blData& current = state.current();
   //---- set edge mach number ** 2
   current.param.mz =
       current.param.uz * current.param.uz * hstinv /
       (gm1bl * (1.0 - 0.5 * current.param.uz * current.param.uz * hstinv));
-  tr2 = 1.0 + 0.5 * gm1bl * current.param.mz;
+  double tr2 = 1.0 + 0.5 * gm1bl * current.param.mz;
   current.param.mz_uz = 2.0 * current.param.mz * tr2 / current.param.uz;
   current.param.mz_ms =
       current.param.uz * current.param.uz * tr2 /
@@ -35,11 +34,11 @@ bool XFoil::blkin(BoundaryLayerState& state) {
   current.param.hz_tz = -current.param.hz / current.param.tz;
 
   //---- set edge static/stagnation enthalpy
-  herat = 1.0 - 0.5 * current.param.uz * current.param.uz * hstinv;
-  he_u2 = -current.param.uz * hstinv;
-  he_ms = -0.5 * current.param.uz * current.param.uz * hstinv_ms;
+  double herat = 1.0 - 0.5 * current.param.uz * current.param.uz * hstinv;
+  double he_u2 = -current.param.uz * hstinv;
+  double he_ms = -0.5 * current.param.uz * current.param.uz * hstinv_ms;
   //---- set molecular viscosity
-  v2_he = (1.5 / herat - 1.0 / (herat + hvrat));
+  double v2_he = (1.5 / herat - 1.0 / (herat + hvrat));
 
   //---- set kinematic shape parameter
   boundary_layer::KineticShapeParameterResult hkin_result =
