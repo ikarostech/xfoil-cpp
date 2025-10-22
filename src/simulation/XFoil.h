@@ -49,6 +49,7 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 #include "Eigen/StdVector"
 
 #include "domain/flow_regime.hpp"
+#include "domain/coefficient/bl_newton.hpp"
 #include "core/math_util.hpp"
 #include "core/spline.hpp"
 #include "core/side_pair.hpp"
@@ -146,7 +147,6 @@ class XFoil {
 
   VectorXd apcalc(Matrix2Xd points);
   void updateTrailingEdgeState();
-  struct BlSystemCoeffs;
   struct SkinFrictionCoefficients {
     double cfm = 0.0;
     double cfm_ms = 0.0;
@@ -461,22 +461,7 @@ class XFoil {
   MatrixXd bij, dij;
 
   // Grouped BL Newton system coefficients (Proposal A)
-  struct BlSystemCoeffs {
-    Matrix<double, 4, 5> a1;     // coefficients at station 1
-    Matrix<double, 4, 5> a2;     // coefficients at station 2
-    Vector<double, 4> rhs;       // residual vector
-    Vector<double, 4> d_msq;     // d(res)/d(Ma^2)
-    Vector<double, 4> d_re;      // d(res)/d(Re)
-    Vector<double, 4> d_xi;      // d(res)/d(xi)
-    void clear() {
-      a1.setZero();
-      a2.setZero();
-      rhs.setZero();
-      d_msq.setZero();
-      d_re.setZero();
-      d_xi.setZero();
-    }
-  } blc;
+  BlSystemCoeffs blc;
 
   bool trforc, simi, tran, turb, wake, trfree;
 

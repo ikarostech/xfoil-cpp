@@ -48,23 +48,23 @@ LogarithmicDifferences getLogarithmicDifferences(FlowRegimeEnum flowRegimeType,
 }
 
 void bldifLaminar(BoundaryLayerState& boundaryLayerState, double amcrit,
-                  XFoil::BlSystemCoeffs& coeffs);
+                  BlSystemCoeffs& coeffs);
 
 void bldifTurbulent(BoundaryLayerState& boundaryLayerState, FlowRegimeEnum flowRegimeType,
                     double upw, const Vector3d& upw1, const Vector3d& upw2, double upw_ms,
-                    double ulog, XFoil::BlSystemCoeffs& coeffs);
+                    double ulog, BlSystemCoeffs& coeffs);
 
 void bldifMomentum(BoundaryLayerState& boundaryLayerState, double xlog, double ulog,
                    double tlog, double ddlog,
                    const XFoil::SkinFrictionCoefficients& skinFriction,
-                   XFoil::BlSystemCoeffs& coeffs);
+                   BlSystemCoeffs& coeffs);
 
 void bldifShape(BoundaryLayerState& boundaryLayerState, double upw, double xlog, double ulog,
                 double hlog, double ddlog, const Vector3d& upw1, const Vector3d& upw2,
-                double upw_ms, XFoil::BlSystemCoeffs& coeffs);
+                double upw_ms, BlSystemCoeffs& coeffs);
 }  // namespace
 
-XFoil::BlSystemCoeffs XFoil::bldif(FlowRegimeEnum flowRegimeType,
+BlSystemCoeffs XFoil::bldif(FlowRegimeEnum flowRegimeType,
                                    BoundaryLayerState boundaryLayerState,
                                    const SkinFrictionCoefficients& skinFriction,
                                    double amcrit) const {
@@ -134,7 +134,7 @@ XFoil::BlSystemCoeffs XFoil::bldif(FlowRegimeEnum flowRegimeType,
 namespace {
 
 void bldifLaminar(BoundaryLayerState& boundaryLayerState, double amcrit,
-                  XFoil::BlSystemCoeffs& coeffs) {
+                  BlSystemCoeffs& coeffs) {
   blData& station1 = boundaryLayerState.station1;
   blData& station2 = boundaryLayerState.station2;
 
@@ -174,7 +174,7 @@ void bldifLaminar(BoundaryLayerState& boundaryLayerState, double amcrit,
 void bldifTurbulent(BoundaryLayerState& boundaryLayerState,
                     FlowRegimeEnum flowRegimeType, double upw,
                     const Vector3d& upw1, const Vector3d& upw2,
-                    double upw_ms, double ulog, XFoil::BlSystemCoeffs& coeffs) {
+                    double upw_ms, double ulog, BlSystemCoeffs& coeffs) {
   blData& station1 = boundaryLayerState.station1;
   blData& station2 = boundaryLayerState.station2;
 
@@ -289,7 +289,7 @@ void bldifTurbulent(BoundaryLayerState& boundaryLayerState,
 void bldifMomentum(BoundaryLayerState& boundaryLayerState, double xlog, double ulog,
                    double tlog, double ddlog,
                    const XFoil::SkinFrictionCoefficients& skinFriction,
-                   XFoil::BlSystemCoeffs& coeffs) {
+                   BlSystemCoeffs& coeffs) {
   blData& station1 = boundaryLayerState.station1;
   blData& station2 = boundaryLayerState.station2;
 
@@ -383,7 +383,7 @@ void bldifMomentum(BoundaryLayerState& boundaryLayerState, double xlog, double u
 
 void bldifShape(BoundaryLayerState& boundaryLayerState, double upw, double xlog,
                 double ulog, double hlog, double ddlog, const Vector3d& upw1,
-                const Vector3d& upw2, double upw_ms, XFoil::BlSystemCoeffs& coeffs) {
+                const Vector3d& upw2, double upw_ms, BlSystemCoeffs& coeffs) {
   blData& station1 = boundaryLayerState.station1;
   blData& station2 = boundaryLayerState.station2;
 
