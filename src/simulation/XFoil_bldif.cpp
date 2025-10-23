@@ -2,10 +2,21 @@
  * BL Newton system assembly split from XFoil.cpp
  */
 
-#include "XFoil.h"
+#include "simulation/bldif.hpp"
+
+#include <algorithm>
+#include <cmath>
+
+#include <Eigen/Core>
+
+#include "core/boundary_layer_util.hpp"
+#include "core/math_util.hpp"
 
 using Eigen::RowVector;
 using Eigen::Vector3d;
+using std::exp;
+using std::fabs;
+using std::log;
 
 namespace {
 constexpr double kSccon = 5.6;
@@ -56,7 +67,7 @@ void bldifTurbulent(BoundaryLayerState& boundaryLayerState, FlowRegimeEnum flowR
 
 void bldifMomentum(BoundaryLayerState& boundaryLayerState, double xlog, double ulog,
                    double tlog, double ddlog,
-                   const XFoil::SkinFrictionCoefficients& skinFriction,
+                   const SkinFrictionCoefficients& skinFriction,
                    BlSystemCoeffs& coeffs);
 
 void bldifShape(BoundaryLayerState& boundaryLayerState, double upw, double xlog, double ulog,
@@ -64,10 +75,10 @@ void bldifShape(BoundaryLayerState& boundaryLayerState, double upw, double xlog,
                 double upw_ms, BlSystemCoeffs& coeffs);
 }  // namespace
 
-BlSystemCoeffs XFoil::bldif(FlowRegimeEnum flowRegimeType,
-                                   BoundaryLayerState boundaryLayerState,
-                                   const SkinFrictionCoefficients& skinFriction,
-                                   double amcrit) const {
+BlSystemCoeffs AssembleBoundaryLayerSystem(FlowRegimeEnum flowRegimeType,
+                                           BoundaryLayerState boundaryLayerState,
+                                           const SkinFrictionCoefficients& skinFriction,
+                                           double amcrit) {
   LogarithmicDifferences logDiffs = getLogarithmicDifferences(flowRegimeType, boundaryLayerState);
 
   blData& station1 = boundaryLayerState.station1;
@@ -288,7 +299,7 @@ void bldifTurbulent(BoundaryLayerState& boundaryLayerState,
 
 void bldifMomentum(BoundaryLayerState& boundaryLayerState, double xlog, double ulog,
                    double tlog, double ddlog,
-                   const XFoil::SkinFrictionCoefficients& skinFriction,
+                   const SkinFrictionCoefficients& skinFriction,
                    BlSystemCoeffs& coeffs) {
   blData& station1 = boundaryLayerState.station1;
   blData& station2 = boundaryLayerState.station2;

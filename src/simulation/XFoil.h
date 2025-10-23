@@ -57,6 +57,7 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 #include "domain/boundary_layer/boundary_layer_builder.hpp"
 #include "domain/foil/foil.hpp"
 #include "simulation/psi.hpp"
+#include "simulation/skin_friction_coefficients.hpp"
 #include "simulation/boundary_layer_state.hpp"
 #include "infrastructure/xfoil_params.h"
 #include "core/boundary_layer_util.hpp"
@@ -147,20 +148,9 @@ class XFoil {
 
   VectorXd apcalc(Matrix2Xd points);
   void updateTrailingEdgeState();
-  struct SkinFrictionCoefficients {
-    double cfm = 0.0;
-    double cfm_ms = 0.0;
-    double cfm_re = 0.0;
-    double cfm_u1 = 0.0;
-    double cfm_t1 = 0.0;
-    double cfm_d1 = 0.0;
-    double cfm_u2 = 0.0;
-    double cfm_t2 = 0.0;
-    double cfm_d2 = 0.0;
-  };
+  using SkinFrictionCoefficients = ::SkinFrictionCoefficients;
   BlSystemCoeffs bldif(FlowRegimeEnum flowRegimeType, BoundaryLayerState boundaryLayerState,
                        const SkinFrictionCoefficients& skinFriction, double amcrit) const;
-  // ---- Helper routines used by bldif ----
   bool blkin(BoundaryLayerState& state);
   SkinFrictionCoefficients blmid(FlowRegimeEnum flowRegimeType);
   SkinFrictionCoefficients blmid(BoundaryLayerState& state, FlowRegimeEnum flowRegimeType);
