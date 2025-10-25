@@ -2,7 +2,7 @@
  * BL Newton system assembly split from XFoil.cpp
  */
 
-#include "simulation/bldif.hpp"
+#include "domain/boundary_layer/boundary_layer_diff_solver.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -75,7 +75,7 @@ void bldifShape(BoundaryLayerState& boundaryLayerState, double upw, double xlog,
                 double upw_ms, BlSystemCoeffs& coeffs);
 }  // namespace
 
-BlSystemCoeffs AssembleBoundaryLayerSystem(FlowRegimeEnum flowRegimeType,
+BlSystemCoeffs BlDiffSolver::AssembleBoundaryLayerSystem(FlowRegimeEnum flowRegimeType,
                                            BoundaryLayerState boundaryLayerState,
                                            const SkinFrictionCoefficients& skinFriction,
                                            double amcrit) {

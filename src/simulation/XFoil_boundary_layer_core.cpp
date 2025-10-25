@@ -201,13 +201,13 @@ bool XFoil::blsys(BoundaryLayerState& state, [[maybe_unused]] BoundaryLayerLatti
   if (tran)
     trdif();
   else if (simi)
-    blc = bldif(FlowRegimeEnum::Similarity, boundaryLayerState, skinFriction, amcrit);
+    blc = blDiffSolver.AssembleBoundaryLayerSystem(FlowRegimeEnum::Similarity, boundaryLayerState, skinFriction, amcrit);
   else if (!turb)
-    blc = bldif(FlowRegimeEnum::Laminar, boundaryLayerState, skinFriction, amcrit);
+    blc = blDiffSolver.AssembleBoundaryLayerSystem(FlowRegimeEnum::Laminar, boundaryLayerState, skinFriction, amcrit);
   else if (wake)
-    blc = bldif(FlowRegimeEnum::Wake, boundaryLayerState, skinFriction, amcrit);
+    blc = blDiffSolver.AssembleBoundaryLayerSystem(FlowRegimeEnum::Wake, boundaryLayerState, skinFriction, amcrit);
   else
-    blc = bldif(FlowRegimeEnum::Turbulent, boundaryLayerState, skinFriction, amcrit);
+    blc = blDiffSolver.AssembleBoundaryLayerSystem(FlowRegimeEnum::Turbulent, boundaryLayerState, skinFriction, amcrit);
 
   if (simi) {
     //----- at similarity station, "1" variables are really "2" variables

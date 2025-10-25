@@ -5,7 +5,12 @@
 #include "simulation/boundary_layer_state.hpp"
 #include "simulation/skin_friction_coefficients.hpp"
 
-BlSystemCoeffs AssembleBoundaryLayerSystem(FlowRegimeEnum flowRegimeType,
+class BlDiffSolver {
+    public:
+    BlDiffSolver() = default;
+    BlSystemCoeffs AssembleBoundaryLayerSystem(FlowRegimeEnum flowRegimeType,
                                            BoundaryLayerState boundaryLayerState,
                                            const SkinFrictionCoefficients& skinFriction,
                                            double amcrit);
+    private:
+};

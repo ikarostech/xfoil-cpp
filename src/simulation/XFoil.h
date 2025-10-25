@@ -55,6 +55,7 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 #include "core/side_pair.hpp"
 #include "domain/boundary_layer.hpp"
 #include "domain/boundary_layer/boundary_layer_builder.hpp"
+#include "domain/boundary_layer/boundary_layer_diff_solver.hpp"
 #include "domain/foil/foil.hpp"
 #include "simulation/psi.hpp"
 #include "simulation/skin_friction_coefficients.hpp"
@@ -149,8 +150,7 @@ class XFoil {
   VectorXd apcalc(Matrix2Xd points);
   void updateTrailingEdgeState();
   using SkinFrictionCoefficients = ::SkinFrictionCoefficients;
-  BlSystemCoeffs bldif(FlowRegimeEnum flowRegimeType, BoundaryLayerState boundaryLayerState,
-                       const SkinFrictionCoefficients& skinFriction, double amcrit) const;
+  BlDiffSolver blDiffSolver;
   bool blkin(BoundaryLayerState& state);
   SkinFrictionCoefficients blmid(FlowRegimeEnum flowRegimeType);
   SkinFrictionCoefficients blmid(BoundaryLayerState& state, FlowRegimeEnum flowRegimeType);

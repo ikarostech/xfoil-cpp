@@ -21,7 +21,7 @@
 *****************************************************************************/
 
 #include "XFoil.h"
-#include "simulation/bldif.hpp"
+#include "domain/boundary_layer/boundary_layer_diff_solver.hpp"
 #include "Eigen/Core"
 #include <cmath>
 using namespace Eigen;
@@ -69,14 +69,6 @@ Matrix2d XFoil::buildBodyToFreestreamRotation() const {
   Matrix2d rotation;
   rotation << ca, sa, -sa, ca;
   return rotation;
-}
-
-BlSystemCoeffs XFoil::bldif(FlowRegimeEnum flowRegimeType,
-                            BoundaryLayerState boundaryLayerState,
-                            const SkinFrictionCoefficients& skinFriction,
-                            double amcrit) const {
-  return AssembleBoundaryLayerSystem(flowRegimeType, boundaryLayerState,
-                                     skinFriction, amcrit);
 }
 
 XFoil::XFoil()
