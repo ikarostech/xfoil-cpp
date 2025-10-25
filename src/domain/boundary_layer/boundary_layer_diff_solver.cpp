@@ -75,7 +75,7 @@ void bldifShape(BoundaryLayerState& boundaryLayerState, double upw, double xlog,
                 double upw_ms, BlSystemCoeffs& coeffs);
 }  // namespace
 
-BlSystemCoeffs BlDiffSolver::AssembleBoundaryLayerSystem(FlowRegimeEnum flowRegimeType,
+BlSystemCoeffs BlDiffSolver::solve(FlowRegimeEnum flowRegimeType,
                                            BoundaryLayerState boundaryLayerState,
                                            const SkinFrictionCoefficients& skinFriction,
                                            double amcrit) {

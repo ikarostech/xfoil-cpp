@@ -8,7 +8,7 @@
 class BlDiffSolver {
     public:
     BlDiffSolver() = default;
-    BlSystemCoeffs AssembleBoundaryLayerSystem(FlowRegimeEnum flowRegimeType,
+    BlSystemCoeffs solve(FlowRegimeEnum flowRegimeType,
                                            BoundaryLayerState boundaryLayerState,
                                            const SkinFrictionCoefficients& skinFriction,
                                            double amcrit);
