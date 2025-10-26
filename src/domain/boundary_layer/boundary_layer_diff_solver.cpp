@@ -58,23 +58,6 @@ LogarithmicDifferences getLogarithmicDifferences(FlowRegimeEnum flowRegimeType,
   return logDiffs;
 }
 
-void bldifLaminar(BoundaryLayerState& boundaryLayerState, double amcrit,
-                  BlSystemCoeffs& coeffs);
-
-void bldifTurbulent(BoundaryLayerState& boundaryLayerState, FlowRegimeEnum flowRegimeType,
-                    double upw, const Vector3d& upw1, const Vector3d& upw2, double upw_ms,
-                    double ulog, BlSystemCoeffs& coeffs);
-
-void bldifMomentum(BoundaryLayerState& boundaryLayerState, double xlog, double ulog,
-                   double tlog, double ddlog,
-                   const SkinFrictionCoefficients& skinFriction,
-                   BlSystemCoeffs& coeffs);
-
-void bldifShape(BoundaryLayerState& boundaryLayerState, double upw, double xlog, double ulog,
-                double hlog, double ddlog, const Vector3d& upw1, const Vector3d& upw2,
-                double upw_ms, BlSystemCoeffs& coeffs);
-}  // namespace
-
 BlSystemCoeffs BlDiffSolver::solve(FlowRegimeEnum flowRegimeType,
                                            BoundaryLayerState boundaryLayerState,
                                            const SkinFrictionCoefficients& skinFriction,
@@ -142,10 +125,8 @@ BlSystemCoeffs BlDiffSolver::solve(FlowRegimeEnum flowRegimeType,
   return coeffs;
 }
 
-namespace {
-
-void bldifLaminar(BoundaryLayerState& boundaryLayerState, double amcrit,
-                  BlSystemCoeffs& coeffs) {
+void BlDiffSolver::bldifLaminar(BoundaryLayerState& boundaryLayerState, double amcrit,
+                                BlSystemCoeffs& coeffs) {
   blData& station1 = boundaryLayerState.station1;
   blData& station2 = boundaryLayerState.station2;
 
@@ -182,10 +163,10 @@ void bldifLaminar(BoundaryLayerState& boundaryLayerState, double amcrit,
   coeffs.rhs[0] = -rezc;
 }
 
-void bldifTurbulent(BoundaryLayerState& boundaryLayerState,
-                    FlowRegimeEnum flowRegimeType, double upw,
-                    const Vector3d& upw1, const Vector3d& upw2,
-                    double upw_ms, double ulog, BlSystemCoeffs& coeffs) {
+void BlDiffSolver::bldifTurbulent(BoundaryLayerState& boundaryLayerState,
+                                  FlowRegimeEnum flowRegimeType, double upw,
+                                  const Vector3d& upw1, const Vector3d& upw2,
+                                  double upw_ms, double ulog, BlSystemCoeffs& coeffs) {
   blData& station1 = boundaryLayerState.station1;
   blData& station2 = boundaryLayerState.station2;
 
@@ -297,10 +278,10 @@ void bldifTurbulent(BoundaryLayerState& boundaryLayerState,
   coeffs.rhs[0] = -rezc;
 }
 
-void bldifMomentum(BoundaryLayerState& boundaryLayerState, double xlog, double ulog,
-                   double tlog, double ddlog,
-                   const SkinFrictionCoefficients& skinFriction,
-                   BlSystemCoeffs& coeffs) {
+void BlDiffSolver::bldifMomentum(BoundaryLayerState& boundaryLayerState, double xlog,
+                                 double ulog, double tlog, double ddlog,
+                                 const SkinFrictionCoefficients& skinFriction,
+                                 BlSystemCoeffs& coeffs) {
   blData& station1 = boundaryLayerState.station1;
   blData& station2 = boundaryLayerState.station2;
 
@@ -392,9 +373,9 @@ void bldifMomentum(BoundaryLayerState& boundaryLayerState, double xlog, double u
   coeffs.rhs[1] = -rezt;
 }
 
-void bldifShape(BoundaryLayerState& boundaryLayerState, double upw, double xlog,
-                double ulog, double hlog, double ddlog, const Vector3d& upw1,
-                const Vector3d& upw2, double upw_ms, BlSystemCoeffs& coeffs) {
+void BlDiffSolver::bldifShape(BoundaryLayerState& boundaryLayerState, double upw, double xlog,
+                              double ulog, double hlog, double ddlog, const Vector3d& upw1,
+                              const Vector3d& upw2, double upw_ms, BlSystemCoeffs& coeffs) {
   blData& station1 = boundaryLayerState.station1;
   blData& station2 = boundaryLayerState.station2;
 
