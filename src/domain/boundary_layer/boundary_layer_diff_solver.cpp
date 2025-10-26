@@ -18,7 +18,6 @@ using std::exp;
 using std::fabs;
 using std::log;
 
-namespace {
 constexpr double kSccon = 5.6;
 constexpr double kGacon = 6.70;
 constexpr double kGbcon = 0.75;
@@ -488,5 +487,3 @@ void BlDiffSolver::bldifShape(BoundaryLayerState& boundaryLayerState, double upw
   coeffs.d_xi[2] = 0.0;
   coeffs.rhs[2] = -rezh;
 }
-
-}  // namespace
