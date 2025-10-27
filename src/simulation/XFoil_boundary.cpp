@@ -17,6 +17,12 @@ skin_friction::C_f evaluateSkinFriction(const blData &data,
                                         data.param.mz, flowRegimeType);
 }
 
+dissipation::DissipationResult evaluateDissipation(const blData &data,
+                                                   FlowRegimeEnum flowRegimeType) {
+  return dissipation::getDissipation(data.hkz.scalar, data.rtz.scalar,
+                                     flowRegimeType);
+}
+
 }  // namespace
 
 blData XFoil::computeShapeParameters(const blData &ref,
@@ -141,14 +147,11 @@ blData XFoil::computeSkinFrictionCoefficients(
   return result;
 }
 
-blData XFoil::computeDissipationAndThickness(
-    const blData &ref, FlowRegimeEnum flowRegimeType) const {
+blData XFoil::computeDissipation(const blData &ref,
+                                 FlowRegimeEnum flowRegimeType) const {
   blData result = ref;
-  double di2l;
   if (flowRegimeType == FlowRegimeEnum::Laminar) {
-    auto dissipation_result =
-        dissipation::getDissipation(result.hkz.scalar, result.rtz.scalar,
-                                    flowRegimeType);
+    auto dissipation_result = evaluateDissipation(result, flowRegimeType);
     result.diz.scalar = dissipation_result.di;
     result.diz.vector = dissipation_result.di_hk * result.hkz.vector +
                         dissipation_result.di_rt * result.rtz.vector;
@@ -236,9 +239,7 @@ blData XFoil::computeDissipationAndThickness(
   }
 
   if (flowRegimeType == FlowRegimeEnum::Turbulent) {
-    auto dissipation_result =
-        dissipation::getDissipation(result.hkz.scalar, result.rtz.scalar,
-                                    flowRegimeType);
+    auto dissipation_result = evaluateDissipation(result, flowRegimeType);
     if (dissipation_result.di > result.diz.scalar) {
       result.diz.scalar = dissipation_result.di;
       result.diz.vector = dissipation_result.di_hk * result.hkz.vector +
@@ -247,10 +248,8 @@ blData XFoil::computeDissipationAndThickness(
   }
 
   if (flowRegimeType == FlowRegimeEnum::Wake) {
-    auto dissipation_result =
-        dissipation::getDissipation(result.hkz.scalar, result.rtz.scalar,
-                                    flowRegimeType);
-    di2l = dissipation_result.di;
+    auto dissipation_result = evaluateDissipation(result, flowRegimeType);
+    const double di2l = dissipation_result.di;
     if (di2l > result.diz.scalar) {
       result.diz.scalar = dissipation_result.di;
       result.diz.vector = dissipation_result.di_hk * result.hkz.vector +
@@ -260,6 +259,13 @@ blData XFoil::computeDissipationAndThickness(
     result.diz.scalar = result.diz.scalar * 2.0;
     result.diz.vector *= 2;
   }
+
+  return result;
+}
+
+blData XFoil::computeThickness(const blData &ref,
+                               [[maybe_unused]] FlowRegimeEnum flowRegimeType) const {
+  blData result = ref;
 
   result.dez.scalar = (3.15 + 1.72 / (result.hkz.scalar - 1.0)) *
                       result.param.tz + result.param.dz;

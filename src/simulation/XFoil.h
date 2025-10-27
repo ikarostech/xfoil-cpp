@@ -178,10 +178,16 @@ class XFoil {
                                          FlowRegimeEnum flowRegimeType) const;
 
   /**
-   * @brief Compute dissipation and boundary-layer thickness.
+   * @brief Compute boundary-layer dissipation.
    */
-  blData computeDissipationAndThickness(const blData& ref,
-                                        FlowRegimeEnum flowRegimeType) const;
+  blData computeDissipation(const blData& ref,
+                            FlowRegimeEnum flowRegimeType) const;
+
+  /**
+   * @brief Compute boundary-layer thickness parameters.
+   */
+  blData computeThickness(const blData& ref,
+                          FlowRegimeEnum flowRegimeType) const;
   double cang(Matrix2Xd points);
   double cdcalc() const;
 

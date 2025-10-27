@@ -150,7 +150,8 @@ bool XFoil::blvar(blData &ref, FlowRegimeEnum flowRegimeType) {
   ref = computeShapeParameters(ref, flowRegimeType);
   ref = computeShearCoefficients(ref, flowRegimeType);
   ref = computeSkinFrictionCoefficients(ref, flowRegimeType);
-  ref = computeDissipationAndThickness(ref, flowRegimeType);
+  ref = computeDissipation(ref, flowRegimeType);
+  ref = computeThickness(ref, flowRegimeType);
   return true;
 }
 
