@@ -166,10 +166,16 @@ class XFoil {
                                 FlowRegimeEnum flowRegimeType) const;
 
   /**
-   * @brief Determine shear and skin friction coefficients.
+   * @brief Determine shear coefficients.
    */
-  blData computeCoefficients(const blData& ref,
-                             FlowRegimeEnum flowRegimeType) const;
+  blData computeShearCoefficients(const blData& ref,
+                                  FlowRegimeEnum flowRegimeType) const;
+
+  /**
+   * @brief Determine skin friction coefficients.
+   */
+  blData computeSkinFrictionCoefficients(const blData& ref,
+                                         FlowRegimeEnum flowRegimeType) const;
 
   /**
    * @brief Compute dissipation and boundary-layer thickness.

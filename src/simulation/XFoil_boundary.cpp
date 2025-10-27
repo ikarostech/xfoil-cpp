@@ -9,6 +9,16 @@
 
 using Eigen::Vector3d;
 
+namespace {
+
+skin_friction::C_f evaluateSkinFriction(const blData &data,
+                                        FlowRegimeEnum flowRegimeType) {
+  return skin_friction::getSkinFriction(data.hkz.scalar, data.rtz.scalar,
+                                        data.param.mz, flowRegimeType);
+}
+
+}  // namespace
+
 blData XFoil::computeShapeParameters(const blData &ref,
                                      FlowRegimeEnum flowRegimeType) const {
   blData result = ref;
@@ -71,8 +81,8 @@ blData XFoil::computeShapeParameters(const blData &ref,
   return result;
 }
 
-blData XFoil::computeCoefficients(const blData &ref,
-                                  FlowRegimeEnum flowRegimeType) const {
+blData XFoil::computeShearCoefficients(const blData &ref,
+                                       FlowRegimeEnum flowRegimeType) const {
   blData result = ref;
 
   double hkc = result.hkz.scalar - 1.0;
@@ -110,13 +120,19 @@ blData XFoil::computeCoefficients(const blData &ref,
   result.cqz.t() += cq2_h2 * result.param.hz_tz;
   result.cqz.d() += cq2_h2 * result.param.hz_dz;
 
-  skin_friction::C_f c_f = skin_friction::getSkinFriction(
-      result.hkz.scalar, result.rtz.scalar, result.param.mz, flowRegimeType);
+  return result;
+}
+
+blData XFoil::computeSkinFrictionCoefficients(
+    const blData &ref, FlowRegimeEnum flowRegimeType) const {
+  blData result = ref;
+
+  skin_friction::C_f c_f = evaluateSkinFriction(result, flowRegimeType);
   result.cfz.scalar = c_f.cf;
   double cf2_hk2 = c_f.hk;
   double cf2_rt2 = c_f.rt;
   double cf2_m2 = c_f.msq;
-  
+
   result.cfz.vector =
       cf2_hk2 * result.hkz.vector + cf2_rt2 * result.rtz.vector;
   result.cfz.u() += cf2_m2 * result.param.mz_uz;
@@ -138,10 +154,7 @@ blData XFoil::computeDissipationAndThickness(
                         dissipation_result.di_rt * result.rtz.vector;
   } else {
     if (flowRegimeType == FlowRegimeEnum::Turbulent) {
-      auto c_ft = skin_friction::getSkinFriction(result.hkz.scalar,
-                                                 result.rtz.scalar,
-                                                 result.param.mz,
-                                                 flowRegimeType);
+      auto c_ft = evaluateSkinFriction(result, flowRegimeType);
       double cf2t = c_ft.cf;
       double cf2t_hk2 = c_ft.hk;
       double cf2t_rt2 = c_ft.rt;

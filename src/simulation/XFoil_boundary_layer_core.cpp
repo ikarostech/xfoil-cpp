@@ -148,7 +148,8 @@ bool XFoil::blvar(blData &ref, FlowRegimeEnum flowRegimeType) {
   // This routine is now decomposed into helper functions to simplify
   // the original Fortran translation.
   ref = computeShapeParameters(ref, flowRegimeType);
-  ref = computeCoefficients(ref, flowRegimeType);
+  ref = computeShearCoefficients(ref, flowRegimeType);
+  ref = computeSkinFrictionCoefficients(ref, flowRegimeType);
   ref = computeDissipationAndThickness(ref, flowRegimeType);
   return true;
 }
