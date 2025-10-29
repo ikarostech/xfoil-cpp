@@ -43,6 +43,7 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 #include <iterator>
 #include <numeric>
 #include <optional>
+#include <stdexcept>
 
 #include "Eigen/Core"
 #include "Eigen/Dense"
@@ -63,8 +64,6 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 #include "infrastructure/xfoil_params.h"
 #include "core/boundary_layer_util.hpp"
 
-using namespace std;
-using namespace Eigen;
 //------ derived dimensioning limit parameters
 
 class XFoil {
@@ -75,6 +74,17 @@ class XFoil {
   XFoil& operator=(const XFoil&) = delete;
   XFoil(XFoil&&) = delete;
   XFoil& operator=(XFoil&&) = delete;
+
+  using VectorXd = Eigen::VectorXd;
+  using VectorXi = Eigen::VectorXi;
+  using Vector2d = Eigen::Vector2d;
+  using MatrixXd = Eigen::MatrixXd;
+  using Matrix2Xd = Eigen::Matrix2Xd;
+  using Matrix2d = Eigen::Matrix2d;
+  template <typename T>
+  using FullPivLU = Eigen::FullPivLU<T>;
+  using Matrix3x2d = Eigen::Matrix<double, 3, 2>;
+  using Matrix3x2dVector = std::vector<Matrix3x2d>;
 
  public:
 
@@ -233,7 +243,7 @@ class XFoil {
       else if (phase == 1) {
         return after;
       }
-      throw invalid_argument("invalid phase type");
+      throw std::invalid_argument("invalid phase type");
     }
   };
 
@@ -252,6 +262,19 @@ class XFoil {
     double tte = 0.0;
     double dmax = 0.0;
   };
+  
+  bool isStartOfWake(int side, int stationIndex) const;
+  void updateSystemMatricesForStation(int side, int stationIndex,
+                                      MixedModeStationContext& ctx);
+  void initializeFirstIterationState(int side, int stationIndex, int previousTransition,
+                                     MixedModeStationContext& ctx, double& ueref,
+                                     double& hkref, double& ami);
+  void configureSimilarityRow(double ueref);
+  void configureViscousRow(double hkref, double ueref, double senswt,
+                           bool resetSensitivity, bool averageSensitivity,
+                           double& sens, double& sennew);
+  bool applyMixedModeNewtonStep(int side, int stationIndex, double deps,
+                                double& ami, MixedModeStationContext& ctx);
   
   VectorXd cpcalc(int n, VectorXd q, double qinf, double minf);
 
@@ -480,7 +503,7 @@ class XFoil {
 
   double xt, xt_a1, xt_ms, xt_re, xt_xf, xt_x1, xt_t1, xt_d1, xt_u1, xt_x2,
       xt_t2, xt_d2, xt_u2;
-  vector<Matrix<double, 3, 2>> va, vb, vdel;
+  Matrix3x2dVector va, vb, vdel;
   double vm[3][IZX][IZX], vz[3][2];
 
 

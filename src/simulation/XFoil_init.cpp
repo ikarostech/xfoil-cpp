@@ -106,9 +106,9 @@ void XFoil::initializeDataStructures() {
   qvis = VectorXd::Zero(total_nodes_with_wake);
 
   memset(wgap, 0, sizeof(wgap));
-  va.resize(IVX, Matrix<double, 3, 2>::Zero());
-  vb.resize(IVX, Matrix<double, 3, 2>::Zero());
-  vdel.resize(IVX, Matrix<double, 3, 2>::Zero());
+  va.resize(IVX, Matrix3x2d::Zero());
+  vb.resize(IVX, Matrix3x2d::Zero());
+  vdel.resize(IVX, Matrix3x2d::Zero());
   memset(vm, 0, sizeof(vm));
   blc.clear();
   memset(vz, 0, sizeof(vz));

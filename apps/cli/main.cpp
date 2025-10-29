@@ -6,12 +6,14 @@
 
 #include "XFoil.h"
 
-int m_Iterations = 0;
-int s_IterLim = 100;
-bool m_bErrors = false;
-bool s_bAutoInitBL = true;
+struct IterationContext {
+  int iterationLimit = 100;
+  bool autoInitializeBoundaryLayer = true;
+  int iterationCount = 0;
+  bool encounteredErrors = false;
+};
 
-bool iterate(XFoil *xfoil) {
+bool iterate(XFoil *xfoil, IterationContext &context) {
   if (!xfoil->viscal()) {
     xfoil->lvconv = false;
     std::cout
@@ -20,7 +22,8 @@ bool iterate(XFoil *xfoil) {
     return false;
   }
 
-  while (m_Iterations < s_IterLim && !xfoil->lvconv /*&& !s_bCancel*/) {
+  while (context.iterationCount < context.iterationLimit &&
+         !xfoil->lvconv /*&& !s_bCancel*/) {
     if (xfoil->ViscousIter()) {
       // if (m_x0 && m_y0) {
       //  m_x0->append((double)m_Iterations);
@@ -30,9 +33,9 @@ bool iterate(XFoil *xfoil) {
       //  m_x1->append((double)m_Iterations);
       //  m_y1->append(xfoil->rmxbl);
       //}
-      m_Iterations++;
+      context.iterationCount++;
     } else
-      m_Iterations = s_IterLim;
+      context.iterationCount = context.iterationLimit;
   }
 
   {
@@ -41,15 +44,15 @@ bool iterate(XFoil *xfoil) {
     xfoil->cpv = viscal_end.viscousCp;
   }
 
-  if (m_Iterations >= s_IterLim && !xfoil->lvconv) {
-    if (s_bAutoInitBL) {
+  if (context.iterationCount >= context.iterationLimit && !xfoil->lvconv) {
+    if (context.autoInitializeBoundaryLayer) {
       xfoil->setBLInitialized(false);
       xfoil->lipan = false;
     }
     return true;
   }
   if (!xfoil->lvconv) {
-    m_bErrors = true;
+    context.encounteredErrors = true;
     return false;
   } else {
     // converged at last
@@ -115,8 +118,11 @@ int main() {
     return 1;
   }
 
+  IterationContext iterationContext{};
+
   for (double alpha = 0; alpha < 15; alpha += 0.5) {
-    m_Iterations = 0;
+    iterationContext.iterationCount = 0;
+    iterationContext.encounteredErrors = false;
 
     foil->setBLInitialized(false);
     foil->lipan = false;
@@ -133,13 +139,13 @@ int main() {
     foil->lwake = false;
     foil->lvconv = false;
 
-    while (!iterate(foil))
+    while (!iterate(foil, iterationContext))
       ;
 
     // std::cout << ss.str() << std::endl;
 
     if (foil->lvconv) {
-      std::cout << "  converged after " << m_Iterations << " iterations"
+      std::cout << "  converged after " << iterationContext.iterationCount << " iterations"
                 << std::endl;
       std::cout << "  cl : " << foil->cl << ", cd : " << foil->cd
                 << ", cm : " << foil->cm << ", xcp : " << foil->getXcp()

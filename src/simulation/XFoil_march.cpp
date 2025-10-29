@@ -200,6 +200,150 @@ XFoil::MixedModeStationContext XFoil::prepareMixedModeStation(int side, int ibl,
   return ctx;
 }
 
+bool XFoil::isStartOfWake(int side, int stationIndex) const {
+  return stationIndex == iblte.get(side) + 1;
+}
+
+void XFoil::updateSystemMatricesForStation(int side, int stationIndex,
+                                           MixedModeStationContext& ctx) {
+  if (isStartOfWake(side, stationIndex)) {
+    ctx.tte = thet.get(1)[iblte.top] + thet.get(2)[iblte.bottom];
+    ctx.dte =
+        dstr.get(1)[iblte.top] + dstr.get(2)[iblte.bottom] + foil.edge.ante;
+    ctx.cte =
+        (ctau.get(1)[iblte.top] * thet.get(1)[iblte.top] +
+         ctau.get(2)[iblte.bottom] * thet.get(2)[iblte.bottom]) /
+        ctx.tte;
+    tesys(ctx.cte, ctx.tte, ctx.dte);
+  } else {
+    blsys(boundaryLayerState, boundaryLayerLattice);
+  }
+}
+
+void XFoil::initializeFirstIterationState(int side, int stationIndex,
+                                          int previousTransition,
+                                          MixedModeStationContext& ctx,
+                                          double& ueref, double& hkref,
+                                          double& ami) {
+  ueref = blData2.param.uz;
+  hkref = blData2.hkz.scalar;
+
+  const bool inLaminarWindow =
+      stationIndex < itran.get(side) && stationIndex >= previousTransition;
+  if (inLaminarWindow) {
+    double uem;
+    double dsm;
+    double thm;
+    if (stationIndex > 0) {
+      uem = uedg.get(side)[stationIndex - 1];
+      dsm = dstr.get(side)[stationIndex - 1];
+      thm = thet.get(side)[stationIndex - 1];
+    } else {
+      uem = uedg.get(side)[stationIndex];
+      dsm = dstr.get(side)[stationIndex];
+      thm = thet.get(side)[stationIndex];
+    }
+    const double uem_sq = uem * uem;
+    const double msq =
+        uem_sq * hstinv / (gm1bl * (1.0 - 0.5 * uem_sq * hstinv));
+    const auto hkin_result = boundary_layer::hkin(dsm / thm, msq);
+    hkref = hkin_result.hk;
+  }
+
+  if (stationIndex < previousTransition) {
+    if (tran) {
+      ctau.get(side)[stationIndex] = 0.03;
+    }
+    if (turb) {
+      const double prev =
+          (stationIndex >= 1) ? ctau.get(side)[stationIndex - 1]
+                              : ctau.get(side)[stationIndex];
+      ctau.get(side)[stationIndex] = prev;
+    }
+    if (tran || turb) {
+      ctx.cti = ctau.get(side)[stationIndex - 1];
+      blData2.param.sz = ctx.cti;
+    }
+  }
+}
+
+void XFoil::configureSimilarityRow(double ueref) {
+  blc.a2(3, 0) = 0.0;
+  blc.a2(3, 1) = 0.0;
+  blc.a2(3, 2) = 0.0;
+  blc.a2(3, 3) = blData2.param.uz_uei;
+  blc.rhs[3] = ueref - blData2.param.uz;
+}
+
+void XFoil::configureViscousRow(double hkref, double ueref, double senswt,
+                                bool resetSensitivity, bool averageSensitivity,
+                                double& sens, double& sennew) {
+  blc.a2(3, 0) = 0.0;
+  blc.a2(3, 1) = blData2.hkz.t();
+  blc.a2(3, 2) = blData2.hkz.d();
+  blc.a2(3, 3) = blData2.hkz.u() * blData2.param.uz_uei;
+  blc.rhs[3] = 1.0;
+
+  const double delta_sen =
+      blc.a2.block(0, 0, 4, 4).fullPivLu().solve(blc.rhs)[3];
+
+  sennew = senswt * delta_sen * hkref / ueref;
+  if (resetSensitivity) {
+    sens = sennew;
+  } else if (averageSensitivity) {
+    sens = 0.5 * (sens + sennew);
+  }
+
+  blc.a2(3, 1) = blData2.hkz.t() * hkref;
+  blc.a2(3, 2) = blData2.hkz.d() * hkref;
+  blc.a2(3, 3) =
+      (blData2.hkz.u() * hkref + sens / ueref) * blData2.param.uz_uei;
+  blc.rhs[3] = -(hkref * hkref) * (blData2.hkz.scalar / hkref - 1.0) -
+               sens * (blData2.param.uz / ueref - 1.0);
+}
+
+bool XFoil::applyMixedModeNewtonStep(int side, int stationIndex, double deps,
+                                     double& ami,
+                                     MixedModeStationContext& ctx) {
+  blc.rhs = blc.a2.block(0, 0, 4, 4).fullPivLu().solve(blc.rhs);
+
+  ctx.dmax =
+      std::max(std::fabs(blc.rhs[1] / ctx.thi), std::fabs(blc.rhs[2] / ctx.dsi));
+  if (stationIndex >= itran.get(side)) {
+    ctx.dmax = std::max(ctx.dmax, std::fabs(blc.rhs[0] / (10.0 * ctx.cti)));
+  }
+
+  rlx = 1.0;
+  if (ctx.dmax > 0.3) {
+    rlx = 0.3 / ctx.dmax;
+  }
+
+  if (stationIndex < itran.get(side)) {
+    ami += rlx * blc.rhs[0];
+    ctx.ami = ami;
+  }
+  if (stationIndex >= itran.get(side)) {
+    ctx.cti += rlx * blc.rhs[0];
+  }
+  ctx.thi += rlx * blc.rhs[1];
+  ctx.dsi += rlx * blc.rhs[2];
+  ctx.uei += rlx * blc.rhs[3];
+
+  if (stationIndex >= itran.get(side)) {
+    ctx.cti = std::clamp(ctx.cti, 0.0000001, 0.30);
+  }
+
+  const double hklim = (stationIndex <= iblte.get(side)) ? 1.02 : 1.00005;
+  const double uei_sq = ctx.uei * ctx.uei;
+  const double msq = uei_sq * hstinv /
+                     (gm1bl * (1.0 - 0.5 * uei_sq * hstinv));
+  double dsw = ctx.dsi - ctx.dswaki;
+  dslim(dsw, ctx.thi, msq, hklim);
+  ctx.dsi = dsw + ctx.dswaki;
+
+  return ctx.dmax <= deps;
+}
+
 void XFoil::checkTransitionIfNeeded(int side, int ibl, bool skipCheck,
                                     int laminarAdvance, double& ami) {
   if (skipCheck || turb) {
@@ -223,8 +367,6 @@ bool XFoil::performMixedModeNewtonIteration(int side, int ibl, int itrold,
   bool converged = false;
   double ueref = 0.0;
   double hkref = 0.0;
-  double msq = 0.0;
-  double hklim = 0.0;
 
   for (int itbl = 1; itbl <= 25; ++itbl) {
     {
@@ -237,127 +379,23 @@ bool XFoil::performMixedModeNewtonIteration(int side, int ibl, int itrold,
 
     checkTransitionIfNeeded(side, ibl, ctx.simi, 1, ami);
 
-    if (ibl == iblte.get(side) + 1) {
-      ctx.tte = thet.get(1)[iblte.top] + thet.get(2)[iblte.bottom];
-      ctx.dte = dstr.get(1)[iblte.top] + dstr.get(2)[iblte.bottom] + foil.edge.ante;
-      ctx.cte = (ctau.get(1)[iblte.top] * thet.get(1)[iblte.top] +
-                 ctau.get(2)[iblte.bottom] * thet.get(2)[iblte.bottom]) /
-                ctx.tte;
-      tesys(ctx.cte, ctx.tte, ctx.dte);
-    } else {
-      blsys(boundaryLayerState, boundaryLayerLattice);
-    }
+    const bool startOfWake = isStartOfWake(side, ibl);
+    updateSystemMatricesForStation(side, ibl, ctx);
 
     if (itbl == 1) {
-      ueref = blData2.param.uz;
-      hkref = blData2.hkz.scalar;
-
-      if (ibl < itran.get(side) && ibl >= itrold) {
-        double uem;
-        double dsm;
-        double thm;
-        if (ibl > 0) {
-          uem = uedg.get(side)[ibl - 1];
-          dsm = dstr.get(side)[ibl - 1];
-          thm = thet.get(side)[ibl - 1];
-        } else {
-          uem = uedg.get(side)[ibl];
-          dsm = dstr.get(side)[ibl];
-          thm = thet.get(side)[ibl];
-        }
-        double uem_sq = uem * uem;
-        msq = uem_sq * hstinv /
-              (gm1bl * (1.0 - 0.5 * uem_sq * hstinv));
-        boundary_layer::KineticShapeParameterResult hkin_result =
-            boundary_layer::hkin(dsm / thm, msq);
-        hkref = hkin_result.hk;
-      }
-
-      if (ibl < itrold) {
-        if (tran) {
-          ctau.get(side)[ibl] = 0.03;
-        }
-        if (turb) {
-          double prev = (ibl >= 1) ? ctau.get(side)[ibl - 1]
-                                   : ctau.get(side)[ibl];
-          ctau.get(side)[ibl] = prev;
-        }
-        if (tran || turb) {
-          ctx.cti = ctau.get(side)[ibl - 1];
-          blData2.param.sz = ctx.cti;
-        }
-      }
+      initializeFirstIterationState(side, ibl, itrold, ctx, ueref, hkref, ami);
     }
 
-    if (ctx.simi || ibl == iblte.get(side) + 1) {
-      blc.a2(3, 0) = 0.0;
-      blc.a2(3, 1) = 0.0;
-      blc.a2(3, 2) = 0.0;
-      blc.a2(3, 3) = blData2.param.uz_uei;
-      blc.rhs[3] = ueref - blData2.param.uz;
+    if (ctx.simi || startOfWake) {
+      configureSimilarityRow(ueref);
     } else {
-      blc.a2(3, 0) = 0.0;
-      blc.a2(3, 1) = blData2.hkz.t();
-      blc.a2(3, 2) = blData2.hkz.d();
-      blc.a2(3, 3) = blData2.hkz.u() * blData2.param.uz_uei;
-      blc.rhs[3] = 1.0;
-
-      double delta_sen =
-          blc.a2.block(0, 0, 4, 4).fullPivLu().solve(blc.rhs)[3];
-
-      sennew = senswt * delta_sen * hkref / ueref;
-      if (itbl <= 5) {
-        sens = sennew;
-      } else if (itbl <= 15) {
-        sens = 0.5 * (sens + sennew);
-      }
-
-      blc.a2(3, 1) = blData2.hkz.t() * hkref;
-      blc.a2(3, 2) = blData2.hkz.d() * hkref;
-      blc.a2(3, 3) =
-          (blData2.hkz.u() * hkref + sens / ueref) * blData2.param.uz_uei;
-      blc.rhs[3] = -(hkref * hkref) * (blData2.hkz.scalar / hkref - 1.0) -
-                   sens * (blData2.param.uz / ueref - 1.0);
+      const bool resetSensitivity = (itbl <= 5);
+      const bool averageSensitivity = (itbl > 5 && itbl <= 15);
+      configureViscousRow(hkref, ueref, senswt, resetSensitivity,
+                          averageSensitivity, sens, sennew);
     }
 
-    blc.rhs = blc.a2.block(0, 0, 4, 4).fullPivLu().solve(blc.rhs);
-
-    ctx.dmax = std::max(fabs(blc.rhs[1] / ctx.thi), fabs(blc.rhs[2] / ctx.dsi));
-    if (ibl >= itran.get(side)) {
-      ctx.dmax =
-          std::max(ctx.dmax, fabs(blc.rhs[0] / (10.0 * ctx.cti)));
-    }
-
-    rlx = 1.0;
-    if (ctx.dmax > 0.3) {
-      rlx = 0.3 / ctx.dmax;
-    }
-
-    if (ibl < itran.get(side)) {
-      ami += rlx * blc.rhs[0];
-      ctx.ami = ami;
-    }
-    if (ibl >= itran.get(side)) {
-      ctx.cti += rlx * blc.rhs[0];
-    }
-    ctx.thi += rlx * blc.rhs[1];
-    ctx.dsi += rlx * blc.rhs[2];
-    ctx.uei += rlx * blc.rhs[3];
-
-    if (ibl >= itran.get(side)) {
-      ctx.cti = std::min(ctx.cti, 0.30);
-      ctx.cti = std::max(ctx.cti, 0.0000001);
-    }
-
-    hklim = (ibl <= iblte.get(side)) ? 1.02 : 1.00005;
-    double uei_sq = ctx.uei * ctx.uei;
-    msq = uei_sq * hstinv /
-          (gm1bl * (1.0 - 0.5 * uei_sq * hstinv));
-    double dsw = ctx.dsi - ctx.dswaki;
-    dslim(dsw, ctx.thi, msq, hklim);
-    ctx.dsi = dsw + ctx.dswaki;
-
-    if (ctx.dmax <= deps) {
+    if (applyMixedModeNewtonStep(side, ibl, deps, ami, ctx)) {
       converged = true;
       break;
     }
@@ -628,7 +666,7 @@ bool XFoil::mrchue() {
 
             ss.str("");
             ss << "     mrchue: inverse mode at " << ibl
-               << "    hk=" << std::fixed << setprecision(3) << htarg << "\n";
+               << "    hk=" << std::fixed << std::setprecision(3) << htarg << "\n";
             writeString(ss.str());
             ss.str("");
 

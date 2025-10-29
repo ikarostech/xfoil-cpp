@@ -3,6 +3,16 @@
 #include <cmath>
 #include "XFoil.h"
 
+using Eigen::Array;
+using Eigen::ArrayXd;
+using Eigen::ArrayXi;
+using Eigen::Dynamic;
+using Eigen::Matrix2Xd;
+using Eigen::MatrixXd;
+using Eigen::Vector2d;
+using Eigen::VectorXd;
+using Eigen::VectorXi;
+
 static const FoilShape& resolveFoilShape(const Foil& foil, int node_index,
                                          int required_nodes) {
   const bool has_wake = foil.wake_shape.n > 0;
