@@ -132,8 +132,12 @@ bool XFoil::mrchdu(BoundaryLayerState& state,
       mass.get(is)[ibl] = ctx.dsi * ctx.uei;
       ctq.get(is)[ibl] = blData2.cqz.scalar;
 
-      blprv(state, ctx.xsi, ctx.ami, ctx.cti, ctx.thi, ctx.dsi, ctx.dswaki,
-            ctx.uei);
+      {
+        blData updatedCurrent =
+            blprv(state.current(), ctx.xsi, ctx.ami, ctx.cti, ctx.thi,
+                  ctx.dsi, ctx.dswaki, ctx.uei);
+        state.current() = updatedCurrent;
+      }
       blkin(state);
 
       stepbl(state);
@@ -220,8 +224,12 @@ bool XFoil::performMixedModeNewtonIteration(int side, int ibl, int itrold,
   double hklim = 0.0;
 
   for (int itbl = 1; itbl <= 25; ++itbl) {
-    blprv(boundaryLayerState, ctx.xsi, ami, ctx.cti, ctx.thi, ctx.dsi,
-          ctx.dswaki, ctx.uei);
+    {
+      blData updatedCurrent = blprv(boundaryLayerState.current(), ctx.xsi, ami,
+                                    ctx.cti, ctx.thi, ctx.dsi, ctx.dswaki,
+                                    ctx.uei);
+      boundaryLayerState.current() = updatedCurrent;
+    }
     blkin(boundaryLayerState);
 
     checkTransitionIfNeeded(side, ibl, ctx.simi, 1, ami);
@@ -395,22 +403,26 @@ void XFoil::handleMixedModeNonConvergence(int side, int ibl,
     }
   }
 
-  blprv(boundaryLayerState, ctx.xsi, ami, ctx.cti, ctx.thi, ctx.dsi,
-        ctx.dswaki, ctx.uei);
+  {
+    blData updatedCurrent = blprv(boundaryLayerState.current(), ctx.xsi, ami,
+                                  ctx.cti, ctx.thi, ctx.dsi, ctx.dswaki,
+                                  ctx.uei);
+    boundaryLayerState.current() = updatedCurrent;
+  }
   blkin(boundaryLayerState);
 
   checkTransitionIfNeeded(side, ibl, ctx.simi, 2, ami);
 
   if (ibl < itran.get(side)) {
-    blvar(blData2, FlowRegimeEnum::Laminar);
+    blData2 = blvar(blData2, FlowRegimeEnum::Laminar);
     blmid(boundaryLayerState, FlowRegimeEnum::Laminar);
   }
   if (ibl >= itran.get(side)) {
-    blvar(blData2, FlowRegimeEnum::Turbulent);
+    blData2 = blvar(blData2, FlowRegimeEnum::Turbulent);
     blmid(boundaryLayerState, FlowRegimeEnum::Turbulent);
   }
   if (ctx.wake) {
-    blvar(blData2, FlowRegimeEnum::Wake);
+    blData2 = blvar(blData2, FlowRegimeEnum::Wake);
     blmid(boundaryLayerState, FlowRegimeEnum::Wake);
   }
 
@@ -519,7 +531,12 @@ bool XFoil::mrchue() {
         //         at the previous "1" station and the current "2" station
         //         (the "1" station coefficients will be ignored)
 
-        blprv(boundaryLayerState, xsi, ami, cti, thi, dsi, dswaki, uei);
+        {
+          blData updatedCurrent =
+              blprv(boundaryLayerState.current(), xsi, ami, cti, thi, dsi,
+                    dswaki, uei);
+          boundaryLayerState.current() = updatedCurrent;
+        }
         blkin(boundaryLayerState);
 
         //-------- check for transition and set appropriate flags and things
@@ -703,7 +720,12 @@ bool XFoil::mrchue() {
           }
         }
         // 109
-        blprv(boundaryLayerState, xsi, ami, cti, thi, dsi, dswaki, uei);
+        {
+          blData updatedCurrent =
+              blprv(boundaryLayerState.current(), xsi, ami, cti, thi, dsi,
+                    dswaki, uei);
+          boundaryLayerState.current() = updatedCurrent;
+        }
         blkin(boundaryLayerState);
         //------- check for transition and set appropriate flags and things
         if ((!simi) && (!turb)) {
@@ -716,11 +738,11 @@ bool XFoil::mrchue() {
         }
         //------- set all other extrapolated values for current station
         if (ibl < itran.get(is))
-          blvar(blData2, FlowRegimeEnum::Laminar);
+          blData2 = blvar(blData2, FlowRegimeEnum::Laminar);
         if (ibl >= itran.get(is))
-          blvar(blData2, FlowRegimeEnum::Turbulent);
+          blData2 = blvar(blData2, FlowRegimeEnum::Turbulent);
         if (wake)
-          blvar(blData2, FlowRegimeEnum::Wake);
+          blData2 = blvar(blData2, FlowRegimeEnum::Wake);
         if (ibl < itran.get(is))
           blmid(boundaryLayerState, FlowRegimeEnum::Laminar);
         if (ibl >= itran.get(is))
@@ -740,7 +762,12 @@ bool XFoil::mrchue() {
       ctq.get(is)[ibl] = blData2.cqz.scalar;
 
       //------ set "1" variables to "2" variables for next streamwise station
-      blprv(boundaryLayerState, xsi, ami, cti, thi, dsi, dswaki, uei);
+      {
+        blData updatedCurrent =
+            blprv(boundaryLayerState.current(), xsi, ami, cti, thi, dsi,
+                  dswaki, uei);
+        boundaryLayerState.current() = updatedCurrent;
+      }
       blkin(boundaryLayerState);
 
       stepbl(boundaryLayerState);
@@ -990,7 +1017,12 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
       due2 = output.uedg.get(is)[ibl] - usav.get(is)[ibl];
       dds2 = d2_u2 * due2;
 
-      blprv(boundaryLayerState, xsi, ami, cti, thi, dsi, dswaki, uei); // cti
+      {
+        blData updatedCurrent =
+            blprv(boundaryLayerState.current(), xsi, ami, cti, thi, dsi,
+                  dswaki, uei);
+        boundaryLayerState.current() = updatedCurrent;
+      } // cti
       blkin(boundaryLayerState);
 
       //---- check for transition and set output.tran, xt, etc. if found
@@ -1188,7 +1220,7 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
 
         output.turb = true;
         output.wake = true;
-        blvar(blData2, FlowRegimeEnum::Wake);
+        blData2 = blvar(blData2, FlowRegimeEnum::Wake);
         blmid(boundaryLayerState, FlowRegimeEnum::Wake);
       }
       u1_m = u2_m;
@@ -1378,7 +1410,7 @@ bool XFoil::tesys(double cte, double tte, double dte) {
 
   blc.clear();
 
-  blvar(blData2, FlowRegimeEnum::Wake);
+  blData2 = blvar(blData2, FlowRegimeEnum::Wake);
 
   blc.a1(0, 0) = -1.0;
   blc.a2(0, 0) = 1.0;
@@ -1863,7 +1895,7 @@ bool XFoil::trdif() {
 
   //---- calculate laminar secondary "t" variables
   blkin(boundaryLayerState);
-  blvar(blData2, FlowRegimeEnum::Laminar);
+  blData2 = blvar(blData2, FlowRegimeEnum::Laminar);
 
   //---- calculate x1-xt midpoint cfm value
   SkinFrictionCoefficients laminarSkinFriction =
@@ -1913,7 +1945,7 @@ bool XFoil::trdif() {
   //**** second, set up turbulent part between xt and x2  ****
 
   //---- calculate equilibrium shear coefficient cqt at transition point
-  blvar(blData2, FlowRegimeEnum::Turbulent);
+  blData2 = blvar(blData2, FlowRegimeEnum::Turbulent);
 
   //---- set initial shear coefficient value st at transition point
   //-    ( note that cq2, cq2_t2, etc. are really "cqt", "cqt_tt", etc.)
@@ -1950,7 +1982,7 @@ bool XFoil::trdif() {
   blData2.param.sz = st;
 
   //---- recalculate turbulent secondary "t" variables using proper cti
-  blvar(blData2, FlowRegimeEnum::Turbulent);
+  blData2 = blvar(blData2, FlowRegimeEnum::Turbulent);
 
   stepbl(boundaryLayerState);
   restoreblData(2);

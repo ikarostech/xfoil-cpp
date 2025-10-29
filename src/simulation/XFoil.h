@@ -154,11 +154,11 @@ class XFoil {
   bool blkin(BoundaryLayerState& state);
   SkinFrictionCoefficients blmid(FlowRegimeEnum flowRegimeType);
   SkinFrictionCoefficients blmid(BoundaryLayerState& state, FlowRegimeEnum flowRegimeType);
-  bool blprv(BoundaryLayerState& state, double xsi, double ami, double cti,
-             double thi, double dsi, double dswaki, double uei);
+  blData blprv(blData data, double xsi, double ami, double cti,
+               double thi, double dsi, double dswaki, double uei) const;
   bool blsolve();
   bool blsys(BoundaryLayerState& state, BoundaryLayerLattice& lattice);
-  bool blvar(blData& ref, FlowRegimeEnum flowRegimeType);
+  blData blvar(blData data, FlowRegimeEnum flowRegimeType) const;
   /**
    * @brief Calculate shape parameters and slip velocity.
    */

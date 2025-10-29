@@ -123,36 +123,35 @@ XFoil::SkinFrictionCoefficients XFoil::blmid(FlowRegimeEnum flowRegimeType) {
 /** ----------------------------------------------------------
  *     set bl primary "2" variables from parameter list
  *  ---------------------------------------------------------- */
-bool XFoil::blprv(BoundaryLayerState& state, double xsi, double ami, double cti,
-                  double thi, double dsi, double dswaki, double uei) {
-  blData& current = state.current();
-  current.param.xz = xsi;
-  current.param.amplz = ami;
-  current.param.sz = cti;
-  current.param.tz = thi;
-  current.param.dz = dsi - dswaki;
-  current.param.dwz = dswaki;
+blData XFoil::blprv(blData data, double xsi, double ami, double cti,
+                    double thi, double dsi, double dswaki, double uei) const {
+  data.param.xz = xsi;
+  data.param.amplz = ami;
+  data.param.sz = cti;
+  data.param.tz = thi;
+  data.param.dz = dsi - dswaki;
+  data.param.dwz = dswaki;
 
-  current.param.uz =
+  data.param.uz =
       uei * (1.0 - tkbl) / (1.0 - tkbl * (uei / qinfbl) * (uei / qinfbl));
-  current.param.uz_uei =
-      (1.0 + tkbl * (2.0 * current.param.uz * uei / qinfbl / qinfbl - 1.0)) /
+  data.param.uz_uei =
+      (1.0 + tkbl * (2.0 * data.param.uz * uei / qinfbl / qinfbl - 1.0)) /
       (1.0 - tkbl * (uei / qinfbl) * (uei / qinfbl));
-  current.param.uz_ms =
-      (current.param.uz * (uei / qinfbl) * (uei / qinfbl) - uei) * tkbl_ms /
+  data.param.uz_ms =
+      (data.param.uz * (uei / qinfbl) * (uei / qinfbl) - uei) * tkbl_ms /
       (1.0 - tkbl * (uei / qinfbl) * (uei / qinfbl));
-  return true;
+  return data;
 }
 
-bool XFoil::blvar(blData &ref, FlowRegimeEnum flowRegimeType) {
+blData XFoil::blvar(blData data, FlowRegimeEnum flowRegimeType) const {
   // This routine is now decomposed into helper functions to simplify
   // the original Fortran translation.
-  ref = computeShapeParameters(ref, flowRegimeType);
-  ref = computeShearCoefficients(ref, flowRegimeType);
-  ref = computeSkinFrictionCoefficients(ref, flowRegimeType);
-  ref = computeDissipation(ref, flowRegimeType);
-  ref = computeThickness(ref, flowRegimeType);
-  return true;
+  data = computeShapeParameters(data, flowRegimeType);
+  data = computeShearCoefficients(data, flowRegimeType);
+  data = computeSkinFrictionCoefficients(data, flowRegimeType);
+  data = computeDissipation(data, flowRegimeType);
+  data = computeThickness(data, flowRegimeType);
+  return data;
 }
 
 
@@ -181,14 +180,14 @@ bool XFoil::blsys(BoundaryLayerState& state, [[maybe_unused]] BoundaryLayerLatti
 
   //---- calculate secondary bl variables and their sensitivities
   if (wake) {
-    blvar(current, FlowRegimeEnum::Wake);
+    current = blvar(current, FlowRegimeEnum::Wake);
     skinFriction = blmid(state, FlowRegimeEnum::Wake);
   } else {
     if (turb || tran) {
-      blvar(current, FlowRegimeEnum::Turbulent);
+      current = blvar(current, FlowRegimeEnum::Turbulent);
       skinFriction = blmid(state, FlowRegimeEnum::Turbulent);
     } else {
-      blvar(current, FlowRegimeEnum::Laminar);
+      current = blvar(current, FlowRegimeEnum::Laminar);
       skinFriction = blmid(state, FlowRegimeEnum::Laminar);
     }
   }
