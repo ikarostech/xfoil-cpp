@@ -3,7 +3,9 @@
 #include <algorithm>
 #include <numbers>
 
-using namespace Eigen;
+using Eigen::Matrix2Xd;
+using Eigen::Vector2d;
+using Eigen::VectorXd;
 
 bool XFoil::abcopy(Matrix2Xd copyFrom) {
   const int original_point_count = foil.foil_shape.n;

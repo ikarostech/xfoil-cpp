@@ -4,7 +4,10 @@
 #include <iomanip>
 #include <cmath>
 #include "domain/boundary_layer/boundary_layer_builder.hpp"
-using namespace Eigen;
+using Eigen::Matrix;
+using Eigen::Vector;
+using Eigen::Vector2d;
+using Eigen::VectorXd;
 
 
 /** -----------------------------------------------------------

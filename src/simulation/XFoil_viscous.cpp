@@ -6,7 +6,10 @@
 #include <sstream>
 #include <iomanip>
 #include <utility>
-using namespace Eigen;
+using Eigen::Matrix2Xd;
+using Eigen::MatrixXd;
+using Eigen::Vector2d;
+using Eigen::VectorXd;
 
 namespace {
 constexpr double kAngleTolerance = 40.0;

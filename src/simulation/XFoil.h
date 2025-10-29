@@ -71,6 +71,10 @@ class XFoil {
  public:
   XFoil();
   virtual ~XFoil();
+  XFoil(const XFoil&) = delete;
+  XFoil& operator=(const XFoil&) = delete;
+  XFoil(XFoil&&) = delete;
+  XFoil& operator=(XFoil&&) = delete;
 
  public:
 
@@ -137,6 +141,8 @@ class XFoil {
   static void setCancel(bool bCancel);
   static double VAccel();
   static void setVAccel(double accel);
+  inline static bool cancelFlag_ = false;
+  inline static double vaccel_ = 0.01;
 
   bool setMach();
 

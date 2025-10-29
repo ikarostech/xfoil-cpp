@@ -3,17 +3,28 @@
 #include <cmath>
 #include <unordered_map>
 #include <utility>
-using namespace Eigen;
+using Eigen::FullPivLU;
+using Eigen::Matrix2d;
+using Eigen::Matrix2Xd;
+using Eigen::MatrixXd;
+using Eigen::Vector2d;
+using Eigen::VectorXd;
 
 namespace {
 struct AerodynamicsState {
   double xcp = 0.0;
 };
 
-std::unordered_map<const XFoil*, AerodynamicsState> g_aerodynamics_state;
+using AerodynamicsStateRegistry =
+    std::unordered_map<const XFoil*, AerodynamicsState>;
+
+AerodynamicsStateRegistry& aerodynamicsStateRegistry() {
+  static AerodynamicsStateRegistry state;
+  return state;
+}
 
 AerodynamicsState& ensureAerodynamicsState(const XFoil* xfoil) {
-  return g_aerodynamics_state[xfoil];
+  return aerodynamicsStateRegistry()[xfoil];
 }
 }  // namespace
 
@@ -41,15 +52,16 @@ double XFoil::cdcalc() const {
 }
 
 double XFoil::getXcp() const {
-  auto it = g_aerodynamics_state.find(this);
-  if (it == g_aerodynamics_state.end()) {
+  const auto& state = aerodynamicsStateRegistry();
+  auto it = state.find(this);
+  if (it == state.end()) {
     return 0.0;
   }
   return it->second.xcp;
 }
 
 void ClearAerodynamicsState(const XFoil& xfoil) {
-  g_aerodynamics_state.erase(&xfoil);
+  aerodynamicsStateRegistry().erase(&xfoil);
 }
 
 XFoil::ClComputation XFoil::clcalc(Vector2d ref) const {

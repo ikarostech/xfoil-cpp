@@ -18,15 +18,20 @@ struct InitState {
   std::array<blData, 3> blsav{};
 };
 
-std::unordered_map<const XFoil*, InitState> g_init_state;
+using InitStateRegistry = std::unordered_map<const XFoil*, InitState>;
+
+InitStateRegistry& initStateRegistry() {
+  static InitStateRegistry state;
+  return state;
+}
 
 InitState& ensureInitState(const XFoil* xfoil) {
-  return g_init_state[xfoil];
+  return initStateRegistry()[xfoil];
 }
 }  // namespace
 
 void ClearInitState(const XFoil& xfoil) {
-  g_init_state.erase(&xfoil);
+  initStateRegistry().erase(&xfoil);
 }
 
 bool XFoil::initialize() {

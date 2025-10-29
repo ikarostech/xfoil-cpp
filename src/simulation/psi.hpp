@@ -5,7 +5,10 @@
 #include "domain/foil/foil.hpp"
 #include "infrastructure/xfoil_params.h"
 
-using namespace Eigen;
+using Eigen::Matrix2Xd;
+using Eigen::Vector;
+using Eigen::Vector2d;
+using Eigen::VectorXd;
 
 class PsiResult {
  public:

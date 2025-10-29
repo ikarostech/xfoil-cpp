@@ -29,11 +29,6 @@ using namespace Eigen;
 void ClearAerodynamicsState(const XFoil& xfoil);
 void ClearInitState(const XFoil& xfoil);
 
-namespace {
-bool g_cancel_flag = false;
-double g_vaccel = 0.01;
-}  // namespace
-
 XFoil::CompressibilityParams XFoil::buildCompressibilityParams() const {
   const double beta = std::sqrt(1.0 - minf * minf);
   const double beta_msq = -0.5 / beta;
@@ -117,17 +112,17 @@ XFoil::~XFoil() {
 }
 
 double XFoil::VAccel() {
-  return g_vaccel;
+  return vaccel_;
 }
 
 void XFoil::setVAccel(double accel) {
-  g_vaccel = accel;
+  vaccel_ = accel;
 }
 
 bool XFoil::isCancelled() {
-  return g_cancel_flag;
+  return cancelFlag_;
 }
 
 void XFoil::setCancel(bool bCancel) {
-  g_cancel_flag = bCancel;
+  cancelFlag_ = bCancel;
 }
