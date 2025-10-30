@@ -13,80 +13,14 @@ using Eigen::VectorXd;
 /** -----------------------------------------------------------
  *     sets  bl location -> panel location  pointer array ipan
  * -----------------------------------------------------------*/
-bool XFoil::iblpan() {
-  std::stringstream ss;
-  const int point_count = foil.foil_shape.n;
-
-  //-- top surface first
-  // store ipan with 0-based BL station index, and set vti at 0-based
-  for (int i = 0; i <= i_stagnation; i++) {
-    ipan.top[i] = i_stagnation - i; // panel index
-    vti.top[i] = 1.0;
-  }
-  // store TE as 0-based logical index
-  iblte.top = i_stagnation;
-  // nbl exclusive upper bound (0-based TE -> 1-based TE station + 1)
-  nbl.top = iblte.top + 2;
-
-  //-- bottom surface next
-  // Bottom side: station 0 just after stagnation on bottom
-  for (int index = 0; index <= point_count - i_stagnation; ++index) {
-    ipan.bottom[index] = i_stagnation + 1 + index;
-    vti.bottom[index] = -1.0;
-  }
-
-  //-- wake
-  iblte.bottom = point_count - i_stagnation - 2; // logical 0-based TE
-
-  for (int iw = 0; iw < nw; iw++) {
-    int i = point_count + iw; // panel index in wake
-    int index = iblte.bottom + iw + 2; // 1-based BL station for wake (bottom)
-    ipan.bottom[index - 1] = i;        // ipan is 0-based in BL station
-    vti.bottom[index - 1] = -1.0;
-  }
-
-  nbl.bottom = iblte.bottom + nw + 2;
-
-  //-- upper wake pointers (for plotting only)
-  for (int iw = 0; iw < nw; iw++) {
-    // copy wake panel pointer from bottom to top (for plotting)
-    ipan.top[iblte.top + iw + 1] = ipan.bottom[iblte.bottom + iw + 1]; // both sides are 0-based indices, hence -1 vs vti
-    vti.top[iblte.top + iw + 1] = 1.0;
-  }
-  int iblmax = std::max(iblte.top, iblte.bottom) + nw + 2;
-  if (iblmax > IVX) {
-    ss << "iblpan :  ***  bl array overflow\n";
-    ss << "Increase IVX to at least " << iblmax << "\n";
-    writeString(ss.str());
-    return false;
-  }
-
-  lipan = true;
-  return true;
-}
+bool XFoil::iblpan() { return BoundaryLayerWorkflow::iblpan(*this); }
 
 
 /** ---------------------------------------------
  *     sets the bl newton system line number
  *     corresponding to each bl station.
  * --------------------------------------------- */
-bool XFoil::iblsys() {
-  int iv = 0;
-  for (int is = 1; is <= 2; is++) {
-    for (int ibl = 0; ibl < nbl.get(is) - 1; ++ibl) {
-      iv++;
-      isys.get(is)[ibl] = iv;
-    }
-  }
-
-  nsys = iv;
-  if (nsys > 2 * IVX) {
-    writeString("*** iblsys: bl system array overflow. ***");
-    return false;
-  }
-
-  return true;
-}
+bool XFoil::iblsys() { return BoundaryLayerWorkflow::iblsys(*this); }
 
 /** ----------------------------------------------------
  *      marches the bls and wake in mixed mode using
@@ -200,150 +134,6 @@ XFoil::MixedModeStationContext XFoil::prepareMixedModeStation(int side, int ibl,
   return ctx;
 }
 
-bool XFoil::isStartOfWake(int side, int stationIndex) const {
-  return stationIndex == iblte.get(side) + 1;
-}
-
-void XFoil::updateSystemMatricesForStation(int side, int stationIndex,
-                                           MixedModeStationContext& ctx) {
-  if (isStartOfWake(side, stationIndex)) {
-    ctx.tte = thet.get(1)[iblte.top] + thet.get(2)[iblte.bottom];
-    ctx.dte =
-        dstr.get(1)[iblte.top] + dstr.get(2)[iblte.bottom] + foil.edge.ante;
-    ctx.cte =
-        (ctau.get(1)[iblte.top] * thet.get(1)[iblte.top] +
-         ctau.get(2)[iblte.bottom] * thet.get(2)[iblte.bottom]) /
-        ctx.tte;
-    tesys(ctx.cte, ctx.tte, ctx.dte);
-  } else {
-    blsys(boundaryLayerState, boundaryLayerLattice);
-  }
-}
-
-void XFoil::initializeFirstIterationState(int side, int stationIndex,
-                                          int previousTransition,
-                                          MixedModeStationContext& ctx,
-                                          double& ueref, double& hkref,
-                                          double& ami) {
-  ueref = blData2.param.uz;
-  hkref = blData2.hkz.scalar;
-
-  const bool inLaminarWindow =
-      stationIndex < itran.get(side) && stationIndex >= previousTransition;
-  if (inLaminarWindow) {
-    double uem;
-    double dsm;
-    double thm;
-    if (stationIndex > 0) {
-      uem = uedg.get(side)[stationIndex - 1];
-      dsm = dstr.get(side)[stationIndex - 1];
-      thm = thet.get(side)[stationIndex - 1];
-    } else {
-      uem = uedg.get(side)[stationIndex];
-      dsm = dstr.get(side)[stationIndex];
-      thm = thet.get(side)[stationIndex];
-    }
-    const double uem_sq = uem * uem;
-    const double msq =
-        uem_sq * hstinv / (gm1bl * (1.0 - 0.5 * uem_sq * hstinv));
-    const auto hkin_result = boundary_layer::hkin(dsm / thm, msq);
-    hkref = hkin_result.hk;
-  }
-
-  if (stationIndex < previousTransition) {
-    if (tran) {
-      ctau.get(side)[stationIndex] = 0.03;
-    }
-    if (turb) {
-      const double prev =
-          (stationIndex >= 1) ? ctau.get(side)[stationIndex - 1]
-                              : ctau.get(side)[stationIndex];
-      ctau.get(side)[stationIndex] = prev;
-    }
-    if (tran || turb) {
-      ctx.cti = ctau.get(side)[stationIndex - 1];
-      blData2.param.sz = ctx.cti;
-    }
-  }
-}
-
-void XFoil::configureSimilarityRow(double ueref) {
-  blc.a2(3, 0) = 0.0;
-  blc.a2(3, 1) = 0.0;
-  blc.a2(3, 2) = 0.0;
-  blc.a2(3, 3) = blData2.param.uz_uei;
-  blc.rhs[3] = ueref - blData2.param.uz;
-}
-
-void XFoil::configureViscousRow(double hkref, double ueref, double senswt,
-                                bool resetSensitivity, bool averageSensitivity,
-                                double& sens, double& sennew) {
-  blc.a2(3, 0) = 0.0;
-  blc.a2(3, 1) = blData2.hkz.t();
-  blc.a2(3, 2) = blData2.hkz.d();
-  blc.a2(3, 3) = blData2.hkz.u() * blData2.param.uz_uei;
-  blc.rhs[3] = 1.0;
-
-  const double delta_sen =
-      blc.a2.block(0, 0, 4, 4).fullPivLu().solve(blc.rhs)[3];
-
-  sennew = senswt * delta_sen * hkref / ueref;
-  if (resetSensitivity) {
-    sens = sennew;
-  } else if (averageSensitivity) {
-    sens = 0.5 * (sens + sennew);
-  }
-
-  blc.a2(3, 1) = blData2.hkz.t() * hkref;
-  blc.a2(3, 2) = blData2.hkz.d() * hkref;
-  blc.a2(3, 3) =
-      (blData2.hkz.u() * hkref + sens / ueref) * blData2.param.uz_uei;
-  blc.rhs[3] = -(hkref * hkref) * (blData2.hkz.scalar / hkref - 1.0) -
-               sens * (blData2.param.uz / ueref - 1.0);
-}
-
-bool XFoil::applyMixedModeNewtonStep(int side, int stationIndex, double deps,
-                                     double& ami,
-                                     MixedModeStationContext& ctx) {
-  blc.rhs = blc.a2.block(0, 0, 4, 4).fullPivLu().solve(blc.rhs);
-
-  ctx.dmax =
-      std::max(std::fabs(blc.rhs[1] / ctx.thi), std::fabs(blc.rhs[2] / ctx.dsi));
-  if (stationIndex >= itran.get(side)) {
-    ctx.dmax = std::max(ctx.dmax, std::fabs(blc.rhs[0] / (10.0 * ctx.cti)));
-  }
-
-  rlx = 1.0;
-  if (ctx.dmax > 0.3) {
-    rlx = 0.3 / ctx.dmax;
-  }
-
-  if (stationIndex < itran.get(side)) {
-    ami += rlx * blc.rhs[0];
-    ctx.ami = ami;
-  }
-  if (stationIndex >= itran.get(side)) {
-    ctx.cti += rlx * blc.rhs[0];
-  }
-  ctx.thi += rlx * blc.rhs[1];
-  ctx.dsi += rlx * blc.rhs[2];
-  ctx.uei += rlx * blc.rhs[3];
-
-  if (stationIndex >= itran.get(side)) {
-    ctx.cti = std::clamp(ctx.cti, 0.0000001, 0.30);
-  }
-
-  const double hklim = (stationIndex <= iblte.get(side)) ? 1.02 : 1.00005;
-  const double uei_sq = ctx.uei * ctx.uei;
-  const double msq = uei_sq * hstinv /
-                     (gm1bl * (1.0 - 0.5 * uei_sq * hstinv));
-  double dsw = ctx.dsi - ctx.dswaki;
-  dslim(dsw, ctx.thi, msq, hklim);
-  ctx.dsi = dsw + ctx.dswaki;
-
-  return ctx.dmax <= deps;
-}
-
 void XFoil::checkTransitionIfNeeded(int side, int ibl, bool skipCheck,
                                     int laminarAdvance, double& ami) {
   if (skipCheck || turb) {
@@ -379,23 +169,28 @@ bool XFoil::performMixedModeNewtonIteration(int side, int ibl, int itrold,
 
     checkTransitionIfNeeded(side, ibl, ctx.simi, 1, ami);
 
-    const bool startOfWake = isStartOfWake(side, ibl);
-    updateSystemMatricesForStation(side, ibl, ctx);
+    const bool startOfWake =
+        BoundaryLayerWorkflow::isStartOfWake(*this, side, ibl);
+    BoundaryLayerWorkflow::updateSystemMatricesForStation(*this, side, ibl,
+                                                          ctx);
 
     if (itbl == 1) {
-      initializeFirstIterationState(side, ibl, itrold, ctx, ueref, hkref, ami);
+      BoundaryLayerWorkflow::initializeFirstIterationState(
+          *this, side, ibl, itrold, ctx, ueref, hkref, ami);
     }
 
     if (ctx.simi || startOfWake) {
-      configureSimilarityRow(ueref);
+      BoundaryLayerWorkflow::configureSimilarityRow(*this, ueref);
     } else {
       const bool resetSensitivity = (itbl <= 5);
       const bool averageSensitivity = (itbl > 5 && itbl <= 15);
-      configureViscousRow(hkref, ueref, senswt, resetSensitivity,
-                          averageSensitivity, sens, sennew);
+      BoundaryLayerWorkflow::configureViscousRow(
+          *this, hkref, ueref, senswt, resetSensitivity, averageSensitivity,
+          sens, sennew);
     }
 
-    if (applyMixedModeNewtonStep(side, ibl, deps, ami, ctx)) {
+    if (BoundaryLayerWorkflow::applyMixedModeNewtonStep(*this, side, ibl, deps,
+                                                       ami, ctx)) {
       converged = true;
       break;
     }
@@ -1294,178 +1089,16 @@ bool XFoil::stepbl(BoundaryLayerState& state) {
 }
 
 
-bool XFoil::stfind() {
-  //-----------------------------------------
-  //     locates stagnation point arc length
-  //     location sst and panel index ist.
-  //-----------------------------------------
-
-  int i;
-  bool bFound = false;
-  const int point_count = foil.foil_shape.n;
-  for (i = 0; i < point_count - 1; i++) {
-    if (surface_vortex(0, i) >= 0.0 && surface_vortex(0, i + 1) < 0.0) {
-      bFound = true;
-      break;
-    }
-  }
-
-  if (!bFound) {
-    writeString("stfind: Stagnation point not found. Continuing ...\n");
-    i = point_count / 2;
-  }
-
-  i_stagnation = i;
-  const double dgam = surface_vortex(0, i + 1) - surface_vortex(0, i);
-  const double ds = foil.foil_shape.spline_length[i + 1] - foil.foil_shape.spline_length[i];
-
-  //---- evaluate so as to minimize roundoff for very small gam[i] or gam[i+1]
-  if (surface_vortex(0, i) < -surface_vortex(0, i + 1))
-    sst = foil.foil_shape.spline_length[i] - ds * (surface_vortex(0, i) / dgam);
-  else
-    sst = foil.foil_shape.spline_length[i + 1] - ds * (surface_vortex(0, i + 1) / dgam);
-
-  //---- tweak stagnation point if it falls right on a node (very unlikely)
-  if (sst <= foil.foil_shape.spline_length[i])
-    sst = foil.foil_shape.spline_length[i] + 0.0000001;
-  if (sst >= foil.foil_shape.spline_length[i + 1])
-    sst = foil.foil_shape.spline_length[i + 1] - 0.0000001;
-
-  sst_go = (sst - foil.foil_shape.spline_length[i + 1]) / dgam;
-  sst_gp = (foil.foil_shape.spline_length[i] - sst) / dgam;
-
-  return true;
-}
+bool XFoil::stfind() { return BoundaryLayerWorkflow::stfind(*this); }
 
 
-bool XFoil::stmove() {
-  //--------------------------------------------------
-  //    moves stagnation point location to new panel.
-  //---------------------------------------------------
-  
-  //-- locate new stagnation point arc length sst from gam distribution
-  int istold = i_stagnation;
-  stfind();
-
-  if (istold == i_stagnation) {
-    //--- recalculate new arc length array
-    xicalc();
-  } else {
-    //--- set new bl position -> panel position  pointers
-    iblpan();
-
-    //--- set new inviscid bl edge velocity uinv from qinv
-    uicalc();
-
-    //--- recalculate new arc length array
-    xicalc();
-
-    //--- set  bl position -> system line  pointers
-    iblsys();
-
-    if (i_stagnation > istold) {
-      //---- increase in number of points on top side (is=1)
-      int idif = i_stagnation - istold;
-
-      itran.top += idif;
-      itran.bottom -= idif;
-
-      //---- move top side bl variables downstream
-      for (int ibl = nbl.top - 2; ibl >= idif; ibl--) {
-        ctau.top[ibl] = ctau.top[ibl - idif];
-        thet.top[ibl] = thet.top[ibl - idif];
-        dstr.top[ibl] = dstr.top[ibl - idif];
-        uedg.top[ibl] = uedg.top[ibl - idif];
-      }
-
-      //---- set bl variables between old and new stagnation point
-      const double dudx =
-          uedg.top[idif] / xssi.top[idif];
-      for (int ibl = idif; ibl >= 1; ibl--) {
-        ctau.top[ibl - 1] = ctau.top[idif];
-        thet.top[ibl - 1] = thet.top[idif];
-        dstr.top[ibl - 1] = dstr.top[idif];
-        uedg.top[ibl - 1] = dudx * xssi.top[ibl - 1];
-      }
-
-      //---- move bottom side bl variables upstream
-      for (int ibl = 0; ibl < nbl.bottom - 1; ibl++) {
-        ctau.bottom[ibl] = ctau.bottom[ibl + idif];
-        thet.bottom[ibl] = thet.bottom[ibl + idif];
-        dstr.bottom[ibl] = dstr.bottom[ibl + idif];
-        uedg.bottom[ibl] = uedg.bottom[ibl + idif];
-      }
-    } else {
-      //---- increase in number of points on bottom side (is=2)
-      int idif = istold - i_stagnation;
-
-      itran.top = itran.top - idif;
-      itran.bottom = itran.bottom + idif;
-
-      //---- move bottom side bl variables downstream
-      for (int ibl = nbl.bottom - 1; ibl >= idif + 1; ibl--) {
-        ctau.bottom[ibl - 1] = ctau.bottom[(ibl - idif) - 1];
-        thet.bottom[ibl - 1] = thet.bottom[(ibl - idif) - 1];
-        dstr.bottom[ibl - 1] = dstr.bottom[(ibl - idif) - 1];
-        uedg.bottom[ibl - 1] = uedg.bottom[(ibl - idif) - 1];
-      }
-
-      //---- set bl variables between old and new stagnation point
-      const double dudx =
-          uedg.bottom[idif] / xssi.bottom[idif];
-      for (int ibl = idif; ibl >= 1; ibl--) {
-        ctau.bottom[ibl - 1] = ctau.bottom[idif];
-        thet.bottom[ibl - 1] = thet.bottom[idif];
-        dstr.bottom[ibl - 1] = dstr.bottom[idif];
-        uedg.bottom[ibl - 1] = dudx * xssi.bottom[ibl - 1];
-      }
-
-      //---- move top side bl variables upstream
-      for (int ibl = 0; ibl < nbl.top - 1; ibl++) {
-        ctau.top[ibl] = ctau.top[ibl + idif];
-        thet.top[ibl] = thet.top[ibl + idif];
-        dstr.top[ibl] = dstr.top[ibl + idif];
-        uedg.top[ibl] = uedg.top[ibl + idif];
-      }
-    }
-  }
-
-  //-- set new mass array since ue has been tweaked
-  for (int is = 1; is <= 2; is++) {
-    for (int ibl = 0; ibl < nbl.get(is) - 1; ++ibl) {
-      mass.get(is)[ibl] = dstr.get(is)[ibl] * uedg.get(is)[ibl];
-    }
-  }
-
-  return true;
-}
+bool XFoil::stmove() { return BoundaryLayerWorkflow::stmove(*this); }
 
 
 // trailing-edge calculations handled by Edge::updateFromFoilShape()
 
 bool XFoil::tesys(double cte, double tte, double dte) {
-  //--------------------------------------------------------
-  //	   sets up "dummy" bl system between airfoil te point
-  //	   and first wake point infinitesimally behind te.
-  //--------------------------------------------------------
-
-  blc.clear();
-
-  blData2 = blvar(blData2, FlowRegimeEnum::Wake);
-
-  blc.a1(0, 0) = -1.0;
-  blc.a2(0, 0) = 1.0;
-  blc.rhs[0] = cte - blData2.param.sz;
-
-  blc.a1(1, 1) = -1.0;
-  blc.a2(1, 1) = 1.0;
-  blc.rhs[1] = tte - blData2.param.tz;
-
-  blc.a1(2, 2) = -1.0;
-  blc.a2(2, 2) = 1.0;
-  blc.rhs[2] = dte - blData2.param.dz - blData2.param.dwz;
-
-  return true;
+  return BoundaryLayerWorkflow::tesys(*this, cte, tte, dte);
 }
 
 

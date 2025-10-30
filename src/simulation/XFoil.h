@@ -63,6 +63,7 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 #include "simulation/boundary_layer_state.hpp"
 #include "infrastructure/xfoil_params.h"
 #include "core/boundary_layer_util.hpp"
+#include "BoundaryLayer.hpp"
 
 //------ derived dimensioning limit parameters
 
@@ -74,6 +75,8 @@ class XFoil {
   XFoil& operator=(const XFoil&) = delete;
   XFoil(XFoil&&) = delete;
   XFoil& operator=(XFoil&&) = delete;
+
+  friend class BoundaryLayerWorkflow;
 
   using VectorXd = Eigen::VectorXd;
   using VectorXi = Eigen::VectorXi;
@@ -247,34 +250,8 @@ class XFoil {
     }
   };
 
-  struct MixedModeStationContext {
-    bool simi = false;
-    bool wake = false;
-    double xsi = 0.0;
-    double uei = 0.0;
-    double thi = 0.0;
-    double dsi = 0.0;
-    double cti = 0.0;
-    double ami = 0.0;
-    double dswaki = 0.0;
-    double cte = 0.0;
-    double dte = 0.0;
-    double tte = 0.0;
-    double dmax = 0.0;
-  };
-  
-  bool isStartOfWake(int side, int stationIndex) const;
-  void updateSystemMatricesForStation(int side, int stationIndex,
-                                      MixedModeStationContext& ctx);
-  void initializeFirstIterationState(int side, int stationIndex, int previousTransition,
-                                     MixedModeStationContext& ctx, double& ueref,
-                                     double& hkref, double& ami);
-  void configureSimilarityRow(double ueref);
-  void configureViscousRow(double hkref, double ueref, double senswt,
-                           bool resetSensitivity, bool averageSensitivity,
-                           double& sens, double& sennew);
-  bool applyMixedModeNewtonStep(int side, int stationIndex, double deps,
-                                double& ami, MixedModeStationContext& ctx);
+  using MixedModeStationContext =
+      BoundaryLayerWorkflow::MixedModeStationContext;
   
   VectorXd cpcalc(int n, VectorXd q, double qinf, double minf);
 
