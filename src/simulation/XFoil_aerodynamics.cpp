@@ -36,14 +36,14 @@ double XFoil::cdcalc() const {
   const double beta = std::sqrt(std::max(0.0, 1.0 - minf * minf));
   const double tklam_local = MathUtil::pow(minf / (1.0 + beta), 2);
 
-  const double thwake = thet.get(2)[nbl.bottom - 2];
-  const double uedg_bottom = uedg.bottom[nbl.bottom - 2];
+  const double thwake = boundaryLayerLattice.thet.get(2)[boundaryLayerLattice.stationCount.bottom - 2];
+  const double uedg_bottom = boundaryLayerLattice.uedg.bottom[boundaryLayerLattice.stationCount.bottom - 2];
   const double urat = uedg_bottom / qinf;
   const double uewake =
       uedg_bottom * (1.0 - tklam_local) /
       (1.0 - tklam_local * urat * urat);
   const double shwake =
-      dstr.get(2)[nbl.bottom - 2] / thet.get(2)[nbl.bottom - 2];
+      boundaryLayerLattice.dstr.get(2)[boundaryLayerLattice.stationCount.bottom - 2] / boundaryLayerLattice.thet.get(2)[boundaryLayerLattice.stationCount.bottom - 2];
 
   const double exponent = 0.5 * (5.0 + shwake);
   const double wake_ratio = uewake / qinf;

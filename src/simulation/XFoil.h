@@ -408,29 +408,10 @@ class XFoil {
   blData& blData1;
   blData& blData2;
 
-  SidePair<VectorXi>& ipan;
-  SidePair<VectorXi>& isys;
-  SidePair<int>& iblte;
-  SidePair<int>& nbl;
-
-  SidePair<double>& xstrip;
-
   Vector2d cmref;
   double tklam; // karman-tsien parameter minf^2 / [1 + sqrt[1-minf^2]]^2 <- Prandtl-Glauert-Ackeret rule ?
   double tkl_msq;
   double dtor;
-
-  SidePair<VectorXd>& thet;
-  SidePair<VectorXd>& ctau;
-  SidePair<VectorXd>& dstr;
-  SidePair<VectorXd>& uedg;
-  SidePair<VectorXd>& ctq;
-  SidePair<VectorXd>& xssi;
-  SidePair<VectorXd>& uinv;
-  SidePair<VectorXd>& uinv_a;
-  SidePair<VectorXd>& mass;
-  SidePair<VectorXd>& vti;
-  SidePair<int>& itran; // bl array index of transition interval
 
  public: //private:
   double rlx;

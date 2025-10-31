@@ -10,20 +10,20 @@ using BoundaryContext = BoundaryLayerWorkflow::MixedModeStationContext;
 
 bool BoundaryLayerWorkflow::isStartOfWake(const XFoil& xfoil, int side,
                                           int stationIndex) {
-  return stationIndex == xfoil.iblte.get(side) + 1;
+  return stationIndex == xfoil.boundaryLayerLattice.trailingEdgeIndex.get(side) + 1;
 }
 
 void BoundaryLayerWorkflow::updateSystemMatricesForStation(
     XFoil& xfoil, int side, int stationIndex, BoundaryContext& ctx) {
   if (isStartOfWake(xfoil, side, stationIndex)) {
-    ctx.tte = xfoil.thet.get(1)[xfoil.iblte.top] +
-              xfoil.thet.get(2)[xfoil.iblte.bottom];
-    ctx.dte = xfoil.dstr.get(1)[xfoil.iblte.top] +
-              xfoil.dstr.get(2)[xfoil.iblte.bottom] + xfoil.foil.edge.ante;
+    ctx.tte = xfoil.boundaryLayerLattice.thet.get(1)[xfoil.boundaryLayerLattice.trailingEdgeIndex.top] +
+              xfoil.boundaryLayerLattice.thet.get(2)[xfoil.boundaryLayerLattice.trailingEdgeIndex.bottom];
+    ctx.dte = xfoil.boundaryLayerLattice.dstr.get(1)[xfoil.boundaryLayerLattice.trailingEdgeIndex.top] +
+              xfoil.boundaryLayerLattice.dstr.get(2)[xfoil.boundaryLayerLattice.trailingEdgeIndex.bottom] + xfoil.foil.edge.ante;
     ctx.cte =
-        (xfoil.ctau.get(1)[xfoil.iblte.top] * xfoil.thet.get(1)[xfoil.iblte.top] +
-         xfoil.ctau.get(2)[xfoil.iblte.bottom] *
-             xfoil.thet.get(2)[xfoil.iblte.bottom]) /
+        (xfoil.boundaryLayerLattice.ctau.get(1)[xfoil.boundaryLayerLattice.trailingEdgeIndex.top] * xfoil.boundaryLayerLattice.thet.get(1)[xfoil.boundaryLayerLattice.trailingEdgeIndex.top] +
+         xfoil.boundaryLayerLattice.ctau.get(2)[xfoil.boundaryLayerLattice.trailingEdgeIndex.bottom] *
+             xfoil.boundaryLayerLattice.thet.get(2)[xfoil.boundaryLayerLattice.trailingEdgeIndex.bottom]) /
         ctx.tte;
     xfoil.tesys(ctx.cte, ctx.tte, ctx.dte);
   } else {
@@ -38,19 +38,19 @@ void BoundaryLayerWorkflow::initializeFirstIterationState(
   hkref = xfoil.blData2.hkz.scalar;
 
   const bool inLaminarWindow =
-      stationIndex < xfoil.itran.get(side) && stationIndex >= previousTransition;
+      stationIndex < xfoil.boundaryLayerLattice.transitionIndex.get(side) && stationIndex >= previousTransition;
   if (inLaminarWindow) {
     double uem;
     double dsm;
     double thm;
     if (stationIndex > 0) {
-      uem = xfoil.uedg.get(side)[stationIndex - 1];
-      dsm = xfoil.dstr.get(side)[stationIndex - 1];
-      thm = xfoil.thet.get(side)[stationIndex - 1];
+      uem = xfoil.boundaryLayerLattice.uedg.get(side)[stationIndex - 1];
+      dsm = xfoil.boundaryLayerLattice.dstr.get(side)[stationIndex - 1];
+      thm = xfoil.boundaryLayerLattice.thet.get(side)[stationIndex - 1];
     } else {
-      uem = xfoil.uedg.get(side)[stationIndex];
-      dsm = xfoil.dstr.get(side)[stationIndex];
-      thm = xfoil.thet.get(side)[stationIndex];
+      uem = xfoil.boundaryLayerLattice.uedg.get(side)[stationIndex];
+      dsm = xfoil.boundaryLayerLattice.dstr.get(side)[stationIndex];
+      thm = xfoil.boundaryLayerLattice.thet.get(side)[stationIndex];
     }
     const double uem_sq = uem * uem;
     const double msq =
@@ -63,16 +63,16 @@ void BoundaryLayerWorkflow::initializeFirstIterationState(
 
   if (stationIndex < previousTransition) {
     if (xfoil.tran) {
-      xfoil.ctau.get(side)[stationIndex] = 0.03;
+      xfoil.boundaryLayerLattice.ctau.get(side)[stationIndex] = 0.03;
     }
     if (xfoil.turb) {
       const double prev =
-          (stationIndex >= 1) ? xfoil.ctau.get(side)[stationIndex - 1]
-                              : xfoil.ctau.get(side)[stationIndex];
-      xfoil.ctau.get(side)[stationIndex] = prev;
+          (stationIndex >= 1) ? xfoil.boundaryLayerLattice.ctau.get(side)[stationIndex - 1]
+                              : xfoil.boundaryLayerLattice.ctau.get(side)[stationIndex];
+      xfoil.boundaryLayerLattice.ctau.get(side)[stationIndex] = prev;
     }
     if (xfoil.tran || xfoil.turb) {
-      ctx.cti = xfoil.ctau.get(side)[stationIndex - 1];
+      ctx.cti = xfoil.boundaryLayerLattice.ctau.get(side)[stationIndex - 1];
       xfoil.blData2.param.sz = ctx.cti;
     }
   }
@@ -125,7 +125,7 @@ bool BoundaryLayerWorkflow::applyMixedModeNewtonStep(
 
   ctx.dmax = std::max(std::fabs(xfoil.blc.rhs[1] / ctx.thi),
                       std::fabs(xfoil.blc.rhs[2] / ctx.dsi));
-  if (stationIndex >= xfoil.itran.get(side)) {
+  if (stationIndex >= xfoil.boundaryLayerLattice.transitionIndex.get(side)) {
     ctx.dmax = std::max(ctx.dmax,
                         std::fabs(xfoil.blc.rhs[0] / (10.0 * ctx.cti)));
   }
@@ -135,23 +135,23 @@ bool BoundaryLayerWorkflow::applyMixedModeNewtonStep(
     xfoil.rlx = 0.3 / ctx.dmax;
   }
 
-  if (stationIndex < xfoil.itran.get(side)) {
+  if (stationIndex < xfoil.boundaryLayerLattice.transitionIndex.get(side)) {
     ami += xfoil.rlx * xfoil.blc.rhs[0];
     ctx.ami = ami;
   }
-  if (stationIndex >= xfoil.itran.get(side)) {
+  if (stationIndex >= xfoil.boundaryLayerLattice.transitionIndex.get(side)) {
     ctx.cti += xfoil.rlx * xfoil.blc.rhs[0];
   }
   ctx.thi += xfoil.rlx * xfoil.blc.rhs[1];
   ctx.dsi += xfoil.rlx * xfoil.blc.rhs[2];
   ctx.uei += xfoil.rlx * xfoil.blc.rhs[3];
 
-  if (stationIndex >= xfoil.itran.get(side)) {
+  if (stationIndex >= xfoil.boundaryLayerLattice.transitionIndex.get(side)) {
     ctx.cti = std::clamp(ctx.cti, 0.0000001, 0.30);
   }
 
   const double hklim =
-      (stationIndex <= xfoil.iblte.get(side)) ? 1.02 : 1.00005;
+      (stationIndex <= xfoil.boundaryLayerLattice.trailingEdgeIndex.get(side)) ? 1.02 : 1.00005;
   const double uei_sq = ctx.uei * ctx.uei;
   const double msq = uei_sq * xfoil.hstinv /
                      (xfoil.gm1bl * (1.0 - 0.5 * uei_sq * xfoil.hstinv));
@@ -167,36 +167,36 @@ bool BoundaryLayerWorkflow::iblpan(XFoil& xfoil) {
   const int point_count = xfoil.foil.foil_shape.n;
 
   for (int i = 0; i <= xfoil.i_stagnation; i++) {
-    xfoil.ipan.top[i] = xfoil.i_stagnation - i;
-    xfoil.vti.top[i] = 1.0;
+    xfoil.boundaryLayerLattice.stationToPanel.top[i] = xfoil.i_stagnation - i;
+    xfoil.boundaryLayerLattice.vti.top[i] = 1.0;
   }
 
-  xfoil.iblte.top = xfoil.i_stagnation;
-  xfoil.nbl.top = xfoil.iblte.top + 2;
+  xfoil.boundaryLayerLattice.trailingEdgeIndex.top = xfoil.i_stagnation;
+  xfoil.boundaryLayerLattice.stationCount.top = xfoil.boundaryLayerLattice.trailingEdgeIndex.top + 2;
 
   for (int index = 0; index <= point_count - xfoil.i_stagnation; ++index) {
-    xfoil.ipan.bottom[index] = xfoil.i_stagnation + 1 + index;
-    xfoil.vti.bottom[index] = -1.0;
+    xfoil.boundaryLayerLattice.stationToPanel.bottom[index] = xfoil.i_stagnation + 1 + index;
+    xfoil.boundaryLayerLattice.vti.bottom[index] = -1.0;
   }
 
-  xfoil.iblte.bottom = point_count - xfoil.i_stagnation - 2;
+  xfoil.boundaryLayerLattice.trailingEdgeIndex.bottom = point_count - xfoil.i_stagnation - 2;
 
   for (int iw = 0; iw < xfoil.nw; iw++) {
     const int panel = point_count + iw;
-    const int index = xfoil.iblte.bottom + iw + 2;
-    xfoil.ipan.bottom[index - 1] = panel;
-    xfoil.vti.bottom[index - 1] = -1.0;
+    const int index = xfoil.boundaryLayerLattice.trailingEdgeIndex.bottom + iw + 2;
+    xfoil.boundaryLayerLattice.stationToPanel.bottom[index - 1] = panel;
+    xfoil.boundaryLayerLattice.vti.bottom[index - 1] = -1.0;
   }
 
-  xfoil.nbl.bottom = xfoil.iblte.bottom + xfoil.nw + 2;
+  xfoil.boundaryLayerLattice.stationCount.bottom = xfoil.boundaryLayerLattice.trailingEdgeIndex.bottom + xfoil.nw + 2;
 
   for (int iw = 0; iw < xfoil.nw; iw++) {
-    xfoil.ipan.top[xfoil.iblte.top + iw + 1] =
-        xfoil.ipan.bottom[xfoil.iblte.bottom + iw + 1];
-    xfoil.vti.top[xfoil.iblte.top + iw + 1] = 1.0;
+    xfoil.boundaryLayerLattice.stationToPanel.top[xfoil.boundaryLayerLattice.trailingEdgeIndex.top + iw + 1] =
+        xfoil.boundaryLayerLattice.stationToPanel.bottom[xfoil.boundaryLayerLattice.trailingEdgeIndex.bottom + iw + 1];
+    xfoil.boundaryLayerLattice.vti.top[xfoil.boundaryLayerLattice.trailingEdgeIndex.top + iw + 1] = 1.0;
   }
 
-  const int iblmax = std::max(xfoil.iblte.top, xfoil.iblte.bottom) +
+  const int iblmax = std::max(xfoil.boundaryLayerLattice.trailingEdgeIndex.top, xfoil.boundaryLayerLattice.trailingEdgeIndex.bottom) +
                      xfoil.nw + 2;
   if (iblmax > IVX) {
     ss << "iblpan :  ***  bl array overflow\n";
@@ -212,9 +212,9 @@ bool BoundaryLayerWorkflow::iblpan(XFoil& xfoil) {
 bool BoundaryLayerWorkflow::iblsys(XFoil& xfoil) {
   int iv = 0;
   for (int is = 1; is <= 2; is++) {
-    for (int ibl = 0; ibl < xfoil.nbl.get(is) - 1; ++ibl) {
+    for (int ibl = 0; ibl < xfoil.boundaryLayerLattice.stationCount.get(is) - 1; ++ibl) {
       ++iv;
-      xfoil.isys.get(is)[ibl] = iv;
+      xfoil.boundaryLayerLattice.stationToSystem.get(is)[ibl] = iv;
     }
   }
 
@@ -293,70 +293,70 @@ bool BoundaryLayerWorkflow::stmove(XFoil& xfoil) {
     if (xfoil.i_stagnation > previous) {
       const int delta = xfoil.i_stagnation - previous;
 
-      xfoil.itran.top += delta;
-      xfoil.itran.bottom -= delta;
+      xfoil.boundaryLayerLattice.transitionIndex.top += delta;
+      xfoil.boundaryLayerLattice.transitionIndex.bottom -= delta;
 
-      for (int ibl = xfoil.nbl.top - 2; ibl >= delta; --ibl) {
-        xfoil.ctau.top[ibl] = xfoil.ctau.top[ibl - delta];
-        xfoil.thet.top[ibl] = xfoil.thet.top[ibl - delta];
-        xfoil.dstr.top[ibl] = xfoil.dstr.top[ibl - delta];
-        xfoil.uedg.top[ibl] = xfoil.uedg.top[ibl - delta];
+      for (int ibl = xfoil.boundaryLayerLattice.stationCount.top - 2; ibl >= delta; --ibl) {
+        xfoil.boundaryLayerLattice.ctau.top[ibl] = xfoil.boundaryLayerLattice.ctau.top[ibl - delta];
+        xfoil.boundaryLayerLattice.thet.top[ibl] = xfoil.boundaryLayerLattice.thet.top[ibl - delta];
+        xfoil.boundaryLayerLattice.dstr.top[ibl] = xfoil.boundaryLayerLattice.dstr.top[ibl - delta];
+        xfoil.boundaryLayerLattice.uedg.top[ibl] = xfoil.boundaryLayerLattice.uedg.top[ibl - delta];
       }
 
       const double dudx =
-          xfoil.uedg.top[delta] / xfoil.xssi.top[delta];
+          xfoil.boundaryLayerLattice.uedg.top[delta] / xfoil.boundaryLayerLattice.xssi.top[delta];
       for (int ibl = delta; ibl >= 1; --ibl) {
-        xfoil.ctau.top[ibl - 1] = xfoil.ctau.top[delta];
-        xfoil.thet.top[ibl - 1] = xfoil.thet.top[delta];
-        xfoil.dstr.top[ibl - 1] = xfoil.dstr.top[delta];
-        xfoil.uedg.top[ibl - 1] = dudx * xfoil.xssi.top[ibl - 1];
+        xfoil.boundaryLayerLattice.ctau.top[ibl - 1] = xfoil.boundaryLayerLattice.ctau.top[delta];
+        xfoil.boundaryLayerLattice.thet.top[ibl - 1] = xfoil.boundaryLayerLattice.thet.top[delta];
+        xfoil.boundaryLayerLattice.dstr.top[ibl - 1] = xfoil.boundaryLayerLattice.dstr.top[delta];
+        xfoil.boundaryLayerLattice.uedg.top[ibl - 1] = dudx * xfoil.boundaryLayerLattice.xssi.top[ibl - 1];
       }
 
-      for (int ibl = 0; ibl < xfoil.nbl.bottom - 1; ++ibl) {
-        xfoil.ctau.bottom[ibl] = xfoil.ctau.bottom[ibl + delta];
-        xfoil.thet.bottom[ibl] = xfoil.thet.bottom[ibl + delta];
-        xfoil.dstr.bottom[ibl] = xfoil.dstr.bottom[ibl + delta];
-        xfoil.uedg.bottom[ibl] = xfoil.uedg.bottom[ibl + delta];
+      for (int ibl = 0; ibl < xfoil.boundaryLayerLattice.stationCount.bottom - 1; ++ibl) {
+        xfoil.boundaryLayerLattice.ctau.bottom[ibl] = xfoil.boundaryLayerLattice.ctau.bottom[ibl + delta];
+        xfoil.boundaryLayerLattice.thet.bottom[ibl] = xfoil.boundaryLayerLattice.thet.bottom[ibl + delta];
+        xfoil.boundaryLayerLattice.dstr.bottom[ibl] = xfoil.boundaryLayerLattice.dstr.bottom[ibl + delta];
+        xfoil.boundaryLayerLattice.uedg.bottom[ibl] = xfoil.boundaryLayerLattice.uedg.bottom[ibl + delta];
       }
     } else {
       const int delta = previous - xfoil.i_stagnation;
 
-      xfoil.itran.top -= delta;
-      xfoil.itran.bottom += delta;
+      xfoil.boundaryLayerLattice.transitionIndex.top -= delta;
+      xfoil.boundaryLayerLattice.transitionIndex.bottom += delta;
 
-      for (int ibl = xfoil.nbl.bottom - 1; ibl >= delta + 1; --ibl) {
-        xfoil.ctau.bottom[ibl - 1] =
-            xfoil.ctau.bottom[(ibl - delta) - 1];
-        xfoil.thet.bottom[ibl - 1] =
-            xfoil.thet.bottom[(ibl - delta) - 1];
-        xfoil.dstr.bottom[ibl - 1] =
-            xfoil.dstr.bottom[(ibl - delta) - 1];
-        xfoil.uedg.bottom[ibl - 1] =
-            xfoil.uedg.bottom[(ibl - delta) - 1];
+      for (int ibl = xfoil.boundaryLayerLattice.stationCount.bottom - 1; ibl >= delta + 1; --ibl) {
+        xfoil.boundaryLayerLattice.ctau.bottom[ibl - 1] =
+            xfoil.boundaryLayerLattice.ctau.bottom[(ibl - delta) - 1];
+        xfoil.boundaryLayerLattice.thet.bottom[ibl - 1] =
+            xfoil.boundaryLayerLattice.thet.bottom[(ibl - delta) - 1];
+        xfoil.boundaryLayerLattice.dstr.bottom[ibl - 1] =
+            xfoil.boundaryLayerLattice.dstr.bottom[(ibl - delta) - 1];
+        xfoil.boundaryLayerLattice.uedg.bottom[ibl - 1] =
+            xfoil.boundaryLayerLattice.uedg.bottom[(ibl - delta) - 1];
       }
 
       const double dudx =
-          xfoil.uedg.bottom[delta] / xfoil.xssi.bottom[delta];
+          xfoil.boundaryLayerLattice.uedg.bottom[delta] / xfoil.boundaryLayerLattice.xssi.bottom[delta];
       for (int ibl = delta; ibl >= 1; --ibl) {
-        xfoil.ctau.bottom[ibl - 1] = xfoil.ctau.bottom[delta];
-        xfoil.thet.bottom[ibl - 1] = xfoil.thet.bottom[delta];
-        xfoil.dstr.bottom[ibl - 1] = xfoil.dstr.bottom[delta];
-        xfoil.uedg.bottom[ibl - 1] = dudx * xfoil.xssi.bottom[ibl - 1];
+        xfoil.boundaryLayerLattice.ctau.bottom[ibl - 1] = xfoil.boundaryLayerLattice.ctau.bottom[delta];
+        xfoil.boundaryLayerLattice.thet.bottom[ibl - 1] = xfoil.boundaryLayerLattice.thet.bottom[delta];
+        xfoil.boundaryLayerLattice.dstr.bottom[ibl - 1] = xfoil.boundaryLayerLattice.dstr.bottom[delta];
+        xfoil.boundaryLayerLattice.uedg.bottom[ibl - 1] = dudx * xfoil.boundaryLayerLattice.xssi.bottom[ibl - 1];
       }
 
-      for (int ibl = 0; ibl < xfoil.nbl.top - 1; ++ibl) {
-        xfoil.ctau.top[ibl] = xfoil.ctau.top[ibl + delta];
-        xfoil.thet.top[ibl] = xfoil.thet.top[ibl + delta];
-        xfoil.dstr.top[ibl] = xfoil.dstr.top[ibl + delta];
-        xfoil.uedg.top[ibl] = xfoil.uedg.top[ibl + delta];
+      for (int ibl = 0; ibl < xfoil.boundaryLayerLattice.stationCount.top - 1; ++ibl) {
+        xfoil.boundaryLayerLattice.ctau.top[ibl] = xfoil.boundaryLayerLattice.ctau.top[ibl + delta];
+        xfoil.boundaryLayerLattice.thet.top[ibl] = xfoil.boundaryLayerLattice.thet.top[ibl + delta];
+        xfoil.boundaryLayerLattice.dstr.top[ibl] = xfoil.boundaryLayerLattice.dstr.top[ibl + delta];
+        xfoil.boundaryLayerLattice.uedg.top[ibl] = xfoil.boundaryLayerLattice.uedg.top[ibl + delta];
       }
     }
   }
 
   for (int is = 1; is <= 2; ++is) {
-    for (int ibl = 0; ibl < xfoil.nbl.get(is) - 1; ++ibl) {
-      xfoil.mass.get(is)[ibl] =
-          xfoil.dstr.get(is)[ibl] * xfoil.uedg.get(is)[ibl];
+    for (int ibl = 0; ibl < xfoil.boundaryLayerLattice.stationCount.get(is) - 1; ++ibl) {
+      xfoil.boundaryLayerLattice.mass.get(is)[ibl] =
+          xfoil.boundaryLayerLattice.dstr.get(is)[ibl] * xfoil.boundaryLayerLattice.uedg.get(is)[ibl];
     }
   }
 

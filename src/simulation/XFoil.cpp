@@ -68,23 +68,7 @@ Matrix2d XFoil::buildBodyToFreestreamRotation() const {
 
 XFoil::XFoil()
     : blData1(boundaryLayerState.station1),
-      blData2(boundaryLayerState.station2),
-      ipan(boundaryLayerLattice.stationToPanel),
-      isys(boundaryLayerLattice.stationToSystem),
-      iblte(boundaryLayerLattice.trailingEdgeIndex),
-      nbl(boundaryLayerLattice.stationCount),
-      xstrip(boundaryLayerLattice.transitionLocation),
-      thet(boundaryLayerLattice.thet),
-      ctau(boundaryLayerLattice.ctau),
-      dstr(boundaryLayerLattice.dstr),
-      uedg(boundaryLayerLattice.uedg),
-      ctq(boundaryLayerLattice.ctq),
-      xssi(boundaryLayerLattice.xssi),
-      uinv(boundaryLayerLattice.uinv),
-      uinv_a(boundaryLayerLattice.uinv_a),
-      mass(boundaryLayerLattice.mass),
-      vti(boundaryLayerLattice.vti),
-      itran(boundaryLayerLattice.transitionIndex) {
+      blData2(boundaryLayerState.station2) {
   m_pOutStream = nullptr;
 
   // fortran seems to initializes variables to 0
@@ -92,8 +76,8 @@ XFoil::XFoil()
 
   // initialize transition parameters until user changes them
   acrit = 9.0;
-  xstrip.top = 1.0;
-  xstrip.bottom = 1.0;
+  boundaryLayerLattice.transitionLocation.top = 1.0;
+  boundaryLayerLattice.transitionLocation.bottom = 1.0;
 
   //---- initialize freestream mach number to zero
   mach_type = MachType::CONSTANT;
