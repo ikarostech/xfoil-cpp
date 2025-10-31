@@ -403,7 +403,10 @@ class XFoil {
 
   Foil foil;
   BoundaryLayerState boundaryLayerState;
-  BoundaryLayerLattice boundaryLayerLattice;
+  BoundaryLayerWorkflow boundaryLayerWorkflow;
+
+  BoundaryLayerLattice& boundaryLayerLattice();
+  const BoundaryLayerLattice& boundaryLayerLattice() const;
 
   blData& blData1;
   blData& blData2;
