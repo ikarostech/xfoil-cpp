@@ -311,7 +311,6 @@ class XFoil {
                                             const VectorXd& d_m) const;
   VectorXd setexp(double ds1, double smax, int nn) const;
 
-  bool stepbl(BoundaryLayerState& state);
   bool trchek();
   bool trdif();
   bool ueset();
@@ -397,7 +396,6 @@ class XFoil {
   bool lblini, lipan;
 
   Foil foil;
-  BoundaryLayerState boundaryLayerState;
   BoundaryLayerWorkflow boundaryLayerWorkflow;
 
   blData& blData1;

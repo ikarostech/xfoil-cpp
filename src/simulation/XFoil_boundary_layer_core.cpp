@@ -116,7 +116,7 @@ XFoil::SkinFrictionCoefficients XFoil::blmid(BoundaryLayerState& state,
 }
 
 XFoil::SkinFrictionCoefficients XFoil::blmid(FlowRegimeEnum flowRegimeType) {
-  return blmid(boundaryLayerState, flowRegimeType);
+  return blmid(boundaryLayerWorkflow.state, flowRegimeType);
 }
 
 
@@ -194,21 +194,20 @@ bool XFoil::blsys(BoundaryLayerState& state, [[maybe_unused]] BoundaryLayerLatti
 
   //---- for the similarity station, "1" and "2" variables are the same
   if (simi) {
-    //		for(int icom=1;icom<= ncom;icom++) com1[icom] = com2[icom];
-    stepbl(state);
+    state.stepbl();
   }
 
   //---- set up appropriate finite difference system for current interval
   if (tran)
     trdif();
   else if (simi)
-    blc = blDiffSolver.solve(FlowRegimeEnum::Similarity, boundaryLayerState, skinFriction, amcrit);
+    blc = blDiffSolver.solve(FlowRegimeEnum::Similarity, boundaryLayerWorkflow.state, skinFriction, amcrit);
   else if (!turb)
-    blc = blDiffSolver.solve(FlowRegimeEnum::Laminar, boundaryLayerState, skinFriction, amcrit);
+    blc = blDiffSolver.solve(FlowRegimeEnum::Laminar, boundaryLayerWorkflow.state, skinFriction, amcrit);
   else if (wake)
-    blc = blDiffSolver.solve(FlowRegimeEnum::Wake, boundaryLayerState, skinFriction, amcrit);
+    blc = blDiffSolver.solve(FlowRegimeEnum::Wake, boundaryLayerWorkflow.state, skinFriction, amcrit);
   else
-    blc = blDiffSolver.solve(FlowRegimeEnum::Turbulent, boundaryLayerState, skinFriction, amcrit);
+    blc = blDiffSolver.solve(FlowRegimeEnum::Turbulent, boundaryLayerWorkflow.state, skinFriction, amcrit);
 
   if (simi) {
     //----- at similarity station, "1" variables are really "2" variables

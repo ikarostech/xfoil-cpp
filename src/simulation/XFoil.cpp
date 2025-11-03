@@ -67,8 +67,8 @@ Matrix2d XFoil::buildBodyToFreestreamRotation() const {
 }
 
 XFoil::XFoil()
-    : blData1(boundaryLayerState.station1),
-      blData2(boundaryLayerState.station2) {
+    : blData1(boundaryLayerWorkflow.state.station1),
+      blData2(boundaryLayerWorkflow.state.station2) {
   m_pOutStream = nullptr;
 
   // fortran seems to initializes variables to 0

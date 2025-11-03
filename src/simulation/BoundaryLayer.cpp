@@ -27,7 +27,7 @@ void BoundaryLayerWorkflow::updateSystemMatricesForStation(
         ctx.tte;
     tesys(xfoil, ctx.cte, ctx.tte, ctx.dte);
   } else {
-    xfoil.blsys(xfoil.boundaryLayerState, lattice);
+    xfoil.blsys(xfoil.boundaryLayerWorkflow.state, lattice);
   }
 }
 

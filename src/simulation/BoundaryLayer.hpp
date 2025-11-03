@@ -48,6 +48,7 @@ class BoundaryLayerWorkflow {
   bool tesys(XFoil& xfoil, double cte, double tte, double dte);
   bool trchek(XFoil& xfoil);
 
- public:
+public:
   BoundaryLayerLattice lattice;
+  BoundaryLayerState state;
 };

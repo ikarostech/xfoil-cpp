@@ -45,6 +45,7 @@ struct BoundaryLayerState {
   }
 
   void swapStations() { std::swap(station1, station2); }
+  void stepbl() { station1 = station2; }
 };
 
 /**
