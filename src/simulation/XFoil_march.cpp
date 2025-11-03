@@ -157,26 +157,26 @@ bool XFoil::performMixedModeNewtonIteration(int side, int ibl, int itrold,
     checkTransitionIfNeeded(side, ibl, ctx.simi, 1, ami);
 
     const bool startOfWake =
-        BoundaryLayerWorkflow::isStartOfWake(*this, side, ibl);
-    BoundaryLayerWorkflow::updateSystemMatricesForStation(*this, side, ibl,
+        boundaryLayerWorkflow.isStartOfWake(*this, side, ibl);
+    boundaryLayerWorkflow.updateSystemMatricesForStation(*this, side, ibl,
                                                           ctx);
 
     if (itbl == 1) {
-      BoundaryLayerWorkflow::initializeFirstIterationState(
+      boundaryLayerWorkflow.initializeFirstIterationState(
           *this, side, ibl, itrold, ctx, ueref, hkref, ami);
     }
 
     if (ctx.simi || startOfWake) {
-      BoundaryLayerWorkflow::configureSimilarityRow(*this, ueref);
+      boundaryLayerWorkflow.configureSimilarityRow(*this, ueref);
     } else {
       const bool resetSensitivity = (itbl <= 5);
       const bool averageSensitivity = (itbl > 5 && itbl <= 15);
-      BoundaryLayerWorkflow::configureViscousRow(
+      boundaryLayerWorkflow.configureViscousRow(
           *this, hkref, ueref, senswt, resetSensitivity, averageSensitivity,
           sens, sennew);
     }
 
-    if (BoundaryLayerWorkflow::applyMixedModeNewtonStep(*this, side, ibl, deps,
+    if (boundaryLayerWorkflow.applyMixedModeNewtonStep(*this, side, ibl, deps,
                                                        ami, ctx)) {
       converged = true;
       break;
@@ -1076,16 +1076,16 @@ bool XFoil::stepbl(BoundaryLayerState& state) {
 }
 
 
-bool XFoil::stfind() { return BoundaryLayerWorkflow::stfind(*this); }
+bool XFoil::stfind() { return boundaryLayerWorkflow.stfind(*this); }
 
 
-bool XFoil::stmove() { return BoundaryLayerWorkflow::stmove(*this); }
+bool XFoil::stmove() { return boundaryLayerWorkflow.stmove(*this); }
 
 
 // trailing-edge calculations handled by Edge::updateFromFoilShape()
 
 bool XFoil::tesys(double cte, double tte, double dte) {
-  return BoundaryLayerWorkflow::tesys(*this, cte, tte, dte);
+  return boundaryLayerWorkflow.tesys(*this, cte, tte, dte);
 }
 
 
