@@ -54,7 +54,7 @@ bool XFoil::mrchdu(BoundaryLayerState& state,
       boundaryLayerWorkflow.lattice.dstr.get(is)[ibl] = ctx.dsi;
       boundaryLayerWorkflow.lattice.uedg.get(is)[ibl] = ctx.uei;
       boundaryLayerWorkflow.lattice.mass.get(is)[ibl] = ctx.dsi * ctx.uei;
-      boundaryLayerWorkflow.lattice.ctq.get(is)[ibl] = blData2.cqz.scalar;
+      boundaryLayerWorkflow.lattice.ctq.get(is)[ibl] = boundaryLayerWorkflow.state.station2.cqz.scalar;
 
       {
         blData updatedCurrent =
@@ -128,7 +128,7 @@ void XFoil::checkTransitionIfNeeded(int side, int ibl, bool skipCheck,
   }
 
   trchek();
-  ami = blData2.param.amplz;
+  ami = boundaryLayerWorkflow.state.station2.param.amplz;
   if (tran) {
     boundaryLayerWorkflow.lattice.transitionIndex.get(side) = ibl;
   } else {
@@ -237,15 +237,15 @@ void XFoil::handleMixedModeNonConvergence(int side, int ibl,
   checkTransitionIfNeeded(side, ibl, ctx.simi, 2, ami);
 
   if (ibl < boundaryLayerWorkflow.lattice.transitionIndex.get(side)) {
-    blData2 = blvar(blData2, FlowRegimeEnum::Laminar);
+    boundaryLayerWorkflow.state.station2 = blvar(boundaryLayerWorkflow.state.station2, FlowRegimeEnum::Laminar);
     blmid(boundaryLayerWorkflow.state, FlowRegimeEnum::Laminar);
   }
   if (ibl >= boundaryLayerWorkflow.lattice.transitionIndex.get(side)) {
-    blData2 = blvar(blData2, FlowRegimeEnum::Turbulent);
+    boundaryLayerWorkflow.state.station2 = blvar(boundaryLayerWorkflow.state.station2, FlowRegimeEnum::Turbulent);
     blmid(boundaryLayerWorkflow.state, FlowRegimeEnum::Turbulent);
   }
   if (ctx.wake) {
-    blData2 = blvar(blData2, FlowRegimeEnum::Wake);
+    boundaryLayerWorkflow.state.station2 = blvar(boundaryLayerWorkflow.state.station2, FlowRegimeEnum::Wake);
     blmid(boundaryLayerWorkflow.state, FlowRegimeEnum::Wake);
   }
 
@@ -254,27 +254,27 @@ void XFoil::handleMixedModeNonConvergence(int side, int ibl,
 
 double XFoil::calcHtarg(int ibl, int is, bool wake) {
   if (ibl < boundaryLayerWorkflow.lattice.transitionIndex.get(is)) {
-    return blData1.hkz.scalar +
-           0.03 * (blData2.param.xz - blData1.param.xz) / blData1.param.tz;
+    return boundaryLayerWorkflow.state.station1.hkz.scalar +
+           0.03 * (boundaryLayerWorkflow.state.station2.param.xz - boundaryLayerWorkflow.state.station1.param.xz) / boundaryLayerWorkflow.state.station1.param.tz;
   } else if (ibl == boundaryLayerWorkflow.lattice.transitionIndex.get(is)) {
-    return blData1.hkz.scalar +
-           (0.03 * (xt - blData1.param.xz) - 0.15 * (blData2.param.xz - xt)) /
-               blData1.param.tz;
+    return boundaryLayerWorkflow.state.station1.hkz.scalar +
+           (0.03 * (xt - boundaryLayerWorkflow.state.station1.param.xz) - 0.15 * (boundaryLayerWorkflow.state.station2.param.xz - xt)) /
+               boundaryLayerWorkflow.state.station1.param.tz;
   } else if (wake) {
     const double cst =
-        0.03 * (blData2.param.xz - blData1.param.xz) / blData1.param.tz;
+        0.03 * (boundaryLayerWorkflow.state.station2.param.xz - boundaryLayerWorkflow.state.station1.param.xz) / boundaryLayerWorkflow.state.station1.param.tz;
     auto euler = [](double hk2, double hk1, double cst) {
       return hk2 - (hk2 + cst * pow(hk2 - 1, 3) - hk1) /
                        (1 + 3 * cst * pow(hk2 - 1, 2));
     };
-    blData2.hkz.scalar = blData1.hkz.scalar;
+    boundaryLayerWorkflow.state.station2.hkz.scalar = boundaryLayerWorkflow.state.station1.hkz.scalar;
     for (int i = 0; i < 3; i++) {
-      blData2.hkz.scalar = euler(blData2.hkz.scalar, blData1.hkz.scalar, cst);
+      boundaryLayerWorkflow.state.station2.hkz.scalar = euler(boundaryLayerWorkflow.state.station2.hkz.scalar, boundaryLayerWorkflow.state.station1.hkz.scalar, cst);
     }
-    return blData2.hkz.scalar;
+    return boundaryLayerWorkflow.state.station2.hkz.scalar;
   } else {
-    return blData1.hkz.scalar -
-           0.15 * (blData2.param.xz - blData1.param.xz) / blData1.param.tz;
+    return boundaryLayerWorkflow.state.station1.hkz.scalar -
+           0.15 * (boundaryLayerWorkflow.state.station2.param.xz - boundaryLayerWorkflow.state.station1.param.xz) / boundaryLayerWorkflow.state.station1.param.tz;
   }
 }
 
@@ -365,14 +365,14 @@ bool XFoil::mrchue() {
         //-------- check for transition and set appropriate flags and things
         if ((!simi) && (!turb)) {
           trchek();
-          ami = blData2.param.amplz;
+          ami = boundaryLayerWorkflow.state.station2.param.amplz;
 
           //--------- fixed bug   md 7 jun 99
           if (tran) {
             boundaryLayerWorkflow.lattice.transitionIndex.get(is) = ibl;
             if (cti <= 0.0) {
               cti = 0.03;
-              blData2.param.sz = cti;
+              boundaryLayerWorkflow.state.station2.param.sz = cti;
             }
           } else
             boundaryLayerWorkflow.lattice.transitionIndex.get(is) = ibl + 2;
@@ -459,10 +459,10 @@ bool XFoil::mrchue() {
         } else {
           //-------- inverse mode (force hk to prescribed value htarg)
           blc.a2(3, 0) = 0.0;
-          blc.a2(3, 1) = blData2.hkz.t();
-          blc.a2(3, 2) = blData2.hkz.d();
-          blc.a2(3, 3) = blData2.hkz.u();
-          blc.rhs[3] = htarg - blData2.hkz.scalar;
+          blc.a2(3, 1) = boundaryLayerWorkflow.state.station2.hkz.t();
+          blc.a2(3, 2) = boundaryLayerWorkflow.state.station2.hkz.d();
+          blc.a2(3, 3) = boundaryLayerWorkflow.state.station2.hkz.u();
+          blc.rhs[3] = htarg - boundaryLayerWorkflow.state.station2.hkz.scalar;
           blc.rhs = blc.a2.block(0, 0, 4, 4).fullPivLu().solve(blc.rhs);
 
           dmax = std::max(fabs(blc.rhs[1] / thi), fabs(blc.rhs[2] / dsi));
@@ -553,7 +553,7 @@ bool XFoil::mrchue() {
         //------- check for transition and set appropriate flags and things
         if ((!simi) && (!turb)) {
           trchek();
-          ami = blData2.param.amplz;
+          ami = boundaryLayerWorkflow.state.station2.param.amplz;
           if (tran)
             boundaryLayerWorkflow.lattice.transitionIndex.get(is) = ibl;
           if (!tran)
@@ -561,11 +561,11 @@ bool XFoil::mrchue() {
         }
         //------- set all other extrapolated values for current station
         if (ibl < boundaryLayerWorkflow.lattice.transitionIndex.get(is))
-          blData2 = blvar(blData2, FlowRegimeEnum::Laminar);
+          boundaryLayerWorkflow.state.station2 = blvar(boundaryLayerWorkflow.state.station2, FlowRegimeEnum::Laminar);
         if (ibl >= boundaryLayerWorkflow.lattice.transitionIndex.get(is))
-          blData2 = blvar(blData2, FlowRegimeEnum::Turbulent);
+          boundaryLayerWorkflow.state.station2 = blvar(boundaryLayerWorkflow.state.station2, FlowRegimeEnum::Turbulent);
         if (wake)
-          blData2 = blvar(blData2, FlowRegimeEnum::Wake);
+          boundaryLayerWorkflow.state.station2 = blvar(boundaryLayerWorkflow.state.station2, FlowRegimeEnum::Wake);
         if (ibl < boundaryLayerWorkflow.lattice.transitionIndex.get(is))
           blmid(boundaryLayerWorkflow.state, FlowRegimeEnum::Laminar);
         if (ibl >= boundaryLayerWorkflow.lattice.transitionIndex.get(is))
@@ -582,7 +582,7 @@ bool XFoil::mrchue() {
       boundaryLayerWorkflow.lattice.dstr.get(is)[ibl] = dsi;
       boundaryLayerWorkflow.lattice.uedg.get(is)[ibl] = uei;
       boundaryLayerWorkflow.lattice.mass.get(is)[ibl] = dsi * uei;
-      boundaryLayerWorkflow.lattice.ctq.get(is)[ibl] = blData2.cqz.scalar;
+      boundaryLayerWorkflow.lattice.ctq.get(is)[ibl] = boundaryLayerWorkflow.state.station2.cqz.scalar;
 
       //------ set "1" variables to "2" variables for next streamwise station
       {
@@ -851,14 +851,14 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
       //---- check for transition and set output.tran, xt, etc. if found
       if (output.tran) {
         trchek();
-        ami = blData2.param.amplz;
+        ami = boundaryLayerWorkflow.state.station2.param.amplz;
       }
 
       if (ibl == output.itran.get(is) && !output.tran) {
         // TRACE("setbl: xtr???  n1=%d n2=%d: \n", ampl1, ampl2);
 
-        ss << "setbl: xtr???  n1=" << blData1.param.amplz
-           << " n2=" << blData2.param.amplz << ":\n";
+        ss << "setbl: xtr???  n1=" << boundaryLayerWorkflow.state.station1.param.amplz
+           << " n2=" << boundaryLayerWorkflow.state.station2.param.amplz << ":\n";
         writeString(ss.str());
         ss.str("");
       }
@@ -919,7 +919,7 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
 
       //---- save wall shear and equil. max shear coefficient for plotting
       // output
-      output.ctq.get(is)[ibl] = blData2.cqz.scalar;
+      output.ctq.get(is)[ibl] = boundaryLayerWorkflow.state.station2.cqz.scalar;
 
       //---- set xi sensitivities wrt le ue changes
       if (is == 1) {
@@ -1043,7 +1043,7 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
 
         output.turb = true;
         output.wake = true;
-        blData2 = blvar(blData2, FlowRegimeEnum::Wake);
+        boundaryLayerWorkflow.state.station2 = blvar(boundaryLayerWorkflow.state.station2, FlowRegimeEnum::Wake);
         blmid(boundaryLayerWorkflow.state, FlowRegimeEnum::Wake);
       }
       u1_m = u2_m;
@@ -1113,20 +1113,20 @@ bool XFoil::trchek() {
 
   //---- calculate average amplification rate ax over x1..x2 interval
   BoundaryLayerUtil::AxResult ax_result =
-      BoundaryLayerUtil::axset(blData1.hkz.scalar, blData1.param.tz, blData1.rtz.scalar,
-            blData1.param.amplz, blData2.hkz.scalar, blData2.param.tz,
-            blData2.rtz.scalar, blData2.param.amplz, amcrit);
+      BoundaryLayerUtil::axset(boundaryLayerWorkflow.state.station1.hkz.scalar, boundaryLayerWorkflow.state.station1.param.tz, boundaryLayerWorkflow.state.station1.rtz.scalar,
+            boundaryLayerWorkflow.state.station1.param.amplz, boundaryLayerWorkflow.state.station2.hkz.scalar, boundaryLayerWorkflow.state.station2.param.tz,
+            boundaryLayerWorkflow.state.station2.rtz.scalar, boundaryLayerWorkflow.state.station2.param.amplz, amcrit);
 
   //---- set initial guess for iterate n2 (ampl2) at x2
-  blData2.param.amplz = blData1.param.amplz +
-                        ax_result.ax * (blData2.param.xz - blData1.param.xz);
+  boundaryLayerWorkflow.state.station2.param.amplz = boundaryLayerWorkflow.state.station1.param.amplz +
+                        ax_result.ax * (boundaryLayerWorkflow.state.station2.param.xz - boundaryLayerWorkflow.state.station1.param.xz);
   //---- solve implicit system for amplification ampl2
   auto iterateAmplification = [&]() -> bool {
     for (int itam = 0; itam < 30; itam++) {
       //---- define weighting factors wf1,wf2 for defining "t" quantities
-      if (blData2.param.amplz <= amcrit) {
+      if (boundaryLayerWorkflow.state.station2.param.amplz <= amcrit) {
         //------ there is no transition yet,  "t" is the same as "2"
-        amplt = blData2.param.amplz;
+        amplt = boundaryLayerWorkflow.state.station2.param.amplz;
         amplt_a2 = 1.0;
         sfa = 1.0;
         sfa_a1 = 0.0;
@@ -1135,18 +1135,18 @@ bool XFoil::trchek() {
         //------ there is transition in x1..x2, "t" is set from n1, n2
         amplt = amcrit;
         amplt_a2 = 0.0;
-        sfa = (amplt - blData1.param.amplz) /
-              (blData2.param.amplz - blData1.param.amplz);
-        sfa_a1 = (sfa - 1.0) / (blData2.param.amplz - blData1.param.amplz);
-        sfa_a2 = (-sfa) / (blData2.param.amplz - blData1.param.amplz);
+        sfa = (amplt - boundaryLayerWorkflow.state.station1.param.amplz) /
+              (boundaryLayerWorkflow.state.station2.param.amplz - boundaryLayerWorkflow.state.station1.param.amplz);
+        sfa_a1 = (sfa - 1.0) / (boundaryLayerWorkflow.state.station2.param.amplz - boundaryLayerWorkflow.state.station1.param.amplz);
+        sfa_a2 = (-sfa) / (boundaryLayerWorkflow.state.station2.param.amplz - boundaryLayerWorkflow.state.station1.param.amplz);
       }
 
-      if (xiforc < blData2.param.xz) {
-        sfx = (xiforc - blData1.param.xz) /
-              (blData2.param.xz - blData1.param.xz);
-        sfx_x1 = (sfx - 1.0) / (blData2.param.xz - blData1.param.xz);
-        sfx_x2 = (-sfx) / (blData2.param.xz - blData1.param.xz);
-        sfx_xf = 1.0 / (blData2.param.xz - blData1.param.xz);
+      if (xiforc < boundaryLayerWorkflow.state.station2.param.xz) {
+        sfx = (xiforc - boundaryLayerWorkflow.state.station1.param.xz) /
+              (boundaryLayerWorkflow.state.station2.param.xz - boundaryLayerWorkflow.state.station1.param.xz);
+        sfx_x1 = (sfx - 1.0) / (boundaryLayerWorkflow.state.station2.param.xz - boundaryLayerWorkflow.state.station1.param.xz);
+        sfx_x2 = (-sfx) / (boundaryLayerWorkflow.state.station2.param.xz - boundaryLayerWorkflow.state.station1.param.xz);
+        sfx_xf = 1.0 / (boundaryLayerWorkflow.state.station2.param.xz - boundaryLayerWorkflow.state.station1.param.xz);
       } else {
         sfx = 1.0;
         sfx_x1 = 0.0;
@@ -1172,38 +1172,38 @@ bool XFoil::trchek() {
       }
 
       //---- interpolate bl variables to xt
-      xt = blData1.param.xz * (1 - wf) + blData2.param.xz * wf;
-      tt = blData1.param.tz * (1 - wf) + blData2.param.tz * wf;
-      dt = blData1.param.dz * (1 - wf) + blData2.param.dz * wf;
-      ut = blData1.param.uz * (1 - wf) + blData2.param.uz * wf;
+      xt = boundaryLayerWorkflow.state.station1.param.xz * (1 - wf) + boundaryLayerWorkflow.state.station2.param.xz * wf;
+      tt = boundaryLayerWorkflow.state.station1.param.tz * (1 - wf) + boundaryLayerWorkflow.state.station2.param.tz * wf;
+      dt = boundaryLayerWorkflow.state.station1.param.dz * (1 - wf) + boundaryLayerWorkflow.state.station2.param.dz * wf;
+      ut = boundaryLayerWorkflow.state.station1.param.uz * (1 - wf) + boundaryLayerWorkflow.state.station2.param.uz * wf;
 
-      xt_a2 = (blData2.param.xz - blData1.param.xz) * wf_a2;
-      tt_a2 = (blData2.param.tz - blData1.param.tz) * wf_a2;
-      dt_a2 = (blData2.param.dz - blData1.param.dz) * wf_a2;
-      ut_a2 = (blData2.param.uz - blData1.param.uz) * wf_a2;
+      xt_a2 = (boundaryLayerWorkflow.state.station2.param.xz - boundaryLayerWorkflow.state.station1.param.xz) * wf_a2;
+      tt_a2 = (boundaryLayerWorkflow.state.station2.param.tz - boundaryLayerWorkflow.state.station1.param.tz) * wf_a2;
+      dt_a2 = (boundaryLayerWorkflow.state.station2.param.dz - boundaryLayerWorkflow.state.station1.param.dz) * wf_a2;
+      ut_a2 = (boundaryLayerWorkflow.state.station2.param.uz - boundaryLayerWorkflow.state.station1.param.uz) * wf_a2;
 
       //---- temporarily set "2" variables from "t" for blkin
-      blData2.param.xz = xt;
-      blData2.param.tz = tt;
-      blData2.param.dz = dt;
-      blData2.param.uz = ut;
+      boundaryLayerWorkflow.state.station2.param.xz = xt;
+      boundaryLayerWorkflow.state.station2.param.tz = tt;
+      boundaryLayerWorkflow.state.station2.param.dz = dt;
+      boundaryLayerWorkflow.state.station2.param.uz = ut;
 
       //---- calculate laminar secondary "t" variables hkt, rtt
       blkin(boundaryLayerWorkflow.state);
 
-      blData::blVector hkt = blData2.hkz;
-      blData::blVector rtt = blData2.rtz;
+      blData::blVector hkt = boundaryLayerWorkflow.state.station2.hkz;
+      blData::blVector rtt = boundaryLayerWorkflow.state.station2.rtz;
 
       //---- restore clobbered "2" variables, except for ampl2
-      amsave = blData2.param.amplz;
+      amsave = boundaryLayerWorkflow.state.station2.param.amplz;
 
       restoreblData(2);
 
-      blData2.param.amplz = amsave;
+      boundaryLayerWorkflow.state.station2.param.amplz = amsave;
 
       //---- calculate amplification rate ax over current x1-xt interval
-      ax_result = BoundaryLayerUtil::axset(blData1.hkz.scalar, blData1.param.tz,
-                        blData1.rtz.scalar, blData1.param.amplz, hkt.scalar, tt, rtt.scalar,
+      ax_result = BoundaryLayerUtil::axset(boundaryLayerWorkflow.state.station1.hkz.scalar, boundaryLayerWorkflow.state.station1.param.tz,
+                        boundaryLayerWorkflow.state.station1.rtz.scalar, boundaryLayerWorkflow.state.station1.param.amplz, hkt.scalar, tt, rtt.scalar,
                         amplt, amcrit);
 
       //---- punch out early if there is no amplification here
@@ -1221,17 +1221,17 @@ bool XFoil::trchek() {
           ax_result.ax_a2 * amplt_a2;
 
       //---- residual for implicit ampl2 definition (amplification equation)
-      res = blData2.param.amplz - blData1.param.amplz -
-            ax_result.ax * (blData2.param.xz - blData1.param.xz);
-      res_a2 = 1.0 - ax_result.ax_a2 * (blData2.param.xz - blData1.param.xz);
+      res = boundaryLayerWorkflow.state.station2.param.amplz - boundaryLayerWorkflow.state.station1.param.amplz -
+            ax_result.ax * (boundaryLayerWorkflow.state.station2.param.xz - boundaryLayerWorkflow.state.station1.param.xz);
+      res_a2 = 1.0 - ax_result.ax_a2 * (boundaryLayerWorkflow.state.station2.param.xz - boundaryLayerWorkflow.state.station1.param.xz);
 
       da2 = -res / res_a2;
 
       rlx = 1.0;
       dxt = xt_a2 * da2;
 
-      if (rlx * fabs(dxt / (blData2.param.xz - blData1.param.xz)) > 0.05) {
-        rlx = 0.05 * fabs((blData2.param.xz - blData1.param.xz) / dxt);
+      if (rlx * fabs(dxt / (boundaryLayerWorkflow.state.station2.param.xz - boundaryLayerWorkflow.state.station1.param.xz)) > 0.05) {
+        rlx = 0.05 * fabs((boundaryLayerWorkflow.state.station2.param.xz - boundaryLayerWorkflow.state.station1.param.xz) / dxt);
       }
 
       if (rlx * fabs(da2) > 1.0) {
@@ -1243,16 +1243,16 @@ bool XFoil::trchek() {
         return true;
       }
 
-      if ((blData2.param.amplz > amcrit &&
-           blData2.param.amplz + rlx * da2 < amcrit) ||
-          (blData2.param.amplz < amcrit &&
-           blData2.param.amplz + rlx * da2 > amcrit)) {
+      if ((boundaryLayerWorkflow.state.station2.param.amplz > amcrit &&
+           boundaryLayerWorkflow.state.station2.param.amplz + rlx * da2 < amcrit) ||
+          (boundaryLayerWorkflow.state.station2.param.amplz < amcrit &&
+           boundaryLayerWorkflow.state.station2.param.amplz + rlx * da2 > amcrit)) {
         //------ limited newton step so ampl2 doesn't step across amcrit either
         // way
-        blData2.param.amplz = amcrit;
+        boundaryLayerWorkflow.state.station2.param.amplz = amcrit;
       } else {
         //------ regular newton step
-        blData2.param.amplz = blData2.param.amplz + rlx * da2;
+        boundaryLayerWorkflow.state.station2.param.amplz = boundaryLayerWorkflow.state.station2.param.amplz + rlx * da2;
       }
     }
     return false;
@@ -1266,8 +1266,8 @@ bool XFoil::trchek() {
   }
 
   //---- test for free or forced transition
-  trfree = (blData2.param.amplz >= amcrit);
-  trforc = (xiforc > blData1.param.xz) && (xiforc <= blData2.param.xz);
+  trfree = (boundaryLayerWorkflow.state.station2.param.amplz >= amcrit);
+  trforc = (xiforc > boundaryLayerWorkflow.state.station1.param.xz) && (xiforc <= boundaryLayerWorkflow.state.station2.param.xz);
 
   //---- set transition interval flag
   tran = (trforc || trfree);
@@ -1312,37 +1312,37 @@ bool XFoil::trchek() {
   dt_d2 = wf;
   ut_u2 = wf;
 
-  xt_a1 = (blData2.param.xz - blData1.param.xz) * wf_a1;
-  tt_a1 = (blData2.param.tz - blData1.param.tz) * wf_a1;
-  dt_a1 = (blData2.param.dz - blData1.param.dz) * wf_a1;
-  ut_a1 = (blData2.param.uz - blData1.param.uz) * wf_a1;
+  xt_a1 = (boundaryLayerWorkflow.state.station2.param.xz - boundaryLayerWorkflow.state.station1.param.xz) * wf_a1;
+  tt_a1 = (boundaryLayerWorkflow.state.station2.param.tz - boundaryLayerWorkflow.state.station1.param.tz) * wf_a1;
+  dt_a1 = (boundaryLayerWorkflow.state.station2.param.dz - boundaryLayerWorkflow.state.station1.param.dz) * wf_a1;
+  ut_a1 = (boundaryLayerWorkflow.state.station2.param.uz - boundaryLayerWorkflow.state.station1.param.uz) * wf_a1;
 
-  xt_x1 += (blData2.param.xz - blData1.param.xz) * wf_x1;
-  tt_x1 = (blData2.param.tz - blData1.param.tz) * wf_x1;
-  dt_x1 = (blData2.param.dz - blData1.param.dz) * wf_x1;
-  ut_x1 = (blData2.param.uz - blData1.param.uz) * wf_x1;
+  xt_x1 += (boundaryLayerWorkflow.state.station2.param.xz - boundaryLayerWorkflow.state.station1.param.xz) * wf_x1;
+  tt_x1 = (boundaryLayerWorkflow.state.station2.param.tz - boundaryLayerWorkflow.state.station1.param.tz) * wf_x1;
+  dt_x1 = (boundaryLayerWorkflow.state.station2.param.dz - boundaryLayerWorkflow.state.station1.param.dz) * wf_x1;
+  ut_x1 = (boundaryLayerWorkflow.state.station2.param.uz - boundaryLayerWorkflow.state.station1.param.uz) * wf_x1;
 
-  xt_x2 += (blData2.param.xz - blData1.param.xz) * wf_x2;
-  tt_x2 = (blData2.param.tz - blData1.param.tz) * wf_x2;
-  dt_x2 = (blData2.param.dz - blData1.param.dz) * wf_x2;
-  ut_x2 = (blData2.param.uz - blData1.param.uz) * wf_x2;
+  xt_x2 += (boundaryLayerWorkflow.state.station2.param.xz - boundaryLayerWorkflow.state.station1.param.xz) * wf_x2;
+  tt_x2 = (boundaryLayerWorkflow.state.station2.param.tz - boundaryLayerWorkflow.state.station1.param.tz) * wf_x2;
+  dt_x2 = (boundaryLayerWorkflow.state.station2.param.dz - boundaryLayerWorkflow.state.station1.param.dz) * wf_x2;
+  ut_x2 = (boundaryLayerWorkflow.state.station2.param.uz - boundaryLayerWorkflow.state.station1.param.uz) * wf_x2;
 
-  xt_xf = (blData2.param.xz - blData1.param.xz) * wf_xf;
+  xt_xf = (boundaryLayerWorkflow.state.station2.param.xz - boundaryLayerWorkflow.state.station1.param.xz) * wf_xf;
 
   //---- at this point, ax = ax( hk1, t1, rt1, a1, hkt, tt, rtt, at )
-  blData::blVector hkt = blData2.hkz;
-  blData::blVector rtt = blData2.rtz;
+  blData::blVector hkt = boundaryLayerWorkflow.state.station2.hkz;
+  blData::blVector rtt = boundaryLayerWorkflow.state.station2.rtz;
 
   //---- set sensitivities of ax( t1 d1 u1 a1 t2 d2 u2 a2 ms re )
-  double ax_t1 = ax_result.ax_hk1 * blData1.hkz.t() + ax_result.ax_t1 +
-                 ax_result.ax_rt1 * blData1.rtz.t() +
+  double ax_t1 = ax_result.ax_hk1 * boundaryLayerWorkflow.state.station1.hkz.t() + ax_result.ax_t1 +
+                 ax_result.ax_rt1 * boundaryLayerWorkflow.state.station1.rtz.t() +
                  (ax_result.ax_hk2 * hkt.t() + ax_result.ax_t2 +
                   ax_result.ax_rt2 * rtt.t()) *
                      tt_t1;
   double ax_d1 =
-      ax_result.ax_hk1 * blData1.hkz.d() + (ax_result.ax_hk2 * hkt.d()) * dt_d1;
+      ax_result.ax_hk1 * boundaryLayerWorkflow.state.station1.hkz.d() + (ax_result.ax_hk2 * hkt.d()) * dt_d1;
   double ax_u1 =
-      ax_result.ax_hk1 * blData1.hkz.u() + ax_result.ax_rt1 * blData1.rtz.u() +
+      ax_result.ax_hk1 * boundaryLayerWorkflow.state.station1.hkz.u() + ax_result.ax_rt1 * boundaryLayerWorkflow.state.station1.rtz.u() +
       (ax_result.ax_hk2 * hkt.u() + ax_result.ax_rt2 * rtt.u()) * ut_u1;
   double ax_a1 =
       ax_result.ax_a1 +
@@ -1379,13 +1379,13 @@ bool XFoil::trchek() {
       (ax_result.ax_hk2 * hkt.u() + ax_result.ax_rt2 * rtt.u()) * ut_x2;
 
   double ax_ms = ax_result.ax_hk2 * hkt.ms() + ax_result.ax_rt2 * rtt.ms() +
-                 ax_result.ax_hk1 * blData1.hkz.ms() +
-                 ax_result.ax_rt1 * blData1.rtz.ms();
+                 ax_result.ax_hk1 * boundaryLayerWorkflow.state.station1.hkz.ms() +
+                 ax_result.ax_rt1 * boundaryLayerWorkflow.state.station1.rtz.ms();
   double ax_re =
-      ax_result.ax_rt2 * rtt.re() + ax_result.ax_rt1 * blData1.rtz.re();
+      ax_result.ax_rt2 * rtt.re() + ax_result.ax_rt1 * boundaryLayerWorkflow.state.station1.rtz.re();
 
   //---- set sensitivities of residual res
-  z_ax = -(blData2.param.xz - blData1.param.xz);
+  z_ax = -(boundaryLayerWorkflow.state.station2.param.xz - boundaryLayerWorkflow.state.station1.param.xz);
 
   z_a1 = z_ax * ax_a1 - 1.0;
   z_t1 = z_ax * ax_t1;
@@ -1445,13 +1445,13 @@ bool XFoil::trdif() {
   saveblData(2);
 
   //---- weighting factors for linear interpolation to transition point
-  double wf2 = (xt - blData1.param.xz) / (blData2.param.xz - blData1.param.xz);
-  double wf2_xt = 1.0 / (blData2.param.xz - blData1.param.xz);
+  double wf2 = (xt - boundaryLayerWorkflow.state.station1.param.xz) / (boundaryLayerWorkflow.state.station2.param.xz - boundaryLayerWorkflow.state.station1.param.xz);
+  double wf2_xt = 1.0 / (boundaryLayerWorkflow.state.station2.param.xz - boundaryLayerWorkflow.state.station1.param.xz);
 
   double wf2_a1 = wf2_xt * xt_a1;
   double wf2_x1 =
-      wf2_xt * xt_x1 + (wf2 - 1.0) / (blData2.param.xz - blData1.param.xz);
-  double wf2_x2 = wf2_xt * xt_x2 - wf2 / (blData2.param.xz - blData1.param.xz);
+      wf2_xt * xt_x1 + (wf2 - 1.0) / (boundaryLayerWorkflow.state.station2.param.xz - boundaryLayerWorkflow.state.station1.param.xz);
+  double wf2_x2 = wf2_xt * xt_x2 - wf2 / (boundaryLayerWorkflow.state.station2.param.xz - boundaryLayerWorkflow.state.station1.param.xz);
   double wf2_t1 = wf2_xt * xt_t1;
   double wf2_t2 = wf2_xt * xt_t2;
   double wf2_d1 = wf2_xt * xt_d1;
@@ -1477,60 +1477,60 @@ bool XFoil::trdif() {
   double wf1_xf = -wf2_xf;
 
   //-----interpolate primary variables to transition point
-  tt = blData1.param.tz * wf1 + blData2.param.tz * wf2;
-  tt_a1 = blData1.param.tz * wf1_a1 + blData2.param.tz * wf2_a1;
-  tt_x1 = blData1.param.tz * wf1_x1 + blData2.param.tz * wf2_x1;
-  tt_x2 = blData1.param.tz * wf1_x2 + blData2.param.tz * wf2_x2;
-  tt_t1 = blData1.param.tz * wf1_t1 + blData2.param.tz * wf2_t1 + wf1;
-  tt_t2 = blData1.param.tz * wf1_t2 + blData2.param.tz * wf2_t2 + wf2;
-  tt_d1 = blData1.param.tz * wf1_d1 + blData2.param.tz * wf2_d1;
-  tt_d2 = blData1.param.tz * wf1_d2 + blData2.param.tz * wf2_d2;
-  tt_u1 = blData1.param.tz * wf1_u1 + blData2.param.tz * wf2_u1;
-  tt_u2 = blData1.param.tz * wf1_u2 + blData2.param.tz * wf2_u2;
-  tt_ms = blData1.param.tz * wf1_ms + blData2.param.tz * wf2_ms;
-  tt_re = blData1.param.tz * wf1_re + blData2.param.tz * wf2_re;
-  tt_xf = blData1.param.tz * wf1_xf + blData2.param.tz * wf2_xf;
+  tt = boundaryLayerWorkflow.state.station1.param.tz * wf1 + boundaryLayerWorkflow.state.station2.param.tz * wf2;
+  tt_a1 = boundaryLayerWorkflow.state.station1.param.tz * wf1_a1 + boundaryLayerWorkflow.state.station2.param.tz * wf2_a1;
+  tt_x1 = boundaryLayerWorkflow.state.station1.param.tz * wf1_x1 + boundaryLayerWorkflow.state.station2.param.tz * wf2_x1;
+  tt_x2 = boundaryLayerWorkflow.state.station1.param.tz * wf1_x2 + boundaryLayerWorkflow.state.station2.param.tz * wf2_x2;
+  tt_t1 = boundaryLayerWorkflow.state.station1.param.tz * wf1_t1 + boundaryLayerWorkflow.state.station2.param.tz * wf2_t1 + wf1;
+  tt_t2 = boundaryLayerWorkflow.state.station1.param.tz * wf1_t2 + boundaryLayerWorkflow.state.station2.param.tz * wf2_t2 + wf2;
+  tt_d1 = boundaryLayerWorkflow.state.station1.param.tz * wf1_d1 + boundaryLayerWorkflow.state.station2.param.tz * wf2_d1;
+  tt_d2 = boundaryLayerWorkflow.state.station1.param.tz * wf1_d2 + boundaryLayerWorkflow.state.station2.param.tz * wf2_d2;
+  tt_u1 = boundaryLayerWorkflow.state.station1.param.tz * wf1_u1 + boundaryLayerWorkflow.state.station2.param.tz * wf2_u1;
+  tt_u2 = boundaryLayerWorkflow.state.station1.param.tz * wf1_u2 + boundaryLayerWorkflow.state.station2.param.tz * wf2_u2;
+  tt_ms = boundaryLayerWorkflow.state.station1.param.tz * wf1_ms + boundaryLayerWorkflow.state.station2.param.tz * wf2_ms;
+  tt_re = boundaryLayerWorkflow.state.station1.param.tz * wf1_re + boundaryLayerWorkflow.state.station2.param.tz * wf2_re;
+  tt_xf = boundaryLayerWorkflow.state.station1.param.tz * wf1_xf + boundaryLayerWorkflow.state.station2.param.tz * wf2_xf;
 
-  dt = blData1.param.dz * wf1 + blData2.param.dz * wf2;
-  dt_a1 = blData1.param.dz * wf1_a1 + blData2.param.dz * wf2_a1;
-  dt_x1 = blData1.param.dz * wf1_x1 + blData2.param.dz * wf2_x1;
-  dt_x2 = blData1.param.dz * wf1_x2 + blData2.param.dz * wf2_x2;
-  dt_t1 = blData1.param.dz * wf1_t1 + blData2.param.dz * wf2_t1;
-  dt_t2 = blData1.param.dz * wf1_t2 + blData2.param.dz * wf2_t2;
-  dt_d1 = blData1.param.dz * wf1_d1 + blData2.param.dz * wf2_d1 + wf1;
-  dt_d2 = blData1.param.dz * wf1_d2 + blData2.param.dz * wf2_d2 + wf2;
-  dt_u1 = blData1.param.dz * wf1_u1 + blData2.param.dz * wf2_u1;
-  dt_u2 = blData1.param.dz * wf1_u2 + blData2.param.dz * wf2_u2;
-  dt_ms = blData1.param.dz * wf1_ms + blData2.param.dz * wf2_ms;
-  dt_re = blData1.param.dz * wf1_re + blData2.param.dz * wf2_re;
-  dt_xf = blData1.param.dz * wf1_xf + blData2.param.dz * wf2_xf;
+  dt = boundaryLayerWorkflow.state.station1.param.dz * wf1 + boundaryLayerWorkflow.state.station2.param.dz * wf2;
+  dt_a1 = boundaryLayerWorkflow.state.station1.param.dz * wf1_a1 + boundaryLayerWorkflow.state.station2.param.dz * wf2_a1;
+  dt_x1 = boundaryLayerWorkflow.state.station1.param.dz * wf1_x1 + boundaryLayerWorkflow.state.station2.param.dz * wf2_x1;
+  dt_x2 = boundaryLayerWorkflow.state.station1.param.dz * wf1_x2 + boundaryLayerWorkflow.state.station2.param.dz * wf2_x2;
+  dt_t1 = boundaryLayerWorkflow.state.station1.param.dz * wf1_t1 + boundaryLayerWorkflow.state.station2.param.dz * wf2_t1;
+  dt_t2 = boundaryLayerWorkflow.state.station1.param.dz * wf1_t2 + boundaryLayerWorkflow.state.station2.param.dz * wf2_t2;
+  dt_d1 = boundaryLayerWorkflow.state.station1.param.dz * wf1_d1 + boundaryLayerWorkflow.state.station2.param.dz * wf2_d1 + wf1;
+  dt_d2 = boundaryLayerWorkflow.state.station1.param.dz * wf1_d2 + boundaryLayerWorkflow.state.station2.param.dz * wf2_d2 + wf2;
+  dt_u1 = boundaryLayerWorkflow.state.station1.param.dz * wf1_u1 + boundaryLayerWorkflow.state.station2.param.dz * wf2_u1;
+  dt_u2 = boundaryLayerWorkflow.state.station1.param.dz * wf1_u2 + boundaryLayerWorkflow.state.station2.param.dz * wf2_u2;
+  dt_ms = boundaryLayerWorkflow.state.station1.param.dz * wf1_ms + boundaryLayerWorkflow.state.station2.param.dz * wf2_ms;
+  dt_re = boundaryLayerWorkflow.state.station1.param.dz * wf1_re + boundaryLayerWorkflow.state.station2.param.dz * wf2_re;
+  dt_xf = boundaryLayerWorkflow.state.station1.param.dz * wf1_xf + boundaryLayerWorkflow.state.station2.param.dz * wf2_xf;
 
-  ut = blData1.param.uz * wf1 + blData2.param.uz * wf2;
-  ut_a1 = blData1.param.uz * wf1_a1 + blData2.param.uz * wf2_a1;
-  ut_x1 = blData1.param.uz * wf1_x1 + blData2.param.uz * wf2_x1;
-  ut_x2 = blData1.param.uz * wf1_x2 + blData2.param.uz * wf2_x2;
-  ut_t1 = blData1.param.uz * wf1_t1 + blData2.param.uz * wf2_t1;
-  ut_t2 = blData1.param.uz * wf1_t2 + blData2.param.uz * wf2_t2;
-  ut_d1 = blData1.param.uz * wf1_d1 + blData2.param.uz * wf2_d1;
-  ut_d2 = blData1.param.uz * wf1_d2 + blData2.param.uz * wf2_d2;
-  ut_u1 = blData1.param.uz * wf1_u1 + blData2.param.uz * wf2_u1 + wf1;
-  ut_u2 = blData1.param.uz * wf1_u2 + blData2.param.uz * wf2_u2 + wf2;
-  ut_ms = blData1.param.uz * wf1_ms + blData2.param.uz * wf2_ms;
-  ut_re = blData1.param.uz * wf1_re + blData2.param.uz * wf2_re;
-  ut_xf = blData1.param.uz * wf1_xf + blData2.param.uz * wf2_xf;
+  ut = boundaryLayerWorkflow.state.station1.param.uz * wf1 + boundaryLayerWorkflow.state.station2.param.uz * wf2;
+  ut_a1 = boundaryLayerWorkflow.state.station1.param.uz * wf1_a1 + boundaryLayerWorkflow.state.station2.param.uz * wf2_a1;
+  ut_x1 = boundaryLayerWorkflow.state.station1.param.uz * wf1_x1 + boundaryLayerWorkflow.state.station2.param.uz * wf2_x1;
+  ut_x2 = boundaryLayerWorkflow.state.station1.param.uz * wf1_x2 + boundaryLayerWorkflow.state.station2.param.uz * wf2_x2;
+  ut_t1 = boundaryLayerWorkflow.state.station1.param.uz * wf1_t1 + boundaryLayerWorkflow.state.station2.param.uz * wf2_t1;
+  ut_t2 = boundaryLayerWorkflow.state.station1.param.uz * wf1_t2 + boundaryLayerWorkflow.state.station2.param.uz * wf2_t2;
+  ut_d1 = boundaryLayerWorkflow.state.station1.param.uz * wf1_d1 + boundaryLayerWorkflow.state.station2.param.uz * wf2_d1;
+  ut_d2 = boundaryLayerWorkflow.state.station1.param.uz * wf1_d2 + boundaryLayerWorkflow.state.station2.param.uz * wf2_d2;
+  ut_u1 = boundaryLayerWorkflow.state.station1.param.uz * wf1_u1 + boundaryLayerWorkflow.state.station2.param.uz * wf2_u1 + wf1;
+  ut_u2 = boundaryLayerWorkflow.state.station1.param.uz * wf1_u2 + boundaryLayerWorkflow.state.station2.param.uz * wf2_u2 + wf2;
+  ut_ms = boundaryLayerWorkflow.state.station1.param.uz * wf1_ms + boundaryLayerWorkflow.state.station2.param.uz * wf2_ms;
+  ut_re = boundaryLayerWorkflow.state.station1.param.uz * wf1_re + boundaryLayerWorkflow.state.station2.param.uz * wf2_re;
+  ut_xf = boundaryLayerWorkflow.state.station1.param.uz * wf1_xf + boundaryLayerWorkflow.state.station2.param.uz * wf2_xf;
 
   //---- set primary "t" variables at xt  (really placed into "2" variables)
-  blData2.param.xz = xt;
-  blData2.param.tz = tt;
-  blData2.param.dz = dt;
-  blData2.param.uz = ut;
+  boundaryLayerWorkflow.state.station2.param.xz = xt;
+  boundaryLayerWorkflow.state.station2.param.tz = tt;
+  boundaryLayerWorkflow.state.station2.param.dz = dt;
+  boundaryLayerWorkflow.state.station2.param.uz = ut;
 
-  blData2.param.amplz = amcrit;
-  blData2.param.sz = 0.0;
+  boundaryLayerWorkflow.state.station2.param.amplz = amcrit;
+  boundaryLayerWorkflow.state.station2.param.sz = 0.0;
 
   //---- calculate laminar secondary "t" variables
   blkin(boundaryLayerWorkflow.state);
-  blData2 = blvar(blData2, FlowRegimeEnum::Laminar);
+  boundaryLayerWorkflow.state.station2 = blvar(boundaryLayerWorkflow.state.station2, FlowRegimeEnum::Laminar);
 
   //---- calculate x1-xt midpoint cfm value
   SkinFrictionCoefficients laminarSkinFriction =
@@ -1580,24 +1580,24 @@ bool XFoil::trdif() {
   //**** second, set up turbulent part between xt and x2  ****
 
   //---- calculate equilibrium shear coefficient cqt at transition point
-  blData2 = blvar(blData2, FlowRegimeEnum::Turbulent);
+  boundaryLayerWorkflow.state.station2 = blvar(boundaryLayerWorkflow.state.station2, FlowRegimeEnum::Turbulent);
 
   //---- set initial shear coefficient value st at transition point
   //-    ( note that cq2, cq2_t2, etc. are really "cqt", "cqt_tt", etc.)
 
-  ctr = 1.8 * exp(-3.3 / (blData2.hkz.scalar - 1.0));
-  ctr_hk2 = ctr * 3.3 / (blData2.hkz.scalar - 1.0) / (blData2.hkz.scalar - 1.0);
+  ctr = 1.8 * exp(-3.3 / (boundaryLayerWorkflow.state.station2.hkz.scalar - 1.0));
+  ctr_hk2 = ctr * 3.3 / (boundaryLayerWorkflow.state.station2.hkz.scalar - 1.0) / (boundaryLayerWorkflow.state.station2.hkz.scalar - 1.0);
 
-  st = ctr * blData2.cqz.scalar;
+  st = ctr * boundaryLayerWorkflow.state.station2.cqz.scalar;
   st_tt =
-      ctr * blData2.cqz.t() + blData2.cqz.scalar * ctr_hk2 * blData2.hkz.t();
+      ctr * boundaryLayerWorkflow.state.station2.cqz.t() + boundaryLayerWorkflow.state.station2.cqz.scalar * ctr_hk2 * boundaryLayerWorkflow.state.station2.hkz.t();
   st_dt =
-      ctr * blData2.cqz.d() + blData2.cqz.scalar * ctr_hk2 * blData2.hkz.d();
+      ctr * boundaryLayerWorkflow.state.station2.cqz.d() + boundaryLayerWorkflow.state.station2.cqz.scalar * ctr_hk2 * boundaryLayerWorkflow.state.station2.hkz.d();
   st_ut =
-      ctr * blData2.cqz.u() + blData2.cqz.scalar * ctr_hk2 * blData2.hkz.u();
+      ctr * boundaryLayerWorkflow.state.station2.cqz.u() + boundaryLayerWorkflow.state.station2.cqz.scalar * ctr_hk2 * boundaryLayerWorkflow.state.station2.hkz.u();
   st_ms =
-      ctr * blData2.cqz.ms() + blData2.cqz.scalar * ctr_hk2 * blData2.hkz.ms();
-  st_re = ctr * blData2.cqz.re();
+      ctr * boundaryLayerWorkflow.state.station2.cqz.ms() + boundaryLayerWorkflow.state.station2.cqz.scalar * ctr_hk2 * boundaryLayerWorkflow.state.station2.hkz.ms();
+  st_re = ctr * boundaryLayerWorkflow.state.station2.cqz.re();
 
   //---- calculate st sensitivities wrt the actual "1" and "2" variables
   st_a1 = st_tt * tt_a1 + st_dt * dt_a1 + st_ut * ut_a1;
@@ -1613,11 +1613,11 @@ bool XFoil::trdif() {
   st_re = st_tt * tt_re + st_dt * dt_re + st_ut * ut_re + st_re;
   st_xf = st_tt * tt_xf + st_dt * dt_xf + st_ut * ut_xf;
 
-  blData2.param.amplz = 0.0;
-  blData2.param.sz = st;
+  boundaryLayerWorkflow.state.station2.param.amplz = 0.0;
+  boundaryLayerWorkflow.state.station2.param.sz = st;
 
   //---- recalculate turbulent secondary "t" variables using proper cti
-  blData2 = blvar(blData2, FlowRegimeEnum::Turbulent);
+  boundaryLayerWorkflow.state.station2 = blvar(boundaryLayerWorkflow.state.station2, FlowRegimeEnum::Turbulent);
 
   boundaryLayerWorkflow.state.stepbl();
   restoreblData(2);

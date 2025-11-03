@@ -397,10 +397,6 @@ class XFoil {
 
   Foil foil;
   BoundaryLayerWorkflow boundaryLayerWorkflow;
-
-  blData& blData1;
-  blData& blData2;
-
   Vector2d cmref;
   double tklam; // karman-tsien parameter minf^2 / [1 + sqrt[1-minf^2]]^2 <- Prandtl-Glauert-Ackeret rule ?
   double tkl_msq;

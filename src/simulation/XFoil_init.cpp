@@ -223,9 +223,9 @@ double XFoil::getActualReynolds(double cls, ReynoldsType reynolds_type) {
 bool XFoil::restoreblData(int icom) {
   auto& cache = ensureInitState(this);
   if (icom == 1) {
-    blData1 = cache.blsav[icom];
+    boundaryLayerWorkflow.state.station1 = cache.blsav[icom];
   } else if (icom == 2) {
-    blData2 = cache.blsav[icom];
+    boundaryLayerWorkflow.state.station2 = cache.blsav[icom];
   }
   return true;
 }
@@ -233,9 +233,9 @@ bool XFoil::restoreblData(int icom) {
 bool XFoil::saveblData(int icom) {
   auto& cache = ensureInitState(this);
   if (icom == 1) {
-    cache.blsav[icom] = blData1;
+    cache.blsav[icom] = boundaryLayerWorkflow.state.station1;
   } else {
-    cache.blsav[icom] = blData2;
+    cache.blsav[icom] = boundaryLayerWorkflow.state.station2;
   }
   return true;
 }
