@@ -141,7 +141,7 @@ bool XFoil::blsolve() {
       vdel[ivp](k, 1) -= D[k][0] * col[0] + D[k][1] * col[1] + D[k][2] * col[2];
 
     if (iv == ivte1) {
-      int ivz = boundaryLayerLattice().stationToSystem.bottom[boundaryLayerLattice().trailingEdgeIndex.bottom];
+      int ivz = boundaryLayerWorkflow.lattice.stationToSystem.bottom[boundaryLayerWorkflow.lattice.trailingEdgeIndex.bottom];
       double Dz[3][2] = {{vz[0][0], vz[0][1]},
                          {vz[1][0], vz[1][1]},
                          {vz[2][0], vz[2][1]}};
@@ -208,7 +208,7 @@ bool XFoil::blsolve() {
     }
   };
 
-  int ivte1 = boundaryLayerLattice().stationToSystem.top[boundaryLayerLattice().trailingEdgeIndex.top];
+  int ivte1 = boundaryLayerWorkflow.lattice.stationToSystem.top[boundaryLayerWorkflow.lattice.trailingEdgeIndex.top];
   for (int iv = 1; iv <= nsys; iv++) {
     int ivp = iv + 1;
     eliminateVaBlock(iv, ivp);

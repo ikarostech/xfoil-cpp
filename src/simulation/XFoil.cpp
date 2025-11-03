@@ -76,7 +76,7 @@ XFoil::XFoil()
 
   // initialize transition parameters until user changes them
   acrit = 9.0;
-  auto& boundary_layer_lattice = boundaryLayerWorkflow.lattice();
+  auto& boundary_layer_lattice = boundaryLayerWorkflow.lattice;
   boundary_layer_lattice.transitionLocation.top = 1.0;
   boundary_layer_lattice.transitionLocation.bottom = 1.0;
 
@@ -94,14 +94,6 @@ XFoil::XFoil()
 XFoil::~XFoil() {
   ClearAerodynamicsState(*this);
   ClearInitState(*this);
-}
-
-BoundaryLayerLattice& XFoil::boundaryLayerLattice() {
-  return boundaryLayerWorkflow.lattice();
-}
-
-const BoundaryLayerLattice& XFoil::boundaryLayerLattice() const {
-  return boundaryLayerWorkflow.lattice();
 }
 
 double XFoil::VAccel() {

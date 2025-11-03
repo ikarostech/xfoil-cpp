@@ -48,14 +48,6 @@ class BoundaryLayerWorkflow {
   static bool tesys(XFoil& xfoil, double cte, double tte, double dte);
   static bool trchek(XFoil& xfoil);
 
-  BoundaryLayerWorkflow();
-
-  BoundaryLayerLattice& lattice();
-  const BoundaryLayerLattice& lattice() const;
-
-  static BoundaryLayerLattice& lattice(XFoil& xfoil);
-  static const BoundaryLayerLattice& lattice(const XFoil& xfoil);
-
- private:
-  BoundaryLayerLattice lattice_;
+ public:
+  BoundaryLayerLattice lattice;
 };

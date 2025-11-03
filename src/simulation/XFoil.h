@@ -405,9 +405,6 @@ class XFoil {
   BoundaryLayerState boundaryLayerState;
   BoundaryLayerWorkflow boundaryLayerWorkflow;
 
-  BoundaryLayerLattice& boundaryLayerLattice();
-  const BoundaryLayerLattice& boundaryLayerLattice() const;
-
   blData& blData1;
   blData& blData2;
 
