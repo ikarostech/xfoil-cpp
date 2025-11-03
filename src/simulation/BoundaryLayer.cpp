@@ -27,15 +27,15 @@ void BoundaryLayerWorkflow::updateSystemMatricesForStation(
         ctx.tte;
     tesys(xfoil, ctx.cte, ctx.tte, ctx.dte);
   } else {
-    xfoil.blsys(xfoil.boundaryLayerWorkflow.state, lattice);
+    xfoil.blsys(state, lattice);
   }
 }
 
 void BoundaryLayerWorkflow::initializeFirstIterationState(
     XFoil& xfoil, int side, int stationIndex, int previousTransition,
     BoundaryContext& ctx, double& ueref, double& hkref, double& ami) {
-  ueref = xfoil.boundaryLayerWorkflow.state.station2.param.uz;
-  hkref = xfoil.boundaryLayerWorkflow.state.station2.hkz.scalar;
+  ueref = state.station2.param.uz;
+  hkref = state.station2.hkz.scalar;
 
   const bool inLaminarWindow =
       stationIndex < lattice.transitionIndex.get(side) && stationIndex >= previousTransition;
@@ -73,7 +73,7 @@ void BoundaryLayerWorkflow::initializeFirstIterationState(
     }
     if (xfoil.tran || xfoil.turb) {
       ctx.cti = lattice.ctau.get(side)[stationIndex - 1];
-      xfoil.boundaryLayerWorkflow.state.station2.param.sz = ctx.cti;
+      state.station2.param.sz = ctx.cti;
     }
   }
 }
@@ -83,8 +83,8 @@ void BoundaryLayerWorkflow::configureSimilarityRow(XFoil& xfoil,
   xfoil.blc.a2(3, 0) = 0.0;
   xfoil.blc.a2(3, 1) = 0.0;
   xfoil.blc.a2(3, 2) = 0.0;
-  xfoil.blc.a2(3, 3) = xfoil.boundaryLayerWorkflow.state.station2.param.uz_uei;
-  xfoil.blc.rhs[3] = ueref - xfoil.boundaryLayerWorkflow.state.station2.param.uz;
+  xfoil.blc.a2(3, 3) = state.station2.param.uz_uei;
+  xfoil.blc.rhs[3] = ueref - state.station2.param.uz;
 }
 
 void BoundaryLayerWorkflow::configureViscousRow(XFoil& xfoil, double hkref,
@@ -93,9 +93,9 @@ void BoundaryLayerWorkflow::configureViscousRow(XFoil& xfoil, double hkref,
                                                 bool averageSensitivity,
                                                 double& sens, double& sennew) {
   xfoil.blc.a2(3, 0) = 0.0;
-  xfoil.blc.a2(3, 1) = xfoil.boundaryLayerWorkflow.state.station2.hkz.t();
-  xfoil.blc.a2(3, 2) = xfoil.boundaryLayerWorkflow.state.station2.hkz.d();
-  xfoil.blc.a2(3, 3) = xfoil.boundaryLayerWorkflow.state.station2.hkz.u() * xfoil.boundaryLayerWorkflow.state.station2.param.uz_uei;
+  xfoil.blc.a2(3, 1) = state.station2.hkz.t();
+  xfoil.blc.a2(3, 2) = state.station2.hkz.d();
+  xfoil.blc.a2(3, 3) = state.station2.hkz.u() * state.station2.param.uz_uei;
   xfoil.blc.rhs[3] = 1.0;
 
   const double delta_sen =
@@ -108,13 +108,13 @@ void BoundaryLayerWorkflow::configureViscousRow(XFoil& xfoil, double hkref,
     sens = 0.5 * (sens + sennew);
   }
 
-  xfoil.blc.a2(3, 1) = xfoil.boundaryLayerWorkflow.state.station2.hkz.t() * hkref;
-  xfoil.blc.a2(3, 2) = xfoil.boundaryLayerWorkflow.state.station2.hkz.d() * hkref;
+  xfoil.blc.a2(3, 1) = state.station2.hkz.t() * hkref;
+  xfoil.blc.a2(3, 2) = state.station2.hkz.d() * hkref;
   xfoil.blc.a2(3, 3) =
-      (xfoil.boundaryLayerWorkflow.state.station2.hkz.u() * hkref + sens / ueref) * xfoil.boundaryLayerWorkflow.state.station2.param.uz_uei;
+      (state.station2.hkz.u() * hkref + sens / ueref) * state.station2.param.uz_uei;
   xfoil.blc.rhs[3] =
-      -(hkref * hkref) * (xfoil.boundaryLayerWorkflow.state.station2.hkz.scalar / hkref - 1.0) -
-      sens * (xfoil.boundaryLayerWorkflow.state.station2.param.uz / ueref - 1.0);
+      -(hkref * hkref) * (state.station2.hkz.scalar / hkref - 1.0) -
+      sens * (state.station2.param.uz / ueref - 1.0);
 }
 
 bool BoundaryLayerWorkflow::applyMixedModeNewtonStep(
@@ -366,19 +366,19 @@ bool BoundaryLayerWorkflow::stmove(XFoil& xfoil) {
 bool BoundaryLayerWorkflow::tesys(XFoil& xfoil, double cte, double tte, double dte) {
   xfoil.blc.clear();
 
-  xfoil.boundaryLayerWorkflow.state.station2 = xfoil.blvar(xfoil.boundaryLayerWorkflow.state.station2, FlowRegimeEnum::Wake);
+  state.station2 = xfoil.blvar(state.station2, FlowRegimeEnum::Wake);
 
   xfoil.blc.a1(0, 0) = -1.0;
   xfoil.blc.a2(0, 0) = 1.0;
-  xfoil.blc.rhs[0] = cte - xfoil.boundaryLayerWorkflow.state.station2.param.sz;
+  xfoil.blc.rhs[0] = cte - state.station2.param.sz;
 
   xfoil.blc.a1(1, 1) = -1.0;
   xfoil.blc.a2(1, 1) = 1.0;
-  xfoil.blc.rhs[1] = tte - xfoil.boundaryLayerWorkflow.state.station2.param.tz;
+  xfoil.blc.rhs[1] = tte - state.station2.param.tz;
 
   xfoil.blc.a1(2, 2) = -1.0;
   xfoil.blc.a2(2, 2) = 1.0;
-  xfoil.blc.rhs[2] = dte - xfoil.boundaryLayerWorkflow.state.station2.param.dz - xfoil.boundaryLayerWorkflow.state.station2.param.dwz;
+  xfoil.blc.rhs[2] = dte - state.station2.param.dz - state.station2.param.dwz;
 
   return true;
 }
