@@ -664,7 +664,7 @@ bool XFoil::viscal() {
       surface_vortex = gamqv();
 
     //	----- locate stagnation point arc length position and panel index
-    stfind();
+    boundaryLayerWorkflow.stfind(*this);
 
     //	----- set  bl position -> panel position  pointers
     boundaryLayerWorkflow.iblpan(*this);
@@ -747,7 +747,7 @@ bool XFoil::ViscousIter() {
 
   qvis = qvfue();  //	------ calculate edge velocities qvis(.) from uedg(..)
   surface_vortex = gamqv();  //	------ set gam distribution from qvis
-  stmove(); //	------ relocate stagnation point
+  boundaryLayerWorkflow.stmove(*this); //	------ relocate stagnation point
 
   //	------ set updated cl,cd
   const auto cl_result = clcalc(cmref);

@@ -388,7 +388,7 @@ bool XFoil::mrchue() {
                  boundaryLayerWorkflow.lattice.ctau.get(2)[boundaryLayerWorkflow.lattice.trailingEdgeIndex.bottom] *
                      boundaryLayerWorkflow.lattice.thet.get(2)[boundaryLayerWorkflow.lattice.trailingEdgeIndex.bottom]) /
                 tte;
-          tesys(cte, tte, dte);
+          boundaryLayerWorkflow.tesys(*this, cte, tte, dte);
         } else
           blsys(boundaryLayerState, boundaryLayerWorkflow.lattice);
 
@@ -878,7 +878,7 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
                output.ctau.get(2)[boundaryLayerWorkflow.lattice.trailingEdgeIndex.bottom] *
                    output.thet.get(2)[boundaryLayerWorkflow.lattice.trailingEdgeIndex.bottom]) /
                tte;
-        tesys(cte, tte, dte);
+        boundaryLayerWorkflow.tesys(*this, cte, tte, dte);
 
         tte_tte1 = 1.0;
         tte_tte2 = 1.0;
@@ -1074,20 +1074,6 @@ bool XFoil::stepbl(BoundaryLayerState& state) {
   state.previous() = state.current();
   return true;
 }
-
-
-bool XFoil::stfind() { return boundaryLayerWorkflow.stfind(*this); }
-
-
-bool XFoil::stmove() { return boundaryLayerWorkflow.stmove(*this); }
-
-
-// trailing-edge calculations handled by Edge::updateFromFoilShape()
-
-bool XFoil::tesys(double cte, double tte, double dte) {
-  return boundaryLayerWorkflow.tesys(*this, cte, tte, dte);
-}
-
 
 bool XFoil::trchek() {
   //----------------------------------------------------------------

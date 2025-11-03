@@ -25,7 +25,7 @@ void BoundaryLayerWorkflow::updateSystemMatricesForStation(
          lattice.ctau.get(2)[lattice.trailingEdgeIndex.bottom] *
              lattice.thet.get(2)[lattice.trailingEdgeIndex.bottom]) /
         ctx.tte;
-    xfoil.tesys(ctx.cte, ctx.tte, ctx.dte);
+    tesys(xfoil, ctx.cte, ctx.tte, ctx.dte);
   } else {
     xfoil.blsys(xfoil.boundaryLayerState, lattice);
   }
