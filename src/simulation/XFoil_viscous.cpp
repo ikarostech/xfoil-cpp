@@ -667,14 +667,14 @@ bool XFoil::viscal() {
     stfind();
 
     //	----- set  bl position -> panel position  pointers
-    iblpan();
+    boundaryLayerWorkflow.iblpan(*this);
 
     //	----- calculate surface arc length array for current stagnation point
     // location
     xicalc();
 
     //	----- set  bl position -> system line  pointers
-    iblsys();
+    boundaryLayerWorkflow.iblsys(*this);
   }
 
   //	---- set inviscid bl edge velocity uinv from qinv

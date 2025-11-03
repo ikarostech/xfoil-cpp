@@ -9,19 +9,6 @@ using Eigen::Vector;
 using Eigen::Vector2d;
 using Eigen::VectorXd;
 
-
-/** -----------------------------------------------------------
- *     sets  bl location -> panel location  pointer array ipan
- * -----------------------------------------------------------*/
-bool XFoil::iblpan() { return BoundaryLayerWorkflow::iblpan(*this); }
-
-
-/** ---------------------------------------------
- *     sets the bl newton system line number
- *     corresponding to each bl station.
- * --------------------------------------------- */
-bool XFoil::iblsys() { return BoundaryLayerWorkflow::iblsys(*this); }
-
 /** ----------------------------------------------------
  *      marches the bls and wake in mixed mode using
  *      the current ue and hk.  the calculated ue

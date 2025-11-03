@@ -259,8 +259,6 @@ class XFoil {
 
   Matrix2Xd gamqv() const;
   bool ggcalc();
-  bool iblpan();
-  bool iblsys();
   double lefind(const Matrix2Xd &points, const Matrix2Xd &dpoints_ds, const VectorXd &s, int n) const;
   
   bool mrchdu();
