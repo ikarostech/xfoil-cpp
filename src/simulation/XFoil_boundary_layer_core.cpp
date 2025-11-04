@@ -201,31 +201,31 @@ bool XFoil::blsys(BoundaryLayerState& state, [[maybe_unused]] BoundaryLayerLatti
   if (tran)
     trdif();
   else if (simi)
-    blc = blDiffSolver.solve(FlowRegimeEnum::Similarity, boundaryLayerWorkflow.state, skinFriction, amcrit);
+    boundaryLayerWorkflow.blc = blDiffSolver.solve(FlowRegimeEnum::Similarity, boundaryLayerWorkflow.state, skinFriction, amcrit);
   else if (!turb)
-    blc = blDiffSolver.solve(FlowRegimeEnum::Laminar, boundaryLayerWorkflow.state, skinFriction, amcrit);
+    boundaryLayerWorkflow.blc = blDiffSolver.solve(FlowRegimeEnum::Laminar, boundaryLayerWorkflow.state, skinFriction, amcrit);
   else if (wake)
-    blc = blDiffSolver.solve(FlowRegimeEnum::Wake, boundaryLayerWorkflow.state, skinFriction, amcrit);
+    boundaryLayerWorkflow.blc = blDiffSolver.solve(FlowRegimeEnum::Wake, boundaryLayerWorkflow.state, skinFriction, amcrit);
   else
-    blc = blDiffSolver.solve(FlowRegimeEnum::Turbulent, boundaryLayerWorkflow.state, skinFriction, amcrit);
+    boundaryLayerWorkflow.blc = blDiffSolver.solve(FlowRegimeEnum::Turbulent, boundaryLayerWorkflow.state, skinFriction, amcrit);
 
   if (simi) {
     //----- at similarity station, "1" variables are really "2" variables
-    blc.a2 += blc.a1;
-    blc.a1 = Matrix<double, 4, 5>::Zero();
+    boundaryLayerWorkflow.blc.a2 += boundaryLayerWorkflow.blc.a1;
+    boundaryLayerWorkflow.blc.a1 = Matrix<double, 4, 5>::Zero();
   }
 
   //---- change system over into incompressible uei and mach
   for (int k = 0; k < 4; k++) {
     //------ residual derivatives wrt compressible uec
-    double res_u1 = blc.a1(k, 3);
-    double res_u2 = blc.a2(k, 3);
-    double res_ms = blc.d_msq[k];
+    double res_u1 = boundaryLayerWorkflow.blc.a1(k, 3);
+    double res_u2 = boundaryLayerWorkflow.blc.a2(k, 3);
+    double res_ms = boundaryLayerWorkflow.blc.d_msq[k];
 
     //------ combine with derivatives of compressible  u1,u2 = uec(uei m)
-    blc.a1(k, 3) *= previous.param.uz_uei;
-    blc.a2(k, 3) *= current.param.uz_uei;
-    blc.d_msq[k] =
+    boundaryLayerWorkflow.blc.a1(k, 3) *= previous.param.uz_uei;
+    boundaryLayerWorkflow.blc.a2(k, 3) *= current.param.uz_uei;
+    boundaryLayerWorkflow.blc.d_msq[k] =
         res_u1 * previous.param.uz_ms + res_u2 * current.param.uz_ms + res_ms;
   }
   return true;

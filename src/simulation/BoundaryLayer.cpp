@@ -80,11 +80,11 @@ void BoundaryLayerWorkflow::initializeFirstIterationState(
 
 void BoundaryLayerWorkflow::configureSimilarityRow(XFoil& xfoil,
                                                    double ueref) {
-  xfoil.blc.a2(3, 0) = 0.0;
-  xfoil.blc.a2(3, 1) = 0.0;
-  xfoil.blc.a2(3, 2) = 0.0;
-  xfoil.blc.a2(3, 3) = state.station2.param.uz_uei;
-  xfoil.blc.rhs[3] = ueref - state.station2.param.uz;
+  blc.a2(3, 0) = 0.0;
+  blc.a2(3, 1) = 0.0;
+  blc.a2(3, 2) = 0.0;
+  blc.a2(3, 3) = state.station2.param.uz_uei;
+  blc.rhs[3] = ueref - state.station2.param.uz;
 }
 
 void BoundaryLayerWorkflow::configureViscousRow(XFoil& xfoil, double hkref,
@@ -92,14 +92,14 @@ void BoundaryLayerWorkflow::configureViscousRow(XFoil& xfoil, double hkref,
                                                 bool resetSensitivity,
                                                 bool averageSensitivity,
                                                 double& sens, double& sennew) {
-  xfoil.blc.a2(3, 0) = 0.0;
-  xfoil.blc.a2(3, 1) = state.station2.hkz.t();
-  xfoil.blc.a2(3, 2) = state.station2.hkz.d();
-  xfoil.blc.a2(3, 3) = state.station2.hkz.u() * state.station2.param.uz_uei;
-  xfoil.blc.rhs[3] = 1.0;
+  blc.a2(3, 0) = 0.0;
+  blc.a2(3, 1) = state.station2.hkz.t();
+  blc.a2(3, 2) = state.station2.hkz.d();
+  blc.a2(3, 3) = state.station2.hkz.u() * state.station2.param.uz_uei;
+  blc.rhs[3] = 1.0;
 
   const double delta_sen =
-      xfoil.blc.a2.block(0, 0, 4, 4).fullPivLu().solve(xfoil.blc.rhs)[3];
+      blc.a2.block(0, 0, 4, 4).fullPivLu().solve(blc.rhs)[3];
 
   sennew = senswt * delta_sen * hkref / ueref;
   if (resetSensitivity) {
@@ -108,11 +108,11 @@ void BoundaryLayerWorkflow::configureViscousRow(XFoil& xfoil, double hkref,
     sens = 0.5 * (sens + sennew);
   }
 
-  xfoil.blc.a2(3, 1) = state.station2.hkz.t() * hkref;
-  xfoil.blc.a2(3, 2) = state.station2.hkz.d() * hkref;
-  xfoil.blc.a2(3, 3) =
+  blc.a2(3, 1) = state.station2.hkz.t() * hkref;
+  blc.a2(3, 2) = state.station2.hkz.d() * hkref;
+  blc.a2(3, 3) =
       (state.station2.hkz.u() * hkref + sens / ueref) * state.station2.param.uz_uei;
-  xfoil.blc.rhs[3] =
+  blc.rhs[3] =
       -(hkref * hkref) * (state.station2.hkz.scalar / hkref - 1.0) -
       sens * (state.station2.param.uz / ueref - 1.0);
 }
@@ -120,14 +120,14 @@ void BoundaryLayerWorkflow::configureViscousRow(XFoil& xfoil, double hkref,
 bool BoundaryLayerWorkflow::applyMixedModeNewtonStep(
     XFoil& xfoil, int side, int stationIndex, double deps, double& ami,
     BoundaryContext& ctx) {
-  xfoil.blc.rhs =
-      xfoil.blc.a2.block(0, 0, 4, 4).fullPivLu().solve(xfoil.blc.rhs);
+  blc.rhs =
+      blc.a2.block(0, 0, 4, 4).fullPivLu().solve(blc.rhs);
 
-  ctx.dmax = std::max(std::fabs(xfoil.blc.rhs[1] / ctx.thi),
-                      std::fabs(xfoil.blc.rhs[2] / ctx.dsi));
+  ctx.dmax = std::max(std::fabs(blc.rhs[1] / ctx.thi),
+                      std::fabs(blc.rhs[2] / ctx.dsi));
   if (stationIndex >= lattice.transitionIndex.get(side)) {
     ctx.dmax = std::max(ctx.dmax,
-                        std::fabs(xfoil.blc.rhs[0] / (10.0 * ctx.cti)));
+                        std::fabs(blc.rhs[0] / (10.0 * ctx.cti)));
   }
 
   xfoil.rlx = 1.0;
@@ -136,15 +136,15 @@ bool BoundaryLayerWorkflow::applyMixedModeNewtonStep(
   }
 
   if (stationIndex < lattice.transitionIndex.get(side)) {
-    ami += xfoil.rlx * xfoil.blc.rhs[0];
+    ami += xfoil.rlx * blc.rhs[0];
     ctx.ami = ami;
   }
   if (stationIndex >= lattice.transitionIndex.get(side)) {
-    ctx.cti += xfoil.rlx * xfoil.blc.rhs[0];
+    ctx.cti += xfoil.rlx * blc.rhs[0];
   }
-  ctx.thi += xfoil.rlx * xfoil.blc.rhs[1];
-  ctx.dsi += xfoil.rlx * xfoil.blc.rhs[2];
-  ctx.uei += xfoil.rlx * xfoil.blc.rhs[3];
+  ctx.thi += xfoil.rlx * blc.rhs[1];
+  ctx.dsi += xfoil.rlx * blc.rhs[2];
+  ctx.uei += xfoil.rlx * blc.rhs[3];
 
   if (stationIndex >= lattice.transitionIndex.get(side)) {
     ctx.cti = std::clamp(ctx.cti, 0.0000001, 0.30);
@@ -364,21 +364,21 @@ bool BoundaryLayerWorkflow::stmove(XFoil& xfoil) {
 }
 
 bool BoundaryLayerWorkflow::tesys(XFoil& xfoil, double cte, double tte, double dte) {
-  xfoil.blc.clear();
+  blc.clear();
 
   state.station2 = xfoil.blvar(state.station2, FlowRegimeEnum::Wake);
 
-  xfoil.blc.a1(0, 0) = -1.0;
-  xfoil.blc.a2(0, 0) = 1.0;
-  xfoil.blc.rhs[0] = cte - state.station2.param.sz;
+  blc.a1(0, 0) = -1.0;
+  blc.a2(0, 0) = 1.0;
+  blc.rhs[0] = cte - state.station2.param.sz;
 
-  xfoil.blc.a1(1, 1) = -1.0;
-  xfoil.blc.a2(1, 1) = 1.0;
-  xfoil.blc.rhs[1] = tte - state.station2.param.tz;
+  blc.a1(1, 1) = -1.0;
+  blc.a2(1, 1) = 1.0;
+  blc.rhs[1] = tte - state.station2.param.tz;
 
-  xfoil.blc.a1(2, 2) = -1.0;
-  xfoil.blc.a2(2, 2) = 1.0;
-  xfoil.blc.rhs[2] = dte - state.station2.param.dz - state.station2.param.dwz;
+  blc.a1(2, 2) = -1.0;
+  blc.a2(2, 2) = 1.0;
+  blc.rhs[2] = dte - state.station2.param.dz - state.station2.param.dwz;
 
   return true;
 }

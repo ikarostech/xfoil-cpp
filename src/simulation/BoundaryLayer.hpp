@@ -1,6 +1,7 @@
 #pragma once
 
 #include "simulation/boundary_layer_state.hpp"
+#include "domain/coefficient/bl_newton.hpp"
 
 class XFoil;
 
@@ -50,5 +51,6 @@ class BoundaryLayerWorkflow {
 
 public:
   BoundaryLayerLattice lattice;
+  BlSystemCoeffs blc;
   BoundaryLayerState state;
 };

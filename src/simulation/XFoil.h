@@ -439,8 +439,6 @@ class XFoil {
   MatrixXd bij, dij;
 
   // Grouped BL Newton system coefficients (Proposal A)
-  BlSystemCoeffs blc;
-
   bool trforc, simi, tran, turb, wake, trfree;
 
   double qinfbl, tkbl, tkbl_ms, rstbl, rstbl_ms, hstinv, hstinv_ms;

@@ -394,19 +394,19 @@ bool XFoil::mrchue() {
 
         if (direct) {
           //--------- try direct mode (set due = 0 in currently empty 4th line)
-          blc.a2(3, 0) = 0.0;
-          blc.a2(3, 1) = 0.0;
-          blc.a2(3, 2) = 0.0;
-          blc.a2(3, 3) = 1.0;
-          blc.rhs[3] = 0.0;
+          boundaryLayerWorkflow.blc.a2(3, 0) = 0.0;
+          boundaryLayerWorkflow.blc.a2(3, 1) = 0.0;
+          boundaryLayerWorkflow.blc.a2(3, 2) = 0.0;
+          boundaryLayerWorkflow.blc.a2(3, 3) = 1.0;
+          boundaryLayerWorkflow.blc.rhs[3] = 0.0;
           //--------- solve newton system for current "2" station
-          blc.rhs = blc.a2.block(0, 0, 4, 4).fullPivLu().solve(blc.rhs);
+          boundaryLayerWorkflow.blc.rhs = boundaryLayerWorkflow.blc.a2.block(0, 0, 4, 4).fullPivLu().solve(boundaryLayerWorkflow.blc.rhs);
           //--------- determine max changes and underrelax if necessary
-          dmax = std::max(fabs(blc.rhs[1] / thi), fabs(blc.rhs[2] / dsi));
+          dmax = std::max(fabs(boundaryLayerWorkflow.blc.rhs[1] / thi), fabs(boundaryLayerWorkflow.blc.rhs[2] / dsi));
           if (ibl < boundaryLayerWorkflow.lattice.transitionIndex.get(is))
-            dmax = std::max(dmax, fabs(blc.rhs[0] / 10.0));
+            dmax = std::max(dmax, fabs(boundaryLayerWorkflow.blc.rhs[0] / 10.0));
           if (ibl >= boundaryLayerWorkflow.lattice.transitionIndex.get(is))
-            dmax = std::max(dmax, fabs(blc.rhs[0] / cti));
+            dmax = std::max(dmax, fabs(boundaryLayerWorkflow.blc.rhs[0] / cti));
 
           rlx = 1.0;
           if (dmax > 0.3)
@@ -416,7 +416,7 @@ bool XFoil::mrchue() {
             //---------- calculate resulting kinematic shape parameter hk
             msq =
                 uei * uei * hstinv / (gm1bl * (1.0 - 0.5 * uei * uei * hstinv));
-            htest = (dsi + rlx * blc.rhs[2]) / (thi + rlx * blc.rhs[1]);
+            htest = (dsi + rlx * boundaryLayerWorkflow.blc.rhs[2]) / (thi + rlx * boundaryLayerWorkflow.blc.rhs[1]);
             boundary_layer::KineticShapeParameterResult hkin_result =
                 boundary_layer::hkin(htest, msq);
             hktest = hkin_result.hk;
@@ -432,9 +432,9 @@ bool XFoil::mrchue() {
           if (direct) {
             //---------- update as usual
             if (ibl >= boundaryLayerWorkflow.lattice.transitionIndex.get(is))
-              cti = cti + rlx * blc.rhs[0];
-            thi = thi + rlx * blc.rhs[1];
-            dsi = dsi + rlx * blc.rhs[2];
+              cti = cti + rlx * boundaryLayerWorkflow.blc.rhs[0];
+            thi = thi + rlx * boundaryLayerWorkflow.blc.rhs[1];
+            dsi = dsi + rlx * boundaryLayerWorkflow.blc.rhs[2];
           } else {
             //---------- set prescribed hk for inverse calculation at the
             // current station
@@ -458,25 +458,25 @@ bool XFoil::mrchue() {
           }
         } else {
           //-------- inverse mode (force hk to prescribed value htarg)
-          blc.a2(3, 0) = 0.0;
-          blc.a2(3, 1) = boundaryLayerWorkflow.state.station2.hkz.t();
-          blc.a2(3, 2) = boundaryLayerWorkflow.state.station2.hkz.d();
-          blc.a2(3, 3) = boundaryLayerWorkflow.state.station2.hkz.u();
-          blc.rhs[3] = htarg - boundaryLayerWorkflow.state.station2.hkz.scalar;
-          blc.rhs = blc.a2.block(0, 0, 4, 4).fullPivLu().solve(blc.rhs);
+          boundaryLayerWorkflow.blc.a2(3, 0) = 0.0;
+          boundaryLayerWorkflow.blc.a2(3, 1) = boundaryLayerWorkflow.state.station2.hkz.t();
+          boundaryLayerWorkflow.blc.a2(3, 2) = boundaryLayerWorkflow.state.station2.hkz.d();
+          boundaryLayerWorkflow.blc.a2(3, 3) = boundaryLayerWorkflow.state.station2.hkz.u();
+          boundaryLayerWorkflow.blc.rhs[3] = htarg - boundaryLayerWorkflow.state.station2.hkz.scalar;
+          boundaryLayerWorkflow.blc.rhs = boundaryLayerWorkflow.blc.a2.block(0, 0, 4, 4).fullPivLu().solve(boundaryLayerWorkflow.blc.rhs);
 
-          dmax = std::max(fabs(blc.rhs[1] / thi), fabs(blc.rhs[2] / dsi));
+          dmax = std::max(fabs(boundaryLayerWorkflow.blc.rhs[1] / thi), fabs(boundaryLayerWorkflow.blc.rhs[2] / dsi));
           if (ibl >= boundaryLayerWorkflow.lattice.transitionIndex.get(is))
-            dmax = std::max(dmax, fabs(blc.rhs[0] / cti));
+            dmax = std::max(dmax, fabs(boundaryLayerWorkflow.blc.rhs[0] / cti));
           rlx = 1.0;
           if (dmax > 0.3)
             rlx = 0.3 / dmax;
           //--------- update variables
           if (ibl >= boundaryLayerWorkflow.lattice.transitionIndex.get(is))
-            cti = cti + rlx * blc.rhs[0];
-          thi = thi + rlx * blc.rhs[1];
-          dsi = dsi + rlx * blc.rhs[2];
-          uei = uei + rlx * blc.rhs[3];
+            cti = cti + rlx * boundaryLayerWorkflow.blc.rhs[0];
+          thi = thi + rlx * boundaryLayerWorkflow.blc.rhs[1];
+          dsi = dsi + rlx * boundaryLayerWorkflow.blc.rhs[2];
+          uei = uei + rlx * boundaryLayerWorkflow.blc.rhs[3];
         }
         //-------- eliminate absurd transients
 
@@ -933,99 +933,99 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
       //---- stuff bl system coefficients into main jacobian matrix
 
       for (int jv = 1; jv <= nsys; jv++) {
-        output.vm[0][jv][iv] = blc.a1(0, 2) * d1_m[jv] + blc.a1(0, 3) * u1_m[jv] +
-                        blc.a2(0, 2) * d2_m[jv] + blc.a2(0, 3) * u2_m[jv] +
-                        (blc.a1(0, 4) + blc.a2(0, 4) + blc.d_xi[0]) *
+        output.vm[0][jv][iv] = boundaryLayerWorkflow.blc.a1(0, 2) * d1_m[jv] + boundaryLayerWorkflow.blc.a1(0, 3) * u1_m[jv] +
+                        boundaryLayerWorkflow.blc.a2(0, 2) * d2_m[jv] + boundaryLayerWorkflow.blc.a2(0, 3) * u2_m[jv] +
+                        (boundaryLayerWorkflow.blc.a1(0, 4) + boundaryLayerWorkflow.blc.a2(0, 4) + boundaryLayerWorkflow.blc.d_xi[0]) *
                             (xi_ule1 * ule1_m[jv] + xi_ule2 * ule2_m[jv]);
       }
 
-      output.vb[iv](0, 0) = blc.a1(0, 0);
-      output.vb[iv](0, 1) = blc.a1(0, 1);
+      output.vb[iv](0, 0) = boundaryLayerWorkflow.blc.a1(0, 0);
+      output.vb[iv](0, 1) = boundaryLayerWorkflow.blc.a1(0, 1);
 
-      output.va[iv](0, 0) = blc.a2(0, 0);
-      output.va[iv](0, 1) = blc.a2(0, 1);
+      output.va[iv](0, 0) = boundaryLayerWorkflow.blc.a2(0, 0);
+      output.va[iv](0, 1) = boundaryLayerWorkflow.blc.a2(0, 1);
 
       if (lalfa)
-        output.vdel[iv](0, 1) = blc.d_re[0] * re_clmr + blc.d_msq[0] * msq_clmr;
+        output.vdel[iv](0, 1) = boundaryLayerWorkflow.blc.d_re[0] * re_clmr + boundaryLayerWorkflow.blc.d_msq[0] * msq_clmr;
       else
-        output.vdel[iv](0, 1) = (blc.a1(0, 3) * u1_a + blc.a1(0, 2) * d1_a) +
-                         (blc.a2(0, 3) * u2_a + blc.a2(0, 2) * d2_a) +
-                         (blc.a1(0, 4) + blc.a2(0, 4) + blc.d_xi[0]) *
+        output.vdel[iv](0, 1) = (boundaryLayerWorkflow.blc.a1(0, 3) * u1_a + boundaryLayerWorkflow.blc.a1(0, 2) * d1_a) +
+                         (boundaryLayerWorkflow.blc.a2(0, 3) * u2_a + boundaryLayerWorkflow.blc.a2(0, 2) * d2_a) +
+                         (boundaryLayerWorkflow.blc.a1(0, 4) + boundaryLayerWorkflow.blc.a2(0, 4) + boundaryLayerWorkflow.blc.d_xi[0]) *
                              (xi_ule1 * ule1_a + xi_ule2 * ule2_a);
 
-      output.vdel[iv](0, 0) = blc.rhs[0] + (blc.a1(0, 3) * due1 + blc.a1(0, 2) * dds1) +
-                       (blc.a2(0, 3) * due2 + blc.a2(0, 2) * dds2) +
-                       (blc.a1(0, 4) + blc.a2(0, 4) + blc.d_xi[0]) *
+      output.vdel[iv](0, 0) = boundaryLayerWorkflow.blc.rhs[0] + (boundaryLayerWorkflow.blc.a1(0, 3) * due1 + boundaryLayerWorkflow.blc.a1(0, 2) * dds1) +
+                       (boundaryLayerWorkflow.blc.a2(0, 3) * due2 + boundaryLayerWorkflow.blc.a2(0, 2) * dds2) +
+                       (boundaryLayerWorkflow.blc.a1(0, 4) + boundaryLayerWorkflow.blc.a2(0, 4) + boundaryLayerWorkflow.blc.d_xi[0]) *
                            (xi_ule1 * dule1 + xi_ule2 * dule2);
 
       for (int jv = 1; jv <= nsys; jv++) {
-        output.vm[1][jv][iv] = blc.a1(1, 2) * d1_m[jv] + blc.a1(1, 3) * u1_m[jv] +
-                        blc.a2(1, 2) * d2_m[jv] + blc.a2(1, 3) * u2_m[jv] +
-                        (blc.a1(1, 4) + blc.a2(1, 4) + blc.d_xi[1]) *
+        output.vm[1][jv][iv] = boundaryLayerWorkflow.blc.a1(1, 2) * d1_m[jv] + boundaryLayerWorkflow.blc.a1(1, 3) * u1_m[jv] +
+                        boundaryLayerWorkflow.blc.a2(1, 2) * d2_m[jv] + boundaryLayerWorkflow.blc.a2(1, 3) * u2_m[jv] +
+                        (boundaryLayerWorkflow.blc.a1(1, 4) + boundaryLayerWorkflow.blc.a2(1, 4) + boundaryLayerWorkflow.blc.d_xi[1]) *
                             (xi_ule1 * ule1_m[jv] + xi_ule2 * ule2_m[jv]);
       }
-      output.vb[iv](1, 0) = blc.a1(1, 0);
-      output.vb[iv](1, 1) = blc.a1(1, 1);
+      output.vb[iv](1, 0) = boundaryLayerWorkflow.blc.a1(1, 0);
+      output.vb[iv](1, 1) = boundaryLayerWorkflow.blc.a1(1, 1);
 
-      output.va[iv](1, 0) = blc.a2(1, 0);
-      output.va[iv](1, 1) = blc.a2(1, 1);
+      output.va[iv](1, 0) = boundaryLayerWorkflow.blc.a2(1, 0);
+      output.va[iv](1, 1) = boundaryLayerWorkflow.blc.a2(1, 1);
 
       if (lalfa)
-        output.vdel[iv](1, 1) = blc.d_re[1] * re_clmr + blc.d_msq[1] * msq_clmr;
+        output.vdel[iv](1, 1) = boundaryLayerWorkflow.blc.d_re[1] * re_clmr + boundaryLayerWorkflow.blc.d_msq[1] * msq_clmr;
       else
-        output.vdel[iv](1, 1) = (blc.a1(1, 3) * u1_a + blc.a1(1, 2) * d1_a) +
-                         (blc.a2(1, 3) * u2_a + blc.a2(1, 2) * d2_a) +
-                         (blc.a1(1, 4) + blc.a2(1, 4) + blc.d_xi[1]) *
+        output.vdel[iv](1, 1) = (boundaryLayerWorkflow.blc.a1(1, 3) * u1_a + boundaryLayerWorkflow.blc.a1(1, 2) * d1_a) +
+                         (boundaryLayerWorkflow.blc.a2(1, 3) * u2_a + boundaryLayerWorkflow.blc.a2(1, 2) * d2_a) +
+                         (boundaryLayerWorkflow.blc.a1(1, 4) + boundaryLayerWorkflow.blc.a2(1, 4) + boundaryLayerWorkflow.blc.d_xi[1]) *
                              (xi_ule1 * ule1_a + xi_ule2 * ule2_a);
 
-      output.vdel[iv](1, 0) = blc.rhs[1] + (blc.a1(1, 3) * due1 + blc.a1(1, 2) * dds1) +
-                       (blc.a2(1, 3) * due2 + blc.a2(1, 2) * dds2) +
-                       (blc.a1(1, 4) + blc.a2(1, 4) + blc.d_xi[1]) *
+      output.vdel[iv](1, 0) = boundaryLayerWorkflow.blc.rhs[1] + (boundaryLayerWorkflow.blc.a1(1, 3) * due1 + boundaryLayerWorkflow.blc.a1(1, 2) * dds1) +
+                       (boundaryLayerWorkflow.blc.a2(1, 3) * due2 + boundaryLayerWorkflow.blc.a2(1, 2) * dds2) +
+                       (boundaryLayerWorkflow.blc.a1(1, 4) + boundaryLayerWorkflow.blc.a2(1, 4) + boundaryLayerWorkflow.blc.d_xi[1]) *
                            (xi_ule1 * dule1 + xi_ule2 * dule2);
 
       // memory overlap problem
       for (int jv = 1; jv <= nsys; jv++) {
-        output.vm[2][jv][iv] = blc.a1(2, 2) * d1_m[jv] + blc.a1(2, 3) * u1_m[jv] +
-                        blc.a2(2, 2) * d2_m[jv] + blc.a2(2, 3) * u2_m[jv] +
-                        (blc.a1(2, 4) + blc.a2(2, 4) + blc.d_xi[2]) *
+        output.vm[2][jv][iv] = boundaryLayerWorkflow.blc.a1(2, 2) * d1_m[jv] + boundaryLayerWorkflow.blc.a1(2, 3) * u1_m[jv] +
+                        boundaryLayerWorkflow.blc.a2(2, 2) * d2_m[jv] + boundaryLayerWorkflow.blc.a2(2, 3) * u2_m[jv] +
+                        (boundaryLayerWorkflow.blc.a1(2, 4) + boundaryLayerWorkflow.blc.a2(2, 4) + boundaryLayerWorkflow.blc.d_xi[2]) *
                             (xi_ule1 * ule1_m[jv] + xi_ule2 * ule2_m[jv]);
       }
 
-      output.vb[iv](2, 0) = blc.a1(2, 0);
-      output.vb[iv](2, 1) = blc.a1(2, 1);
+      output.vb[iv](2, 0) = boundaryLayerWorkflow.blc.a1(2, 0);
+      output.vb[iv](2, 1) = boundaryLayerWorkflow.blc.a1(2, 1);
 
-      output.va[iv](2, 0) = blc.a2(2, 0);
-      output.va[iv](2, 1) = blc.a2(2, 1);
+      output.va[iv](2, 0) = boundaryLayerWorkflow.blc.a2(2, 0);
+      output.va[iv](2, 1) = boundaryLayerWorkflow.blc.a2(2, 1);
 
       if (lalfa)
-        output.vdel[iv](2, 1) = blc.d_re[2] * re_clmr + blc.d_msq[2] * msq_clmr;
+        output.vdel[iv](2, 1) = boundaryLayerWorkflow.blc.d_re[2] * re_clmr + boundaryLayerWorkflow.blc.d_msq[2] * msq_clmr;
       else
-        output.vdel[iv](2, 1) = (blc.a1(2, 3) * u1_a + blc.a1(2, 2) * d1_a) +
-                         (blc.a2(2, 3) * u2_a + blc.a2(2, 2) * d2_a) +
-                         (blc.a1(2, 4) + blc.a2(2, 4) + blc.d_xi[2]) *
+        output.vdel[iv](2, 1) = (boundaryLayerWorkflow.blc.a1(2, 3) * u1_a + boundaryLayerWorkflow.blc.a1(2, 2) * d1_a) +
+                         (boundaryLayerWorkflow.blc.a2(2, 3) * u2_a + boundaryLayerWorkflow.blc.a2(2, 2) * d2_a) +
+                         (boundaryLayerWorkflow.blc.a1(2, 4) + boundaryLayerWorkflow.blc.a2(2, 4) + boundaryLayerWorkflow.blc.d_xi[2]) *
                              (xi_ule1 * ule1_a + xi_ule2 * ule2_a);
 
-      output.vdel[iv](2, 0) = blc.rhs[2] + (blc.a1(2, 3) * due1 + blc.a1(2, 2) * dds1) +
-                       (blc.a2(2, 3) * due2 + blc.a2(2, 2) * dds2) +
-                       (blc.a1(2, 4) + blc.a2(2, 4) + blc.d_xi[2]) *
+      output.vdel[iv](2, 0) = boundaryLayerWorkflow.blc.rhs[2] + (boundaryLayerWorkflow.blc.a1(2, 3) * due1 + boundaryLayerWorkflow.blc.a1(2, 2) * dds1) +
+                       (boundaryLayerWorkflow.blc.a2(2, 3) * due2 + boundaryLayerWorkflow.blc.a2(2, 2) * dds2) +
+                       (boundaryLayerWorkflow.blc.a1(2, 4) + boundaryLayerWorkflow.blc.a2(2, 4) + boundaryLayerWorkflow.blc.d_xi[2]) *
                            (xi_ule1 * dule1 + xi_ule2 * dule2);
 
       if (ibl == boundaryLayerWorkflow.lattice.trailingEdgeIndex.get(is) + 1) {
         //----- redefine coefficients for tte, dte, etc
-        output.vz[0][0] = blc.a1(0, 0) * cte_cte1;
-        output.vz[0][1] = blc.a1(0, 0) * cte_tte1 + blc.a1(0, 1) * tte_tte1;
-        output.vb[iv](0, 0) = blc.a1(0, 0) * cte_cte2;
-        output.vb[iv](0, 1) = blc.a1(0, 0) * cte_tte2 + blc.a1(0, 1) * tte_tte2;
+        output.vz[0][0] = boundaryLayerWorkflow.blc.a1(0, 0) * cte_cte1;
+        output.vz[0][1] = boundaryLayerWorkflow.blc.a1(0, 0) * cte_tte1 + boundaryLayerWorkflow.blc.a1(0, 1) * tte_tte1;
+        output.vb[iv](0, 0) = boundaryLayerWorkflow.blc.a1(0, 0) * cte_cte2;
+        output.vb[iv](0, 1) = boundaryLayerWorkflow.blc.a1(0, 0) * cte_tte2 + boundaryLayerWorkflow.blc.a1(0, 1) * tte_tte2;
 
-        output.vz[1][0] = blc.a1(1, 0) * cte_cte1;
-        output.vz[1][1] = blc.a1(1, 0) * cte_tte1 + blc.a1(1, 1) * tte_tte1;
-        output.vb[iv](1, 0) = blc.a1(1, 0) * cte_cte2;
-        output.vb[iv](1, 1) = blc.a1(1, 0) * cte_tte2 + blc.a1(1, 1) * tte_tte2;
+        output.vz[1][0] = boundaryLayerWorkflow.blc.a1(1, 0) * cte_cte1;
+        output.vz[1][1] = boundaryLayerWorkflow.blc.a1(1, 0) * cte_tte1 + boundaryLayerWorkflow.blc.a1(1, 1) * tte_tte1;
+        output.vb[iv](1, 0) = boundaryLayerWorkflow.blc.a1(1, 0) * cte_cte2;
+        output.vb[iv](1, 1) = boundaryLayerWorkflow.blc.a1(1, 0) * cte_tte2 + boundaryLayerWorkflow.blc.a1(1, 1) * tte_tte2;
 
-        output.vz[2][0] = blc.a1(2, 0) * cte_cte1;
-        output.vz[2][1] = blc.a1(2, 0) * cte_tte1 + blc.a1(2, 1) * tte_tte1;
-        output.vb[iv](2, 0) = blc.a1(2, 0) * cte_cte2;
-        output.vb[iv](2, 1) = blc.a1(2, 0) * cte_tte2 + blc.a1(2, 1) * tte_tte2;
+        output.vz[2][0] = boundaryLayerWorkflow.blc.a1(2, 0) * cte_cte1;
+        output.vz[2][1] = boundaryLayerWorkflow.blc.a1(2, 0) * cte_tte1 + boundaryLayerWorkflow.blc.a1(2, 1) * tte_tte1;
+        output.vb[iv](2, 0) = boundaryLayerWorkflow.blc.a1(2, 0) * cte_cte2;
+        output.vb[iv](2, 1) = boundaryLayerWorkflow.blc.a1(2, 0) * cte_tte2 + boundaryLayerWorkflow.blc.a1(2, 1) * tte_tte2;
       }
 
       //---- turbulent intervals will follow if currently at transition interval
@@ -1539,7 +1539,7 @@ bool XFoil::trdif() {
   //=    at this point, all "2" variables are really "t" variables at xt
 
   //---- set up newton system for dam, dth, dds, due, dxi  at  x1 and xt
-  blc = blDiffSolver.solve(FlowRegimeEnum::Laminar, boundaryLayerWorkflow.state, laminarSkinFriction, amcrit);
+  boundaryLayerWorkflow.blc = blDiffSolver.solve(FlowRegimeEnum::Laminar, boundaryLayerWorkflow.state, laminarSkinFriction, amcrit);
 
   //---- the current newton system is in terms of "1" and "t" variables,
   //-    so calculate its equivalent in terms of "1" and "2" variables.
@@ -1547,34 +1547,34 @@ bool XFoil::trdif() {
   //-    into sensitivities wrt "1" and "2" variables.  the amplification
   //-    equation is unnecessary here, so the k=1 row is left empty.
   for (int k = 1; k < 3; k++) {
-    blrez[k] = blc.rhs[k];
-    blm[k] = blc.d_msq[k] + blc.a2(k, 1) * tt_ms + blc.a2(k, 2) * dt_ms +
-             blc.a2(k, 3) * ut_ms + blc.a2(k, 4) * xt_ms;
-    blr[k] = blc.d_re[k] + blc.a2(k, 1) * tt_re + blc.a2(k, 2) * dt_re +
-             blc.a2(k, 3) * ut_re + blc.a2(k, 4) * xt_re;
-    blx[k] = blc.d_xi[k] + blc.a2(k, 1) * tt_xf + blc.a2(k, 2) * dt_xf +
-             blc.a2(k, 3) * ut_xf + blc.a2(k, 4) * xt_xf;
+    blrez[k] = boundaryLayerWorkflow.blc.rhs[k];
+    blm[k] = boundaryLayerWorkflow.blc.d_msq[k] + boundaryLayerWorkflow.blc.a2(k, 1) * tt_ms + boundaryLayerWorkflow.blc.a2(k, 2) * dt_ms +
+             boundaryLayerWorkflow.blc.a2(k, 3) * ut_ms + boundaryLayerWorkflow.blc.a2(k, 4) * xt_ms;
+    blr[k] = boundaryLayerWorkflow.blc.d_re[k] + boundaryLayerWorkflow.blc.a2(k, 1) * tt_re + boundaryLayerWorkflow.blc.a2(k, 2) * dt_re +
+             boundaryLayerWorkflow.blc.a2(k, 3) * ut_re + boundaryLayerWorkflow.blc.a2(k, 4) * xt_re;
+    blx[k] = boundaryLayerWorkflow.blc.d_xi[k] + boundaryLayerWorkflow.blc.a2(k, 1) * tt_xf + boundaryLayerWorkflow.blc.a2(k, 2) * dt_xf +
+             boundaryLayerWorkflow.blc.a2(k, 3) * ut_xf + boundaryLayerWorkflow.blc.a2(k, 4) * xt_xf;
 
-    bl1(k, 0) = blc.a1(k, 0) + blc.a2(k, 1) * tt_a1 + blc.a2(k, 2) * dt_a1 +
-                blc.a2(k, 3) * ut_a1 + blc.a2(k, 4) * xt_a1;
-    bl1(k, 1) = blc.a1(k, 1) + blc.a2(k, 1) * tt_t1 + blc.a2(k, 2) * dt_t1 +
-                blc.a2(k, 3) * ut_t1 + blc.a2(k, 4) * xt_t1;
-    bl1(k, 2) = blc.a1(k, 2) + blc.a2(k, 1) * tt_d1 + blc.a2(k, 2) * dt_d1 +
-                blc.a2(k, 3) * ut_d1 + blc.a2(k, 4) * xt_d1;
-    bl1(k, 3) = blc.a1(k, 3) + blc.a2(k, 1) * tt_u1 + blc.a2(k, 2) * dt_u1 +
-                blc.a2(k, 3) * ut_u1 + blc.a2(k, 4) * xt_u1;
-    bl1(k, 4) = blc.a1(k, 4) + blc.a2(k, 1) * tt_x1 + blc.a2(k, 2) * dt_x1 +
-                blc.a2(k, 3) * ut_x1 + blc.a2(k, 4) * xt_x1;
+    bl1(k, 0) = boundaryLayerWorkflow.blc.a1(k, 0) + boundaryLayerWorkflow.blc.a2(k, 1) * tt_a1 + boundaryLayerWorkflow.blc.a2(k, 2) * dt_a1 +
+                boundaryLayerWorkflow.blc.a2(k, 3) * ut_a1 + boundaryLayerWorkflow.blc.a2(k, 4) * xt_a1;
+    bl1(k, 1) = boundaryLayerWorkflow.blc.a1(k, 1) + boundaryLayerWorkflow.blc.a2(k, 1) * tt_t1 + boundaryLayerWorkflow.blc.a2(k, 2) * dt_t1 +
+                boundaryLayerWorkflow.blc.a2(k, 3) * ut_t1 + boundaryLayerWorkflow.blc.a2(k, 4) * xt_t1;
+    bl1(k, 2) = boundaryLayerWorkflow.blc.a1(k, 2) + boundaryLayerWorkflow.blc.a2(k, 1) * tt_d1 + boundaryLayerWorkflow.blc.a2(k, 2) * dt_d1 +
+                boundaryLayerWorkflow.blc.a2(k, 3) * ut_d1 + boundaryLayerWorkflow.blc.a2(k, 4) * xt_d1;
+    bl1(k, 3) = boundaryLayerWorkflow.blc.a1(k, 3) + boundaryLayerWorkflow.blc.a2(k, 1) * tt_u1 + boundaryLayerWorkflow.blc.a2(k, 2) * dt_u1 +
+                boundaryLayerWorkflow.blc.a2(k, 3) * ut_u1 + boundaryLayerWorkflow.blc.a2(k, 4) * xt_u1;
+    bl1(k, 4) = boundaryLayerWorkflow.blc.a1(k, 4) + boundaryLayerWorkflow.blc.a2(k, 1) * tt_x1 + boundaryLayerWorkflow.blc.a2(k, 2) * dt_x1 +
+                boundaryLayerWorkflow.blc.a2(k, 3) * ut_x1 + boundaryLayerWorkflow.blc.a2(k, 4) * xt_x1;
 
     bl2(k, 0) = 0.0;
-    bl2(k, 1) = blc.a2(k, 1) * tt_t2 + blc.a2(k, 2) * dt_t2 + blc.a2(k, 3) * ut_t2 +
-                blc.a2(k, 4) * xt_t2;
-    bl2(k, 2) = blc.a2(k, 1) * tt_d2 + blc.a2(k, 2) * dt_d2 + blc.a2(k, 3) * ut_d2 +
-                blc.a2(k, 4) * xt_d2;
-    bl2(k, 3) = blc.a2(k, 1) * tt_u2 + blc.a2(k, 2) * dt_u2 + blc.a2(k, 3) * ut_u2 +
-                blc.a2(k, 4) * xt_u2;
-    bl2(k, 4) = blc.a2(k, 1) * tt_x2 + blc.a2(k, 2) * dt_x2 + blc.a2(k, 3) * ut_x2 +
-                blc.a2(k, 4) * xt_x2;
+    bl2(k, 1) = boundaryLayerWorkflow.blc.a2(k, 1) * tt_t2 + boundaryLayerWorkflow.blc.a2(k, 2) * dt_t2 + boundaryLayerWorkflow.blc.a2(k, 3) * ut_t2 +
+                boundaryLayerWorkflow.blc.a2(k, 4) * xt_t2;
+    bl2(k, 2) = boundaryLayerWorkflow.blc.a2(k, 1) * tt_d2 + boundaryLayerWorkflow.blc.a2(k, 2) * dt_d2 + boundaryLayerWorkflow.blc.a2(k, 3) * ut_d2 +
+                boundaryLayerWorkflow.blc.a2(k, 4) * xt_d2;
+    bl2(k, 3) = boundaryLayerWorkflow.blc.a2(k, 1) * tt_u2 + boundaryLayerWorkflow.blc.a2(k, 2) * dt_u2 + boundaryLayerWorkflow.blc.a2(k, 3) * ut_u2 +
+                boundaryLayerWorkflow.blc.a2(k, 4) * xt_u2;
+    bl2(k, 4) = boundaryLayerWorkflow.blc.a2(k, 1) * tt_x2 + boundaryLayerWorkflow.blc.a2(k, 2) * dt_x2 + boundaryLayerWorkflow.blc.a2(k, 3) * ut_x2 +
+                boundaryLayerWorkflow.blc.a2(k, 4) * xt_x2;
   }
 
   //**** second, set up turbulent part between xt and x2  ****
@@ -1627,7 +1627,7 @@ bool XFoil::trdif() {
       blmid(boundaryLayerWorkflow.state, FlowRegimeEnum::Turbulent);
 
   //---- set up newton system for dct, dth, dds, due, dxi  at  xt and x2
-  blc = blDiffSolver.solve(FlowRegimeEnum::Turbulent, boundaryLayerWorkflow.state, turbulentSkinFriction, amcrit);
+  boundaryLayerWorkflow.blc = blDiffSolver.solve(FlowRegimeEnum::Turbulent, boundaryLayerWorkflow.state, turbulentSkinFriction, amcrit);
 
   //---- convert sensitivities wrt "t" variables into sensitivities
   //-    wrt "1" and "2" variables as done before for the laminar part
@@ -1644,37 +1644,37 @@ bool XFoil::trdif() {
                            {0, dt_t2, dt_d2, dt_u2, dt_x2},
                            {0, ut_t2, ut_d2, ut_u2, ut_x2},
                            {0, xt_t2, xt_d2, xt_u2, xt_x2}};
-  bt1.block(0, 0, 3, 5) = blc.a1.block(0, 0, 3, 5) * bt1_right;
-  bt2.block(0, 0, 3, 5) = blc.a1.block(0, 0, 3, 5) * bt2_right;
-  bt2 += blc.a2;
+  bt1.block(0, 0, 3, 5) = boundaryLayerWorkflow.blc.a1.block(0, 0, 3, 5) * bt1_right;
+  bt2.block(0, 0, 3, 5) = boundaryLayerWorkflow.blc.a1.block(0, 0, 3, 5) * bt2_right;
+  bt2 += boundaryLayerWorkflow.blc.a2;
   for (int k = 0; k < 3; k++) {
-    btrez[k] = blc.rhs[k];
-    btm[k] = blc.d_msq[k] + blc.a1(k, 0) * st_ms + blc.a1(k, 1) * tt_ms +
-             blc.a1(k, 2) * dt_ms + blc.a1(k, 3) * ut_ms + blc.a1(k, 4) * xt_ms;
-    btr[k] = blc.d_re[k] + blc.a1(k, 0) * st_re + blc.a1(k, 1) * tt_re +
-             blc.a1(k, 2) * dt_re + blc.a1(k, 3) * ut_re + blc.a1(k, 4) * xt_re;
-    btx[k] = blc.d_xi[k] + blc.a1(k, 0) * st_xf + blc.a1(k, 1) * tt_xf +
-             blc.a1(k, 2) * dt_xf + blc.a1(k, 3) * ut_xf + blc.a1(k, 4) * xt_xf;
+    btrez[k] = boundaryLayerWorkflow.blc.rhs[k];
+    btm[k] = boundaryLayerWorkflow.blc.d_msq[k] + boundaryLayerWorkflow.blc.a1(k, 0) * st_ms + boundaryLayerWorkflow.blc.a1(k, 1) * tt_ms +
+             boundaryLayerWorkflow.blc.a1(k, 2) * dt_ms + boundaryLayerWorkflow.blc.a1(k, 3) * ut_ms + boundaryLayerWorkflow.blc.a1(k, 4) * xt_ms;
+    btr[k] = boundaryLayerWorkflow.blc.d_re[k] + boundaryLayerWorkflow.blc.a1(k, 0) * st_re + boundaryLayerWorkflow.blc.a1(k, 1) * tt_re +
+             boundaryLayerWorkflow.blc.a1(k, 2) * dt_re + boundaryLayerWorkflow.blc.a1(k, 3) * ut_re + boundaryLayerWorkflow.blc.a1(k, 4) * xt_re;
+    btx[k] = boundaryLayerWorkflow.blc.d_xi[k] + boundaryLayerWorkflow.blc.a1(k, 0) * st_xf + boundaryLayerWorkflow.blc.a1(k, 1) * tt_xf +
+             boundaryLayerWorkflow.blc.a1(k, 2) * dt_xf + boundaryLayerWorkflow.blc.a1(k, 3) * ut_xf + boundaryLayerWorkflow.blc.a1(k, 4) * xt_xf;
   }
 
   //---- add up laminar and turbulent parts to get final system
   //-    in terms of honest-to-god "1" and "2" variables.
-  blc.rhs[0] = btrez[0];
-  blc.rhs[1] = blrez[1] + btrez[1];
-  blc.rhs[2] = blrez[2] + btrez[2];
-  blc.d_msq[0] = btm[0];
-  blc.d_msq[1] = blm[1] + btm[1];
-  blc.d_msq[2] = blm[2] + btm[2];
-  blc.d_re[0] = btr[0];
-  blc.d_re[1] = blr[1] + btr[1];
-  blc.d_re[2] = blr[2] + btr[2];
-  blc.d_xi[0] = btx[0];
-  blc.d_xi[1] = blx[1] + btx[1];
-  blc.d_xi[2] = blx[2] + btx[2];
-  blc.a1.row(0) = bt1.row(0);
-  blc.a2.row(0) = bt2.row(0);
-  blc.a1.middleRows(1, 2) = bl1.middleRows(1, 2) + bt1.middleRows(1, 2);
-  blc.a2.middleRows(1, 2) = bl2.middleRows(1, 2) + bt2.middleRows(1, 2);
+  boundaryLayerWorkflow.blc.rhs[0] = btrez[0];
+  boundaryLayerWorkflow.blc.rhs[1] = blrez[1] + btrez[1];
+  boundaryLayerWorkflow.blc.rhs[2] = blrez[2] + btrez[2];
+  boundaryLayerWorkflow.blc.d_msq[0] = btm[0];
+  boundaryLayerWorkflow.blc.d_msq[1] = blm[1] + btm[1];
+  boundaryLayerWorkflow.blc.d_msq[2] = blm[2] + btm[2];
+  boundaryLayerWorkflow.blc.d_re[0] = btr[0];
+  boundaryLayerWorkflow.blc.d_re[1] = blr[1] + btr[1];
+  boundaryLayerWorkflow.blc.d_re[2] = blr[2] + btr[2];
+  boundaryLayerWorkflow.blc.d_xi[0] = btx[0];
+  boundaryLayerWorkflow.blc.d_xi[1] = blx[1] + btx[1];
+  boundaryLayerWorkflow.blc.d_xi[2] = blx[2] + btx[2];
+  boundaryLayerWorkflow.blc.a1.row(0) = bt1.row(0);
+  boundaryLayerWorkflow.blc.a2.row(0) = bt2.row(0);
+  boundaryLayerWorkflow.blc.a1.middleRows(1, 2) = bl1.middleRows(1, 2) + bt1.middleRows(1, 2);
+  boundaryLayerWorkflow.blc.a2.middleRows(1, 2) = bl2.middleRows(1, 2) + bt2.middleRows(1, 2);
 
   //---- to be sanitary, restore "1" quantities which got clobbered
   //-    in all of the numerical gymnastics above.  the "2" variables

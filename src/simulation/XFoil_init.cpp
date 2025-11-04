@@ -110,7 +110,7 @@ void XFoil::initializeDataStructures() {
   vb.resize(IVX, Matrix3x2d::Zero());
   vdel.resize(IVX, Matrix3x2d::Zero());
   memset(vm, 0, sizeof(vm));
-  blc.clear();
+  boundaryLayerWorkflow.blc.clear();
   memset(vz, 0, sizeof(vz));
 
   memset(qgamm, 0, sizeof(qgamm));
