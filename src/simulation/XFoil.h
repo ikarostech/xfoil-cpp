@@ -380,15 +380,6 @@ class XFoil {
 
   bool lgamu, lqaij, ladij, lwdij;
 
-  const double sccon = 5.6;
-  const double gacon = 6.70;
-  const double gbcon = 0.75;
-  const double gbc0 = 0.60;
-  const double gbc1 = 0.40;
-  const double gccon = 18.0;
-  const double dlcon = 0.9;
-  const double ctcon = 0.5 / (gacon * gacon * gbcon);
-
   BoundaryLayerVariablesSolver boundaryLayerVariablesSolver;
 
   int nsys;

@@ -6,11 +6,6 @@
 #include "domain/coefficient/dissipation.hpp"
 #include "domain/coefficient/skin_friction.hpp"
 
-BoundaryLayerVariablesSolver::BoundaryLayerVariablesSolver(double gbcon,
-                                                           double gccon,
-                                                           double ctcon)
-    : gbcon_(gbcon), gccon_(gccon), ctcon_(ctcon) {}
-
 blData BoundaryLayerVariablesSolver::computeShapeParameters(
     const blData& ref, FlowRegimeEnum flowRegimeType) const {
   blData result = ref;
@@ -44,16 +39,16 @@ blData BoundaryLayerVariablesSolver::computeShapeParameters(
   result.hsz.ms() += hs_result.hs_msq * result.param.mz_ms;
 
   const double us2_hs2 = 0.5 *
-      (1.0 - (result.hkz.scalar - 1.0) / (gbcon_ * result.param.hz));
+      (1.0 - (result.hkz.scalar - 1.0) / (kGbcon * result.param.hz));
   const double us2_hk2 =
-      0.5 * result.hsz.scalar * (-1.0 / (gbcon_ * result.param.hz));
+      0.5 * result.hsz.scalar * (-1.0 / (kGbcon * result.param.hz));
   const double us2_h2 = 0.5 * result.hsz.scalar * (result.hkz.scalar - 1.0) /
-                        (gbcon_ * result.param.hz * result.param.hz);
+                        (kGbcon * result.param.hz * result.param.hz);
 
   result.usz.scalar =
       0.5 * result.hsz.scalar *
       (1.0 -
-       (result.hkz.scalar - 1.0) / (gbcon_ * result.param.hz));
+       (result.hkz.scalar - 1.0) / (kGbcon * result.param.hz));
   result.usz.vector =
       us2_hs2 * result.hsz.vector + us2_hk2 * result.hkz.vector;
   result.usz.t() += us2_h2 * result.param.hz_tz;
@@ -83,7 +78,7 @@ blData BoundaryLayerVariablesSolver::computeShearCoefficients(
   double hkc_hk2 = 1.0;
   double hkc_rt2 = 0.0;
   if (flowRegimeType == FlowRegimeEnum::Turbulent) {
-    const double gcc = gccon_;
+    const double gcc = kGccon;
     hkc = result.hkz.scalar - 1.0 - gcc / result.rtz.scalar;
     hkc_hk2 = 1.0;
     hkc_rt2 = gcc / result.rtz.scalar / result.rtz.scalar;
@@ -98,7 +93,7 @@ blData BoundaryLayerVariablesSolver::computeShearCoefficients(
   double usb = 1.0 - result.usz.scalar;
   result.cqz.scalar =
       hkc / result.hkz.scalar *
-      std::sqrt(ctcon_ * result.hsz.scalar * hkb /
+      std::sqrt(kCtcon * result.hsz.scalar * hkb /
                 (usb * result.param.hz));
   double cq2_hs2 = result.cqz.scalar / result.hsz.scalar / 2;
   double cq2_us2 = result.cqz.scalar * (0.5 / usb);

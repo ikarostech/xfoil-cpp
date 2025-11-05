@@ -5,7 +5,7 @@
 
 class BoundaryLayerVariablesSolver {
  public:
-  BoundaryLayerVariablesSolver(double gbcon, double gccon, double ctcon);
+  BoundaryLayerVariablesSolver() = default;
 
   blData solve(blData data, FlowRegimeEnum flowRegimeType) const;
 
@@ -20,8 +20,9 @@ class BoundaryLayerVariablesSolver {
                             FlowRegimeEnum flowRegimeType) const;
   blData computeThickness(const blData& ref,
                           FlowRegimeEnum flowRegimeType) const;
-  
-  double gbcon_;
-  double gccon_;
-  double ctcon_;
+
+  static constexpr double kGbcon = 0.75;
+  static constexpr double kGccon = 18.0;
+  static constexpr double kGacon = 6.70;
+  static constexpr double kCtcon = 0.5 / (kGacon * kGacon * kGbcon);
 };
