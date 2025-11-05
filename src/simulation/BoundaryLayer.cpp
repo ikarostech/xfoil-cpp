@@ -163,12 +163,7 @@ bool BoundaryLayerWorkflow::applyMixedModeNewtonStep(
 
 blData BoundaryLayerWorkflow::blvar(XFoil& xfoil, blData data,
                                     FlowRegimeEnum flowRegimeType) {
-  data = xfoil.boundaryLayerVariablesSolver.computeShapeParameters(data, flowRegimeType);
-  data = xfoil.boundaryLayerVariablesSolver.computeShearCoefficients(data, flowRegimeType);
-  data = xfoil.boundaryLayerVariablesSolver.computeSkinFrictionCoefficients(data, flowRegimeType);
-  data = xfoil.boundaryLayerVariablesSolver.computeDissipation(data, flowRegimeType);
-  data = xfoil.boundaryLayerVariablesSolver.computeThickness(data, flowRegimeType);
-  return data;
+  return xfoil.boundaryLayerVariablesSolver.solve(data, flowRegimeType);
 }
 
 bool BoundaryLayerWorkflow::iblpan(XFoil& xfoil) {

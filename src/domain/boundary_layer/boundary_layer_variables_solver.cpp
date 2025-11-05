@@ -6,22 +6,6 @@
 #include "domain/coefficient/dissipation.hpp"
 #include "domain/coefficient/skin_friction.hpp"
 
-namespace {
-
-inline skin_friction::C_f evaluateSkinFriction(const blData& data,
-                                               FlowRegimeEnum flowRegimeType) {
-  return skin_friction::getSkinFriction(data.hkz.scalar, data.rtz.scalar,
-                                        data.param.mz, flowRegimeType);
-}
-
-inline dissipation::DissipationResult evaluateDissipation(
-    const blData& data, FlowRegimeEnum flowRegimeType) {
-  return dissipation::getDissipation(data.hkz.scalar, data.rtz.scalar,
-                                     flowRegimeType);
-}
-
-}  // namespace
-
 BoundaryLayerVariablesSolver::BoundaryLayerVariablesSolver(double gbcon,
                                                            double gccon,
                                                            double ctcon)
@@ -138,8 +122,7 @@ blData BoundaryLayerVariablesSolver::computeSkinFrictionCoefficients(
     const blData& ref, FlowRegimeEnum flowRegimeType) const {
   blData result = ref;
 
-  const skin_friction::C_f c_f =
-      evaluateSkinFriction(result, flowRegimeType);
+  const skin_friction::C_f c_f = skin_friction::getSkinFriction(result.hkz.scalar, result.rtz.scalar, result.param.mz, flowRegimeType);
   result.cfz.scalar = c_f.cf;
   const double cf2_hk2 = c_f.hk;
   const double cf2_rt2 = c_f.rt;
@@ -157,14 +140,13 @@ blData BoundaryLayerVariablesSolver::computeDissipation(
     const blData& ref, FlowRegimeEnum flowRegimeType) const {
   blData result = ref;
   if (flowRegimeType == FlowRegimeEnum::Laminar) {
-    const auto dissipation_result =
-        evaluateDissipation(result, flowRegimeType);
+    const auto dissipation_result = dissipation::getDissipation(result.hkz.scalar, result.rtz.scalar, flowRegimeType);
     result.diz.scalar = dissipation_result.di;
     result.diz.vector = dissipation_result.di_hk * result.hkz.vector +
                         dissipation_result.di_rt * result.rtz.vector;
   } else {
     if (flowRegimeType == FlowRegimeEnum::Turbulent) {
-      const auto c_ft = evaluateSkinFriction(result, flowRegimeType);
+      const auto c_ft = skin_friction::getSkinFriction(result.hkz.scalar, result.rtz.scalar, result.param.mz, flowRegimeType);
       const double cf2t = c_ft.cf;
       const double cf2t_hk2 = c_ft.hk;
       const double cf2t_rt2 = c_ft.rt;
@@ -247,8 +229,7 @@ blData BoundaryLayerVariablesSolver::computeDissipation(
   }
 
   if (flowRegimeType == FlowRegimeEnum::Turbulent) {
-    const auto dissipation_result =
-        evaluateDissipation(result, flowRegimeType);
+    const auto dissipation_result = dissipation::getDissipation(result.hkz.scalar, result.rtz.scalar, flowRegimeType);
     if (dissipation_result.di > result.diz.scalar) {
       result.diz.scalar = dissipation_result.di;
       result.diz.vector = dissipation_result.di_hk * result.hkz.vector +
@@ -257,8 +238,7 @@ blData BoundaryLayerVariablesSolver::computeDissipation(
   }
 
   if (flowRegimeType == FlowRegimeEnum::Wake) {
-    const auto dissipation_result =
-        evaluateDissipation(result, flowRegimeType);
+    const auto dissipation_result = dissipation::getDissipation(result.hkz.scalar, result.rtz.scalar, flowRegimeType);
     const double di2l = dissipation_result.di;
     if (di2l > result.diz.scalar) {
       result.diz.scalar = dissipation_result.di;
@@ -294,4 +274,13 @@ blData BoundaryLayerVariablesSolver::computeThickness(
   }
 
   return result;
+}
+
+blData BoundaryLayerVariablesSolver::solve(blData data, FlowRegimeEnum flowRegimeType) const {
+  data = computeShapeParameters(data, flowRegimeType);
+  data = computeShearCoefficients(data, flowRegimeType);
+  data = computeSkinFrictionCoefficients(data, flowRegimeType);
+  data = computeDissipation(data, flowRegimeType);
+  data = computeThickness(data, flowRegimeType);
+  return data;
 }

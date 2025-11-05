@@ -7,6 +7,9 @@ class BoundaryLayerVariablesSolver {
  public:
   BoundaryLayerVariablesSolver(double gbcon, double gccon, double ctcon);
 
+  blData solve(blData data, FlowRegimeEnum flowRegimeType) const;
+
+ private:
   blData computeShapeParameters(const blData& ref,
                                 FlowRegimeEnum flowRegimeType) const;
   blData computeShearCoefficients(const blData& ref,
@@ -17,8 +20,7 @@ class BoundaryLayerVariablesSolver {
                             FlowRegimeEnum flowRegimeType) const;
   blData computeThickness(const blData& ref,
                           FlowRegimeEnum flowRegimeType) const;
-
- private:
+  
   double gbcon_;
   double gccon_;
   double ctcon_;
