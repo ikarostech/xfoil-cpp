@@ -25,6 +25,7 @@ target_link_libraries(xfoil_core
 add_library(xfoil_domain
     src/domain/boundary_layer.cpp
     src/domain/boundary_layer/boundary_layer_diff_solver.cpp
+    src/domain/boundary_layer/boundary_layer_variables_solver.cpp
     src/domain/coefficient/dissipation.cpp
     src/domain/coefficient/skin_friction.cpp
     src/domain/foil/edge.cpp

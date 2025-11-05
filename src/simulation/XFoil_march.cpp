@@ -167,12 +167,12 @@ bool XFoil::performMixedModeNewtonIteration(int side, int ibl, int itrold,
     }
 
     if (ctx.simi || startOfWake) {
-      boundaryLayerWorkflow.configureSimilarityRow(*this, ueref);
+      boundaryLayerWorkflow.configureSimilarityRow(ueref);
     } else {
       const bool resetSensitivity = (itbl <= 5);
       const bool averageSensitivity = (itbl > 5 && itbl <= 15);
       boundaryLayerWorkflow.configureViscousRow(
-          *this, hkref, ueref, senswt, resetSensitivity, averageSensitivity,
+          hkref, ueref, senswt, resetSensitivity, averageSensitivity,
           sens, sennew);
     }
 
@@ -237,15 +237,21 @@ void XFoil::handleMixedModeNonConvergence(int side, int ibl,
   checkTransitionIfNeeded(side, ibl, ctx.simi, 2, ami);
 
   if (ibl < boundaryLayerWorkflow.lattice.transitionIndex.get(side)) {
-    boundaryLayerWorkflow.state.station2 = blvar(boundaryLayerWorkflow.state.station2, FlowRegimeEnum::Laminar);
+    boundaryLayerWorkflow.state.station2 =
+        boundaryLayerWorkflow.blvar(*this, boundaryLayerWorkflow.state.station2,
+                                    FlowRegimeEnum::Laminar);
     blmid(boundaryLayerWorkflow.state, FlowRegimeEnum::Laminar);
   }
   if (ibl >= boundaryLayerWorkflow.lattice.transitionIndex.get(side)) {
-    boundaryLayerWorkflow.state.station2 = blvar(boundaryLayerWorkflow.state.station2, FlowRegimeEnum::Turbulent);
+    boundaryLayerWorkflow.state.station2 =
+        boundaryLayerWorkflow.blvar(*this, boundaryLayerWorkflow.state.station2,
+                                    FlowRegimeEnum::Turbulent);
     blmid(boundaryLayerWorkflow.state, FlowRegimeEnum::Turbulent);
   }
   if (ctx.wake) {
-    boundaryLayerWorkflow.state.station2 = blvar(boundaryLayerWorkflow.state.station2, FlowRegimeEnum::Wake);
+    boundaryLayerWorkflow.state.station2 =
+        boundaryLayerWorkflow.blvar(*this, boundaryLayerWorkflow.state.station2,
+                                    FlowRegimeEnum::Wake);
     blmid(boundaryLayerWorkflow.state, FlowRegimeEnum::Wake);
   }
 
@@ -561,11 +567,20 @@ bool XFoil::mrchue() {
         }
         //------- set all other extrapolated values for current station
         if (ibl < boundaryLayerWorkflow.lattice.transitionIndex.get(is))
-          boundaryLayerWorkflow.state.station2 = blvar(boundaryLayerWorkflow.state.station2, FlowRegimeEnum::Laminar);
+          boundaryLayerWorkflow.state.station2 =
+              boundaryLayerWorkflow.blvar(
+                  *this, boundaryLayerWorkflow.state.station2,
+                  FlowRegimeEnum::Laminar);
         if (ibl >= boundaryLayerWorkflow.lattice.transitionIndex.get(is))
-          boundaryLayerWorkflow.state.station2 = blvar(boundaryLayerWorkflow.state.station2, FlowRegimeEnum::Turbulent);
+          boundaryLayerWorkflow.state.station2 =
+              boundaryLayerWorkflow.blvar(
+                  *this, boundaryLayerWorkflow.state.station2,
+                  FlowRegimeEnum::Turbulent);
         if (wake)
-          boundaryLayerWorkflow.state.station2 = blvar(boundaryLayerWorkflow.state.station2, FlowRegimeEnum::Wake);
+          boundaryLayerWorkflow.state.station2 =
+              boundaryLayerWorkflow.blvar(
+                  *this, boundaryLayerWorkflow.state.station2,
+                  FlowRegimeEnum::Wake);
         if (ibl < boundaryLayerWorkflow.lattice.transitionIndex.get(is))
           blmid(boundaryLayerWorkflow.state, FlowRegimeEnum::Laminar);
         if (ibl >= boundaryLayerWorkflow.lattice.transitionIndex.get(is))
@@ -1043,7 +1058,10 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
 
         output.turb = true;
         output.wake = true;
-        boundaryLayerWorkflow.state.station2 = blvar(boundaryLayerWorkflow.state.station2, FlowRegimeEnum::Wake);
+        boundaryLayerWorkflow.state.station2 =
+            boundaryLayerWorkflow.blvar(
+                *this, boundaryLayerWorkflow.state.station2,
+                FlowRegimeEnum::Wake);
         blmid(boundaryLayerWorkflow.state, FlowRegimeEnum::Wake);
       }
       u1_m = u2_m;
@@ -1530,7 +1548,9 @@ bool XFoil::trdif() {
 
   //---- calculate laminar secondary "t" variables
   blkin(boundaryLayerWorkflow.state);
-  boundaryLayerWorkflow.state.station2 = blvar(boundaryLayerWorkflow.state.station2, FlowRegimeEnum::Laminar);
+  boundaryLayerWorkflow.state.station2 =
+      boundaryLayerWorkflow.blvar(*this, boundaryLayerWorkflow.state.station2,
+                                  FlowRegimeEnum::Laminar);
 
   //---- calculate x1-xt midpoint cfm value
   SkinFrictionCoefficients laminarSkinFriction =
@@ -1580,7 +1600,9 @@ bool XFoil::trdif() {
   //**** second, set up turbulent part between xt and x2  ****
 
   //---- calculate equilibrium shear coefficient cqt at transition point
-  boundaryLayerWorkflow.state.station2 = blvar(boundaryLayerWorkflow.state.station2, FlowRegimeEnum::Turbulent);
+  boundaryLayerWorkflow.state.station2 =
+      boundaryLayerWorkflow.blvar(*this, boundaryLayerWorkflow.state.station2,
+                                  FlowRegimeEnum::Turbulent);
 
   //---- set initial shear coefficient value st at transition point
   //-    ( note that cq2, cq2_t2, etc. are really "cqt", "cqt_tt", etc.)
@@ -1617,7 +1639,9 @@ bool XFoil::trdif() {
   boundaryLayerWorkflow.state.station2.param.sz = st;
 
   //---- recalculate turbulent secondary "t" variables using proper cti
-  boundaryLayerWorkflow.state.station2 = blvar(boundaryLayerWorkflow.state.station2, FlowRegimeEnum::Turbulent);
+  boundaryLayerWorkflow.state.station2 =
+      boundaryLayerWorkflow.blvar(*this, boundaryLayerWorkflow.state.station2,
+                                  FlowRegimeEnum::Turbulent);
 
   boundaryLayerWorkflow.state.stepbl();
   restoreblData(2);

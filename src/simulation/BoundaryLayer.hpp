@@ -4,6 +4,7 @@
 #include "domain/coefficient/bl_newton.hpp"
 
 class XFoil;
+enum class FlowRegimeEnum;
 
 class BoundaryLayerWorkflow {
  public:
@@ -33,14 +34,15 @@ class BoundaryLayerWorkflow {
                                      MixedModeStationContext& ctx,
                                      double& ueref, double& hkref,
                                      double& ami);
-  void configureSimilarityRow(XFoil& xfoil, double ueref);
-  void configureViscousRow(XFoil& xfoil, double hkref, double ueref,
+  void configureSimilarityRow(double ueref);
+  void configureViscousRow(double hkref, double ueref,
                            double senswt, bool resetSensitivity,
                            bool averageSensitivity, double& sens,
                            double& sennew);
   bool applyMixedModeNewtonStep(XFoil& xfoil, int side, int stationIndex,
                                 double deps, double& ami,
                                 MixedModeStationContext& ctx);
+  blData blvar(XFoil& xfoil, blData data, FlowRegimeEnum flowRegimeType);
 
   bool iblpan(XFoil& xfoil);
   bool iblsys(XFoil& xfoil);

@@ -78,8 +78,7 @@ void BoundaryLayerWorkflow::initializeFirstIterationState(
   }
 }
 
-void BoundaryLayerWorkflow::configureSimilarityRow(XFoil& xfoil,
-                                                   double ueref) {
+void BoundaryLayerWorkflow::configureSimilarityRow(double ueref) {
   blc.a2(3, 0) = 0.0;
   blc.a2(3, 1) = 0.0;
   blc.a2(3, 2) = 0.0;
@@ -87,7 +86,7 @@ void BoundaryLayerWorkflow::configureSimilarityRow(XFoil& xfoil,
   blc.rhs[3] = ueref - state.station2.param.uz;
 }
 
-void BoundaryLayerWorkflow::configureViscousRow(XFoil& xfoil, double hkref,
+void BoundaryLayerWorkflow::configureViscousRow(double hkref,
                                                 double ueref, double senswt,
                                                 bool resetSensitivity,
                                                 bool averageSensitivity,
@@ -160,6 +159,16 @@ bool BoundaryLayerWorkflow::applyMixedModeNewtonStep(
   ctx.dsi = dsw + ctx.dswaki;
 
   return ctx.dmax <= deps;
+}
+
+blData BoundaryLayerWorkflow::blvar(XFoil& xfoil, blData data,
+                                    FlowRegimeEnum flowRegimeType) {
+  data = xfoil.boundaryLayerVariablesSolver.computeShapeParameters(data, flowRegimeType);
+  data = xfoil.boundaryLayerVariablesSolver.computeShearCoefficients(data, flowRegimeType);
+  data = xfoil.boundaryLayerVariablesSolver.computeSkinFrictionCoefficients(data, flowRegimeType);
+  data = xfoil.boundaryLayerVariablesSolver.computeDissipation(data, flowRegimeType);
+  data = xfoil.boundaryLayerVariablesSolver.computeThickness(data, flowRegimeType);
+  return data;
 }
 
 bool BoundaryLayerWorkflow::iblpan(XFoil& xfoil) {
@@ -366,7 +375,7 @@ bool BoundaryLayerWorkflow::stmove(XFoil& xfoil) {
 bool BoundaryLayerWorkflow::tesys(XFoil& xfoil, double cte, double tte, double dte) {
   blc.clear();
 
-  state.station2 = xfoil.blvar(state.station2, FlowRegimeEnum::Wake);
+  state.station2 = blvar(xfoil, state.station2, FlowRegimeEnum::Wake);
 
   blc.a1(0, 0) = -1.0;
   blc.a2(0, 0) = 1.0;

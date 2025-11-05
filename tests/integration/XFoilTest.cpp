@@ -195,7 +195,8 @@ TEST_F(DatGoogleTest, test_blvar_cfz_wake) {
   foil->ViscousIter();
 
   //when
-  foil->blData2 = foil->blvar(foil->blData2, FlowRegimeEnum::Laminar);
+  foil->blData2 = foil->boundaryLayerWorkflow.blvar(
+      *foil, foil->blData2, FlowRegimeEnum::Laminar);
 
   //then
   ASSERT_EQ(0, foil->blData2.cfz_uz);

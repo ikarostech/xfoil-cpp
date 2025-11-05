@@ -57,6 +57,7 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 #include "domain/boundary_layer.hpp"
 #include "domain/boundary_layer/boundary_layer_builder.hpp"
 #include "domain/boundary_layer/boundary_layer_diff_solver.hpp"
+#include "domain/boundary_layer/boundary_layer_variables_solver.hpp"
 #include "domain/foil/foil.hpp"
 #include "simulation/psi.hpp"
 #include "simulation/skin_friction_coefficients.hpp"
@@ -177,36 +178,6 @@ class XFoil {
                double thi, double dsi, double dswaki, double uei) const;
   bool blsolve();
   bool blsys(BoundaryLayerState& state, BoundaryLayerLattice& lattice);
-  blData blvar(blData data, FlowRegimeEnum flowRegimeType) const;
-  /**
-   * @brief Calculate shape parameters and slip velocity.
-   */
-  blData computeShapeParameters(const blData& ref,
-                                FlowRegimeEnum flowRegimeType) const;
-
-  /**
-   * @brief Determine shear coefficients.
-   */
-  blData computeShearCoefficients(const blData& ref,
-                                  FlowRegimeEnum flowRegimeType) const;
-
-  /**
-   * @brief Determine skin friction coefficients.
-   */
-  blData computeSkinFrictionCoefficients(const blData& ref,
-                                         FlowRegimeEnum flowRegimeType) const;
-
-  /**
-   * @brief Compute boundary-layer dissipation.
-   */
-  blData computeDissipation(const blData& ref,
-                            FlowRegimeEnum flowRegimeType) const;
-
-  /**
-   * @brief Compute boundary-layer thickness parameters.
-   */
-  blData computeThickness(const blData& ref,
-                          FlowRegimeEnum flowRegimeType) const;
   double cang(Matrix2Xd points);
   double cdcalc() const;
 
@@ -417,6 +388,8 @@ class XFoil {
   const double gccon = 18.0;
   const double dlcon = 0.9;
   const double ctcon = 0.5 / (gacon * gacon * gbcon);
+
+  BoundaryLayerVariablesSolver boundaryLayerVariablesSolver;
 
   int nsys;
 

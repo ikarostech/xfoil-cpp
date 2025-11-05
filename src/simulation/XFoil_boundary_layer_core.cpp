@@ -143,17 +143,6 @@ blData XFoil::blprv(blData data, double xsi, double ami, double cti,
   return data;
 }
 
-blData XFoil::blvar(blData data, FlowRegimeEnum flowRegimeType) const {
-  // This routine is now decomposed into helper functions to simplify
-  // the original Fortran translation.
-  data = computeShapeParameters(data, flowRegimeType);
-  data = computeShearCoefficients(data, flowRegimeType);
-  data = computeSkinFrictionCoefficients(data, flowRegimeType);
-  data = computeDissipation(data, flowRegimeType);
-  data = computeThickness(data, flowRegimeType);
-  return data;
-}
-
 
 /** ------------------------------------------------------------------
  *
@@ -180,14 +169,14 @@ bool XFoil::blsys(BoundaryLayerState& state, [[maybe_unused]] BoundaryLayerLatti
 
   //---- calculate secondary bl variables and their sensitivities
   if (wake) {
-    current = blvar(current, FlowRegimeEnum::Wake);
+    current = boundaryLayerWorkflow.blvar(*this, current, FlowRegimeEnum::Wake);
     skinFriction = blmid(state, FlowRegimeEnum::Wake);
   } else {
     if (turb || tran) {
-      current = blvar(current, FlowRegimeEnum::Turbulent);
+      current = boundaryLayerWorkflow.blvar(*this, current, FlowRegimeEnum::Turbulent);
       skinFriction = blmid(state, FlowRegimeEnum::Turbulent);
     } else {
-      current = blvar(current, FlowRegimeEnum::Laminar);
+      current = boundaryLayerWorkflow.blvar(*this, current, FlowRegimeEnum::Laminar);
       skinFriction = blmid(state, FlowRegimeEnum::Laminar);
     }
   }

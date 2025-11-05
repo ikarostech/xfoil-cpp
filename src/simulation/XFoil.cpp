@@ -66,7 +66,7 @@ Matrix2d XFoil::buildBodyToFreestreamRotation() const {
   return rotation;
 }
 
-XFoil::XFoil() {
+XFoil::XFoil() : boundaryLayerVariablesSolver(gbcon, gccon, ctcon) {
 
   m_pOutStream = nullptr;
 
