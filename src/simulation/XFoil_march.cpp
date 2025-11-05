@@ -238,19 +238,19 @@ void XFoil::handleMixedModeNonConvergence(int side, int ibl,
 
   if (ibl < boundaryLayerWorkflow.lattice.transitionIndex.get(side)) {
     boundaryLayerWorkflow.state.station2 =
-        boundaryLayerWorkflow.blvar(*this, boundaryLayerWorkflow.state.station2,
+        boundaryLayerWorkflow.blvar(boundaryLayerWorkflow.state.station2,
                                     FlowRegimeEnum::Laminar);
     blmid(boundaryLayerWorkflow.state, FlowRegimeEnum::Laminar);
   }
   if (ibl >= boundaryLayerWorkflow.lattice.transitionIndex.get(side)) {
     boundaryLayerWorkflow.state.station2 =
-        boundaryLayerWorkflow.blvar(*this, boundaryLayerWorkflow.state.station2,
+        boundaryLayerWorkflow.blvar(boundaryLayerWorkflow.state.station2,
                                     FlowRegimeEnum::Turbulent);
     blmid(boundaryLayerWorkflow.state, FlowRegimeEnum::Turbulent);
   }
   if (ctx.wake) {
     boundaryLayerWorkflow.state.station2 =
-        boundaryLayerWorkflow.blvar(*this, boundaryLayerWorkflow.state.station2,
+        boundaryLayerWorkflow.blvar(boundaryLayerWorkflow.state.station2,
                                     FlowRegimeEnum::Wake);
     blmid(boundaryLayerWorkflow.state, FlowRegimeEnum::Wake);
   }
@@ -569,17 +569,17 @@ bool XFoil::mrchue() {
         if (ibl < boundaryLayerWorkflow.lattice.transitionIndex.get(is))
           boundaryLayerWorkflow.state.station2 =
               boundaryLayerWorkflow.blvar(
-                  *this, boundaryLayerWorkflow.state.station2,
+                  boundaryLayerWorkflow.state.station2,
                   FlowRegimeEnum::Laminar);
         if (ibl >= boundaryLayerWorkflow.lattice.transitionIndex.get(is))
           boundaryLayerWorkflow.state.station2 =
               boundaryLayerWorkflow.blvar(
-                  *this, boundaryLayerWorkflow.state.station2,
+                  boundaryLayerWorkflow.state.station2,
                   FlowRegimeEnum::Turbulent);
         if (wake)
           boundaryLayerWorkflow.state.station2 =
               boundaryLayerWorkflow.blvar(
-                  *this, boundaryLayerWorkflow.state.station2,
+                  boundaryLayerWorkflow.state.station2,
                   FlowRegimeEnum::Wake);
         if (ibl < boundaryLayerWorkflow.lattice.transitionIndex.get(is))
           blmid(boundaryLayerWorkflow.state, FlowRegimeEnum::Laminar);
@@ -1060,7 +1060,7 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
         output.wake = true;
         boundaryLayerWorkflow.state.station2 =
             boundaryLayerWorkflow.blvar(
-                *this, boundaryLayerWorkflow.state.station2,
+                boundaryLayerWorkflow.state.station2,
                 FlowRegimeEnum::Wake);
         blmid(boundaryLayerWorkflow.state, FlowRegimeEnum::Wake);
       }
@@ -1549,7 +1549,7 @@ bool XFoil::trdif() {
   //---- calculate laminar secondary "t" variables
   blkin(boundaryLayerWorkflow.state);
   boundaryLayerWorkflow.state.station2 =
-      boundaryLayerWorkflow.blvar(*this, boundaryLayerWorkflow.state.station2,
+      boundaryLayerWorkflow.blvar(boundaryLayerWorkflow.state.station2,
                                   FlowRegimeEnum::Laminar);
 
   //---- calculate x1-xt midpoint cfm value
@@ -1601,7 +1601,7 @@ bool XFoil::trdif() {
 
   //---- calculate equilibrium shear coefficient cqt at transition point
   boundaryLayerWorkflow.state.station2 =
-      boundaryLayerWorkflow.blvar(*this, boundaryLayerWorkflow.state.station2,
+      boundaryLayerWorkflow.blvar(boundaryLayerWorkflow.state.station2,
                                   FlowRegimeEnum::Turbulent);
 
   //---- set initial shear coefficient value st at transition point
@@ -1640,7 +1640,7 @@ bool XFoil::trdif() {
 
   //---- recalculate turbulent secondary "t" variables using proper cti
   boundaryLayerWorkflow.state.station2 =
-      boundaryLayerWorkflow.blvar(*this, boundaryLayerWorkflow.state.station2,
+      boundaryLayerWorkflow.blvar(boundaryLayerWorkflow.state.station2,
                                   FlowRegimeEnum::Turbulent);
 
   boundaryLayerWorkflow.state.stepbl();

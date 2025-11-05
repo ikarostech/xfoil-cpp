@@ -161,9 +161,8 @@ bool BoundaryLayerWorkflow::applyMixedModeNewtonStep(
   return ctx.dmax <= deps;
 }
 
-blData BoundaryLayerWorkflow::blvar(XFoil& xfoil, blData data,
-                                    FlowRegimeEnum flowRegimeType) {
-  return xfoil.boundaryLayerVariablesSolver.solve(data, flowRegimeType);
+blData BoundaryLayerWorkflow::blvar(blData data, FlowRegimeEnum flowRegimeType) {
+  return this->boundaryLayerVariablesSolver.solve(data, flowRegimeType);
 }
 
 bool BoundaryLayerWorkflow::iblpan(XFoil& xfoil) {
@@ -370,7 +369,7 @@ bool BoundaryLayerWorkflow::stmove(XFoil& xfoil) {
 bool BoundaryLayerWorkflow::tesys(XFoil& xfoil, double cte, double tte, double dte) {
   blc.clear();
 
-  state.station2 = blvar(xfoil, state.station2, FlowRegimeEnum::Wake);
+  state.station2 = this->blvar(state.station2, FlowRegimeEnum::Wake);
 
   blc.a1(0, 0) = -1.0;
   blc.a2(0, 0) = 1.0;

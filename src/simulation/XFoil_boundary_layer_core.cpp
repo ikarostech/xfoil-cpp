@@ -169,14 +169,14 @@ bool XFoil::blsys(BoundaryLayerState& state, [[maybe_unused]] BoundaryLayerLatti
 
   //---- calculate secondary bl variables and their sensitivities
   if (wake) {
-    current = boundaryLayerWorkflow.blvar(*this, current, FlowRegimeEnum::Wake);
+    current = boundaryLayerWorkflow.blvar(current, FlowRegimeEnum::Wake);
     skinFriction = blmid(state, FlowRegimeEnum::Wake);
   } else {
     if (turb || tran) {
-      current = boundaryLayerWorkflow.blvar(*this, current, FlowRegimeEnum::Turbulent);
+      current = boundaryLayerWorkflow.blvar(current, FlowRegimeEnum::Turbulent);
       skinFriction = blmid(state, FlowRegimeEnum::Turbulent);
     } else {
-      current = boundaryLayerWorkflow.blvar(*this, current, FlowRegimeEnum::Laminar);
+      current = boundaryLayerWorkflow.blvar(current, FlowRegimeEnum::Laminar);
       skinFriction = blmid(state, FlowRegimeEnum::Laminar);
     }
   }

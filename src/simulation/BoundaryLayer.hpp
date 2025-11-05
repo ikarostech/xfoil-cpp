@@ -2,12 +2,14 @@
 
 #include "simulation/boundary_layer_state.hpp"
 #include "domain/coefficient/bl_newton.hpp"
+#include "domain/boundary_layer/boundary_layer_variables_solver.hpp"
 
 class XFoil;
 enum class FlowRegimeEnum;
 
 class BoundaryLayerWorkflow {
  public:
+  BoundaryLayerVariablesSolver boundaryLayerVariablesSolver;
   struct MixedModeStationContext {
     bool simi = false;
     bool wake = false;
@@ -42,7 +44,7 @@ class BoundaryLayerWorkflow {
   bool applyMixedModeNewtonStep(XFoil& xfoil, int side, int stationIndex,
                                 double deps, double& ami,
                                 MixedModeStationContext& ctx);
-  blData blvar(XFoil& xfoil, blData data, FlowRegimeEnum flowRegimeType);
+  blData blvar(blData data, FlowRegimeEnum flowRegimeType);
 
   bool iblpan(XFoil& xfoil);
   bool iblsys(XFoil& xfoil);

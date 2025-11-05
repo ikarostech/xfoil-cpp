@@ -380,8 +380,6 @@ class XFoil {
 
   bool lgamu, lqaij, ladij, lwdij;
 
-  BoundaryLayerVariablesSolver boundaryLayerVariablesSolver;
-
   int nsys;
 
   double wgap[IWX];
