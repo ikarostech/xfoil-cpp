@@ -172,10 +172,6 @@ class XFoil {
 
   BlDiffSolver blDiffSolver;
   bool blkin(BoundaryLayerState& state);
-  SkinFrictionCoefficients blmid(FlowRegimeEnum flowRegimeType);
-  SkinFrictionCoefficients blmid(BoundaryLayerState& state, FlowRegimeEnum flowRegimeType);
-  blData blprv(blData data, double xsi, double ami, double cti,
-               double thi, double dsi, double dswaki, double uei) const;
   bool blsolve();
   double cang(Matrix2Xd points);
   double cdcalc() const;

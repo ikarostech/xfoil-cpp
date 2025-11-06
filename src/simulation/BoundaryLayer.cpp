@@ -5,6 +5,7 @@
 #include <sstream>
 
 #include "XFoil.h"
+#include "domain/coefficient/skin_friction.hpp"
 
 using BoundaryContext = BoundaryLayerWorkflow::MixedModeStationContext;
 
@@ -165,6 +166,87 @@ blData BoundaryLayerWorkflow::blvar(blData data, FlowRegimeEnum flowRegimeType) 
   return this->boundaryLayerVariablesSolver.solve(data, flowRegimeType);
 }
 
+SkinFrictionCoefficients BoundaryLayerWorkflow::blmid(
+    XFoil& xfoil, BoundaryLayerState& state, FlowRegimeEnum flowRegimeType) {
+  blData& previous = state.previous();
+  blData& current = state.current();
+
+  if (xfoil.simi) {
+    previous.hkz = current.hkz;
+    previous.rtz = current.rtz;
+    previous.param.mz = current.param.mz;
+    previous.param.mz_uz = current.param.mz_uz;
+    previous.param.mz_ms = current.param.mz_ms;
+  }
+
+  const double hka = 0.5 * (previous.hkz.scalar + current.hkz.scalar);
+  const double rta = 0.5 * (previous.rtz.scalar + current.rtz.scalar);
+  const double ma = 0.5 * (previous.param.mz + current.param.mz);
+
+  skin_friction::C_f cf_res =
+      skin_friction::getSkinFriction(hka, rta, ma, flowRegimeType);
+
+  SkinFrictionCoefficients coeffs;
+  coeffs.cfm = cf_res.cf;
+  const double cfm_hka = cf_res.hk;
+  const double cfm_rta = cf_res.rt;
+  const double cfm_ma = cf_res.msq;
+
+  coeffs.cfm_u1 = 0.5 * (cfm_hka * previous.hkz.u() +
+                         cfm_ma * previous.param.mz_uz +
+                         cfm_rta * previous.rtz.u());
+  coeffs.cfm_t1 = 0.5 * (cfm_hka * previous.hkz.t() +
+                         cfm_rta * previous.rtz.t());
+  coeffs.cfm_d1 = 0.5 * (cfm_hka * previous.hkz.d());
+
+  coeffs.cfm_u2 = 0.5 * (cfm_hka * current.hkz.u() +
+                         cfm_ma * current.param.mz_uz +
+                         cfm_rta * current.rtz.u());
+  coeffs.cfm_t2 = 0.5 * (cfm_hka * current.hkz.t() +
+                         cfm_rta * current.rtz.t());
+  coeffs.cfm_d2 = 0.5 * (cfm_hka * current.hkz.d());
+
+  coeffs.cfm_ms =
+      0.5 * (cfm_hka * previous.hkz.ms() + cfm_ma * previous.param.mz_ms +
+             cfm_rta * previous.rtz.ms() + cfm_hka * current.hkz.ms() +
+             cfm_ma * current.param.mz_ms + cfm_rta * current.rtz.ms());
+  coeffs.cfm_re = 0.5 * (cfm_rta * previous.rtz.re() +
+                         cfm_rta * current.rtz.re());
+
+  return coeffs;
+}
+
+SkinFrictionCoefficients BoundaryLayerWorkflow::blmid(
+    XFoil& xfoil, FlowRegimeEnum flowRegimeType) {
+  return blmid(xfoil, state, flowRegimeType);
+}
+
+blData BoundaryLayerWorkflow::blprv(XFoil& xfoil, blData data, double xsi,
+                                    double ami, double cti, double thi,
+                                    double dsi, double dswaki,
+                                    double uei) const {
+  data.param.xz = xsi;
+  data.param.amplz = ami;
+  data.param.sz = cti;
+  data.param.tz = thi;
+  data.param.dz = dsi - dswaki;
+  data.param.dwz = dswaki;
+
+  data.param.uz =
+      uei * (1.0 - xfoil.tkbl) /
+      (1.0 - xfoil.tkbl * (uei / xfoil.qinfbl) * (uei / xfoil.qinfbl));
+  data.param.uz_uei =
+      (1.0 + xfoil.tkbl *
+                (2.0 * data.param.uz * uei / xfoil.qinfbl / xfoil.qinfbl -
+                 1.0)) /
+      (1.0 - xfoil.tkbl * (uei / xfoil.qinfbl) * (uei / xfoil.qinfbl));
+  data.param.uz_ms =
+      (data.param.uz * (uei / xfoil.qinfbl) * (uei / xfoil.qinfbl) - uei) *
+      xfoil.tkbl_ms /
+      (1.0 - xfoil.tkbl * (uei / xfoil.qinfbl) * (uei / xfoil.qinfbl));
+  return data;
+}
+
 bool BoundaryLayerWorkflow::blsys(XFoil& xfoil) {
   blData& previous = state.previous();
   blData& current = state.current();
@@ -173,13 +255,13 @@ bool BoundaryLayerWorkflow::blsys(XFoil& xfoil) {
 
   if (xfoil.wake) {
     current = blvar(current, FlowRegimeEnum::Wake);
-    skinFriction = xfoil.blmid(state, FlowRegimeEnum::Wake);
+    skinFriction = blmid(xfoil, state, FlowRegimeEnum::Wake);
   } else if (xfoil.turb || xfoil.tran) {
     current = blvar(current, FlowRegimeEnum::Turbulent);
-    skinFriction = xfoil.blmid(state, FlowRegimeEnum::Turbulent);
+    skinFriction = blmid(xfoil, state, FlowRegimeEnum::Turbulent);
   } else {
     current = blvar(current, FlowRegimeEnum::Laminar);
-    skinFriction = xfoil.blmid(state, FlowRegimeEnum::Laminar);
+    skinFriction = blmid(xfoil, state, FlowRegimeEnum::Laminar);
   }
 
   if (xfoil.simi) {

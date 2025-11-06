@@ -122,7 +122,7 @@ TEST_F(DatGoogleTest, test_blmid_turbulent) {
   
   //when
   XFoil::SkinFrictionCoefficients laminarCoeffs =
-      foil->blmid(FlowRegimeEnum::Laminar);
+      foil->boundaryLayerWorkflow.blmid(*foil, FlowRegimeEnum::Laminar);
 
   //then
   ASSERT_DOUBLE_EQ(-6.8333333333333339e-07, laminarCoeffs.cfm);
@@ -146,7 +146,7 @@ TEST_F(DatGoogleTest, test_blmid_laminar) {
   
   //when
   XFoil::SkinFrictionCoefficients turbulentCoeffs =
-      foil->blmid(FlowRegimeEnum::Turbulent);
+      foil->boundaryLayerWorkflow.blmid(*foil, FlowRegimeEnum::Turbulent);
 
   //then
   ASSERT_DOUBLE_EQ(-6.8333333333333339e-07, turbulentCoeffs.cfm);
@@ -170,7 +170,7 @@ TEST_F(DatGoogleTest, test_blmid_turbulent_wake) {
   
   //when
   XFoil::SkinFrictionCoefficients wakeCoeffs =
-      foil->blmid(FlowRegimeEnum::Wake);
+      foil->boundaryLayerWorkflow.blmid(*foil, FlowRegimeEnum::Wake);
 
   //then
   ASSERT_DOUBLE_EQ(0, wakeCoeffs.cfm);

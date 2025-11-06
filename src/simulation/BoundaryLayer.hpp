@@ -3,6 +3,7 @@
 #include "simulation/boundary_layer_state.hpp"
 #include "domain/coefficient/bl_newton.hpp"
 #include "domain/boundary_layer/boundary_layer_variables_solver.hpp"
+#include "simulation/skin_friction_coefficients.hpp"
 
 class XFoil;
 enum class FlowRegimeEnum;
@@ -45,6 +46,13 @@ class BoundaryLayerWorkflow {
                                 double deps, double& ami,
                                 MixedModeStationContext& ctx);
   blData blvar(blData data, FlowRegimeEnum flowRegimeType);
+  SkinFrictionCoefficients blmid(XFoil& xfoil,
+                                 BoundaryLayerState& state,
+                                 FlowRegimeEnum flowRegimeType);
+  SkinFrictionCoefficients blmid(XFoil& xfoil,
+                                 FlowRegimeEnum flowRegimeType);
+  blData blprv(XFoil& xfoil, blData data, double xsi, double ami, double cti,
+               double thi, double dsi, double dswaki, double uei) const;
   bool blsys(XFoil& xfoil);
 
   bool iblpan(XFoil& xfoil);

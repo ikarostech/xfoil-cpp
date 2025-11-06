@@ -58,8 +58,9 @@ bool XFoil::mrchdu(BoundaryLayerState& state,
 
       {
         blData updatedCurrent =
-            blprv(state.current(), ctx.xsi, ctx.ami, ctx.cti, ctx.thi,
-                  ctx.dsi, ctx.dswaki, ctx.uei);
+            boundaryLayerWorkflow.blprv(*this, state.current(), ctx.xsi,
+                                        ctx.ami, ctx.cti, ctx.thi, ctx.dsi,
+                                        ctx.dswaki, ctx.uei);
         state.current() = updatedCurrent;
       }
       blkin(state);
@@ -147,9 +148,10 @@ bool XFoil::performMixedModeNewtonIteration(int side, int ibl, int itrold,
 
   for (int itbl = 1; itbl <= 25; ++itbl) {
     {
-      blData updatedCurrent = blprv(boundaryLayerWorkflow.state.current(), ctx.xsi, ami,
-                                    ctx.cti, ctx.thi, ctx.dsi, ctx.dswaki,
-                                    ctx.uei);
+  blData updatedCurrent =
+      boundaryLayerWorkflow.blprv(*this, boundaryLayerWorkflow.state.current(),
+                                  ctx.xsi, ami, ctx.cti, ctx.thi, ctx.dsi,
+                                  ctx.dswaki, ctx.uei);
       boundaryLayerWorkflow.state.current() = updatedCurrent;
     }
     blkin(boundaryLayerWorkflow.state);
@@ -227,9 +229,10 @@ void XFoil::handleMixedModeNonConvergence(int side, int ibl,
   }
 
   {
-    blData updatedCurrent = blprv(boundaryLayerWorkflow.state.current(), ctx.xsi, ami,
-                                  ctx.cti, ctx.thi, ctx.dsi, ctx.dswaki,
-                                  ctx.uei);
+    blData updatedCurrent =
+        boundaryLayerWorkflow.blprv(
+            *this, boundaryLayerWorkflow.state.current(), ctx.xsi, ami,
+            ctx.cti, ctx.thi, ctx.dsi, ctx.dswaki, ctx.uei);
     boundaryLayerWorkflow.state.current() = updatedCurrent;
   }
   blkin(boundaryLayerWorkflow.state);
@@ -240,19 +243,22 @@ void XFoil::handleMixedModeNonConvergence(int side, int ibl,
     boundaryLayerWorkflow.state.station2 =
         boundaryLayerWorkflow.blvar(boundaryLayerWorkflow.state.station2,
                                     FlowRegimeEnum::Laminar);
-    blmid(boundaryLayerWorkflow.state, FlowRegimeEnum::Laminar);
+    boundaryLayerWorkflow.blmid(*this, boundaryLayerWorkflow.state,
+                                FlowRegimeEnum::Laminar);
   }
   if (ibl >= boundaryLayerWorkflow.lattice.transitionIndex.get(side)) {
     boundaryLayerWorkflow.state.station2 =
         boundaryLayerWorkflow.blvar(boundaryLayerWorkflow.state.station2,
                                     FlowRegimeEnum::Turbulent);
-    blmid(boundaryLayerWorkflow.state, FlowRegimeEnum::Turbulent);
+    boundaryLayerWorkflow.blmid(*this, boundaryLayerWorkflow.state,
+                                FlowRegimeEnum::Turbulent);
   }
   if (ctx.wake) {
     boundaryLayerWorkflow.state.station2 =
         boundaryLayerWorkflow.blvar(boundaryLayerWorkflow.state.station2,
                                     FlowRegimeEnum::Wake);
-    blmid(boundaryLayerWorkflow.state, FlowRegimeEnum::Wake);
+    boundaryLayerWorkflow.blmid(*this, boundaryLayerWorkflow.state,
+                                FlowRegimeEnum::Wake);
   }
 
   ctx.ami = ami;
@@ -362,8 +368,9 @@ bool XFoil::mrchue() {
 
         {
           blData updatedCurrent =
-              blprv(boundaryLayerWorkflow.state.current(), xsi, ami, cti, thi, dsi,
-                    dswaki, uei);
+              boundaryLayerWorkflow.blprv(*this,
+                                          boundaryLayerWorkflow.state.current(),
+                                          xsi, ami, cti, thi, dsi, dswaki, uei);
           boundaryLayerWorkflow.state.current() = updatedCurrent;
         }
         blkin(boundaryLayerWorkflow.state);
@@ -552,8 +559,9 @@ bool XFoil::mrchue() {
         // 109
         {
           blData updatedCurrent =
-              blprv(boundaryLayerWorkflow.state.current(), xsi, ami, cti, thi, dsi,
-                    dswaki, uei);
+              boundaryLayerWorkflow.blprv(*this,
+                                          boundaryLayerWorkflow.state.current(),
+                                          xsi, ami, cti, thi, dsi, dswaki, uei);
           boundaryLayerWorkflow.state.current() = updatedCurrent;
         }
         blkin(boundaryLayerWorkflow.state);
@@ -583,11 +591,14 @@ bool XFoil::mrchue() {
                   boundaryLayerWorkflow.state.station2,
                   FlowRegimeEnum::Wake);
         if (ibl < boundaryLayerWorkflow.lattice.transitionIndex.get(is))
-          blmid(boundaryLayerWorkflow.state, FlowRegimeEnum::Laminar);
+          boundaryLayerWorkflow.blmid(*this, boundaryLayerWorkflow.state,
+                                      FlowRegimeEnum::Laminar);
         if (ibl >= boundaryLayerWorkflow.lattice.transitionIndex.get(is))
-          blmid(boundaryLayerWorkflow.state, FlowRegimeEnum::Turbulent);
+          boundaryLayerWorkflow.blmid(*this, boundaryLayerWorkflow.state,
+                                      FlowRegimeEnum::Turbulent);
         if (wake)
-          blmid(boundaryLayerWorkflow.state, FlowRegimeEnum::Wake);
+          boundaryLayerWorkflow.blmid(*this, boundaryLayerWorkflow.state,
+                                      FlowRegimeEnum::Wake);
       }
       //------ store primary variables
       if (ibl < boundaryLayerWorkflow.lattice.transitionIndex.get(is))
@@ -603,8 +614,9 @@ bool XFoil::mrchue() {
       //------ set "1" variables to "2" variables for next streamwise station
       {
         blData updatedCurrent =
-            blprv(boundaryLayerWorkflow.state.current(), xsi, ami, cti, thi, dsi,
-                  dswaki, uei);
+            boundaryLayerWorkflow.blprv(*this,
+                                        boundaryLayerWorkflow.state.current(),
+                                        xsi, ami, cti, thi, dsi, dswaki, uei);
         boundaryLayerWorkflow.state.current() = updatedCurrent;
       }
       blkin(boundaryLayerWorkflow.state);
@@ -856,12 +868,13 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
       due2 = output.uedg.get(is)[ibl] - usav.get(is)[ibl];
       dds2 = d2_u2 * due2;
 
-      {
-        blData updatedCurrent =
-            blprv(boundaryLayerWorkflow.state.current(), xsi, ami, cti, thi, dsi,
-                  dswaki, uei);
-        boundaryLayerWorkflow.state.current() = updatedCurrent;
-      } // cti
+  {
+    blData updatedCurrent =
+        boundaryLayerWorkflow.blprv(*this,
+                                    boundaryLayerWorkflow.state.current(), xsi,
+                                    ami, cti, thi, dsi, dswaki, uei);
+    boundaryLayerWorkflow.state.current() = updatedCurrent;
+  } // cti
       blkin(boundaryLayerWorkflow.state);
 
       //---- check for transition and set output.tran, xt, etc. if found
@@ -1063,7 +1076,8 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
             boundaryLayerWorkflow.blvar(
                 boundaryLayerWorkflow.state.station2,
                 FlowRegimeEnum::Wake);
-        blmid(boundaryLayerWorkflow.state, FlowRegimeEnum::Wake);
+        boundaryLayerWorkflow.blmid(*this, boundaryLayerWorkflow.state,
+                                    FlowRegimeEnum::Wake);
       }
       u1_m = u2_m;
       d1_m = d2_m;
@@ -1555,7 +1569,8 @@ bool XFoil::trdif() {
 
   //---- calculate x1-xt midpoint cfm value
   SkinFrictionCoefficients laminarSkinFriction =
-      blmid(boundaryLayerWorkflow.state, FlowRegimeEnum::Laminar);
+      boundaryLayerWorkflow.blmid(*this, boundaryLayerWorkflow.state,
+                                  FlowRegimeEnum::Laminar);
 
   //=    at this point, all "2" variables are really "t" variables at xt
 
@@ -1649,7 +1664,8 @@ bool XFoil::trdif() {
 
   //---- calculate xt-x2 midpoint cfm value
   SkinFrictionCoefficients turbulentSkinFriction =
-      blmid(boundaryLayerWorkflow.state, FlowRegimeEnum::Turbulent);
+      boundaryLayerWorkflow.blmid(*this, boundaryLayerWorkflow.state,
+                                  FlowRegimeEnum::Turbulent);
 
   //---- set up newton system for dct, dth, dds, due, dxi  at  xt and x2
   boundaryLayerWorkflow.blc = blDiffSolver.solve(FlowRegimeEnum::Turbulent, boundaryLayerWorkflow.state, turbulentSkinFriction, amcrit);
