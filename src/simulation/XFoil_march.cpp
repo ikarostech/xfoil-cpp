@@ -243,22 +243,19 @@ void XFoil::handleMixedModeNonConvergence(int side, int ibl,
     boundaryLayerWorkflow.state.station2 =
         boundaryLayerWorkflow.blvar(boundaryLayerWorkflow.state.station2,
                                     FlowRegimeEnum::Laminar);
-    boundaryLayerWorkflow.blmid(*this, boundaryLayerWorkflow.state,
-                                FlowRegimeEnum::Laminar);
+    boundaryLayerWorkflow.blmid(*this, FlowRegimeEnum::Laminar);
   }
   if (ibl >= boundaryLayerWorkflow.lattice.transitionIndex.get(side)) {
     boundaryLayerWorkflow.state.station2 =
         boundaryLayerWorkflow.blvar(boundaryLayerWorkflow.state.station2,
                                     FlowRegimeEnum::Turbulent);
-    boundaryLayerWorkflow.blmid(*this, boundaryLayerWorkflow.state,
-                                FlowRegimeEnum::Turbulent);
+    boundaryLayerWorkflow.blmid(*this, FlowRegimeEnum::Turbulent);
   }
   if (ctx.wake) {
     boundaryLayerWorkflow.state.station2 =
         boundaryLayerWorkflow.blvar(boundaryLayerWorkflow.state.station2,
                                     FlowRegimeEnum::Wake);
-    boundaryLayerWorkflow.blmid(*this, boundaryLayerWorkflow.state,
-                                FlowRegimeEnum::Wake);
+    boundaryLayerWorkflow.blmid(*this, FlowRegimeEnum::Wake);
   }
 
   ctx.ami = ami;
@@ -591,14 +588,11 @@ bool XFoil::mrchue() {
                   boundaryLayerWorkflow.state.station2,
                   FlowRegimeEnum::Wake);
         if (ibl < boundaryLayerWorkflow.lattice.transitionIndex.get(is))
-          boundaryLayerWorkflow.blmid(*this, boundaryLayerWorkflow.state,
-                                      FlowRegimeEnum::Laminar);
+          boundaryLayerWorkflow.blmid(*this, FlowRegimeEnum::Laminar);
         if (ibl >= boundaryLayerWorkflow.lattice.transitionIndex.get(is))
-          boundaryLayerWorkflow.blmid(*this, boundaryLayerWorkflow.state,
-                                      FlowRegimeEnum::Turbulent);
+          boundaryLayerWorkflow.blmid(*this, FlowRegimeEnum::Turbulent);
         if (wake)
-          boundaryLayerWorkflow.blmid(*this, boundaryLayerWorkflow.state,
-                                      FlowRegimeEnum::Wake);
+          boundaryLayerWorkflow.blmid(*this, FlowRegimeEnum::Wake);
       }
       //------ store primary variables
       if (ibl < boundaryLayerWorkflow.lattice.transitionIndex.get(is))
@@ -1076,8 +1070,7 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
             boundaryLayerWorkflow.blvar(
                 boundaryLayerWorkflow.state.station2,
                 FlowRegimeEnum::Wake);
-        boundaryLayerWorkflow.blmid(*this, boundaryLayerWorkflow.state,
-                                    FlowRegimeEnum::Wake);
+        boundaryLayerWorkflow.blmid(*this, FlowRegimeEnum::Wake);
       }
       u1_m = u2_m;
       d1_m = d2_m;
@@ -1569,8 +1562,7 @@ bool XFoil::trdif() {
 
   //---- calculate x1-xt midpoint cfm value
   SkinFrictionCoefficients laminarSkinFriction =
-      boundaryLayerWorkflow.blmid(*this, boundaryLayerWorkflow.state,
-                                  FlowRegimeEnum::Laminar);
+      boundaryLayerWorkflow.blmid(*this, FlowRegimeEnum::Laminar);
 
   //=    at this point, all "2" variables are really "t" variables at xt
 
@@ -1664,8 +1656,7 @@ bool XFoil::trdif() {
 
   //---- calculate xt-x2 midpoint cfm value
   SkinFrictionCoefficients turbulentSkinFriction =
-      boundaryLayerWorkflow.blmid(*this, boundaryLayerWorkflow.state,
-                                  FlowRegimeEnum::Turbulent);
+      boundaryLayerWorkflow.blmid(*this, FlowRegimeEnum::Turbulent);
 
   //---- set up newton system for dct, dth, dds, due, dxi  at  xt and x2
   boundaryLayerWorkflow.blc = blDiffSolver.solve(FlowRegimeEnum::Turbulent, boundaryLayerWorkflow.state, turbulentSkinFriction, amcrit);

@@ -167,7 +167,8 @@ blData BoundaryLayerWorkflow::blvar(blData data, FlowRegimeEnum flowRegimeType) 
 }
 
 SkinFrictionCoefficients BoundaryLayerWorkflow::blmid(
-    XFoil& xfoil, BoundaryLayerState& state, FlowRegimeEnum flowRegimeType) {
+    XFoil& xfoil, FlowRegimeEnum flowRegimeType) {
+  BoundaryLayerState& state = this->state;
   blData& previous = state.previous();
   blData& current = state.current();
 
@@ -216,11 +217,6 @@ SkinFrictionCoefficients BoundaryLayerWorkflow::blmid(
   return coeffs;
 }
 
-SkinFrictionCoefficients BoundaryLayerWorkflow::blmid(
-    XFoil& xfoil, FlowRegimeEnum flowRegimeType) {
-  return blmid(xfoil, state, flowRegimeType);
-}
-
 blData BoundaryLayerWorkflow::blprv(XFoil& xfoil, blData data, double xsi,
                                     double ami, double cti, double thi,
                                     double dsi, double dswaki,
@@ -255,13 +251,13 @@ bool BoundaryLayerWorkflow::blsys(XFoil& xfoil) {
 
   if (xfoil.wake) {
     current = blvar(current, FlowRegimeEnum::Wake);
-    skinFriction = blmid(xfoil, state, FlowRegimeEnum::Wake);
+    skinFriction = blmid(xfoil, FlowRegimeEnum::Wake);
   } else if (xfoil.turb || xfoil.tran) {
     current = blvar(current, FlowRegimeEnum::Turbulent);
-    skinFriction = blmid(xfoil, state, FlowRegimeEnum::Turbulent);
+    skinFriction = blmid(xfoil, FlowRegimeEnum::Turbulent);
   } else {
     current = blvar(current, FlowRegimeEnum::Laminar);
-    skinFriction = blmid(xfoil, state, FlowRegimeEnum::Laminar);
+    skinFriction = blmid(xfoil, FlowRegimeEnum::Laminar);
   }
 
   if (xfoil.simi) {
