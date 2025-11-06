@@ -27,7 +27,7 @@ void BoundaryLayerWorkflow::updateSystemMatricesForStation(
         ctx.tte;
     tesys(xfoil, ctx.cte, ctx.tte, ctx.dte);
   } else {
-    xfoil.blsys(state, lattice);
+    blsys(xfoil);
   }
 }
 
@@ -163,6 +163,62 @@ bool BoundaryLayerWorkflow::applyMixedModeNewtonStep(
 
 blData BoundaryLayerWorkflow::blvar(blData data, FlowRegimeEnum flowRegimeType) {
   return this->boundaryLayerVariablesSolver.solve(data, flowRegimeType);
+}
+
+bool BoundaryLayerWorkflow::blsys(XFoil& xfoil) {
+  blData& previous = state.previous();
+  blData& current = state.current();
+
+  SkinFrictionCoefficients skinFriction;
+
+  if (xfoil.wake) {
+    current = blvar(current, FlowRegimeEnum::Wake);
+    skinFriction = xfoil.blmid(state, FlowRegimeEnum::Wake);
+  } else if (xfoil.turb || xfoil.tran) {
+    current = blvar(current, FlowRegimeEnum::Turbulent);
+    skinFriction = xfoil.blmid(state, FlowRegimeEnum::Turbulent);
+  } else {
+    current = blvar(current, FlowRegimeEnum::Laminar);
+    skinFriction = xfoil.blmid(state, FlowRegimeEnum::Laminar);
+  }
+
+  if (xfoil.simi) {
+    state.stepbl();
+  }
+
+  if (xfoil.tran) {
+    xfoil.trdif();
+  } else if (xfoil.simi) {
+    blc = xfoil.blDiffSolver.solve(FlowRegimeEnum::Similarity, state,
+                                   skinFriction, xfoil.amcrit);
+  } else if (!xfoil.turb) {
+    blc = xfoil.blDiffSolver.solve(FlowRegimeEnum::Laminar, state,
+                                   skinFriction, xfoil.amcrit);
+  } else if (xfoil.wake) {
+    blc = xfoil.blDiffSolver.solve(FlowRegimeEnum::Wake, state,
+                                   skinFriction, xfoil.amcrit);
+  } else {
+    blc = xfoil.blDiffSolver.solve(FlowRegimeEnum::Turbulent, state,
+                                   skinFriction, xfoil.amcrit);
+  }
+
+  if (xfoil.simi) {
+    blc.a2 += blc.a1;
+    blc.a1.setZero();
+  }
+
+  for (int k = 0; k < 4; ++k) {
+    double res_u1 = blc.a1(k, 3);
+    double res_u2 = blc.a2(k, 3);
+    double res_ms = blc.d_msq[k];
+
+    blc.a1(k, 3) *= previous.param.uz_uei;
+    blc.a2(k, 3) *= current.param.uz_uei;
+    blc.d_msq[k] =
+        res_u1 * previous.param.uz_ms + res_u2 * current.param.uz_ms + res_ms;
+  }
+
+  return true;
 }
 
 bool BoundaryLayerWorkflow::iblpan(XFoil& xfoil) {

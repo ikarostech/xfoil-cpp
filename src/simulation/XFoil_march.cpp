@@ -395,8 +395,9 @@ bool XFoil::mrchue() {
                      boundaryLayerWorkflow.lattice.thet.get(2)[boundaryLayerWorkflow.lattice.trailingEdgeIndex.bottom]) /
                 tte;
           boundaryLayerWorkflow.tesys(*this, cte, tte, dte);
-        } else
-          blsys(boundaryLayerWorkflow.state, boundaryLayerWorkflow.lattice);
+        } else {
+          boundaryLayerWorkflow.blsys(*this);
+        }
 
         if (direct) {
           //--------- try direct mode (set due = 0 in currently empty 4th line)
@@ -929,7 +930,7 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
                 (output.uedg.bottom[boundaryLayerWorkflow.lattice.trailingEdgeIndex.bottom] -
                  usav.bottom[boundaryLayerWorkflow.lattice.trailingEdgeIndex.bottom]);
       } else {
-        blsys(boundaryLayerWorkflow.state, boundaryLayerWorkflow.lattice);
+        boundaryLayerWorkflow.blsys(*this);
       }
 
       //---- save wall shear and equil. max shear coefficient for plotting

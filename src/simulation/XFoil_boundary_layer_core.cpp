@@ -67,7 +67,7 @@ bool XFoil::blkin(BoundaryLayerState& state) {
 }
 
 
-XFoil::SkinFrictionCoefficients XFoil::blmid(BoundaryLayerState& state,
+SkinFrictionCoefficients XFoil::blmid(BoundaryLayerState& state,
                                              FlowRegimeEnum flowRegimeType) {
 
   blData& previous = state.previous();
@@ -115,7 +115,7 @@ XFoil::SkinFrictionCoefficients XFoil::blmid(BoundaryLayerState& state,
   return coeffs;
 }
 
-XFoil::SkinFrictionCoefficients XFoil::blmid(FlowRegimeEnum flowRegimeType) {
+SkinFrictionCoefficients XFoil::blmid(FlowRegimeEnum flowRegimeType) {
   return blmid(boundaryLayerWorkflow.state, flowRegimeType);
 }
 
@@ -161,61 +161,3 @@ blData XFoil::blprv(blData data, double xsi, double ami, double cti,
  *      if turb, then  ds1, ds2  replace  da1, da2
  *
  * ------------------------------------------------------------------ */
-bool XFoil::blsys(BoundaryLayerState& state, [[maybe_unused]] BoundaryLayerLattice& lattice) {
-  blData& previous = state.previous();
-  blData& current = state.current();
-
-  SkinFrictionCoefficients skinFriction;
-
-  //---- calculate secondary bl variables and their sensitivities
-  if (wake) {
-    current = boundaryLayerWorkflow.blvar(current, FlowRegimeEnum::Wake);
-    skinFriction = blmid(state, FlowRegimeEnum::Wake);
-  } else {
-    if (turb || tran) {
-      current = boundaryLayerWorkflow.blvar(current, FlowRegimeEnum::Turbulent);
-      skinFriction = blmid(state, FlowRegimeEnum::Turbulent);
-    } else {
-      current = boundaryLayerWorkflow.blvar(current, FlowRegimeEnum::Laminar);
-      skinFriction = blmid(state, FlowRegimeEnum::Laminar);
-    }
-  }
-
-  //---- for the similarity station, "1" and "2" variables are the same
-  if (simi) {
-    state.stepbl();
-  }
-
-  //---- set up appropriate finite difference system for current interval
-  if (tran)
-    trdif();
-  else if (simi)
-    boundaryLayerWorkflow.blc = blDiffSolver.solve(FlowRegimeEnum::Similarity, boundaryLayerWorkflow.state, skinFriction, amcrit);
-  else if (!turb)
-    boundaryLayerWorkflow.blc = blDiffSolver.solve(FlowRegimeEnum::Laminar, boundaryLayerWorkflow.state, skinFriction, amcrit);
-  else if (wake)
-    boundaryLayerWorkflow.blc = blDiffSolver.solve(FlowRegimeEnum::Wake, boundaryLayerWorkflow.state, skinFriction, amcrit);
-  else
-    boundaryLayerWorkflow.blc = blDiffSolver.solve(FlowRegimeEnum::Turbulent, boundaryLayerWorkflow.state, skinFriction, amcrit);
-
-  if (simi) {
-    //----- at similarity station, "1" variables are really "2" variables
-    boundaryLayerWorkflow.blc.a2 += boundaryLayerWorkflow.blc.a1;
-    boundaryLayerWorkflow.blc.a1 = Matrix<double, 4, 5>::Zero();
-  }
-
-  //---- change system over into incompressible uei and mach
-  for (int k = 0; k < 4; k++) {
-    //------ residual derivatives wrt compressible uec
-    double res_u1 = boundaryLayerWorkflow.blc.a1(k, 3);
-    double res_u2 = boundaryLayerWorkflow.blc.a2(k, 3);
-    double res_ms = boundaryLayerWorkflow.blc.d_msq[k];
-
-    //------ combine with derivatives of compressible  u1,u2 = uec(uei m)
-    boundaryLayerWorkflow.blc.a1(k, 3) *= previous.param.uz_uei;
-    boundaryLayerWorkflow.blc.a2(k, 3) *= current.param.uz_uei;
-    boundaryLayerWorkflow.blc.d_msq[k] =
-        res_u1 * previous.param.uz_ms + res_u2 * current.param.uz_ms + res_ms;
-  }
-  return true;
-}

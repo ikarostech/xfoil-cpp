@@ -45,6 +45,7 @@ class BoundaryLayerWorkflow {
                                 double deps, double& ami,
                                 MixedModeStationContext& ctx);
   blData blvar(blData data, FlowRegimeEnum flowRegimeType);
+  bool blsys(XFoil& xfoil);
 
   bool iblpan(XFoil& xfoil);
   bool iblsys(XFoil& xfoil);

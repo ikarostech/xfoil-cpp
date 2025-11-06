@@ -169,7 +169,7 @@ class XFoil {
 
   VectorXd apcalc(Matrix2Xd points);
   void updateTrailingEdgeState();
-  using SkinFrictionCoefficients = ::SkinFrictionCoefficients;
+
   BlDiffSolver blDiffSolver;
   bool blkin(BoundaryLayerState& state);
   SkinFrictionCoefficients blmid(FlowRegimeEnum flowRegimeType);
@@ -177,7 +177,6 @@ class XFoil {
   blData blprv(blData data, double xsi, double ami, double cti,
                double thi, double dsi, double dswaki, double uei) const;
   bool blsolve();
-  bool blsys(BoundaryLayerState& state, BoundaryLayerLattice& lattice);
   double cang(Matrix2Xd points);
   double cdcalc() const;
 
