@@ -1,5 +1,7 @@
 #pragma once
 
+#include <sstream>
+
 #include "simulation/boundary_layer_state.hpp"
 #include "domain/coefficient/bl_newton.hpp"
 #include "domain/boundary_layer/boundary_layer_variables_solver.hpp"
@@ -26,6 +28,24 @@ class BoundaryLayerWorkflow {
     double tte = 0.0;
     double dmax = 0.0;
   };
+  struct MrchueStationContext {
+    bool simi = false;
+    bool wake = false;
+    bool direct = true;
+    double xsi = 0.0;
+    double uei = 0.0;
+    double thi = 0.0;
+    double dsi = 0.0;
+    double ami = 0.0;
+    double cti = 0.0;
+    double dswaki = 0.0;
+    double cte = 0.0;
+    double dte = 0.0;
+    double tte = 0.0;
+    double dmax = 0.0;
+    double hmax = 0.0;
+    double htarg = 0.0;
+  };
 
   bool isStartOfWake(const XFoil& xfoil, int side, int stationIndex);
   void updateSystemMatricesForStation(XFoil& xfoil, int side,
@@ -51,6 +71,33 @@ class BoundaryLayerWorkflow {
   blData blprv(XFoil& xfoil, blData data, double xsi, double ami, double cti,
                double thi, double dsi, double dswaki, double uei) const;
   bool blsys(XFoil& xfoil);
+  bool mrchdu(XFoil& xfoil);
+  bool mrchdu(BoundaryLayerState& state, BoundaryLayerLattice& lattice,
+              XFoil& xfoil);
+  bool marchBoundaryLayerSide(BoundaryLayerState& state, int side,
+                              double deps, double senswt, double& sens,
+                              double& sennew, double& ami, XFoil& xfoil);
+  bool processBoundaryLayerStation(BoundaryLayerState& state, int side,
+                                   int stationIndex, int previousTransition,
+                                   double deps, double senswt, double& sens,
+                                   double& sennew, double& ami, XFoil& xfoil);
+  bool mrchue(XFoil& xfoil);
+  bool mrchue(BoundaryLayerState& state, BoundaryLayerLattice& lattice,
+              XFoil& xfoil);
+  void initializeMrchueSide(int side, double& thi, double& dsi,
+                            double& ami, double& cti, XFoil& xfoil);
+  void prepareMrchueStationContext(int side, int stationIndex,
+                                   MrchueStationContext& ctx, double thi,
+                                   double dsi, double ami, double cti,
+                                   XFoil& xfoil);
+  bool performMrchueNewtonLoop(int side, int stationIndex,
+                               MrchueStationContext& ctx, XFoil& xfoil,
+                               std::stringstream& ss);
+  void handleMrchueStationFailure(int side, int stationIndex,
+                                  MrchueStationContext& ctx, XFoil& xfoil,
+                                  std::stringstream& ss);
+  void storeMrchueStationState(int side, int stationIndex,
+                               const MrchueStationContext& ctx, XFoil& xfoil);
 
   bool iblpan(XFoil& xfoil);
   bool iblsys(XFoil& xfoil);
