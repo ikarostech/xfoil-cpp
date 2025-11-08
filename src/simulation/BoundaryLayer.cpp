@@ -299,6 +299,81 @@ bool BoundaryLayerWorkflow::blsys(XFoil& xfoil) {
   return true;
 }
 
+int BoundaryLayerWorkflow::resetSideState(int side, XFoil& xfoil) {
+  const int previousTransition = lattice.transitionIndex.get(side);
+  xfoil.xiforc = xfoil.xifset(side);
+  xfoil.tran = false;
+  xfoil.turb = false;
+  lattice.transitionIndex.get(side) = lattice.trailingEdgeIndex.get(side);
+  return previousTransition;
+}
+
+void BoundaryLayerWorkflow::storeStationStateCommon(
+    int side, int stationIndex, double ami, double cti, double thi,
+    double dsi, double uei, double xsi, double dswaki, XFoil& xfoil) {
+  if (stationIndex < lattice.transitionIndex.get(side)) {
+    lattice.ctau.get(side)[stationIndex] = ami;
+  } else {
+    lattice.ctau.get(side)[stationIndex] = cti;
+  }
+  lattice.thet.get(side)[stationIndex] = thi;
+  lattice.dstr.get(side)[stationIndex] = dsi;
+  lattice.uedg.get(side)[stationIndex] = uei;
+  lattice.mass.get(side)[stationIndex] = dsi * uei;
+  lattice.ctq.get(side)[stationIndex] = state.station2.cqz.scalar;
+
+  {
+    blData updatedCurrent =
+        blprv(xfoil, state.current(), xsi, ami, cti, thi, dsi, dswaki, uei);
+    state.current() = updatedCurrent;
+  }
+  xfoil.blkin(state);
+  state.stepbl();
+
+  if (xfoil.tran ||
+      stationIndex == lattice.trailingEdgeIndex.get(side)) {
+    xfoil.turb = true;
+  }
+
+  xfoil.tran = false;
+}
+
+double BoundaryLayerWorkflow::fallbackEdgeVelocity(
+    int side, int stationIndex,
+    EdgeVelocityFallbackMode edgeMode) const {
+  switch (edgeMode) {
+    case EdgeVelocityFallbackMode::UsePreviousStation:
+      return lattice.uedg.get(side)[stationIndex - 1];
+    case EdgeVelocityFallbackMode::AverageNeighbors: {
+      double uei = lattice.uedg.get(side)[stationIndex];
+      if (stationIndex < lattice.stationCount.get(side) - 1) {
+        uei = 0.5 * (lattice.uedg.get(side)[stationIndex - 1] +
+                     lattice.uedg.get(side)[stationIndex + 1]);
+      }
+      return uei;
+    }
+  }
+  return lattice.uedg.get(side)[stationIndex];
+}
+
+void BoundaryLayerWorkflow::syncStationRegimeStates(int side,
+                                                    int stationIndex,
+                                                    bool wake,
+                                                    XFoil& xfoil) {
+  if (stationIndex < lattice.transitionIndex.get(side)) {
+    state.station2 = blvar(state.station2, FlowRegimeEnum::Laminar);
+    blmid(xfoil, FlowRegimeEnum::Laminar);
+  }
+  if (stationIndex >= lattice.transitionIndex.get(side)) {
+    state.station2 = blvar(state.station2, FlowRegimeEnum::Turbulent);
+    blmid(xfoil, FlowRegimeEnum::Turbulent);
+  }
+  if (wake) {
+    state.station2 = blvar(state.station2, FlowRegimeEnum::Wake);
+    blmid(xfoil, FlowRegimeEnum::Wake);
+  }
+}
+
 bool BoundaryLayerWorkflow::mrchdu(XFoil& xfoil) {
   return mrchdu(state, lattice, xfoil);
 }
@@ -325,12 +400,7 @@ bool BoundaryLayerWorkflow::mrchdu(BoundaryLayerState& state,
 bool BoundaryLayerWorkflow::marchBoundaryLayerSide(
     BoundaryLayerState& state, int side, double deps, double senswt,
     double& sens, double& sennew, double& ami, XFoil& xfoil) {
-  xfoil.xiforc = xfoil.xifset(side);
-  int previousTransition = lattice.transitionIndex.get(side);
-
-  xfoil.tran = false;
-  xfoil.turb = false;
-  lattice.transitionIndex.get(side) = lattice.trailingEdgeIndex.get(side);
+  const int previousTransition = resetSideState(side, xfoil);
 
   for (int stationIndex = 0;
        stationIndex < lattice.stationCount.get(side) - 1; ++stationIndex) {
@@ -361,34 +431,8 @@ bool BoundaryLayerWorkflow::processBoundaryLayerStation(
   }
 
   sens = sennew;
-
-  if (stationIndex < lattice.transitionIndex.get(side)) {
-    lattice.ctau.get(side)[stationIndex] = ctx.ami;
-  } else {
-    lattice.ctau.get(side)[stationIndex] = ctx.cti;
-  }
-  lattice.thet.get(side)[stationIndex] = ctx.thi;
-  lattice.dstr.get(side)[stationIndex] = ctx.dsi;
-  lattice.uedg.get(side)[stationIndex] = ctx.uei;
-  lattice.mass.get(side)[stationIndex] = ctx.dsi * ctx.uei;
-  lattice.ctq.get(side)[stationIndex] = state.station2.cqz.scalar;
-
-  {
-    blData updatedCurrent =
-        blprv(xfoil, state.current(), ctx.xsi, ctx.ami, ctx.cti, ctx.thi,
-              ctx.dsi, ctx.dswaki, ctx.uei);
-    state.current() = updatedCurrent;
-  }
-  xfoil.blkin(state);
-
-  state.stepbl();
-
-  if (xfoil.tran ||
-      stationIndex == lattice.trailingEdgeIndex.get(side)) {
-    xfoil.turb = true;
-  }
-
-  xfoil.tran = false;
+  storeStationStateCommon(side, stationIndex, ctx.ami, ctx.cti, ctx.thi,
+                          ctx.dsi, ctx.uei, ctx.xsi, ctx.dswaki, xfoil);
 
   if (XFoil::isCancelled()) {
     return false;
@@ -406,54 +450,62 @@ bool BoundaryLayerWorkflow::mrchue(BoundaryLayerState& state,
                                    XFoil& xfoil) {
   std::stringstream ss;
   for (int side = 1; side <= 2; ++side) {
-    ss << "    Side " << side << " ...\n";
-    xfoil.writeString(ss.str());
-    ss.str("");
-
-    xfoil.xiforc = xfoil.xifset(side);
-
-    double thi = 0.0;
-    double dsi = 0.0;
-    double ami = 0.0;
-    double cti = 0.0;
-    initializeMrchueSide(side, thi, dsi, ami, cti, xfoil);
-
-    xfoil.tran = false;
-    xfoil.turb = false;
-    lattice.transitionIndex.get(side) = lattice.trailingEdgeIndex.get(side);
-
-    for (int stationIndex = 0;
-         stationIndex < lattice.stationCount.get(side) - 1; ++stationIndex) {
-      MrchueStationContext ctx;
-      prepareMrchueStationContext(side, stationIndex, ctx, thi, dsi, ami, cti,
-                                  xfoil);
-      bool converged =
-          performMrchueNewtonLoop(side, stationIndex, ctx, xfoil, ss);
-      if (!converged) {
-        handleMrchueStationFailure(side, stationIndex, ctx, xfoil, ss);
-      }
-      storeMrchueStationState(side, stationIndex, ctx, xfoil);
-
-      ami = ctx.ami;
-      cti = ctx.cti;
-      thi = ctx.thi;
-      dsi = ctx.dsi;
-
-      if (stationIndex == lattice.trailingEdgeIndex.get(side)) {
-        thi = lattice.thet.get(1)[lattice.trailingEdgeIndex.top] +
-              lattice.thet.get(2)[lattice.trailingEdgeIndex.bottom];
-        dsi = lattice.dstr.get(1)[lattice.trailingEdgeIndex.top] +
-              lattice.dstr.get(2)[lattice.trailingEdgeIndex.bottom] +
-              xfoil.foil.edge.ante;
-      }
-
-      if (XFoil::isCancelled()) {
-        return false;
-      }
+    if (!marchMrchueSide(state, side, xfoil, ss)) {
+      return false;
     }
   }
   return true;
 }
+
+
+bool BoundaryLayerWorkflow::marchMrchueSide(BoundaryLayerState& state,
+                                            int side, XFoil& xfoil,
+                                            std::stringstream& ss) {
+  ss << "    Side " << side << " ...\n";
+  xfoil.writeString(ss.str());
+  ss.str("");
+
+  resetSideState(side, xfoil);
+
+  double thi = 0.0;
+  double dsi = 0.0;
+  double ami = 0.0;
+  double cti = 0.0;
+  initializeMrchueSide(side, thi, dsi, ami, cti, xfoil);
+
+  for (int stationIndex = 0;
+       stationIndex < lattice.stationCount.get(side) - 1; ++stationIndex) {
+    MrchueStationContext ctx;
+    prepareMrchueStationContext(side, stationIndex, ctx, thi, dsi, ami, cti,
+                                xfoil);
+    bool converged =
+        performMrchueNewtonLoop(side, stationIndex, ctx, xfoil, ss);
+    if (!converged) {
+      handleMrchueStationFailure(side, stationIndex, ctx, xfoil, ss);
+    }
+    storeMrchueStationState(side, stationIndex, ctx, xfoil);
+
+    ami = ctx.ami;
+    cti = ctx.cti;
+    thi = ctx.thi;
+    dsi = ctx.dsi;
+
+    if (stationIndex == lattice.trailingEdgeIndex.get(side)) {
+      thi = lattice.thet.get(1)[lattice.trailingEdgeIndex.top] +
+            lattice.thet.get(2)[lattice.trailingEdgeIndex.bottom];
+      dsi = lattice.dstr.get(1)[lattice.trailingEdgeIndex.top] +
+            lattice.dstr.get(2)[lattice.trailingEdgeIndex.bottom] +
+            xfoil.foil.edge.ante;
+    }
+
+    if (XFoil::isCancelled()) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 
 void BoundaryLayerWorkflow::initializeMrchueSide(int side, double& thi,
                                                  double& dsi, double& ami,
@@ -682,46 +734,9 @@ void BoundaryLayerWorkflow::handleMrchueStationFailure(
   xfoil.writeString(ss.str());
   ss.str("");
 
-  if (ctx.dmax > 0.1 && stationIndex >= 2) {
-    if (stationIndex <= lattice.trailingEdgeIndex.get(side)) {
-      ctx.thi = lattice.thet.get(side)[stationIndex - 1] *
-                std::sqrt(lattice.xssi.get(side)[stationIndex] /
-                          lattice.xssi.get(side)[stationIndex - 1]);
-      ctx.dsi = lattice.dstr.get(side)[stationIndex - 1] *
-                std::sqrt(lattice.xssi.get(side)[stationIndex] /
-                          lattice.xssi.get(side)[stationIndex - 1]);
-    } else {
-      if (stationIndex == lattice.trailingEdgeIndex.get(side) + 1) {
-        ctx.cti = ctx.cte;
-        ctx.thi = ctx.tte;
-        ctx.dsi = ctx.dte;
-      } else {
-        ctx.thi = lattice.thet.get(side)[stationIndex - 1];
-        const double ratlen =
-            (lattice.xssi.get(side)[stationIndex] -
-             lattice.xssi.get(side)[stationIndex - 1]) /
-            (10.0 * lattice.dstr.get(side)[stationIndex - 1]);
-        ctx.dsi = (lattice.dstr.get(side)[stationIndex - 1] +
-                   ctx.thi * ratlen) /
-                  (1.0 + ratlen);
-      }
-    }
-
-    if (stationIndex == lattice.transitionIndex.get(side)) {
-      ctx.cti = 0.05;
-    }
-    if (stationIndex >
-        lattice.transitionIndex.get(side)) {
-      ctx.cti = lattice.ctau.get(side)[stationIndex - 1];
-    }
-
-    ctx.uei = lattice.uedg.get(side)[stationIndex];
-    if (stationIndex < lattice.stationCount.get(side) - 1) {
-      ctx.uei = 0.5 *
-                (lattice.uedg.get(side)[stationIndex - 1] +
-                 lattice.uedg.get(side)[stationIndex + 1]);
-    }
-  }
+  resetStationKinematicsAfterFailure(
+      side, stationIndex, ctx,
+      EdgeVelocityFallbackMode::AverageNeighbors);
 
   {
     blData updatedCurrent =
@@ -731,65 +746,14 @@ void BoundaryLayerWorkflow::handleMrchueStationFailure(
   }
   xfoil.blkin(state);
 
-  if ((!ctx.simi) && (!xfoil.turb)) {
-    xfoil.trchek();
-    ctx.ami = state.station2.param.amplz;
-    if (xfoil.tran) {
-      lattice.transitionIndex.get(side) = stationIndex;
-    } else {
-      lattice.transitionIndex.get(side) = stationIndex + 2;
-    }
-  }
-
-  if (stationIndex <
-      lattice.transitionIndex.get(side)) {
-    state.station2 =
-        blvar(state.station2, FlowRegimeEnum::Laminar);
-    blmid(xfoil, FlowRegimeEnum::Laminar);
-  }
-  if (stationIndex >= lattice.transitionIndex.get(side)) {
-    state.station2 =
-        blvar(state.station2, FlowRegimeEnum::Turbulent);
-    blmid(xfoil, FlowRegimeEnum::Turbulent);
-  }
-  if (ctx.wake) {
-    state.station2 =
-        blvar(state.station2, FlowRegimeEnum::Wake);
-    blmid(xfoil, FlowRegimeEnum::Wake);
-  }
+  xfoil.checkTransitionIfNeeded(side, stationIndex, ctx.simi, 2, ctx.ami);
+  syncStationRegimeStates(side, stationIndex, ctx.wake, xfoil);
 }
 
 void BoundaryLayerWorkflow::storeMrchueStationState(
     int side, int stationIndex, const MrchueStationContext& ctx, XFoil& xfoil) {
-  if (stationIndex <
-      lattice.transitionIndex.get(side)) {
-    lattice.ctau.get(side)[stationIndex] = ctx.ami;
-  }
-  if (stationIndex >=
-      lattice.transitionIndex.get(side)) {
-    lattice.ctau.get(side)[stationIndex] = ctx.cti;
-  }
-  lattice.thet.get(side)[stationIndex] = ctx.thi;
-  lattice.dstr.get(side)[stationIndex] = ctx.dsi;
-  lattice.uedg.get(side)[stationIndex] = ctx.uei;
-  lattice.mass.get(side)[stationIndex] = ctx.dsi * ctx.uei;
-  lattice.ctq.get(side)[stationIndex] = state.station2.cqz.scalar;
-
-  {
-    blData updatedCurrent =
-        blprv(xfoil, state.current(), ctx.xsi, ctx.ami, ctx.cti, ctx.thi,
-              ctx.dsi, ctx.dswaki, ctx.uei);
-    state.current() = updatedCurrent;
-  }
-  xfoil.blkin(state);
-  state.stepbl();
-
-  if (xfoil.tran ||
-      stationIndex == lattice.trailingEdgeIndex.get(side)) {
-    xfoil.turb = true;
-  }
-
-  xfoil.tran = false;
+  storeStationStateCommon(side, stationIndex, ctx.ami, ctx.cti, ctx.thi,
+                          ctx.dsi, ctx.uei, ctx.xsi, ctx.dswaki, xfoil);
 }
 
 bool BoundaryLayerWorkflow::iblpan(XFoil& xfoil) {

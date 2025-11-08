@@ -141,36 +141,9 @@ void XFoil::handleMixedModeNonConvergence(int side, int ibl,
      << ctx.dmax << "\n";
   writeString(ss.str());
 
-  if (ctx.dmax > 0.1 && ibl >= 2) {
-    if (ibl <= boundaryLayerWorkflow.lattice.trailingEdgeIndex.get(side)) {
-      ctx.thi = boundaryLayerWorkflow.lattice.thet.get(side)[ibl - 1] *
-                sqrt(boundaryLayerWorkflow.lattice.xssi.get(side)[ibl] / boundaryLayerWorkflow.lattice.xssi.get(side)[ibl - 1]);
-      ctx.dsi = boundaryLayerWorkflow.lattice.dstr.get(side)[ibl - 1] *
-                sqrt(boundaryLayerWorkflow.lattice.xssi.get(side)[ibl] / boundaryLayerWorkflow.lattice.xssi.get(side)[ibl - 1]);
-      ctx.uei = boundaryLayerWorkflow.lattice.uedg.get(side)[ibl - 1];
-    } else {
-      if (ibl == boundaryLayerWorkflow.lattice.trailingEdgeIndex.get(side) + 1) {
-        ctx.cti = ctx.cte;
-        ctx.thi = ctx.tte;
-        ctx.dsi = ctx.dte;
-        ctx.uei = boundaryLayerWorkflow.lattice.uedg.get(side)[ibl - 1];
-      } else {
-        ctx.thi = boundaryLayerWorkflow.lattice.thet.get(side)[ibl - 1];
-        double ratlen = (boundaryLayerWorkflow.lattice.xssi.get(side)[ibl] - boundaryLayerWorkflow.lattice.xssi.get(side)[ibl - 1]) /
-                        (10.0 * boundaryLayerWorkflow.lattice.dstr.get(side)[ibl - 1]);
-        ctx.dsi = (boundaryLayerWorkflow.lattice.dstr.get(side)[ibl - 1] + ctx.thi * ratlen) /
-                  (1.0 + ratlen);
-        ctx.uei = boundaryLayerWorkflow.lattice.uedg.get(side)[ibl - 1];
-      }
-    }
-
-    if (ibl == boundaryLayerWorkflow.lattice.transitionIndex.get(side)) {
-      ctx.cti = 0.05;
-    }
-    if (ibl > boundaryLayerWorkflow.lattice.transitionIndex.get(side)) {
-      ctx.cti = boundaryLayerWorkflow.lattice.ctau.get(side)[ibl - 1];
-    }
-  }
+  boundaryLayerWorkflow.resetStationKinematicsAfterFailure(
+      side, ibl, ctx,
+      BoundaryLayerWorkflow::EdgeVelocityFallbackMode::UsePreviousStation);
 
   {
     blData updatedCurrent =
@@ -183,24 +156,7 @@ void XFoil::handleMixedModeNonConvergence(int side, int ibl,
 
   checkTransitionIfNeeded(side, ibl, ctx.simi, 2, ami);
 
-  if (ibl < boundaryLayerWorkflow.lattice.transitionIndex.get(side)) {
-    boundaryLayerWorkflow.state.station2 =
-        boundaryLayerWorkflow.blvar(boundaryLayerWorkflow.state.station2,
-                                    FlowRegimeEnum::Laminar);
-    boundaryLayerWorkflow.blmid(*this, FlowRegimeEnum::Laminar);
-  }
-  if (ibl >= boundaryLayerWorkflow.lattice.transitionIndex.get(side)) {
-    boundaryLayerWorkflow.state.station2 =
-        boundaryLayerWorkflow.blvar(boundaryLayerWorkflow.state.station2,
-                                    FlowRegimeEnum::Turbulent);
-    boundaryLayerWorkflow.blmid(*this, FlowRegimeEnum::Turbulent);
-  }
-  if (ctx.wake) {
-    boundaryLayerWorkflow.state.station2 =
-        boundaryLayerWorkflow.blvar(boundaryLayerWorkflow.state.station2,
-                                    FlowRegimeEnum::Wake);
-    boundaryLayerWorkflow.blmid(*this, FlowRegimeEnum::Wake);
-  }
+  boundaryLayerWorkflow.syncStationRegimeStates(side, ibl, ctx.wake, *this);
 
   ctx.ami = ami;
 }
