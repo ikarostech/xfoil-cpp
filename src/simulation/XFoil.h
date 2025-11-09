@@ -280,7 +280,6 @@ class XFoil {
   bool trchek();
   bool trdif();
   bool ueset();
-  bool uicalc();
   bool update();
   struct EdgeVelocityDistribution {
     SidePair<VectorXd> unew;

@@ -423,7 +423,7 @@ bool BoundaryLayerWorkflow::stmove(XFoil& xfoil) {
     xfoil.xicalc();
   } else {
     iblpan(xfoil);
-    xfoil.uicalc();
+    uicalc(xfoil);
     xfoil.xicalc();
     iblsys(xfoil);
 
@@ -494,6 +494,23 @@ bool BoundaryLayerWorkflow::stmove(XFoil& xfoil) {
     for (int ibl = 0; ibl < lattice.stationCount.get(is) - 1; ++ibl) {
       lattice.mass.get(is)[ibl] =
           lattice.dstr.get(is)[ibl] * lattice.uedg.get(is)[ibl];
+    }
+  }
+
+  return true;
+}
+
+bool BoundaryLayerWorkflow::uicalc(XFoil& xfoil) {
+  //--------------------------------------------------------------
+  //     sets inviscid ue from panel inviscid tangential velocity
+  //--------------------------------------------------------------
+  for (int side = 1; side <= 2; ++side) {
+    lattice.uinv.get(side)[0] = 0.0;
+    lattice.uinv_a.get(side)[0] = 0.0;
+    for (int stationIndex = 0; stationIndex < lattice.stationCount.get(side) - 1; ++stationIndex) {
+      const int panelIndex = lattice.stationToPanel.get(side)[stationIndex];
+      lattice.uinv.get(side)[stationIndex] = lattice.vti.get(side)[stationIndex] * xfoil.qinv[panelIndex];
+      lattice.uinv_a.get(side)[stationIndex] = lattice.vti.get(side)[stationIndex] * xfoil.qinv_a[panelIndex];
     }
   }
 

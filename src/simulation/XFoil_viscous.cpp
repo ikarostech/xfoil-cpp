@@ -678,7 +678,7 @@ bool XFoil::viscal() {
   }
 
   //	---- set inviscid bl edge velocity uinv from qinv
-  uicalc();
+  boundaryLayerWorkflow.uicalc(*this);
 
   if (!lblini) {
     //	----- set initial ue from inviscid ue
@@ -742,7 +742,7 @@ bool XFoil::ViscousIter() {
     auto qiset_result = qiset();
     qinv = std::move(qiset_result.qinv);
     qinv_a = std::move(qiset_result.qinv_a);
-    uicalc();
+    boundaryLayerWorkflow.uicalc(*this);
   }
 
   qvis = qvfue();  //	------ calculate edge velocities qvis(.) from uedg(..)

@@ -1304,24 +1304,6 @@ bool XFoil::ueset() {
 }
 
 
-bool XFoil::uicalc() {
-  //--------------------------------------------------------------
-  //     sets inviscid ue from panel inviscid tangential velocity
-  //--------------------------------------------------------------
-  for (int is = 1; is <= 2; is++) {
-    boundaryLayerWorkflow.lattice.uinv.get(is)[0] = 0.0;
-    boundaryLayerWorkflow.lattice.uinv_a.get(is)[0] = 0.0;
-    for (int ibl = 0; ibl < boundaryLayerWorkflow.lattice.stationCount.get(is) - 1; ++ibl) {
-      int i = boundaryLayerWorkflow.lattice.stationToPanel.get(is)[ibl];
-      boundaryLayerWorkflow.lattice.uinv.get(is)[ibl] = boundaryLayerWorkflow.lattice.vti.get(is)[ibl] * qinv[i];
-      boundaryLayerWorkflow.lattice.uinv_a.get(is)[ibl] = boundaryLayerWorkflow.lattice.vti.get(is)[ibl] * qinv_a[i];
-    }
-  }
-
-  return true;
-}
-
-
 bool XFoil::xicalc() {
   //-------------------------------------------------------------
   //     sets bl arc length array on each airfoil side and wake
