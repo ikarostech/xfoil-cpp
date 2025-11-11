@@ -139,7 +139,7 @@ void XFoil::resetVariables() {
   qinf = 1.0;
   cl = cm = cd = 0.0;
   sigte = gamte = 0.0;
-  awake = avisc = 0.0;
+  avisc = 0.0;
   resetFlags();
   cmref = Vector2d{0.25, 0.0};
   i_stagnation = 0;

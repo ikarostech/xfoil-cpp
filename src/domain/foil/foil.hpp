@@ -23,4 +23,9 @@ class Foil {
       edge = Edge(foil_shape);
       // xyWake();
     }
+
+    bool xyWake(int wake_point_count, Eigen::VectorXd &apanel,
+                const Eigen::Matrix2Xd &gamu,
+                const Eigen::Matrix2Xd &surface_vortex,
+                double alfa, double qinf);
 };

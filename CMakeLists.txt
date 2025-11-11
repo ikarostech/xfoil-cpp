@@ -55,6 +55,7 @@ add_library(xfoil_simulation
     src/simulation/BoundaryLayer.cpp
     src/simulation/BoundaryLayer_march.cpp
     src/simulation/psi.cpp
+    src/domain/foil/foil.cpp
 )
 target_include_directories(xfoil_simulation
     PUBLIC

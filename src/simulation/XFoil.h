@@ -275,8 +275,6 @@ class XFoil {
   };
   DerivativeVectors clearDerivativeVectors(const VectorXd& u_m,
                                             const VectorXd& d_m) const;
-  VectorXd setexp(double ds1, double smax, int nn) const;
-
   bool trchek();
   bool trdif();
   bool ueset();
@@ -351,7 +349,7 @@ class XFoil {
 
   double cl, cm, cd, acrit;
   VectorXd cpi, cpv;
-  double alfa, avisc, awake, reinf1, qinf, mvisc, rmsbl;
+  double alfa, avisc, reinf1, qinf, mvisc, rmsbl;
   double minf, reinf;
   bool lalfa, lvisc, lvconv, lwake;
   double qgamm[IBX + 1];
