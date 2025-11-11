@@ -93,51 +93,6 @@ double XFoil::cang(Matrix2Xd points) {
   return max_angle;
 }
 
-double XFoil::lefind(const Matrix2Xd &points, const Matrix2Xd &dpoints_ds, const VectorXd &s, int n) const {
-  const double dseps = (s[n - 1] - s[0]) * 0.00001;
-  const Vector2d point_te_local = 0.5 * (points.col(0) + points.col(n - 1));
-
-  int i = 2;
-  for (; i < n - 2; i++) {
-    const Vector2d dpoint_te = points.col(i) - point_te_local;
-    const Vector2d dpoint = points.col(i + 1) - points.col(i);
-    if (dpoint_te.dot(dpoint) < 0.0)
-      break;
-  }
-
-  const double sle_initial = s[i];
-  if (s[i] == s[i - 1])
-    return sle_initial;
-
-  double sle_candidate = sle_initial;
-  Vector2d point_le_local;
-  for (int iter = 1; iter <= 50; iter++) {
-    point_le_local.x() = spline::seval(sle_candidate, points.row(0), dpoints_ds.row(0), s, n);
-    point_le_local.y() = spline::seval(sle_candidate, points.row(1), dpoints_ds.row(1), s, n);
-
-    Vector2d dpoint_ds_vec;
-    dpoint_ds_vec.x() = spline::deval(sle_candidate, points.row(0), dpoints_ds.row(0), s, n);
-    dpoint_ds_vec.y() = spline::deval(sle_candidate, points.row(1), dpoints_ds.row(1), s, n);
-
-    Vector2d dpoint_dd_vec;
-    dpoint_dd_vec.x() = spline::d2val(sle_candidate, points.row(0), dpoints_ds.row(0), s, n);
-    dpoint_dd_vec.y() = spline::d2val(sle_candidate, points.row(1), dpoints_ds.row(1), s, n);
-
-    const Vector2d chord_v = point_le_local - point_te_local;
-    const double res = chord_v.dot(dpoint_ds_vec);
-    const double ress = dpoint_ds_vec.dot(dpoint_ds_vec) + chord_v.dot(dpoint_dd_vec);
-    double dsle = -res / ress;
-    const double chord_sum = fabs(chord_v.x() + chord_v.y());
-    dsle = std::max(dsle, -0.02 * chord_sum);
-    dsle = std::min(dsle, 0.02 * chord_sum);
-    sle_candidate += dsle;
-    if (fabs(dsle) < dseps)
-      return sle_candidate;
-  }
-
-  return sle_initial;
-}
-
 void XFoil::updateTrailingEdgeState() {
   const int node_count = foil.foil_shape.n;
 

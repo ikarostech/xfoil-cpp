@@ -9,24 +9,6 @@ using Eigen::Vector;
 using Eigen::Vector2d;
 using Eigen::VectorXd;
 
-/** ----------------------------------------------------
- *      marches the bls and wake in mixed mode using
- *      the current ue and hk.  the calculated ue
- *      and hk lie along a line quasi-normal to the
- *      natural ue-hk characteristic line of the
- *      current bl so that the goldstein or levy-lees
- *      singularity is never encountered.  continuous
- *      checking of transition onset is performed.
- * ----------------------------------------------------- */
-bool XFoil::mrchdu(BoundaryLayerState& state,
-                   [[maybe_unused]] BoundaryLayerLattice& lattice) {
-  return boundaryLayerWorkflow.mrchdu(state, lattice, *this);
-}
-
-bool XFoil::mrchdu() {
-  return boundaryLayerWorkflow.mrchdu(*this);
-}
-
 XFoil::MixedModeStationContext XFoil::prepareMixedModeStation(int side, int ibl,
                                                               int itrold,
                                                               double& ami) {
@@ -187,16 +169,6 @@ double XFoil::calcHtarg(int ibl, int is, bool wake) {
   }
 }
 
-
-/** ----------------------------------------------------
- *      marches the bls and wake in direct mode using
- *      the uedg array. if separation is encountered,
- *      a plausible value of hk extrapolated from
- *      upstream is prescribed instead.  continuous
- *      checking of transition onset is performed.
- * ----------------------------------------------------*/
-bool XFoil::mrchue() { return boundaryLayerWorkflow.mrchue(*this); }
-
 SetblInputView XFoil::makeSetblInputView() const {
   return SetblInputView{lblini,
                         boundaryLayerWorkflow.lattice.uedg,
@@ -323,12 +295,12 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
     // TRACE(" initializing bl ...\n");
     writeString("   Initializing bl ...\n");
 
-    mrchue();
+    boundaryLayerWorkflow.mrchue(*this);
     output.lblini = true;
   }
 
   //---- march bl with current ue and ds to establish transition
-  mrchdu();
+  boundaryLayerWorkflow.mrchdu(*this);
 
   SidePair<VectorXd> usav = input.uedg;
 

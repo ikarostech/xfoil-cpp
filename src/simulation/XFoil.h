@@ -225,10 +225,7 @@ class XFoil {
 
   Matrix2Xd gamqv() const;
   bool ggcalc();
-  double lefind(const Matrix2Xd &points, const Matrix2Xd &dpoints_ds, const VectorXd &s, int n) const;
-  
-  bool mrchdu();
-  bool mrchdu(BoundaryLayerState& state, BoundaryLayerLattice& lattice);
+
   MixedModeStationContext prepareMixedModeStation(int side, int ibl, int itrold,
                                                   double& ami);
   bool performMixedModeNewtonIteration(int side, int ibl, int itrold,
@@ -239,7 +236,6 @@ class XFoil {
                                      MixedModeStationContext& ctx, double& ami);
   void checkTransitionIfNeeded(int side, int ibl, bool skipCheck,
                                int laminarAdvance, double& ami);
-  bool mrchue();
   double calcHtarg(int ibl, int is, bool wake);
   Matrix2Xd ncalc(Matrix2Xd point, VectorXd spline_length, int n);
 
