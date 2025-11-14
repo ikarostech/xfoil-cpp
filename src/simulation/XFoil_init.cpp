@@ -180,19 +180,20 @@ bool XFoil::comset() {
 
 void XFoil::writeString(std::string str) { *m_pOutStream << str; }
 
-double XFoil::getActualMach(double cls, MachType mach_type) {
+double XFoil::getActualMach(double cls, MachType mach_control) {
+  AnalysisState& state = analysis_state_;
   const double cla = std::max(cls, 0.000001);
-  switch (mach_type) {
+  switch (mach_control) {
   case MachType::CONSTANT: {
-    minf = minf1;
+    state.currentMach = state.referenceMach;
     return 0.0;
   }
   case MachType::FIXED_LIFT: {
-    minf = minf1 / sqrt(cla);
-    return -0.5 * minf / cla;
+    state.currentMach = state.referenceMach / std::sqrt(cla);
+    return -0.5 * state.currentMach / cla;
   }
   case MachType::FIXED_LIFT_AND_DYNAMIC_PRESSURE: {
-    minf = minf1;
+    state.currentMach = state.referenceMach;
     return 0.0;
   }
   default:
@@ -200,20 +201,21 @@ double XFoil::getActualMach(double cls, MachType mach_type) {
   }
 }
 
-double XFoil::getActualReynolds(double cls, ReynoldsType reynolds_type) {
+double XFoil::getActualReynolds(double cls, ReynoldsType reynolds_control) {
+  AnalysisState& state = analysis_state_;
   const double cla = std::max(cls, 0.000001);
-  switch (reynolds_type) {
+  switch (reynolds_control) {
   case ReynoldsType::CONSTANT: {
-    reinf = reinf1;
+    state.currentRe = state.referenceRe;
     return 0.0;
   }
   case ReynoldsType::FIXED_LIFT: {
-    reinf = reinf1 / sqrt(cla);
-    return -0.5 * reinf / cla;
+    state.currentRe = state.referenceRe / std::sqrt(cla);
+    return -0.5 * state.currentRe / cla;
   }
   case ReynoldsType::FIXED_LIFT_AND_DYNAMIC_PRESSURE: {
-    reinf = reinf1 / cla;
-    return -reinf / cla;
+    state.currentRe = state.referenceRe / cla;
+    return -state.currentRe / cla;
   }
   default:
     return 0;

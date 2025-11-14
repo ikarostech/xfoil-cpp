@@ -126,6 +126,9 @@ class BoundaryLayerWorkflow {
   bool tesys(XFoil& xfoil, double cte, double tte, double dte);
   bool trchek(XFoil& xfoil);
 
+private:
+  void copyStationState(int side, int destination, int source);
+
 public:
   BoundaryLayerLattice lattice;
   BlSystemCoeffs blc;

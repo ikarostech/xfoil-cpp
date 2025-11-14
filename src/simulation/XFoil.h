@@ -108,8 +108,21 @@ class XFoil {
     FIXED_LIFT,
     FIXED_LIFT_AND_DYNAMIC_PRESSURE
   };
-  ReynoldsType reynolds_type;
-  MachType mach_type;
+
+  struct AnalysisState {
+    double alpha = 0.0;
+    double qinf = 1.0;
+    double referenceRe = 0.0;
+    double referenceMach = 0.0;
+    double currentRe = 0.0;
+    double currentMach = 0.0;
+    double clspec = 0.0;
+    bool controlByAlpha = true;
+    bool viscous = false;
+    ReynoldsType reynoldsType = ReynoldsType::CONSTANT;
+    MachType machType = MachType::CONSTANT;
+  };
+
   bool initXFoilAnalysis(double Re, double alpha, double Mach, double NCrit,
                          double XtrTop, double XtrBot, ReynoldsType reType, MachType maType,
                          bool bViscous, std::stringstream &outStream);
@@ -339,19 +352,30 @@ class XFoil {
 
  public:
 
-  std::stringstream *m_pOutStream;
+  AnalysisState analysis_state_;
+  AnalysisState& analysisState() { return analysis_state_; }
+  const AnalysisState& analysisState() const { return analysis_state_; }
+  double& clspec;
+  double& alfa;
+  double& qinf;
+  double& reinf1;
+  double& minf1;
+  double& reinf;
+  double& minf;
+  bool& lalfa;
+  bool& lvisc;
+  ReynoldsType& reynolds_type;
+  MachType& mach_type;
 
-  double clspec;
+  std::stringstream *m_pOutStream;
 
   double cl, cm, cd, acrit;
   VectorXd cpi, cpv;
-  double alfa, avisc, reinf1, qinf, mvisc, rmsbl;
-  double minf, reinf;
-  bool lalfa, lvisc, lvconv, lwake;
+  double avisc, mvisc, rmsbl;
+  bool lvconv, lwake;
   double qgamm[IBX + 1];
   double rmxbl;
 
-  double minf1;
   bool lblini, lipan;
 
   Foil foil;

@@ -48,16 +48,15 @@ bool XFoil::initXFoilAnalysis(double Re, double alpha, double Mach,
   lblini = false;
   lipan = false;
 
-  reinf1 = Re;
-  alfa = alpha * std::numbers::pi / 180.0;
-
-  minf1 = Mach;
-  reynolds_type = reType;
-  mach_type = maType;
-  lalfa = true;
-  qinf = 1.0;
-
-  lvisc = bViscous;
+  AnalysisState& state = analysis_state_;
+  state.referenceRe = Re;
+  state.alpha = alpha * std::numbers::pi / 180.0;
+  state.referenceMach = Mach;
+  state.reynoldsType = reType;
+  state.machType = maType;
+  state.controlByAlpha = true;
+  state.qinf = 1.0;
+  state.viscous = bViscous;
 
   acrit = NCrit;
   boundaryLayerWorkflow.lattice.transitionLocation.top = XtrTop;

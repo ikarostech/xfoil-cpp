@@ -30,9 +30,10 @@ void ClearAerodynamicsState(const XFoil& xfoil);
 void ClearInitState(const XFoil& xfoil);
 
 XFoil::CompressibilityParams XFoil::buildCompressibilityParams() const {
-  const double beta = std::sqrt(1.0 - minf * minf);
+  const double current_mach = analysis_state_.currentMach;
+  const double beta = std::sqrt(1.0 - current_mach * current_mach);
   const double beta_msq = -0.5 / beta;
-  const double bfac = 0.5 * minf * minf / (1.0 + beta);
+  const double bfac = 0.5 * current_mach * current_mach / (1.0 + beta);
   const double bfac_msq = 0.5 / (1.0 + beta) - bfac / (1.0 + beta) * beta_msq;
   return {beta, beta_msq, bfac, bfac_msq};
 }
@@ -40,7 +41,7 @@ XFoil::CompressibilityParams XFoil::buildCompressibilityParams() const {
 XFoil::PressureCoefficientResult XFoil::computePressureCoefficient(
     double tangential_velocity, double velocity_derivative,
     const CompressibilityParams &params) const {
-  const double velocity_ratio = tangential_velocity / qinf;
+  const double velocity_ratio = tangential_velocity / analysis_state_.qinf;
   const double cginc = 1.0 - velocity_ratio * velocity_ratio;
   const double denom = params.beta + params.bfac * cginc;
   const double pressure_coefficient = cginc / denom;
@@ -50,7 +51,9 @@ XFoil::PressureCoefficientResult XFoil::computePressureCoefficient(
 
   double cp_velocity_derivative = 0.0;
   if (velocity_derivative != 0.0) {
-    const double cpi = -2.0 * tangential_velocity / (qinf * qinf);
+    const double freestream_speed = analysis_state_.qinf;
+    const double cpi =
+        -2.0 * tangential_velocity / (freestream_speed * freestream_speed);
     const double cpc_cpi = (1.0 - params.bfac * pressure_coefficient) / denom;
     cp_velocity_derivative = cpc_cpi * cpi * velocity_derivative;
   }
@@ -59,14 +62,26 @@ XFoil::PressureCoefficientResult XFoil::computePressureCoefficient(
 }
 
 Matrix2d XFoil::buildBodyToFreestreamRotation() const {
-  const double ca = std::cos(alfa);
-  const double sa = std::sin(alfa);
+  const double ca = std::cos(analysis_state_.alpha);
+  const double sa = std::sin(analysis_state_.alpha);
   Matrix2d rotation;
   rotation << ca, sa, -sa, ca;
   return rotation;
 }
 
-XFoil::XFoil() {
+XFoil::XFoil()
+    : analysis_state_(),
+      clspec(analysis_state_.clspec),
+      alfa(analysis_state_.alpha),
+      qinf(analysis_state_.qinf),
+      reinf1(analysis_state_.referenceRe),
+      minf1(analysis_state_.referenceMach),
+      reinf(analysis_state_.currentRe),
+      minf(analysis_state_.currentMach),
+      lalfa(analysis_state_.controlByAlpha),
+      lvisc(analysis_state_.viscous),
+      reynolds_type(analysis_state_.reynoldsType),
+      mach_type(analysis_state_.machType) {
 
   m_pOutStream = nullptr;
 
