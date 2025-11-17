@@ -247,18 +247,18 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
          cte_tte2 = 0.0, cte_cte1 = 0.0, cte_cte2 = 0.0;
 
   //---- set the cl used to define mach, reynolds numbers
-  if (lalfa)
+  if (analysis_state_.controlByAlpha)
     clmr = cl;
   else
-    clmr = clspec;
+    clmr = analysis_state_.clspec;
 
   cti = 0.0; // techwinder added, otherwise variable is not initialized
 
   //---- set current minf(cl)
-  ma_clmr = getActualMach(clmr, mach_type);
-  re_clmr = getActualReynolds(clmr, reynolds_type);
+  ma_clmr = getActualMach(clmr, analysis_state_.machType);
+  re_clmr = getActualReynolds(clmr, analysis_state_.reynoldsType);
 
-  msq_clmr = 2.0 * minf * ma_clmr;
+  msq_clmr = 2.0 * analysis_state_.currentMach * ma_clmr;
 
   //---- set compressibility parameter tklam and derivative tk_msq
   comset();
@@ -267,24 +267,32 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
   output.gm1bl = gamm1;
 
   //---- set parameters for compressibility correction
-  output.qinfbl = qinf;
+  output.qinfbl = analysis_state_.qinf;
   output.tkbl = tklam;
   output.tkbl_ms = tkl_msq;
 
   //---- stagnation density and 1/enthalpy
-  output.rstbl = pow((1.0 + 0.5 * output.gm1bl * minf * minf), (1.0 / output.gm1bl));
-  output.rstbl_ms = 0.5 * output.rstbl / (1.0 + 0.5 * output.gm1bl * minf * minf);
-  output.hstinv = output.gm1bl * (minf / output.qinfbl) * (minf / output.qinfbl) /
-           (1.0 + 0.5 * output.gm1bl * minf * minf);
-  output.hstinv_ms = output.gm1bl * (1.0 / output.qinfbl) * (1.0 / output.qinfbl) /
-                  (1.0 + 0.5 * output.gm1bl * minf * minf) -
-              0.5 * output.gm1bl * output.hstinv / (1.0 + 0.5 * output.gm1bl * minf * minf);
+  output.rstbl =
+      pow((1.0 + 0.5 * output.gm1bl * analysis_state_.currentMach * analysis_state_.currentMach),
+          (1.0 / output.gm1bl));
+  output.rstbl_ms =
+      0.5 * output.rstbl /
+      (1.0 + 0.5 * output.gm1bl * analysis_state_.currentMach * analysis_state_.currentMach);
+  output.hstinv = output.gm1bl *
+                  MathUtil::pow(analysis_state_.currentMach / output.qinfbl, 2) /
+                  (1.0 + 0.5 * output.gm1bl * analysis_state_.currentMach * analysis_state_.currentMach);
+  output.hstinv_ms =
+      output.gm1bl * MathUtil::pow(1.0 / output.qinfbl, 2) /
+          (1.0 + 0.5 * output.gm1bl * analysis_state_.currentMach * analysis_state_.currentMach) -
+      0.5 * output.gm1bl * output.hstinv /
+          (1.0 + 0.5 * output.gm1bl * analysis_state_.currentMach * analysis_state_.currentMach);
 
   //---- set reynolds number based on freestream density, velocity, viscosity
   herat = 1.0 - 0.5 * output.qinfbl * output.qinfbl * output.hstinv;
   herat_ms = -0.5 * output.qinfbl * output.qinfbl * output.hstinv_ms;
 
-  output.reybl = reinf * sqrt(herat * herat * herat) * (1.0 + hvrat) / (herat + hvrat);
+  output.reybl = analysis_state_.currentRe * sqrt(herat * herat * herat) *
+                 (1.0 + hvrat) / (herat + hvrat);
   output.reybl_re = sqrt(herat * herat * herat) * (1.0 + hvrat) / (herat + hvrat);
   output.reybl_ms = output.reybl * (1.5 / herat - 1.0 / (herat + hvrat)) * herat_ms;
 
@@ -502,7 +510,7 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
       output.va[iv](0, 0) = boundaryLayerWorkflow.blc.a2(0, 0);
       output.va[iv](0, 1) = boundaryLayerWorkflow.blc.a2(0, 1);
 
-      if (lalfa)
+      if (analysis_state_.controlByAlpha)
         output.vdel[iv](0, 1) = boundaryLayerWorkflow.blc.d_re[0] * re_clmr + boundaryLayerWorkflow.blc.d_msq[0] * msq_clmr;
       else
         output.vdel[iv](0, 1) = (boundaryLayerWorkflow.blc.a1(0, 3) * u1_a + boundaryLayerWorkflow.blc.a1(0, 2) * d1_a) +
@@ -527,7 +535,7 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
       output.va[iv](1, 0) = boundaryLayerWorkflow.blc.a2(1, 0);
       output.va[iv](1, 1) = boundaryLayerWorkflow.blc.a2(1, 1);
 
-      if (lalfa)
+      if (analysis_state_.controlByAlpha)
         output.vdel[iv](1, 1) = boundaryLayerWorkflow.blc.d_re[1] * re_clmr + boundaryLayerWorkflow.blc.d_msq[1] * msq_clmr;
       else
         output.vdel[iv](1, 1) = (boundaryLayerWorkflow.blc.a1(1, 3) * u1_a + boundaryLayerWorkflow.blc.a1(1, 2) * d1_a) +
@@ -554,7 +562,7 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
       output.va[iv](2, 0) = boundaryLayerWorkflow.blc.a2(2, 0);
       output.va[iv](2, 1) = boundaryLayerWorkflow.blc.a2(2, 1);
 
-      if (lalfa)
+      if (analysis_state_.controlByAlpha)
         output.vdel[iv](2, 1) = boundaryLayerWorkflow.blc.d_re[2] * re_clmr + boundaryLayerWorkflow.blc.d_msq[2] * msq_clmr;
       else
         output.vdel[iv](2, 1) = (boundaryLayerWorkflow.blc.a1(2, 3) * u1_a + boundaryLayerWorkflow.blc.a1(2, 2) * d1_a) +

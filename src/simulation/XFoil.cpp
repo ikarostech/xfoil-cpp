@@ -69,19 +69,7 @@ Matrix2d XFoil::buildBodyToFreestreamRotation() const {
   return rotation;
 }
 
-XFoil::XFoil()
-    : analysis_state_(),
-      clspec(analysis_state_.clspec),
-      alfa(analysis_state_.alpha),
-      qinf(analysis_state_.qinf),
-      reinf1(analysis_state_.referenceRe),
-      minf1(analysis_state_.referenceMach),
-      reinf(analysis_state_.currentRe),
-      minf(analysis_state_.currentMach),
-      lalfa(analysis_state_.controlByAlpha),
-      lvisc(analysis_state_.viscous),
-      reynolds_type(analysis_state_.reynoldsType),
-      mach_type(analysis_state_.machType) {
+XFoil::XFoil() : analysis_state_() {
 
   m_pOutStream = nullptr;
 
@@ -95,14 +83,14 @@ XFoil::XFoil()
   boundary_layer_lattice.transitionLocation.bottom = 1.0;
 
   //---- initialize freestream mach number to zero
-  mach_type = MachType::CONSTANT;
-  minf1 = 0.0;
+  analysis_state_.machType = MachType::CONSTANT;
+  analysis_state_.referenceMach = 0.0;
 
   //---- drop tolerance for bl system solver
   setVAccel(0.01);
   //---- default viscous parameters
-  reynolds_type = ReynoldsType::CONSTANT;
-  reinf1 = 0.0;
+  analysis_state_.reynoldsType = ReynoldsType::CONSTANT;
+  analysis_state_.referenceRe = 0.0;
 }
 
 XFoil::~XFoil() {

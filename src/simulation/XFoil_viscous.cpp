@@ -133,8 +133,9 @@ bool XFoil::qdcalc() {
     PsiResult psi_result =
         psilin(foil, i, foil.wake_shape.points.col(i),
                foil.wake_shape.normal_vector.col(i), true, point_count, gamu,
-               surface_vortex, alfa, qinf, apanel, foil.edge.sharp,
-               foil.edge.ante, foil.edge.dste, foil.edge.aste);
+               surface_vortex, analysis_state_.alpha, analysis_state_.qinf,
+               apanel, foil.edge.sharp, foil.edge.ante, foil.edge.dste,
+               foil.edge.aste);
     cij.row(iw) = psi_result.dqdg.head(point_count).transpose();
     dij.row(i).head(point_count) = psi_result.dqdm.head(point_count).transpose();
     //------ wake contribution
@@ -163,8 +164,9 @@ bool XFoil::qdcalc() {
  *      current alpha.
  * -------------------------------------------------------- */
 XFoil::TangentialVelocityResult XFoil::qiset() const {
-  Matrix2d rotateMatrix =
-      Matrix2d{{cos(alfa), sin(alfa)}, {-sin(alfa), cos(alfa)}};
+  Matrix2d rotateMatrix = Matrix2d{
+      {cos(analysis_state_.alpha), sin(analysis_state_.alpha)},
+      {-sin(analysis_state_.alpha), cos(analysis_state_.alpha)}};
   const int point_count = foil.foil_shape.n;
   const int total_nodes_with_wake = point_count + nw;
 
@@ -216,7 +218,8 @@ Matrix2Xd XFoil::qwcalc() {
     updated_qinvu.col(i) =
         psilin(foil, i, foil.wake_shape.points.col(i),
                foil.wake_shape.normal_vector.col(i), false, point_count, gamu,
-               surface_vortex, alfa, qinf, apanel, foil.edge.sharp,
+               surface_vortex, analysis_state_.alpha, analysis_state_.qinf,
+               apanel, foil.edge.sharp,
                foil.edge.ante, foil.edge.dste, foil.edge.aste)
             .qtan;
   }
@@ -301,7 +304,9 @@ XFoil::EdgeVelocityDistribution XFoil::computeNewUeDistribution() const {
         }
       }
 
-      const double uinv_ac = lalfa ? 0.0 : boundaryLayerWorkflow.lattice.uinv_a.get(is)[ibl];
+      const double uinv_ac = analysis_state_.controlByAlpha
+                                 ? 0.0
+                                 : boundaryLayerWorkflow.lattice.uinv_a.get(is)[ibl];
       // Store unew/u_ac at 0-based station index
       distribution.unew.get(is)[ibl] = boundaryLayerWorkflow.lattice.uinv.get(is)[ibl] + dui;
       distribution.u_ac.get(is)[ibl] = uinv_ac + dui_ac;
@@ -402,9 +407,10 @@ static void applyRelaxationLimit(const VectorXd &dn, double dhi, double dlo,
 double XFoil::computeAcChange(double clnew, double cl_current,
                               double cl_target, double cl_ac, double cl_a,
                               double cl_ms) const {
-  if (lalfa) {
+  if (analysis_state_.controlByAlpha) {
     return (clnew - cl_current) /
-           (1.0 - cl_ac - cl_ms * 2.0 * minf * minf_cl);
+           (1.0 - cl_ac -
+            cl_ms * 2.0 * analysis_state_.currentMach * minf_cl);
   }
   return (clnew - cl_target) / (0.0 - cl_ac - cl_a);
 }
@@ -552,8 +558,8 @@ bool XFoil::update() {
   //      checks for excessive changes and underrelaxes if necessary.
   //      calculates max and rms changes.
   //      also calculates the change in the global variable "ac".
-  //        if lalfa=true , "ac" is cl
-  //        if lalfa=false, "ac" is alpha
+  //        if controlByAlpha=true , "ac" is cl
+  //        if controlByAlpha=false, "ac" is alpha
   //------------------------------------------------------------------
 
   SidePair<VectorXd> unew, u_ac;
@@ -565,10 +571,10 @@ bool XFoil::update() {
   //---- max allowable cl change per iteration
   double dclmax = 0.5;
   double dclmin = -0.5;
-  if (mach_type != MachType::CONSTANT)
+  if (analysis_state_.machType != MachType::CONSTANT)
     dclmin = std::max(-0.5, -0.9 * cl);
-  hstinv =
-      gamm1 * (minf / qinf) * (minf / qinf) / (1.0 + 0.5 * gamm1 * minf * minf);
+  hstinv = gamm1 * MathUtil::pow(analysis_state_.currentMach / analysis_state_.qinf, 2) /
+           (1.0 + 0.5 * gamm1 * analysis_state_.currentMach * analysis_state_.currentMach);
 
   //--- calculate new ue distribution and tangential velocities
   const auto ue_distribution = computeNewUeDistribution();
@@ -579,12 +585,13 @@ bool XFoil::update() {
 
   //--- initialize under-relaxation factor
   rlx = 1.0;
-  const double cl_target = lalfa ? cl : clspec;
+  const double cl_target =
+      analysis_state_.controlByAlpha ? cl : analysis_state_.clspec;
   double dac = computeAcChange(cl_contributions.cl, cl, cl_target,
                                cl_contributions.cl_ac, cl_contributions.cl_a,
                                cl_contributions.cl_ms);
 
-  if (lalfa)
+  if (analysis_state_.controlByAlpha)
     rlx = clampRelaxationForGlobalChange(rlx, dac, dclmin, dclmax);
   else
     rlx = clampRelaxationForGlobalChange(rlx, dac, dalmin, dalmax);
@@ -610,10 +617,11 @@ bool XFoil::update() {
 
   rmsbl = sqrt(rmsbl / (4.0 * double(boundaryLayerWorkflow.lattice.stationCount.top + boundaryLayerWorkflow.lattice.stationCount.bottom)));
 
-  if (lalfa)
+  if (analysis_state_.controlByAlpha)
     cl = cl + rlx * dac;
   else
-    alfa = alfa + rlx * dac;
+    analysis_state_.alpha =
+        analysis_state_.alpha + rlx * dac;
 
   for (int side = 1; side <= 2; ++side) {
     boundaryLayerWorkflow.lattice.ctau.get(side) = updated_boundary_layer.get(side).ctau;
@@ -693,11 +701,15 @@ bool XFoil::viscal() {
     //	----- set correct cl if converged point exists
     qvis = qvfue();
 
-    if (lvisc) {
-      cpv = cpcalc(total_nodes_with_wake, qvis, qinf, minf);
-      cpi = cpcalc(total_nodes_with_wake, qinv, qinf, minf);
-    } else
-      cpi = cpcalc(point_count, qinv, qinf, minf);
+    if (analysis_state_.viscous) {
+      cpv = cpcalc(total_nodes_with_wake, qvis, analysis_state_.qinf,
+                   analysis_state_.currentMach);
+      cpi = cpcalc(total_nodes_with_wake, qinv, analysis_state_.qinf,
+                   analysis_state_.currentMach);
+    } else {
+      cpi = cpcalc(point_count, qinv, analysis_state_.qinf,
+                   analysis_state_.currentMach);
+    }
 
     surface_vortex = gamqv();
     const auto cl_result = clcalc(cmref);
@@ -716,8 +728,10 @@ bool XFoil::viscal() {
 XFoil::ViscalEndResult XFoil::ViscalEnd() {
   ViscalEndResult result;
   const int total_nodes_with_wake = foil.foil_shape.n + nw;
-  result.inviscidCp = cpcalc(total_nodes_with_wake, qinv, qinf, minf);
-  result.viscousCp = cpcalc(total_nodes_with_wake, qvis, qinf, minf);
+  result.inviscidCp = cpcalc(total_nodes_with_wake, qinv, analysis_state_.qinf,
+                             analysis_state_.currentMach);
+  result.viscousCp = cpcalc(total_nodes_with_wake, qvis, analysis_state_.qinf,
+                             analysis_state_.currentMach);
   return result;
 }
 
@@ -733,9 +747,9 @@ bool XFoil::ViscousIter() {
 
   update(); //	------ update bl variables
 
-  if (lalfa) { //	------- set new freestream mach, re from new cl
-    minf_cl = getActualMach(cl, mach_type);
-    reinf_cl = getActualReynolds(cl, reynolds_type);
+  if (analysis_state_.controlByAlpha) { //	------- set new freestream mach, re from new cl
+    minf_cl = getActualMach(cl, analysis_state_.machType);
+    reinf_cl = getActualReynolds(cl, analysis_state_.reynoldsType);
     comset();
   } else { //	------- set new inviscid speeds qinv and uinv for new alpha
     auto qiset_result = qiset();
@@ -755,8 +769,8 @@ bool XFoil::ViscousIter() {
 
   if (rmsbl < eps1) {
     lvconv = true;
-    avisc = alfa;
-    mvisc = minf;
+    avisc = analysis_state_.alpha;
+    mvisc = analysis_state_.currentMach;
     writeString("----------CONVERGED----------\n\n");
   }
 

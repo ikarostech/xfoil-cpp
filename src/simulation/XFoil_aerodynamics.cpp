@@ -29,16 +29,18 @@ AerodynamicsState& ensureAerodynamicsState(const XFoil* xfoil) {
 }  // namespace
 
 double XFoil::cdcalc() const {
-  if (!(lvisc && lblini)) {
+  if (!(analysis_state_.viscous && lblini)) {
     return 0.0;
   }
 
-  const double beta = std::sqrt(std::max(0.0, 1.0 - minf * minf));
-  const double tklam_local = MathUtil::pow(minf / (1.0 + beta), 2);
+  const double beta =
+      std::sqrt(std::max(0.0, 1.0 - analysis_state_.currentMach * analysis_state_.currentMach));
+  const double tklam_local =
+      MathUtil::pow(analysis_state_.currentMach / (1.0 + beta), 2);
 
   const double thwake = boundaryLayerWorkflow.lattice.thet.get(2)[boundaryLayerWorkflow.lattice.stationCount.bottom - 2];
   const double uedg_bottom = boundaryLayerWorkflow.lattice.uedg.bottom[boundaryLayerWorkflow.lattice.stationCount.bottom - 2];
-  const double urat = uedg_bottom / qinf;
+  const double urat = uedg_bottom / analysis_state_.qinf;
   const double uewake =
       uedg_bottom * (1.0 - tklam_local) /
       (1.0 - tklam_local * urat * urat);
@@ -46,7 +48,7 @@ double XFoil::cdcalc() const {
       boundaryLayerWorkflow.lattice.dstr.get(2)[boundaryLayerWorkflow.lattice.stationCount.bottom - 2] / boundaryLayerWorkflow.lattice.thet.get(2)[boundaryLayerWorkflow.lattice.stationCount.bottom - 2];
 
   const double exponent = 0.5 * (5.0 + shwake);
-  const double wake_ratio = uewake / qinf;
+  const double wake_ratio = uewake / analysis_state_.qinf;
   const double wake_term = std::pow(wake_ratio, exponent);
   return 2.0 * thwake * wake_term;
 }
@@ -202,11 +204,13 @@ bool XFoil::ggcalc() {
     PsiResult psi_result =
         psilin(foil, i, foil.foil_shape.points.col(i),
                foil.foil_shape.normal_vector.col(i), true, point_count, gamu,
-               surface_vortex, alfa, qinf, apanel, foil.edge.sharp,
-               foil.edge.ante, foil.edge.dste, foil.edge.aste);
+               surface_vortex, analysis_state_.alpha, analysis_state_.qinf,
+               apanel, foil.edge.sharp, foil.edge.ante, foil.edge.dste,
+               foil.edge.aste);
 
-    const Vector2d res = qinf * Vector2d{foil.foil_shape.points.col(i).y(),
-                                         -foil.foil_shape.points.col(i).x()};
+    const Vector2d res = analysis_state_.qinf *
+                         Vector2d{foil.foil_shape.points.col(i).y(),
+                                  -foil.foil_shape.points.col(i).x()};
 
     //------ dres/dgamma
     dpsi_dgam.row(i).head(point_count) = psi_result.dzdg.head(point_count);
@@ -256,10 +260,11 @@ bool XFoil::ggcalc() {
     const Vector2d normal_bis{-bis_vector.y(), bis_vector.x()};
 
     //----- set velocity component along bisector line
-    PsiResult psi_result = psilin(foil, -1, bis, normal_bis, true, point_count,
-                                  gamu, surface_vortex, alfa, qinf, apanel,
-                                  foil.edge.sharp, foil.edge.ante, foil.edge.dste,
-                                  foil.edge.aste);
+    PsiResult psi_result =
+        psilin(foil, -1, bis, normal_bis, true, point_count, gamu,
+               surface_vortex, analysis_state_.alpha, analysis_state_.qinf,
+               apanel, foil.edge.sharp, foil.edge.ante, foil.edge.dste,
+               foil.edge.aste);
 
     //----- dres/dgamma
     dpsi_dgam.row(point_count - 1).head(point_count) = psi_result.dzdg.head(point_count);
@@ -307,8 +312,9 @@ namespace {
 enum class SpecTarget { AngleOfAttack, LiftCoefficient };
 
 void updateSurfaceVortexFromGamu(XFoil &xfoil) {
-  Matrix2d rotateMatrix =
-      Matrix2d{{cos(xfoil.alfa), sin(xfoil.alfa)}, {-sin(xfoil.alfa), cos(xfoil.alfa)}};
+  Matrix2d rotateMatrix = Matrix2d{
+      {cos(xfoil.analysis_state_.alpha), sin(xfoil.analysis_state_.alpha)},
+      {-sin(xfoil.analysis_state_.alpha), cos(xfoil.analysis_state_.alpha)}};
 
   for (int i = 0; i < xfoil.foil.foil_shape.n; i++) {
     xfoil.surface_vortex(0, i) = rotateMatrix.row(0).dot(xfoil.gamu.col(i));
@@ -333,8 +339,10 @@ bool specConverge(XFoil &xfoil, SpecTarget target) {
     xfoil.updateTrailingEdgeState();
     applyQiset();
   } else {
-    xfoil.minf_cl = xfoil.getActualMach(xfoil.clspec, xfoil.mach_type);
-    xfoil.reinf_cl = xfoil.getActualReynolds(xfoil.clspec, xfoil.reynolds_type);
+    xfoil.minf_cl = xfoil.getActualMach(xfoil.analysis_state_.clspec,
+                                        xfoil.analysis_state_.machType);
+    xfoil.reinf_cl = xfoil.getActualReynolds(xfoil.analysis_state_.clspec,
+                                             xfoil.analysis_state_.reynoldsType);
     xfoil.comset();
   }
 
@@ -344,10 +352,10 @@ bool specConverge(XFoil &xfoil, SpecTarget target) {
 
   if (target == SpecTarget::AngleOfAttack) {
     double clm = 1.0;
-    double minf_clm = xfoil.getActualMach(clm, xfoil.mach_type);
+    double minf_clm = xfoil.getActualMach(clm, xfoil.analysis_state_.machType);
 
     for (int itcl = 1; itcl <= 20; itcl++) {
-      const double msq_clm = 2.0 * xfoil.minf * minf_clm;
+      const double msq_clm = 2.0 * xfoil.analysis_state_.currentMach * minf_clm;
       const double dclm = (xfoil.cl - clm) / (1.0 - xfoil.cl_msq * msq_clm);
 
       const double clm1 = clm;
@@ -358,11 +366,12 @@ bool specConverge(XFoil &xfoil, SpecTarget target) {
         clm = clm1 + xfoil.rlx * dclm;
 
         //-------- set new freestream mach m(clm)
-        minf_clm = xfoil.getActualMach(clm, xfoil.mach_type);
+        minf_clm = xfoil.getActualMach(clm, xfoil.analysis_state_.machType);
 
         //-------- if mach is ok, go do next newton iteration
         // FIXME double型の==比較
-        if (xfoil.mach_type == XFoil::MachType::CONSTANT || xfoil.minf == 0.0 ||
+        if (xfoil.analysis_state_.machType == XFoil::MachType::CONSTANT ||
+            xfoil.analysis_state_.currentMach == 0.0 ||
             minf_clm != 0.0)
           break;
 
@@ -387,12 +396,20 @@ bool specConverge(XFoil &xfoil, SpecTarget target) {
     applyQiset();
     xfoil.applyClComputation(xfoil.clcalc(xfoil.cmref));
 
-    xfoil.cpi = xfoil.cpcalc(xfoil.foil.foil_shape.n, xfoil.qinv, xfoil.qinf, xfoil.minf);
-    if (xfoil.lvisc) {
-      xfoil.cpv = xfoil.cpcalc(xfoil.foil.foil_shape.n + xfoil.nw, xfoil.qvis, xfoil.qinf, xfoil.minf);
-      xfoil.cpi = xfoil.cpcalc(xfoil.foil.foil_shape.n + xfoil.nw, xfoil.qinv, xfoil.qinf, xfoil.minf);
+    xfoil.cpi = xfoil.cpcalc(xfoil.foil.foil_shape.n, xfoil.qinv,
+                             xfoil.analysis_state_.qinf,
+                             xfoil.analysis_state_.currentMach);
+    if (xfoil.analysis_state_.viscous) {
+      xfoil.cpv = xfoil.cpcalc(xfoil.foil.foil_shape.n + xfoil.nw, xfoil.qvis,
+                               xfoil.analysis_state_.qinf,
+                               xfoil.analysis_state_.currentMach);
+      xfoil.cpi = xfoil.cpcalc(xfoil.foil.foil_shape.n + xfoil.nw, xfoil.qinv,
+                               xfoil.analysis_state_.qinf,
+                               xfoil.analysis_state_.currentMach);
     } else
-      xfoil.cpi = xfoil.cpcalc(xfoil.foil.foil_shape.n, xfoil.qinv, xfoil.qinf, xfoil.minf);
+      xfoil.cpi = xfoil.cpcalc(xfoil.foil.foil_shape.n, xfoil.qinv,
+                               xfoil.analysis_state_.qinf,
+                               xfoil.analysis_state_.currentMach);
 
     for (int i = 0; i < xfoil.foil.foil_shape.n; i++) {
       xfoil.qgamm[i] = xfoil.surface_vortex(0, i);
@@ -402,10 +419,12 @@ bool specConverge(XFoil &xfoil, SpecTarget target) {
   }
 
   for (int ital = 1; ital <= 20; ital++) {
-    const double dalfa = (xfoil.clspec - xfoil.cl) / xfoil.cl_alf;
+    const double dalfa =
+        (xfoil.analysis_state_.clspec - xfoil.cl) / xfoil.cl_alf;
     xfoil.rlx = 1.0;
 
-    xfoil.alfa = xfoil.alfa + xfoil.rlx * dalfa;
+    xfoil.analysis_state_.alpha =
+        xfoil.analysis_state_.alpha + xfoil.rlx * dalfa;
 
     updateSurfaceVortexFromGamu(xfoil);
 
@@ -426,12 +445,18 @@ bool specConverge(XFoil &xfoil, SpecTarget target) {
   xfoil.updateTrailingEdgeState();
   applyQiset();
 
-  if (xfoil.lvisc) {
-    xfoil.cpv = xfoil.cpcalc(xfoil.foil.foil_shape.n + xfoil.nw, xfoil.qvis, xfoil.qinf, xfoil.minf);
-    xfoil.cpi = xfoil.cpcalc(xfoil.foil.foil_shape.n + xfoil.nw, xfoil.qinv, xfoil.qinf, xfoil.minf);
+  if (xfoil.analysis_state_.viscous) {
+    xfoil.cpv = xfoil.cpcalc(xfoil.foil.foil_shape.n + xfoil.nw, xfoil.qvis,
+                             xfoil.analysis_state_.qinf,
+                             xfoil.analysis_state_.currentMach);
+    xfoil.cpi = xfoil.cpcalc(xfoil.foil.foil_shape.n + xfoil.nw, xfoil.qinv,
+                             xfoil.analysis_state_.qinf,
+                             xfoil.analysis_state_.currentMach);
 
   } else {
-    xfoil.cpi = xfoil.cpcalc(xfoil.foil.foil_shape.n, xfoil.qinv, xfoil.qinf, xfoil.minf);
+    xfoil.cpi = xfoil.cpcalc(xfoil.foil.foil_shape.n, xfoil.qinv,
+                             xfoil.analysis_state_.qinf,
+                             xfoil.analysis_state_.currentMach);
   }
 
   return true;

@@ -128,7 +128,7 @@ int main() {
     foil->lipan = false;
 
     foil->setAlpha(alpha * 3.14159 / 180);
-    foil->lalfa = true;
+    foil->analysisState().controlByAlpha = true;
     foil->setQInf(1.0);
     std::cout << "alpha : " << alpha << std::endl;
 

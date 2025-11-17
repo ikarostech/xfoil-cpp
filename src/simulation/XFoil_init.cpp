@@ -47,8 +47,8 @@ bool XFoil::initialize() {
   setVAccel(0.01);
 
   //---- set minf, reinf, based on current cl-dependence
-  minf_cl = getActualMach(1.0, mach_type);
-  reinf_cl = getActualReynolds(1.0, reynolds_type);
+  minf_cl = getActualMach(1.0, analysis_state_.machType);
+  reinf_cl = getActualReynolds(1.0, analysis_state_.reynoldsType);
 
   return true;
 }
@@ -117,9 +117,10 @@ void XFoil::initializeDataStructures() {
 }
 
 void XFoil::resetFlags() {
-  lgamu = lvisc = lwake = lblini = lipan = false;
+  lgamu = lwake = lblini = lipan = false;
   lqaij = ladij = lwdij = lvconv = false;
-  lalfa = false;
+  analysis_state_.viscous = false;
+  analysis_state_.controlByAlpha = false;
   foil.edge.sharp = false;
   trforc = simi = tran = turb = wake = trfree = false;
 }
@@ -136,7 +137,7 @@ void XFoil::resetVariables() {
 
   gamma = 1.4;
   gamm1 = gamma - 1.0;
-  qinf = 1.0;
+  analysis_state_.qinf = 1.0;
   cl = cm = cd = 0.0;
   sigte = gamte = 0.0;
   avisc = 0.0;
@@ -152,11 +153,14 @@ void XFoil::resetVariables() {
   amcrit = 0.0;
   auto& cache = ensureInitState(this);
   cache.amax = 0.0;
-  alfa = rmxbl = rmsbl = rlx = clspec = 0.0;
+  analysis_state_.alpha = 0.0;
+  analysis_state_.clspec = 0.0;
+  rmxbl = rmsbl = rlx = 0.0;
   foil.edge.ante = 0.0;
   foil.edge.aste = 0.0;
   foil.edge.dste = 0.0;
-  minf = reinf = 0.0;
+  analysis_state_.currentMach = 0.0;
+  analysis_state_.currentRe = 0.0;
   minf_cl = reinf_cl = 0.0;
   cl_alf = cl_msq = 0.0;
   tklam = tkl_msq = 0.0;
@@ -169,10 +173,11 @@ void XFoil::resetVariables() {
 bool XFoil::comset() {
   //---- set karman-tsien parameter tklam
   double beta, beta_msq;
-  beta = sqrt(1.0 - minf * minf);
+  const double current_mach = analysis_state_.currentMach;
+  beta = sqrt(1.0 - current_mach * current_mach);
   beta_msq = -0.5 / beta;
 
-  tklam = MathUtil::pow(minf / (1.0 + beta), 2);
+  tklam = MathUtil::pow(current_mach / (1.0 + beta), 2);
   tkl_msq = 1.0 / MathUtil::pow(1.0 + beta, 2) -
             2.0 * tklam / (1.0 + beta) * beta_msq;
   return true;
@@ -243,13 +248,13 @@ bool XFoil::saveblData(int icom) {
 }
 
 bool XFoil::setMach() {
-  minf_cl = getActualMach(1.0, mach_type);
-  reinf_cl = getActualReynolds(1.0, reynolds_type);
+  minf_cl = getActualMach(1.0, analysis_state_.machType);
+  reinf_cl = getActualReynolds(1.0, analysis_state_.reynoldsType);
   comset();
   const int point_count = foil.foil_shape.n;
-  cpi = cpcalc(point_count, qinv, qinf, minf);
-  if (lvisc) {
-    cpv = cpcalc(point_count + nw, qvis, qinf, minf);
+  cpi = cpcalc(point_count, qinv, analysis_state_.qinf, analysis_state_.currentMach);
+  if (analysis_state_.viscous) {
+    cpv = cpcalc(point_count + nw, qvis, analysis_state_.qinf, analysis_state_.currentMach);
   }
   const auto cl_result = clcalc(cmref);
   applyClComputation(cl_result);

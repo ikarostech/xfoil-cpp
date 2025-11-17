@@ -154,14 +154,14 @@ class XFoil {
   bool isBLInitialized() const { return lblini; }
   void setBLInitialized(bool bInitialized) { lblini = bInitialized; }
 
-  double QInf() const { return qinf; }
-  void setQInf(double v) { qinf = v; }
+  double QInf() const { return analysis_state_.qinf; }
+  void setQInf(double v) { analysis_state_.qinf = v; }
 
-  double alpha() const { return alfa; }
-  void setAlpha(double aoa) { alfa = aoa; }
+  double alpha() const { return analysis_state_.alpha; }
+  void setAlpha(double aoa) { analysis_state_.alpha = aoa; }
 
-  double ClSpec() const { return clspec; }
-  void setClSpec(double cl) { clspec = cl; }
+  double ClSpec() const { return analysis_state_.clspec; }
+  void setClSpec(double cl) { analysis_state_.clspec = cl; }
   double getXcp() const;
 
   static bool isCancelled();
@@ -355,17 +355,7 @@ class XFoil {
   AnalysisState analysis_state_;
   AnalysisState& analysisState() { return analysis_state_; }
   const AnalysisState& analysisState() const { return analysis_state_; }
-  double& clspec;
-  double& alfa;
-  double& qinf;
-  double& reinf1;
-  double& minf1;
-  double& reinf;
-  double& minf;
-  bool& lalfa;
-  bool& lvisc;
-  ReynoldsType& reynolds_type;
-  MachType& mach_type;
+  // transitional parameters stored inside analysis_state_
 
   std::stringstream *m_pOutStream;
 
