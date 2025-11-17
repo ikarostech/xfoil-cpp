@@ -297,16 +297,16 @@ class XFoil {
     VectorXd qnew;
     VectorXd q_ac;
   };
-  QtanResult computeQtan(const SidePair<VectorXd>& unew,
-                         const SidePair<VectorXd>& u_ac) const;
+
+  QtanResult computeQtan(const EdgeVelocityDistribution& distribution) const;
   struct ClContributions {
     double cl = 0.0;
     double cl_a = 0.0;
     double cl_ms = 0.0;
     double cl_ac = 0.0;
   };
-  ClContributions computeClFromQtan(const VectorXd& qnew,
-                                    const VectorXd& q_ac) const;
+
+  ClContributions computeClFromEdgeVelocityDistribution(const EdgeVelocityDistribution& distribution) const;
   struct BoundaryLayerDelta {
     VectorXd dctau;
     VectorXd dthet;

@@ -319,8 +319,9 @@ XFoil::EdgeVelocityDistribution XFoil::computeNewUeDistribution() const {
 /**
  * @brief Convert edge velocities to tangential velocities.
  */
-XFoil::QtanResult XFoil::computeQtan(const SidePair<VectorXd> &unew,
-                                      const SidePair<VectorXd> &u_ac) const {
+XFoil::QtanResult XFoil::computeQtan(const EdgeVelocityDistribution& distribution) const {
+  const auto unew = distribution.unew;
+  const auto u_ac = distribution.u_ac;
   QtanResult result;
   result.qnew = VectorXd::Zero(IQX);
   result.q_ac = VectorXd::Zero(IQX);
@@ -336,13 +337,15 @@ XFoil::QtanResult XFoil::computeQtan(const SidePair<VectorXd> &unew,
   return result;
 }
 
-
 /**
  * @brief Calculate lift coefficient contributions from tangential velocity.
  */
-XFoil::ClContributions XFoil::computeClFromQtan(const VectorXd &qnew,
-                                                const VectorXd &q_ac) const {
+XFoil::ClContributions XFoil::computeClFromEdgeVelocityDistribution(const EdgeVelocityDistribution& distribution) const {
   ClContributions contributions;
+  const QtanResult qtan = computeQtan(distribution);
+  
+  const VectorXd& qnew = qtan.qnew;
+  const VectorXd& q_ac = qtan.q_ac;
   const auto compressibility = buildCompressibilityParams();
   const Matrix2d rotateMatrix = buildBodyToFreestreamRotation();
   const int point_count = foil.foil_shape.n;
@@ -385,7 +388,6 @@ XFoil::ClContributions XFoil::computeClFromQtan(const VectorXd &qnew,
 
   return contributions;
 }
-
 
 static void applyRelaxationLimit(const VectorXd &dn, double dhi, double dlo,
                                  double &relaxation) {
@@ -562,9 +564,6 @@ bool XFoil::update() {
   //        if controlByAlpha=false, "ac" is alpha
   //------------------------------------------------------------------
 
-  SidePair<VectorXd> unew, u_ac;
-
-
   //---- max allowable alpha changes per iteration
   const double dalmax = 0.5 * dtor;
   const double dalmin = -0.5 * dtor;
@@ -578,10 +577,7 @@ bool XFoil::update() {
 
   //--- calculate new ue distribution and tangential velocities
   const auto ue_distribution = computeNewUeDistribution();
-  unew = ue_distribution.unew;
-  u_ac = ue_distribution.u_ac;
-  const auto qtan = computeQtan(unew, u_ac);
-  const auto cl_contributions = computeClFromQtan(qtan.qnew, qtan.q_ac);
+  const auto cl_contributions = computeClFromEdgeVelocityDistribution(ue_distribution);
 
   //--- initialize under-relaxation factor
   rlx = 1.0;
@@ -606,7 +602,7 @@ bool XFoil::update() {
   SidePair<BoundaryLayerSideState> updated_boundary_layer;
   for (int side = 1; side <= 2; ++side) {
     deltas.get(side) =
-        buildBoundaryLayerDelta(side, unew.get(side), u_ac.get(side), dac);
+        buildBoundaryLayerDelta(side, ue_distribution.unew.get(side), ue_distribution.u_ac.get(side), dac);
     metrics.get(side) =
         evaluateSegmentRelaxation(side, deltas.get(side), dhi, dlo, rlx);
     rmsbl += metrics.get(side).rmsContribution;
