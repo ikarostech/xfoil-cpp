@@ -10,27 +10,27 @@
 using BoundaryContext = BoundaryLayerWorkflow::MixedModeStationContext;
 
 int BoundaryLayerWorkflow::resetSideState(int side, XFoil& xfoil) {
-  const int previousTransition = lattice.transitionIndex.get(side);
+  const int previousTransition = lattice.get(side).transitionIndex;
   xfoil.xiforc = xfoil.xifset(side);
   xfoil.tran = false;
   xfoil.turb = false;
-  lattice.transitionIndex.get(side) = lattice.trailingEdgeIndex.get(side);
+  lattice.get(side).transitionIndex = lattice.get(side).trailingEdgeIndex;
   return previousTransition;
 }
 
 void BoundaryLayerWorkflow::storeStationStateCommon(
     int side, int stationIndex, double ami, double cti, double thi,
     double dsi, double uei, double xsi, double dswaki, XFoil& xfoil) {
-  if (stationIndex < lattice.transitionIndex.get(side)) {
-    lattice.ctau.get(side)[stationIndex] = ami;
+  if (stationIndex < lattice.get(side).transitionIndex) {
+    lattice.get(side).ctau[stationIndex] = ami;
   } else {
-    lattice.ctau.get(side)[stationIndex] = cti;
+    lattice.get(side).ctau[stationIndex] = cti;
   }
-  lattice.thet.get(side)[stationIndex] = thi;
-  lattice.dstr.get(side)[stationIndex] = dsi;
-  lattice.uedg.get(side)[stationIndex] = uei;
-  lattice.mass.get(side)[stationIndex] = dsi * uei;
-  lattice.ctq.get(side)[stationIndex] = state.station2.cqz.scalar;
+  lattice.get(side).thet[stationIndex] = thi;
+  lattice.get(side).dstr[stationIndex] = dsi;
+  lattice.get(side).uedg[stationIndex] = uei;
+  lattice.get(side).mass[stationIndex] = dsi * uei;
+  lattice.get(side).ctq[stationIndex] = state.station2.cqz.scalar;
 
   {
     blData updatedCurrent =
@@ -41,7 +41,7 @@ void BoundaryLayerWorkflow::storeStationStateCommon(
   state.stepbl();
 
   if (xfoil.tran ||
-      stationIndex == lattice.trailingEdgeIndex.get(side)) {
+      stationIndex == lattice.get(side).trailingEdgeIndex) {
     xfoil.turb = true;
   }
 
@@ -53,28 +53,28 @@ double BoundaryLayerWorkflow::fallbackEdgeVelocity(
     EdgeVelocityFallbackMode edgeMode) const {
   switch (edgeMode) {
     case EdgeVelocityFallbackMode::UsePreviousStation:
-      return lattice.uedg.get(side)[stationIndex - 1];
+      return lattice.get(side).uedg[stationIndex - 1];
     case EdgeVelocityFallbackMode::AverageNeighbors: {
-      double uei = lattice.uedg.get(side)[stationIndex];
-      if (stationIndex < lattice.stationCount.get(side) - 1) {
-        uei = 0.5 * (lattice.uedg.get(side)[stationIndex - 1] +
-                     lattice.uedg.get(side)[stationIndex + 1]);
+      double uei = lattice.get(side).uedg[stationIndex];
+      if (stationIndex < lattice.get(side).stationCount - 1) {
+        uei = 0.5 * (lattice.get(side).uedg[stationIndex - 1] +
+                     lattice.get(side).uedg[stationIndex + 1]);
       }
       return uei;
     }
   }
-  return lattice.uedg.get(side)[stationIndex];
+  return lattice.get(side).uedg[stationIndex];
 }
 
 void BoundaryLayerWorkflow::syncStationRegimeStates(int side,
                                                     int stationIndex,
                                                     bool wake,
                                                     XFoil& xfoil) {
-  if (stationIndex < lattice.transitionIndex.get(side)) {
+  if (stationIndex < lattice.get(side).transitionIndex) {
     state.station2 = blvar(state.station2, FlowRegimeEnum::Laminar);
     blmid(xfoil, FlowRegimeEnum::Laminar);
   }
-  if (stationIndex >= lattice.transitionIndex.get(side)) {
+  if (stationIndex >= lattice.get(side).transitionIndex) {
     state.station2 = blvar(state.station2, FlowRegimeEnum::Turbulent);
     blmid(xfoil, FlowRegimeEnum::Turbulent);
   }
@@ -89,7 +89,7 @@ bool BoundaryLayerWorkflow::mrchdu(XFoil& xfoil) {
 }
 
 bool BoundaryLayerWorkflow::mrchdu(BoundaryLayerState& state,
-                                   [[maybe_unused]] BoundaryLayerLattice& lattice,
+                                   [[maybe_unused]] SidePair<BoundaryLayerLattice>& lattice,
                                    XFoil& xfoil) {
   const double deps = 0.000005;
   const double senswt = 1000.0;
@@ -113,7 +113,7 @@ bool BoundaryLayerWorkflow::marchBoundaryLayerSide(
   const int previousTransition = resetSideState(side, xfoil);
 
   for (int stationIndex = 0;
-       stationIndex < lattice.stationCount.get(side) - 1; ++stationIndex) {
+       stationIndex < lattice.get(side).stationCount - 1; ++stationIndex) {
     if (!processBoundaryLayerStation(state, side, stationIndex,
                                      previousTransition, deps, senswt, sens,
                                      sennew, ami, xfoil)) {
@@ -156,7 +156,7 @@ bool BoundaryLayerWorkflow::mrchue(XFoil& xfoil) {
 }
 
 bool BoundaryLayerWorkflow::mrchue(BoundaryLayerState& state,
-                                   [[maybe_unused]] BoundaryLayerLattice& lattice,
+                                   [[maybe_unused]] SidePair<BoundaryLayerLattice>& lattice,
                                    XFoil& xfoil) {
   std::stringstream ss;
   for (int side = 1; side <= 2; ++side) {
@@ -183,7 +183,7 @@ bool BoundaryLayerWorkflow::marchMrchueSide(BoundaryLayerState& state,
   initializeMrchueSide(side, thi, dsi, ami, cti, xfoil);
 
   for (int stationIndex = 0;
-       stationIndex < lattice.stationCount.get(side) - 1; ++stationIndex) {
+       stationIndex < lattice.get(side).stationCount - 1; ++stationIndex) {
     MrchueStationContext ctx;
     prepareMrchueStationContext(side, stationIndex, ctx, thi, dsi, ami, cti,
                                 xfoil);
@@ -199,11 +199,11 @@ bool BoundaryLayerWorkflow::marchMrchueSide(BoundaryLayerState& state,
     thi = ctx.thi;
     dsi = ctx.dsi;
 
-    if (stationIndex == lattice.trailingEdgeIndex.get(side)) {
-      thi = lattice.thet.get(1)[lattice.trailingEdgeIndex.top] +
-            lattice.thet.get(2)[lattice.trailingEdgeIndex.bottom];
-      dsi = lattice.dstr.get(1)[lattice.trailingEdgeIndex.top] +
-            lattice.dstr.get(2)[lattice.trailingEdgeIndex.bottom] +
+    if (stationIndex == lattice.get(side).trailingEdgeIndex) {
+      thi = lattice.get(1).thet[lattice.top.trailingEdgeIndex] +
+            lattice.get(2).thet[lattice.bottom.trailingEdgeIndex];
+      dsi = lattice.get(1).dstr[lattice.top.trailingEdgeIndex] +
+            lattice.get(2).dstr[lattice.bottom.trailingEdgeIndex] +
             xfoil.foil.edge.ante;
     }
 
@@ -218,8 +218,8 @@ bool BoundaryLayerWorkflow::marchMrchueSide(BoundaryLayerState& state,
 void BoundaryLayerWorkflow::initializeMrchueSide(int side, double& thi,
                                                  double& dsi, double& ami,
                                                  double& cti, XFoil& xfoil) {
-  const double xsi = lattice.xssi.get(side)[0];
-  const double uei = lattice.uedg.get(side)[0];
+  const double xsi = lattice.get(side).xssi[0];
+  const double uei = lattice.get(side).uedg[0];
   const double ucon = uei / xsi;
   const double tsq = 0.45 / (ucon * 6.0 * xfoil.reybl);
   thi = std::sqrt(tsq);
@@ -232,9 +232,9 @@ void BoundaryLayerWorkflow::prepareMrchueStationContext(
     int side, int stationIndex, MrchueStationContext& ctx, double thi,
     double dsi, double ami, double cti, XFoil& xfoil) {
   ctx.simi = (stationIndex == 0);
-  ctx.wake = stationIndex > lattice.trailingEdgeIndex.get(side);
-  ctx.xsi = lattice.xssi.get(side)[stationIndex];
-  ctx.uei = lattice.uedg.get(side)[stationIndex];
+  ctx.wake = stationIndex > lattice.get(side).trailingEdgeIndex;
+  ctx.xsi = lattice.get(side).xssi[stationIndex];
+  ctx.uei = lattice.get(side).uedg[stationIndex];
   ctx.thi = thi;
   ctx.dsi = dsi;
   ctx.ami = ami;
@@ -244,7 +244,7 @@ void BoundaryLayerWorkflow::prepareMrchueStationContext(
   ctx.hmax = 0.0;
   ctx.htarg = 0.0;
   if (ctx.wake) {
-    const int iw = stationIndex - lattice.trailingEdgeIndex.get(side);
+    const int iw = stationIndex - lattice.get(side).trailingEdgeIndex;
     ctx.dswaki = xfoil.wgap[iw - 1];
   } else {
     ctx.dswaki = 0.0;
@@ -280,28 +280,28 @@ bool BoundaryLayerWorkflow::performMrchueNewtonLoop(
       ctx.ami = state.station2.param.amplz;
 
       if (xfoil.tran) {
-        lattice.transitionIndex.get(side) = stationIndex;
+        lattice.get(side).transitionIndex = stationIndex;
         if (ctx.cti <= 0.0) {
           ctx.cti = 0.03;
           state.station2.param.sz = ctx.cti;
         }
       } else {
-        lattice.transitionIndex.get(side) = stationIndex + 2;
+        lattice.get(side).transitionIndex = stationIndex + 2;
       }
     }
 
     if (stationIndex ==
-        lattice.trailingEdgeIndex.get(side) + 1) {
-      ctx.tte = lattice.thet.get(1)[lattice.trailingEdgeIndex.top] +
-                lattice.thet.get(2)[lattice.trailingEdgeIndex.bottom];
-      ctx.dte = lattice.dstr.get(1)[lattice.trailingEdgeIndex.top] +
-                lattice.dstr.get(2)[lattice.trailingEdgeIndex.bottom] +
+        lattice.get(side).trailingEdgeIndex + 1) {
+      ctx.tte = lattice.get(1).thet[lattice.top.trailingEdgeIndex] +
+                lattice.get(2).thet[lattice.bottom.trailingEdgeIndex];
+      ctx.dte = lattice.get(1).dstr[lattice.top.trailingEdgeIndex] +
+                lattice.get(2).dstr[lattice.bottom.trailingEdgeIndex] +
                 xfoil.foil.edge.ante;
       ctx.cte =
-          (lattice.ctau.get(1)[lattice.trailingEdgeIndex.top] *
-               lattice.thet.get(1)[lattice.trailingEdgeIndex.top] +
-           lattice.ctau.get(2)[lattice.trailingEdgeIndex.bottom] *
-               lattice.thet.get(2)[lattice.trailingEdgeIndex.bottom]) /
+          (lattice.get(1).ctau[lattice.top.trailingEdgeIndex] *
+               lattice.get(1).thet[lattice.top.trailingEdgeIndex] +
+           lattice.get(2).ctau[lattice.bottom.trailingEdgeIndex] *
+               lattice.get(2).thet[lattice.bottom.trailingEdgeIndex]) /
           ctx.tte;
       tesys(xfoil, ctx.cte, ctx.tte, ctx.dte);
     } else {
@@ -320,11 +320,11 @@ bool BoundaryLayerWorkflow::performMrchueNewtonLoop(
       dmax_local =
           std::max(std::fabs(blc.rhs[1] / ctx.thi),
                    std::fabs(blc.rhs[2] / ctx.dsi));
-      if (stationIndex < lattice.transitionIndex.get(side)) {
+      if (stationIndex < lattice.get(side).transitionIndex) {
         dmax_local =
             std::max(dmax_local, std::fabs(blc.rhs[0] / 10.0));
       }
-      if (stationIndex >= lattice.transitionIndex.get(side)) {
+      if (stationIndex >= lattice.get(side).transitionIndex) {
         dmax_local =
             std::max(dmax_local, std::fabs(blc.rhs[0] / ctx.cti));
       }
@@ -334,7 +334,7 @@ bool BoundaryLayerWorkflow::performMrchueNewtonLoop(
         rlx = 0.3 / dmax_local;
       }
 
-      if (stationIndex != lattice.trailingEdgeIndex.get(side) + 1) {
+      if (stationIndex != lattice.get(side).trailingEdgeIndex + 1) {
         const double msq =
             ctx.uei * ctx.uei * xfoil.hstinv /
             (xfoil.gm1bl *
@@ -346,7 +346,7 @@ bool BoundaryLayerWorkflow::performMrchueNewtonLoop(
         const double hktest = hkin_result.hk;
 
         const double hmax =
-            (stationIndex < lattice.transitionIndex.get(side))
+            (stationIndex < lattice.get(side).transitionIndex)
                 ? kHlmax
                 : kHtmax;
         direct = (hktest < hmax);
@@ -367,7 +367,7 @@ bool BoundaryLayerWorkflow::performMrchueNewtonLoop(
         }
       }
 
-      if (stationIndex >= lattice.transitionIndex.get(side)) {
+      if (stationIndex >= lattice.get(side).transitionIndex) {
         ctx.cti += rlx * blc.rhs[0];
       }
       ctx.thi += rlx * blc.rhs[1];
@@ -385,7 +385,7 @@ bool BoundaryLayerWorkflow::performMrchueNewtonLoop(
       dmax_local =
           std::max(std::fabs(blc.rhs[1] / ctx.thi),
                    std::fabs(blc.rhs[2] / ctx.dsi));
-      if (stationIndex >= lattice.transitionIndex.get(side)) {
+      if (stationIndex >= lattice.get(side).transitionIndex) {
         dmax_local =
             std::max(dmax_local, std::fabs(blc.rhs[0] / ctx.cti));
       }
@@ -395,7 +395,7 @@ bool BoundaryLayerWorkflow::performMrchueNewtonLoop(
         rlx = 0.3 / dmax_local;
       }
 
-      if (stationIndex >= lattice.transitionIndex.get(side)) {
+      if (stationIndex >= lattice.get(side).transitionIndex) {
         ctx.cti += rlx * blc.rhs[0];
       }
       ctx.thi += rlx * blc.rhs[1];
@@ -403,12 +403,12 @@ bool BoundaryLayerWorkflow::performMrchueNewtonLoop(
       ctx.uei += rlx * blc.rhs[3];
     }
 
-    if (stationIndex >= lattice.transitionIndex.get(side)) {
+    if (stationIndex >= lattice.get(side).transitionIndex) {
       ctx.cti = std::clamp(ctx.cti, 0.0000001, 0.30);
     }
 
     const double hklim =
-        (stationIndex <= lattice.trailingEdgeIndex.get(side)) ? 1.02
+        (stationIndex <= lattice.get(side).trailingEdgeIndex) ? 1.02
                                                               : 1.00005;
     const double msq =
         ctx.uei * ctx.uei * xfoil.hstinv /

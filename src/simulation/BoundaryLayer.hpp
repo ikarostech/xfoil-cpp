@@ -77,7 +77,7 @@ class BoundaryLayerWorkflow {
                double thi, double dsi, double dswaki, double uei) const;
   bool blsys(XFoil& xfoil);
   bool mrchdu(XFoil& xfoil);
-  bool mrchdu(BoundaryLayerState& state, BoundaryLayerLattice& lattice,
+  bool mrchdu(BoundaryLayerState& state, SidePair<BoundaryLayerLattice>& lattice,
               XFoil& xfoil);
   int resetSideState(int side, XFoil& xfoil);
   bool marchBoundaryLayerSide(BoundaryLayerState& state, int side,
@@ -88,7 +88,7 @@ class BoundaryLayerWorkflow {
                                    double deps, double senswt, double& sens,
                                    double& sennew, double& ami, XFoil& xfoil);
   bool mrchue(XFoil& xfoil);
-  bool mrchue(BoundaryLayerState& state, BoundaryLayerLattice& lattice,
+  bool mrchue(BoundaryLayerState& state, SidePair<BoundaryLayerLattice>& lattice,
               XFoil& xfoil);
   bool marchMrchueSide(BoundaryLayerState& state, int side,
                        XFoil& xfoil, std::stringstream& ss);
@@ -130,7 +130,7 @@ private:
   void copyStationState(int side, int destination, int source);
 
 public:
-  BoundaryLayerLattice lattice;
+  SidePair<BoundaryLayerLattice> lattice;
   BlSystemCoeffs blc;
   BoundaryLayerState state;
 };
@@ -143,36 +143,36 @@ inline void BoundaryLayerWorkflow::resetStationKinematicsAfterFailure(
     return;
   }
 
-  if (stationIndex <= lattice.trailingEdgeIndex.get(side)) {
+  if (stationIndex <= lattice.get(side).trailingEdgeIndex) {
     const double ratio =
-        lattice.xssi.get(side)[stationIndex] /
-        lattice.xssi.get(side)[stationIndex - 1];
+        lattice.get(side).xssi[stationIndex] /
+        lattice.get(side).xssi[stationIndex - 1];
     const double scale = std::sqrt(ratio);
-    ctx.thi = lattice.thet.get(side)[stationIndex - 1] * scale;
-    ctx.dsi = lattice.dstr.get(side)[stationIndex - 1] * scale;
+    ctx.thi = lattice.get(side).thet[stationIndex - 1] * scale;
+    ctx.dsi = lattice.get(side).dstr[stationIndex - 1] * scale;
   } else {
-    if (stationIndex == lattice.trailingEdgeIndex.get(side) + 1) {
+    if (stationIndex == lattice.get(side).trailingEdgeIndex + 1) {
       ctx.cti = ctx.cte;
       ctx.thi = ctx.tte;
       ctx.dsi = ctx.dte;
     } else {
-      ctx.thi = lattice.thet.get(side)[stationIndex - 1];
+      ctx.thi = lattice.get(side).thet[stationIndex - 1];
       const double ratlen =
-          (lattice.xssi.get(side)[stationIndex] -
-           lattice.xssi.get(side)[stationIndex - 1]) /
-          (10.0 * lattice.dstr.get(side)[stationIndex - 1]);
+          (lattice.get(side).xssi[stationIndex] -
+           lattice.get(side).xssi[stationIndex - 1]) /
+          (10.0 * lattice.get(side).dstr[stationIndex - 1]);
       ctx.dsi =
-          (lattice.dstr.get(side)[stationIndex - 1] + ctx.thi * ratlen) /
+          (lattice.get(side).dstr[stationIndex - 1] + ctx.thi * ratlen) /
           (1.0 + ratlen);
     }
   }
 
   ctx.uei = fallbackEdgeVelocity(side, stationIndex, edgeMode);
 
-  if (stationIndex == lattice.transitionIndex.get(side)) {
+  if (stationIndex == lattice.get(side).transitionIndex) {
     ctx.cti = 0.05;
   }
-  if (stationIndex > lattice.transitionIndex.get(side)) {
-    ctx.cti = lattice.ctau.get(side)[stationIndex - 1];
+  if (stationIndex > lattice.get(side).transitionIndex) {
+    ctx.cti = lattice.get(side).ctau[stationIndex - 1];
   }
 }

@@ -37,3 +37,37 @@ struct SidePair {
     }
   }
 };
+
+/**
+ * @brief Lightweight view that holds references to a pair of values.
+ *
+ * Unlike SidePair, this structure does not own its elements and can be used to
+ * expose references to existing data without copying it.
+ */
+template <class T>
+struct SidePairRef {
+  T& top;
+  T& bottom;
+
+  T& get(int side) {
+    switch (side) {
+      case 1:
+        return top;
+      case 2:
+        return bottom;
+      default:
+        throw std::invalid_argument("invalid side type");
+    }
+  }
+
+  const T& get(int side) const {
+    switch (side) {
+      case 1:
+        return top;
+      case 2:
+        return bottom;
+      default:
+        throw std::invalid_argument("invalid side type");
+    }
+  }
+};

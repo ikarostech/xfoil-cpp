@@ -53,69 +53,60 @@ struct BoundaryLayerState {
  *        lattice along the airfoil and wake.
  */
 struct BoundaryLayerLattice {
-  SidePair<Eigen::VectorXi> stationToPanel;
-  SidePair<Eigen::VectorXi> stationToSystem;
-  SidePair<int> trailingEdgeIndex;
-  SidePair<int> stationCount;
+  Eigen::VectorXi stationToPanel;
+  Eigen::VectorXi stationToSystem;
+  int trailingEdgeIndex = 0;
+  int stationCount = 0;
 
-  SidePair<double> transitionLocation;
+  double transitionLocation = 0.0;
 
-  SidePair<Eigen::VectorXd> ctau;
-  SidePair<Eigen::VectorXd> thet;
-  SidePair<Eigen::VectorXd> dstr;
-  SidePair<Eigen::VectorXd> uedg;
-  SidePair<Eigen::VectorXd> ctq;
-  SidePair<Eigen::VectorXd> xssi;
-  SidePair<Eigen::VectorXd> uinv;
-  SidePair<Eigen::VectorXd> uinv_a;
-  SidePair<Eigen::VectorXd> mass;
-  SidePair<Eigen::VectorXd> vti;
+  Eigen::VectorXd ctau;
+  Eigen::VectorXd thet;
+  Eigen::VectorXd dstr;
+  Eigen::VectorXd uedg;
+  Eigen::VectorXd ctq;
+  Eigen::VectorXd xssi;
+  Eigen::VectorXd uinv;
+  Eigen::VectorXd uinv_a;
+  Eigen::VectorXd mass;
+  Eigen::VectorXd vti;
 
-  SidePair<int> transitionIndex;
+  int transitionIndex = 0;
 
   void clear() {
-    stationToPanel.top.resize(0);
-    stationToPanel.bottom.resize(0);
-    stationToSystem.top.resize(0);
-    stationToSystem.bottom.resize(0);
-    trailingEdgeIndex.top = 0;
-    trailingEdgeIndex.bottom = 0;
-    stationCount.top = 0;
-    stationCount.bottom = 0;
-    transitionLocation.top = 0.0;
-    transitionLocation.bottom = 0.0;
-    transitionIndex.top = 0;
-    transitionIndex.bottom = 0;
+    stationToPanel.resize(0);
+    stationToSystem.resize(0);
+    trailingEdgeIndex = 0;
+    stationCount = 0;
+    transitionLocation = 0.0;
+    transitionIndex = 0;
 
-    auto resetVectorPair = [](SidePair<Eigen::VectorXd>& pair) {
-      pair.top.resize(0);
-      pair.bottom.resize(0);
-    };
+    auto resetVector = [](Eigen::VectorXd& vector) { vector.resize(0); };
 
-    resetVectorPair(ctau);
-    resetVectorPair(thet);
-    resetVectorPair(dstr);
-    resetVectorPair(uedg);
-    resetVectorPair(ctq);
-    resetVectorPair(xssi);
-    resetVectorPair(uinv);
-    resetVectorPair(uinv_a);
-    resetVectorPair(mass);
-    resetVectorPair(vti);
+    resetVector(ctau);
+    resetVector(thet);
+    resetVector(dstr);
+    resetVector(uedg);
+    resetVector(ctq);
+    resetVector(xssi);
+    resetVector(uinv);
+    resetVector(uinv_a);
+    resetVector(mass);
+    resetVector(vti);
   }
 
-  void resizeSide(int side, int size) {
-    stationToPanel.get(side).resize(size);
-    stationToSystem.get(side).resize(size);
-    ctau.get(side).resize(size);
-    thet.get(side).resize(size);
-    dstr.get(side).resize(size);
-    uedg.get(side).resize(size);
-    ctq.get(side).resize(size);
-    xssi.get(side).resize(size);
-    uinv.get(side).resize(size);
-    uinv_a.get(side).resize(size);
-    mass.get(side).resize(size);
-    vti.get(side).resize(size);
+  void resize(int size) {
+    stationToPanel.resize(size);
+    stationToSystem.resize(size);
+    ctau.resize(size);
+    thet.resize(size);
+    dstr.resize(size);
+    uedg.resize(size);
+    ctq.resize(size);
+    xssi.resize(size);
+    uinv.resize(size);
+    uinv_a.resize(size);
+    mass.resize(size);
+    vti.resize(size);
   }
 };

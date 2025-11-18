@@ -59,8 +59,8 @@ bool XFoil::initXFoilAnalysis(double Re, double alpha, double Mach,
   state.viscous = bViscous;
 
   acrit = NCrit;
-  boundaryLayerWorkflow.lattice.transitionLocation.top = XtrTop;
-  boundaryLayerWorkflow.lattice.transitionLocation.bottom = XtrBot;
+  boundaryLayerWorkflow.lattice.top.transitionLocation = XtrTop;
+  boundaryLayerWorkflow.lattice.bottom.transitionLocation = XtrBot;
 
   if (Mach > 0.000001) {
     if (!setMach()) {
@@ -189,11 +189,11 @@ XFoil::TangentialVelocityResult XFoil::qiset() const {
 VectorXd XFoil::qvfue() const {
   VectorXd updated_qvis = qvis;
   for (int is = 1; is <= 2; is++) {
-    const auto& vti_side = boundaryLayerWorkflow.lattice.vti.get(is);
-    const auto& uedg_side = boundaryLayerWorkflow.lattice.uedg.get(is);
-    const int limit = boundaryLayerWorkflow.lattice.stationCount.get(is) - 1;
+    const auto& vti_side = boundaryLayerWorkflow.lattice.get(is).vti;
+    const auto& uedg_side = boundaryLayerWorkflow.lattice.get(is).uedg;
+    const int limit = boundaryLayerWorkflow.lattice.get(is).stationCount - 1;
     for (int ibl = 0; ibl < limit; ++ibl) {
-      int i = boundaryLayerWorkflow.lattice.stationToPanel.get(is)[ibl];
+      int i = boundaryLayerWorkflow.lattice.get(is).stationToPanel[ibl];
       updated_qvis[i] = vti_side[ibl] * uedg_side[ibl];
     }
   }
@@ -231,10 +231,11 @@ XFoil::EdgeVelocitySwapResult XFoil::swapEdgeVelocities(
     const SidePair<VectorXd> &usav) const {
   EdgeVelocitySwapResult result;
   result.swappedUsav = usav;
-  result.restoredUedg = boundaryLayerWorkflow.lattice.uedg;
+  result.restoredUedg.top = boundaryLayerWorkflow.lattice.top.uedg;
+  result.restoredUedg.bottom = boundaryLayerWorkflow.lattice.bottom.uedg;
   for (int is = 1; is <= 2; ++is) {
-    for (int ibl = 0; ibl < boundaryLayerWorkflow.lattice.stationCount.get(is) - 1; ++ibl) {
-      result.swappedUsav.get(is)[ibl] = boundaryLayerWorkflow.lattice.uedg.get(is)[ibl];
+    for (int ibl = 0; ibl < boundaryLayerWorkflow.lattice.get(is).stationCount - 1; ++ibl) {
+      result.swappedUsav.get(is)[ibl] = boundaryLayerWorkflow.lattice.get(is).uedg[ibl];
       result.restoredUedg.get(is)[ibl] = usav.get(is)[ibl];
     }
   }
@@ -251,14 +252,14 @@ XFoil::LeTeSensitivities XFoil::computeLeTeSensitivities(int ile1, int ile2,
   sensitivities.ute1_m = VectorXd::Zero(2 * IVX + 1);
   sensitivities.ute2_m = VectorXd::Zero(2 * IVX + 1);
   for (int js = 1; js <= 2; ++js) {
-    for (int jbl = 0; jbl < boundaryLayerWorkflow.lattice.stationCount.get(js) - 1; ++jbl) {
-      const int j = boundaryLayerWorkflow.lattice.stationToPanel.get(js)[jbl];
-      const int jv = boundaryLayerWorkflow.lattice.stationToSystem.get(js)[jbl];
-      const double vti_js = boundaryLayerWorkflow.lattice.vti.get(js)[jbl];
-      sensitivities.ule1_m[jv] = -boundaryLayerWorkflow.lattice.vti.top[0] * vti_js * dij(ile1, j);
-      sensitivities.ule2_m[jv] = -boundaryLayerWorkflow.lattice.vti.bottom[0] * vti_js * dij(ile2, j);
-      sensitivities.ute1_m[jv] = -boundaryLayerWorkflow.lattice.vti.top[boundaryLayerWorkflow.lattice.trailingEdgeIndex.top] * vti_js * dij(ite1, j);
-      sensitivities.ute2_m[jv] = -boundaryLayerWorkflow.lattice.vti.bottom[boundaryLayerWorkflow.lattice.trailingEdgeIndex.bottom] * vti_js * dij(ite2, j);
+    for (int jbl = 0; jbl < boundaryLayerWorkflow.lattice.get(js).stationCount - 1; ++jbl) {
+      const int j = boundaryLayerWorkflow.lattice.get(js).stationToPanel[jbl];
+      const int jv = boundaryLayerWorkflow.lattice.get(js).stationToSystem[jbl];
+      const double vti_js = boundaryLayerWorkflow.lattice.get(js).vti[jbl];
+      sensitivities.ule1_m[jv] = -boundaryLayerWorkflow.lattice.top.vti[0] * vti_js * dij(ile1, j);
+      sensitivities.ule2_m[jv] = -boundaryLayerWorkflow.lattice.bottom.vti[0] * vti_js * dij(ile2, j);
+      sensitivities.ute1_m[jv] = -boundaryLayerWorkflow.lattice.top.vti[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex] * vti_js * dij(ite1, j);
+      sensitivities.ute2_m[jv] = -boundaryLayerWorkflow.lattice.bottom.vti[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex] * vti_js * dij(ite2, j);
     }
   }
   return sensitivities;
@@ -269,8 +270,8 @@ XFoil::DerivativeVectors XFoil::clearDerivativeVectors(const VectorXd &u_m,
                                                         const VectorXd &d_m) const {
   DerivativeVectors result{u_m, d_m};
   for (int js = 1; js <= 2; ++js) {
-    for (int jbl = 0; jbl < boundaryLayerWorkflow.lattice.stationCount.get(js) - 1; ++jbl) {
-      const int jv = boundaryLayerWorkflow.lattice.stationToSystem.get(js)[jbl];
+    for (int jbl = 0; jbl < boundaryLayerWorkflow.lattice.get(js).stationCount - 1; ++jbl) {
+      const int jv = boundaryLayerWorkflow.lattice.get(js).stationToSystem[jbl];
       result.u[jv] = 0.0;
       result.d[jv] = 0.0;
     }
@@ -289,26 +290,26 @@ XFoil::EdgeVelocityDistribution XFoil::computeNewUeDistribution() const {
   distribution.u_ac.top = VectorXd::Zero(IVX);
   distribution.u_ac.bottom = VectorXd::Zero(IVX);
   for (int is = 1; is <= 2; is++) {
-    for (int ibl = 0; ibl < boundaryLayerWorkflow.lattice.stationCount.get(is) - 1; ++ibl) {
-      const int i = boundaryLayerWorkflow.lattice.stationToPanel.get(is)[ibl];
+    for (int ibl = 0; ibl < boundaryLayerWorkflow.lattice.get(is).stationCount - 1; ++ibl) {
+      const int i = boundaryLayerWorkflow.lattice.get(is).stationToPanel[ibl];
       double dui = 0.0;
       double dui_ac = 0.0;
       for (int js = 1; js <= 2; js++) {
-        for (int jbl = 0; jbl < boundaryLayerWorkflow.lattice.stationCount.get(js) - 1; ++jbl) {
-          const int j = boundaryLayerWorkflow.lattice.stationToPanel.get(js)[jbl];
-          const int jv = boundaryLayerWorkflow.lattice.stationToSystem.get(js)[jbl];
-          const double ue_m = -boundaryLayerWorkflow.lattice.vti.get(is)[ibl] * boundaryLayerWorkflow.lattice.vti.get(js)[jbl] *
+        for (int jbl = 0; jbl < boundaryLayerWorkflow.lattice.get(js).stationCount - 1; ++jbl) {
+          const int j = boundaryLayerWorkflow.lattice.get(js).stationToPanel[jbl];
+          const int jv = boundaryLayerWorkflow.lattice.get(js).stationToSystem[jbl];
+          const double ue_m = -boundaryLayerWorkflow.lattice.get(is).vti[ibl] * boundaryLayerWorkflow.lattice.get(js).vti[jbl] *
                               dij(i, j);
-          dui += ue_m * (boundaryLayerWorkflow.lattice.mass.get(js)[jbl] + vdel[jv](2, 0));
+          dui += ue_m * (boundaryLayerWorkflow.lattice.get(js).mass[jbl] + vdel[jv](2, 0));
           dui_ac += ue_m * (-vdel[jv](2, 1));
         }
       }
 
       const double uinv_ac = analysis_state_.controlByAlpha
                                  ? 0.0
-                                 : boundaryLayerWorkflow.lattice.uinv_a.get(is)[ibl];
+                                 : boundaryLayerWorkflow.lattice.get(is).uinv_a[ibl];
       // Store unew/u_ac at 0-based station index
-      distribution.unew.get(is)[ibl] = boundaryLayerWorkflow.lattice.uinv.get(is)[ibl] + dui;
+      distribution.unew.get(is)[ibl] = boundaryLayerWorkflow.lattice.get(is).uinv[ibl] + dui;
       distribution.u_ac.get(is)[ibl] = uinv_ac + dui_ac;
     }
   }
@@ -328,10 +329,10 @@ XFoil::QtanResult XFoil::computeQtan(const EdgeVelocityDistribution& distributio
   for (int is = 1; is <= 2; is++) {
     const VectorXd &unew_vec = (is == 1) ? unew.top : unew.bottom;
     const VectorXd &uac_vec = (is == 1) ? u_ac.top : u_ac.bottom;
-    for (int ibl = 0; ibl < boundaryLayerWorkflow.lattice.trailingEdgeIndex.get(is); ++ibl) {
-      const int i = boundaryLayerWorkflow.lattice.stationToPanel.get(is)[ibl];
-      result.qnew[i] = boundaryLayerWorkflow.lattice.vti.get(is)[ibl] * unew_vec[ibl];
-      result.q_ac[i] = boundaryLayerWorkflow.lattice.vti.get(is)[ibl] * uac_vec[ibl];
+    for (int ibl = 0; ibl < boundaryLayerWorkflow.lattice.get(is).trailingEdgeIndex; ++ibl) {
+      const int i = boundaryLayerWorkflow.lattice.get(is).stationToPanel[ibl];
+      result.qnew[i] = boundaryLayerWorkflow.lattice.get(is).vti[ibl] * unew_vec[ibl];
+      result.q_ac[i] = boundaryLayerWorkflow.lattice.get(is).vti[ibl] * uac_vec[ibl];
     }
   }
   return result;
@@ -435,7 +436,7 @@ XFoil::BoundaryLayerDelta XFoil::buildBoundaryLayerDelta(
     int side, const VectorXd &unew_side, const VectorXd &u_ac_side,
     double dac) const {
   BoundaryLayerDelta delta;
-  const int len = boundaryLayerWorkflow.lattice.stationCount.get(side) - 1;
+  const int len = boundaryLayerWorkflow.lattice.get(side).stationCount - 1;
   if (len <= 0)
     return delta;
 
@@ -444,7 +445,7 @@ XFoil::BoundaryLayerDelta XFoil::buildBoundaryLayerDelta(
   delta.ddstr = VectorXd(len);
   delta.duedg = VectorXd(len);
 
-  const auto iv = boundaryLayerWorkflow.lattice.stationToSystem.get(side).segment(0, len);
+  const auto iv = boundaryLayerWorkflow.lattice.get(side).stationToSystem.segment(0, len);
   VectorXd dmass(len);
   for (int j = 0; j < len; ++j) {
     const int idx = iv[j];
@@ -453,8 +454,8 @@ XFoil::BoundaryLayerDelta XFoil::buildBoundaryLayerDelta(
     dmass[j] = vdel[idx](2, 0) - dac * vdel[idx](2, 1);
   }
 
-  const VectorXd uedg_segment = boundaryLayerWorkflow.lattice.uedg.get(side).head(len);
-  const VectorXd dstr_segment = boundaryLayerWorkflow.lattice.dstr.get(side).head(len);
+  const VectorXd uedg_segment = boundaryLayerWorkflow.lattice.get(side).uedg.head(len);
+  const VectorXd dstr_segment = boundaryLayerWorkflow.lattice.get(side).dstr.head(len);
   const VectorXd unew_segment = unew_side.head(len);
   const VectorXd uac_segment = u_ac_side.head(len);
 
@@ -474,12 +475,12 @@ XFoil::BoundaryLayerMetrics XFoil::evaluateSegmentRelaxation(
   if (len <= 0)
     return metrics;
 
-  const VectorXd ctau_segment = boundaryLayerWorkflow.lattice.ctau.get(side).head(len);
-  const VectorXd thet_segment = boundaryLayerWorkflow.lattice.thet.get(side).head(len);
-  const VectorXd dstr_segment = boundaryLayerWorkflow.lattice.dstr.get(side).head(len);
+  const VectorXd ctau_segment = boundaryLayerWorkflow.lattice.get(side).ctau.head(len);
+  const VectorXd thet_segment = boundaryLayerWorkflow.lattice.get(side).thet.head(len);
+  const VectorXd dstr_segment = boundaryLayerWorkflow.lattice.get(side).dstr.head(len);
 
   VectorXd dn1(len);
-  const int transition_index = boundaryLayerWorkflow.lattice.transitionIndex.get(side);
+  const int transition_index = boundaryLayerWorkflow.lattice.get(side).transitionIndex;
   for (int idx = 0; idx < len; ++idx) {
     dn1[idx] =
         (idx < transition_index) ? delta.dctau[idx] / 10.0
@@ -512,11 +513,11 @@ XFoil::BoundaryLayerMetrics XFoil::evaluateSegmentRelaxation(
 XFoil::BoundaryLayerSideState XFoil::applyBoundaryLayerDelta(
     int side, const BoundaryLayerDelta &delta, double relaxation) {
   BoundaryLayerSideState state;
-  state.ctau = boundaryLayerWorkflow.lattice.ctau.get(side);
-  state.thet = boundaryLayerWorkflow.lattice.thet.get(side);
-  state.dstr = boundaryLayerWorkflow.lattice.dstr.get(side);
-  state.uedg = boundaryLayerWorkflow.lattice.uedg.get(side);
-  state.mass = boundaryLayerWorkflow.lattice.mass.get(side);
+  state.ctau = boundaryLayerWorkflow.lattice.get(side).ctau;
+  state.thet = boundaryLayerWorkflow.lattice.get(side).thet;
+  state.dstr = boundaryLayerWorkflow.lattice.get(side).dstr;
+  state.uedg = boundaryLayerWorkflow.lattice.get(side).uedg;
+  state.mass = boundaryLayerWorkflow.lattice.get(side).mass;
 
   const int len = delta.dctau.size();
   if (len <= 0)
@@ -527,19 +528,19 @@ XFoil::BoundaryLayerSideState XFoil::applyBoundaryLayerDelta(
   state.dstr.head(len) += relaxation * delta.ddstr;
   state.uedg.head(len) += relaxation * delta.duedg;
 
-  const int transition_index = std::max(0, boundaryLayerWorkflow.lattice.transitionIndex.get(side));
+  const int transition_index = std::max(0, boundaryLayerWorkflow.lattice.get(side).transitionIndex);
   for (int idx = transition_index; idx < len; ++idx) {
     state.ctau[idx] = std::min(state.ctau[idx], 0.25);
   }
 
   for (int ibl = 0; ibl < len; ++ibl) {
     double dswaki = 0.0;
-    if (ibl > boundaryLayerWorkflow.lattice.trailingEdgeIndex.get(side)) {
-      const int wake_index = ibl - (boundaryLayerWorkflow.lattice.trailingEdgeIndex.get(side) + 1);
+    if (ibl > boundaryLayerWorkflow.lattice.get(side).trailingEdgeIndex) {
+      const int wake_index = ibl - (boundaryLayerWorkflow.lattice.get(side).trailingEdgeIndex + 1);
       dswaki = wgap[wake_index];
     }
 
-    const double hklim = (ibl <= boundaryLayerWorkflow.lattice.trailingEdgeIndex.get(side)) ? 1.02 : 1.00005;
+    const double hklim = (ibl <= boundaryLayerWorkflow.lattice.get(side).trailingEdgeIndex) ? 1.02 : 1.00005;
     const double uedg_val = state.uedg[ibl];
     const double uedg_sq = uedg_val * uedg_val;
     const double denom = 1.0 - 0.5 * uedg_sq * hstinv;
@@ -611,7 +612,7 @@ bool XFoil::update() {
         applyBoundaryLayerDelta(side, deltas.get(side), rlx);
   }
 
-  rmsbl = sqrt(rmsbl / (4.0 * double(boundaryLayerWorkflow.lattice.stationCount.top + boundaryLayerWorkflow.lattice.stationCount.bottom)));
+  rmsbl = sqrt(rmsbl / (4.0 * double(boundaryLayerWorkflow.lattice.top.stationCount + boundaryLayerWorkflow.lattice.bottom.stationCount)));
 
   if (analysis_state_.controlByAlpha)
     cl = cl + rlx * dac;
@@ -620,21 +621,21 @@ bool XFoil::update() {
         analysis_state_.alpha + rlx * dac;
 
   for (int side = 1; side <= 2; ++side) {
-    boundaryLayerWorkflow.lattice.ctau.get(side) = updated_boundary_layer.get(side).ctau;
-    boundaryLayerWorkflow.lattice.thet.get(side) = updated_boundary_layer.get(side).thet;
-    boundaryLayerWorkflow.lattice.dstr.get(side) = updated_boundary_layer.get(side).dstr;
-    boundaryLayerWorkflow.lattice.uedg.get(side) = updated_boundary_layer.get(side).uedg;
-    boundaryLayerWorkflow.lattice.mass.get(side) = updated_boundary_layer.get(side).mass;
+    boundaryLayerWorkflow.lattice.get(side).ctau = updated_boundary_layer.get(side).ctau;
+    boundaryLayerWorkflow.lattice.get(side).thet = updated_boundary_layer.get(side).thet;
+    boundaryLayerWorkflow.lattice.get(side).dstr = updated_boundary_layer.get(side).dstr;
+    boundaryLayerWorkflow.lattice.get(side).uedg = updated_boundary_layer.get(side).uedg;
+    boundaryLayerWorkflow.lattice.get(side).mass = updated_boundary_layer.get(side).mass;
   }
 
   //--- equate upper wake arrays to lower wake arrays
-  for (int kbl = 1; kbl <= boundaryLayerWorkflow.lattice.stationCount.bottom - (boundaryLayerWorkflow.lattice.trailingEdgeIndex.bottom + 1); kbl++) {
-    boundaryLayerWorkflow.lattice.ctau.top[boundaryLayerWorkflow.lattice.trailingEdgeIndex.top + kbl] = boundaryLayerWorkflow.lattice.ctau.bottom[boundaryLayerWorkflow.lattice.trailingEdgeIndex.bottom + kbl];
-    boundaryLayerWorkflow.lattice.thet.top[boundaryLayerWorkflow.lattice.trailingEdgeIndex.top + kbl] = boundaryLayerWorkflow.lattice.thet.bottom[boundaryLayerWorkflow.lattice.trailingEdgeIndex.bottom + kbl];
-    boundaryLayerWorkflow.lattice.dstr.top[boundaryLayerWorkflow.lattice.trailingEdgeIndex.top + kbl] = boundaryLayerWorkflow.lattice.dstr.bottom[boundaryLayerWorkflow.lattice.trailingEdgeIndex.bottom + kbl];
-    boundaryLayerWorkflow.lattice.uedg.top[boundaryLayerWorkflow.lattice.trailingEdgeIndex.top + kbl] =
-                     boundaryLayerWorkflow.lattice.uedg.bottom[boundaryLayerWorkflow.lattice.trailingEdgeIndex.bottom + kbl];
-    boundaryLayerWorkflow.lattice.ctq.top[boundaryLayerWorkflow.lattice.trailingEdgeIndex.top + kbl] = boundaryLayerWorkflow.lattice.ctq.bottom[boundaryLayerWorkflow.lattice.trailingEdgeIndex.bottom + kbl];
+  for (int kbl = 1; kbl <= boundaryLayerWorkflow.lattice.bottom.stationCount - (boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex + 1); kbl++) {
+    boundaryLayerWorkflow.lattice.top.ctau[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex + kbl] = boundaryLayerWorkflow.lattice.bottom.ctau[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex + kbl];
+    boundaryLayerWorkflow.lattice.top.thet[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex + kbl] = boundaryLayerWorkflow.lattice.bottom.thet[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex + kbl];
+    boundaryLayerWorkflow.lattice.top.dstr[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex + kbl] = boundaryLayerWorkflow.lattice.bottom.dstr[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex + kbl];
+    boundaryLayerWorkflow.lattice.top.uedg[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex + kbl] =
+                     boundaryLayerWorkflow.lattice.bottom.uedg[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex + kbl];
+    boundaryLayerWorkflow.lattice.top.ctq[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex + kbl] = boundaryLayerWorkflow.lattice.bottom.ctq[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex + kbl];
   }
 
   return true;
@@ -685,11 +686,11 @@ bool XFoil::viscal() {
 
   if (!lblini) {
     //	----- set initial ue from inviscid ue
-    for (int ibl = 0; ibl < boundaryLayerWorkflow.lattice.stationCount.top - 1; ibl++) {
-      boundaryLayerWorkflow.lattice.uedg.top[ibl] = boundaryLayerWorkflow.lattice.uinv.top[ibl];
+    for (int ibl = 0; ibl < boundaryLayerWorkflow.lattice.top.stationCount - 1; ibl++) {
+      boundaryLayerWorkflow.lattice.top.uedg[ibl] = boundaryLayerWorkflow.lattice.top.uinv[ibl];
     }
-    for (int ibl = 0; ibl < boundaryLayerWorkflow.lattice.stationCount.bottom - 1; ibl++) {
-      boundaryLayerWorkflow.lattice.uedg.bottom[ibl] = boundaryLayerWorkflow.lattice.uinv.bottom[ibl];
+    for (int ibl = 0; ibl < boundaryLayerWorkflow.lattice.bottom.stationCount - 1; ibl++) {
+      boundaryLayerWorkflow.lattice.bottom.uedg[ibl] = boundaryLayerWorkflow.lattice.bottom.uinv[ibl];
     }
   }
 

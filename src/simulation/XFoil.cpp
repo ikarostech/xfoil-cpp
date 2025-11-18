@@ -79,8 +79,8 @@ XFoil::XFoil() : analysis_state_() {
   // initialize transition parameters until user changes them
   acrit = 9.0;
   auto& boundary_layer_lattice = boundaryLayerWorkflow.lattice;
-  boundary_layer_lattice.transitionLocation.top = 1.0;
-  boundary_layer_lattice.transitionLocation.bottom = 1.0;
+  boundary_layer_lattice.top.transitionLocation = 1.0;
+  boundary_layer_lattice.bottom.transitionLocation = 1.0;
 
   //---- initialize freestream mach number to zero
   analysis_state_.machType = MachType::CONSTANT;

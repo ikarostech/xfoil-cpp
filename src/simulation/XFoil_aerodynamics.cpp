@@ -38,14 +38,14 @@ double XFoil::cdcalc() const {
   const double tklam_local =
       MathUtil::pow(analysis_state_.currentMach / (1.0 + beta), 2);
 
-  const double thwake = boundaryLayerWorkflow.lattice.thet.get(2)[boundaryLayerWorkflow.lattice.stationCount.bottom - 2];
-  const double uedg_bottom = boundaryLayerWorkflow.lattice.uedg.bottom[boundaryLayerWorkflow.lattice.stationCount.bottom - 2];
+  const double thwake = boundaryLayerWorkflow.lattice.get(2).thet[boundaryLayerWorkflow.lattice.bottom.stationCount - 2];
+  const double uedg_bottom = boundaryLayerWorkflow.lattice.bottom.uedg[boundaryLayerWorkflow.lattice.bottom.stationCount - 2];
   const double urat = uedg_bottom / analysis_state_.qinf;
   const double uewake =
       uedg_bottom * (1.0 - tklam_local) /
       (1.0 - tklam_local * urat * urat);
   const double shwake =
-      boundaryLayerWorkflow.lattice.dstr.get(2)[boundaryLayerWorkflow.lattice.stationCount.bottom - 2] / boundaryLayerWorkflow.lattice.thet.get(2)[boundaryLayerWorkflow.lattice.stationCount.bottom - 2];
+      boundaryLayerWorkflow.lattice.get(2).dstr[boundaryLayerWorkflow.lattice.bottom.stationCount - 2] / boundaryLayerWorkflow.lattice.get(2).thet[boundaryLayerWorkflow.lattice.bottom.stationCount - 2];
 
   const double exponent = 0.5 * (5.0 + shwake);
   const double wake_ratio = uewake / analysis_state_.qinf;

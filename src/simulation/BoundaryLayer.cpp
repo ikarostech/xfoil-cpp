@@ -11,20 +11,20 @@ using BoundaryContext = BoundaryLayerWorkflow::MixedModeStationContext;
 
 bool BoundaryLayerWorkflow::isStartOfWake(const XFoil& xfoil, int side,
                                           int stationIndex) {
-  return stationIndex == lattice.trailingEdgeIndex.get(side) + 1;
+  return stationIndex == lattice.get(side).trailingEdgeIndex + 1;
 }
 
 void BoundaryLayerWorkflow::updateSystemMatricesForStation(
     XFoil& xfoil, int side, int stationIndex, BoundaryContext& ctx) {
   if (isStartOfWake(xfoil, side, stationIndex)) {
-    ctx.tte = lattice.thet.get(1)[lattice.trailingEdgeIndex.top] +
-              lattice.thet.get(2)[lattice.trailingEdgeIndex.bottom];
-    ctx.dte = lattice.dstr.get(1)[lattice.trailingEdgeIndex.top] +
-              lattice.dstr.get(2)[lattice.trailingEdgeIndex.bottom] + xfoil.foil.edge.ante;
+    ctx.tte = lattice.get(1).thet[lattice.top.trailingEdgeIndex] +
+              lattice.get(2).thet[lattice.bottom.trailingEdgeIndex];
+    ctx.dte = lattice.get(1).dstr[lattice.top.trailingEdgeIndex] +
+              lattice.get(2).dstr[lattice.bottom.trailingEdgeIndex] + xfoil.foil.edge.ante;
     ctx.cte =
-        (lattice.ctau.get(1)[lattice.trailingEdgeIndex.top] * lattice.thet.get(1)[lattice.trailingEdgeIndex.top] +
-         lattice.ctau.get(2)[lattice.trailingEdgeIndex.bottom] *
-             lattice.thet.get(2)[lattice.trailingEdgeIndex.bottom]) /
+        (lattice.get(1).ctau[lattice.top.trailingEdgeIndex] * lattice.get(1).thet[lattice.top.trailingEdgeIndex] +
+         lattice.get(2).ctau[lattice.bottom.trailingEdgeIndex] *
+             lattice.get(2).thet[lattice.bottom.trailingEdgeIndex]) /
         ctx.tte;
     tesys(xfoil, ctx.cte, ctx.tte, ctx.dte);
   } else {
@@ -39,19 +39,19 @@ void BoundaryLayerWorkflow::initializeFirstIterationState(
   hkref = state.station2.hkz.scalar;
 
   const bool inLaminarWindow =
-      stationIndex < lattice.transitionIndex.get(side) && stationIndex >= previousTransition;
+      stationIndex < lattice.get(side).transitionIndex && stationIndex >= previousTransition;
   if (inLaminarWindow) {
     double uem;
     double dsm;
     double thm;
     if (stationIndex > 0) {
-      uem = lattice.uedg.get(side)[stationIndex - 1];
-      dsm = lattice.dstr.get(side)[stationIndex - 1];
-      thm = lattice.thet.get(side)[stationIndex - 1];
+      uem = lattice.get(side).uedg[stationIndex - 1];
+      dsm = lattice.get(side).dstr[stationIndex - 1];
+      thm = lattice.get(side).thet[stationIndex - 1];
     } else {
-      uem = lattice.uedg.get(side)[stationIndex];
-      dsm = lattice.dstr.get(side)[stationIndex];
-      thm = lattice.thet.get(side)[stationIndex];
+      uem = lattice.get(side).uedg[stationIndex];
+      dsm = lattice.get(side).dstr[stationIndex];
+      thm = lattice.get(side).thet[stationIndex];
     }
     const double uem_sq = uem * uem;
     const double msq =
@@ -64,16 +64,16 @@ void BoundaryLayerWorkflow::initializeFirstIterationState(
 
   if (stationIndex < previousTransition) {
     if (xfoil.tran) {
-      lattice.ctau.get(side)[stationIndex] = 0.03;
+      lattice.get(side).ctau[stationIndex] = 0.03;
     }
     if (xfoil.turb) {
       const double prev =
-          (stationIndex >= 1) ? lattice.ctau.get(side)[stationIndex - 1]
-                              : lattice.ctau.get(side)[stationIndex];
-      lattice.ctau.get(side)[stationIndex] = prev;
+          (stationIndex >= 1) ? lattice.get(side).ctau[stationIndex - 1]
+                              : lattice.get(side).ctau[stationIndex];
+      lattice.get(side).ctau[stationIndex] = prev;
     }
     if (xfoil.tran || xfoil.turb) {
-      ctx.cti = lattice.ctau.get(side)[stationIndex - 1];
+      ctx.cti = lattice.get(side).ctau[stationIndex - 1];
       state.station2.param.sz = ctx.cti;
     }
   }
@@ -125,7 +125,7 @@ bool BoundaryLayerWorkflow::applyMixedModeNewtonStep(
 
   ctx.dmax = std::max(std::fabs(blc.rhs[1] / ctx.thi),
                       std::fabs(blc.rhs[2] / ctx.dsi));
-  if (stationIndex >= lattice.transitionIndex.get(side)) {
+  if (stationIndex >= lattice.get(side).transitionIndex) {
     ctx.dmax = std::max(ctx.dmax,
                         std::fabs(blc.rhs[0] / (10.0 * ctx.cti)));
   }
@@ -135,23 +135,23 @@ bool BoundaryLayerWorkflow::applyMixedModeNewtonStep(
     xfoil.rlx = 0.3 / ctx.dmax;
   }
 
-  if (stationIndex < lattice.transitionIndex.get(side)) {
+  if (stationIndex < lattice.get(side).transitionIndex) {
     ami += xfoil.rlx * blc.rhs[0];
     ctx.ami = ami;
   }
-  if (stationIndex >= lattice.transitionIndex.get(side)) {
+  if (stationIndex >= lattice.get(side).transitionIndex) {
     ctx.cti += xfoil.rlx * blc.rhs[0];
   }
   ctx.thi += xfoil.rlx * blc.rhs[1];
   ctx.dsi += xfoil.rlx * blc.rhs[2];
   ctx.uei += xfoil.rlx * blc.rhs[3];
 
-  if (stationIndex >= lattice.transitionIndex.get(side)) {
+  if (stationIndex >= lattice.get(side).transitionIndex) {
     ctx.cti = std::clamp(ctx.cti, 0.0000001, 0.30);
   }
 
   const double hklim =
-      (stationIndex <= lattice.trailingEdgeIndex.get(side)) ? 1.02 : 1.00005;
+      (stationIndex <= lattice.get(side).trailingEdgeIndex) ? 1.02 : 1.00005;
   const double uei_sq = ctx.uei * ctx.uei;
   const double msq = uei_sq * xfoil.hstinv /
                      (xfoil.gm1bl * (1.0 - 0.5 * uei_sq * xfoil.hstinv));
@@ -304,36 +304,36 @@ bool BoundaryLayerWorkflow::iblpan(XFoil& xfoil) {
   const int point_count = xfoil.foil.foil_shape.n;
 
   for (int i = 0; i <= xfoil.i_stagnation; i++) {
-    lattice.stationToPanel.top[i] = xfoil.i_stagnation - i;
-    lattice.vti.top[i] = 1.0;
+    lattice.top.stationToPanel[i] = xfoil.i_stagnation - i;
+    lattice.top.vti[i] = 1.0;
   }
 
-  lattice.trailingEdgeIndex.top = xfoil.i_stagnation;
-  lattice.stationCount.top = lattice.trailingEdgeIndex.top + 2;
+  lattice.top.trailingEdgeIndex = xfoil.i_stagnation;
+  lattice.top.stationCount = lattice.top.trailingEdgeIndex + 2;
 
   for (int index = 0; index <= point_count - xfoil.i_stagnation; ++index) {
-    lattice.stationToPanel.bottom[index] = xfoil.i_stagnation + 1 + index;
-    lattice.vti.bottom[index] = -1.0;
+    lattice.bottom.stationToPanel[index] = xfoil.i_stagnation + 1 + index;
+    lattice.bottom.vti[index] = -1.0;
   }
 
-  lattice.trailingEdgeIndex.bottom = point_count - xfoil.i_stagnation - 2;
+  lattice.bottom.trailingEdgeIndex = point_count - xfoil.i_stagnation - 2;
 
   for (int iw = 0; iw < xfoil.nw; iw++) {
     const int panel = point_count + iw;
-    const int index = lattice.trailingEdgeIndex.bottom + iw + 2;
-    lattice.stationToPanel.bottom[index - 1] = panel;
-    lattice.vti.bottom[index - 1] = -1.0;
+    const int index = lattice.bottom.trailingEdgeIndex + iw + 2;
+    lattice.bottom.stationToPanel[index - 1] = panel;
+    lattice.bottom.vti[index - 1] = -1.0;
   }
 
-  lattice.stationCount.bottom = lattice.trailingEdgeIndex.bottom + xfoil.nw + 2;
+  lattice.bottom.stationCount = lattice.bottom.trailingEdgeIndex + xfoil.nw + 2;
 
   for (int iw = 0; iw < xfoil.nw; iw++) {
-    lattice.stationToPanel.top[lattice.trailingEdgeIndex.top + iw + 1] =
-        lattice.stationToPanel.bottom[lattice.trailingEdgeIndex.bottom + iw + 1];
-    lattice.vti.top[lattice.trailingEdgeIndex.top + iw + 1] = 1.0;
+    lattice.top.stationToPanel[lattice.top.trailingEdgeIndex + iw + 1] =
+        lattice.bottom.stationToPanel[lattice.bottom.trailingEdgeIndex + iw + 1];
+    lattice.top.vti[lattice.top.trailingEdgeIndex + iw + 1] = 1.0;
   }
 
-  const int iblmax = std::max(lattice.trailingEdgeIndex.top, lattice.trailingEdgeIndex.bottom) +
+  const int iblmax = std::max(lattice.top.trailingEdgeIndex, lattice.bottom.trailingEdgeIndex) +
                      xfoil.nw + 2;
   if (iblmax > IVX) {
     ss << "iblpan :  ***  bl array overflow\n";
@@ -349,9 +349,9 @@ bool BoundaryLayerWorkflow::iblpan(XFoil& xfoil) {
 bool BoundaryLayerWorkflow::iblsys(XFoil& xfoil) {
   int iv = 0;
   for (int is = 1; is <= 2; is++) {
-    for (int ibl = 0; ibl < lattice.stationCount.get(is) - 1; ++ibl) {
+    for (int ibl = 0; ibl < lattice.get(is).stationCount - 1; ++ibl) {
       ++iv;
-      lattice.stationToSystem.get(is)[ibl] = iv;
+      lattice.get(is).stationToSystem[ibl] = iv;
     }
   }
 
@@ -430,50 +430,50 @@ bool BoundaryLayerWorkflow::stmove(XFoil& xfoil) {
     if (xfoil.i_stagnation > previous) {
       const int delta = xfoil.i_stagnation - previous;
 
-      lattice.transitionIndex.top += delta;
-      lattice.transitionIndex.bottom -= delta;
+      lattice.top.transitionIndex += delta;
+      lattice.bottom.transitionIndex -= delta;
 
-      for (int ibl = lattice.stationCount.top - 2; ibl >= delta; --ibl) {
+      for (int ibl = lattice.top.stationCount - 2; ibl >= delta; --ibl) {
         copyStationState(1, ibl, ibl - delta);
       }
 
       const double dudx =
-          lattice.uedg.top[delta] / lattice.xssi.top[delta];
+          lattice.top.uedg[delta] / lattice.top.xssi[delta];
       for (int ibl = delta; ibl >= 1; --ibl) {
         copyStationState(1, ibl - 1, delta);
-        lattice.uedg.top[ibl - 1] = dudx * lattice.xssi.top[ibl - 1];
+        lattice.top.uedg[ibl - 1] = dudx * lattice.top.xssi[ibl - 1];
       }
 
-      for (int ibl = 0; ibl < lattice.stationCount.bottom - 1; ++ibl) {
+      for (int ibl = 0; ibl < lattice.bottom.stationCount - 1; ++ibl) {
         copyStationState(2, ibl, ibl + delta);
       }
     } else {
       const int delta = previous - xfoil.i_stagnation;
 
-      lattice.transitionIndex.top -= delta;
-      lattice.transitionIndex.bottom += delta;
+      lattice.top.transitionIndex -= delta;
+      lattice.bottom.transitionIndex += delta;
 
-      for (int ibl = lattice.stationCount.bottom - 1; ibl >= delta + 1; --ibl) {
+      for (int ibl = lattice.bottom.stationCount - 1; ibl >= delta + 1; --ibl) {
         copyStationState(2, ibl - 1, (ibl - delta) - 1);
       }
 
       const double dudx =
-          lattice.uedg.bottom[delta] / lattice.xssi.bottom[delta];
+          lattice.bottom.uedg[delta] / lattice.bottom.xssi[delta];
       for (int ibl = delta; ibl >= 1; --ibl) {
         copyStationState(2, ibl - 1, delta);
-        lattice.uedg.bottom[ibl - 1] = dudx * lattice.xssi.bottom[ibl - 1];
+        lattice.bottom.uedg[ibl - 1] = dudx * lattice.bottom.xssi[ibl - 1];
       }
 
-      for (int ibl = 0; ibl < lattice.stationCount.top - 1; ++ibl) {
+      for (int ibl = 0; ibl < lattice.top.stationCount - 1; ++ibl) {
         copyStationState(1, ibl, ibl + delta);
       }
     }
   }
 
   for (int is = 1; is <= 2; ++is) {
-    for (int ibl = 0; ibl < lattice.stationCount.get(is) - 1; ++ibl) {
-      lattice.mass.get(is)[ibl] =
-          lattice.dstr.get(is)[ibl] * lattice.uedg.get(is)[ibl];
+    for (int ibl = 0; ibl < lattice.get(is).stationCount - 1; ++ibl) {
+      lattice.get(is).mass[ibl] =
+          lattice.get(is).dstr[ibl] * lattice.get(is).uedg[ibl];
     }
   }
 
@@ -485,12 +485,12 @@ bool BoundaryLayerWorkflow::uicalc(XFoil& xfoil) {
   //     sets inviscid ue from panel inviscid tangential velocity
   //--------------------------------------------------------------
   for (int side = 1; side <= 2; ++side) {
-    lattice.uinv.get(side)[0] = 0.0;
-    lattice.uinv_a.get(side)[0] = 0.0;
-    for (int stationIndex = 0; stationIndex < lattice.stationCount.get(side) - 1; ++stationIndex) {
-      const int panelIndex = lattice.stationToPanel.get(side)[stationIndex];
-      lattice.uinv.get(side)[stationIndex] = lattice.vti.get(side)[stationIndex] * xfoil.qinv[panelIndex];
-      lattice.uinv_a.get(side)[stationIndex] = lattice.vti.get(side)[stationIndex] * xfoil.qinv_a[panelIndex];
+    lattice.get(side).uinv[0] = 0.0;
+    lattice.get(side).uinv_a[0] = 0.0;
+    for (int stationIndex = 0; stationIndex < lattice.get(side).stationCount - 1; ++stationIndex) {
+      const int panelIndex = lattice.get(side).stationToPanel[stationIndex];
+      lattice.get(side).uinv[stationIndex] = lattice.get(side).vti[stationIndex] * xfoil.qinv[panelIndex];
+      lattice.get(side).uinv_a[stationIndex] = lattice.get(side).vti[stationIndex] * xfoil.qinv_a[panelIndex];
     }
   }
 
@@ -518,8 +518,8 @@ bool BoundaryLayerWorkflow::tesys(XFoil& xfoil, double cte, double tte, double d
 }
 
 void BoundaryLayerWorkflow::copyStationState(int side, int destination, int source) {
-  lattice.ctau.get(side)[destination] = lattice.ctau.get(side)[source];
-  lattice.thet.get(side)[destination] = lattice.thet.get(side)[source];
-  lattice.dstr.get(side)[destination] = lattice.dstr.get(side)[source];
-  lattice.uedg.get(side)[destination] = lattice.uedg.get(side)[source];
+  lattice.get(side).ctau[destination] = lattice.get(side).ctau[source];
+  lattice.get(side).thet[destination] = lattice.get(side).thet[source];
+  lattice.get(side).dstr[destination] = lattice.get(side).dstr[source];
+  lattice.get(side).uedg[destination] = lattice.get(side).uedg[source];
 }
