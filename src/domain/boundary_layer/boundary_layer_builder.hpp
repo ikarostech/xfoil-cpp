@@ -5,12 +5,12 @@
 
 struct SetblInputView {
   const bool& lblini;
-  SidePairRef<const Eigen::VectorXd> uedg;
-  SidePairRef<const Eigen::VectorXd> ctau;
-  SidePairRef<const Eigen::VectorXd> thet;
-  SidePairRef<const Eigen::VectorXd> dstr;
-  SidePairRef<const Eigen::VectorXd> mass;
-  SidePairRef<const Eigen::VectorXd> ctq;
+  SidePairRef<const Eigen::VectorXd> edgeVelocity;
+  SidePairRef<const Eigen::VectorXd> skinFrictionCoeff;
+  SidePairRef<const Eigen::VectorXd> momentumThickness;
+  SidePairRef<const Eigen::VectorXd> displacementThickness;
+  SidePairRef<const Eigen::VectorXd> massFlux;
+  SidePairRef<const Eigen::VectorXd> skinFrictionCoeffHistory;
   SidePairRef<const int> itran;
 };
 
@@ -28,12 +28,12 @@ struct SetblOutputView {
   double& reybl_re;
   double& reybl_ms;
   double& amcrit;
-  SidePairRef<Eigen::VectorXd> uedg;
-  SidePairRef<Eigen::VectorXd> ctau;
-  SidePairRef<Eigen::VectorXd> thet;
-  SidePairRef<Eigen::VectorXd> dstr;
-  SidePairRef<Eigen::VectorXd> mass;
-  SidePairRef<Eigen::VectorXd> ctq;
+  SidePairRef<Eigen::VectorXd> edgeVelocity;
+  SidePairRef<Eigen::VectorXd> skinFrictionCoeff;
+  SidePairRef<Eigen::VectorXd> momentumThickness;
+  SidePairRef<Eigen::VectorXd> displacementThickness;
+  SidePairRef<Eigen::VectorXd> massFlux;
+  SidePairRef<Eigen::VectorXd> skinFrictionCoeffHistory;
   SidePairRef<int> itran;
   std::vector<Eigen::Matrix<double, 3, 2>>& va;
   std::vector<Eigen::Matrix<double, 3, 2>>& vb;

@@ -145,24 +145,24 @@ inline void BoundaryLayerWorkflow::resetStationKinematicsAfterFailure(
 
   if (stationIndex <= lattice.get(side).trailingEdgeIndex) {
     const double ratio =
-        lattice.get(side).xssi[stationIndex] /
-        lattice.get(side).xssi[stationIndex - 1];
+        lattice.get(side).arcLengthCoordinates[stationIndex] /
+        lattice.get(side).arcLengthCoordinates[stationIndex - 1];
     const double scale = std::sqrt(ratio);
-    ctx.thi = lattice.get(side).sideState.thet[stationIndex - 1] * scale;
-    ctx.dsi = lattice.get(side).sideState.dstr[stationIndex - 1] * scale;
+    ctx.thi = lattice.get(side).profiles.momentumThickness[stationIndex - 1] * scale;
+    ctx.dsi = lattice.get(side).profiles.displacementThickness[stationIndex - 1] * scale;
   } else {
     if (stationIndex == lattice.get(side).trailingEdgeIndex + 1) {
       ctx.cti = ctx.cte;
       ctx.thi = ctx.tte;
       ctx.dsi = ctx.dte;
     } else {
-      ctx.thi = lattice.get(side).sideState.thet[stationIndex - 1];
+      ctx.thi = lattice.get(side).profiles.momentumThickness[stationIndex - 1];
       const double ratlen =
-          (lattice.get(side).xssi[stationIndex] -
-           lattice.get(side).xssi[stationIndex - 1]) /
-          (10.0 * lattice.get(side).sideState.dstr[stationIndex - 1]);
+          (lattice.get(side).arcLengthCoordinates[stationIndex] -
+           lattice.get(side).arcLengthCoordinates[stationIndex - 1]) /
+          (10.0 * lattice.get(side).profiles.displacementThickness[stationIndex - 1]);
       ctx.dsi =
-          (lattice.get(side).sideState.dstr[stationIndex - 1] + ctx.thi * ratlen) /
+          (lattice.get(side).profiles.displacementThickness[stationIndex - 1] + ctx.thi * ratlen) /
           (1.0 + ratlen);
     }
   }
@@ -173,6 +173,6 @@ inline void BoundaryLayerWorkflow::resetStationKinematicsAfterFailure(
     ctx.cti = 0.05;
   }
   if (stationIndex > lattice.get(side).transitionIndex) {
-    ctx.cti = lattice.get(side).sideState.ctau[stationIndex - 1];
+    ctx.cti = lattice.get(side).profiles.skinFrictionCoeff[stationIndex - 1];
   }
 }

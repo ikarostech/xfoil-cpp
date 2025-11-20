@@ -72,11 +72,11 @@ VectorXd XFoil::apcalc(Matrix2Xd points) {
 }
 
 double XFoil::atanc(double y, double x, double thold) {
-  double tpi, thnew, dthet, dtcorr;
+  double tpi, thnew, dmomentumThickness, dtcorr;
   tpi = 6.2831853071795864769;
   thnew = atan2(y, x);
-  dthet = thnew - thold;
-  dtcorr = dthet - tpi * int((dthet + sign(std::numbers::pi, dthet)) / tpi);
+  dmomentumThickness = thnew - thold;
+  dtcorr = dmomentumThickness - tpi * int((dmomentumThickness + sign(std::numbers::pi, dmomentumThickness)) / tpi);
   return thold + dtcorr;
 }
 

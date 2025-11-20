@@ -98,7 +98,7 @@ BoundaryLayerUtil::AxResult BoundaryLayerUtil::axset(double hk1, double t1, doub
  *                       0
  *             the integration can be started from the leading
  *             edge since ax will be returned as zero when rt
- *             is below the critical rtheta.  transition occurs
+ *             is below the critical rmomentumThickness.  transition occurs
  *             when n(x) reaches ncrit (ncrit= 9 is "standard").
  * ============================================================== */
 BoundaryLayerUtil::EnvEnResult BoundaryLayerUtil::dampl(double hk, double th, double rt) {
@@ -118,15 +118,15 @@ BoundaryLayerUtil::EnvEnResult BoundaryLayerUtil::dampl(double hk, double th, do
   const double gr = log10(rt);
   const double gr_rt = 1.0 / (2.3025851 * rt);
   if (gr < grcrit - dgr) {
-    //----- no amplification for rtheta < rcrit
+    //----- no amplification for rmomentumThickness < rcrit
     result.ax = 0.0;
     result.ax_hk = 0.0;
     result.ax_th = 0.0;
     result.ax_rt = 0.0;
   } else {
-    //----- set steep cubic ramp used to turn on ax smoothly as rtheta
+    //----- set steep cubic ramp used to turn on ax smoothly as rmomentumThickness
     //-     exceeds rcrit (previously, this was done discontinuously).
-    //-     the ramp goes between  -dgr < log10(rtheta/rcrit) < dgr
+    //-     the ramp goes between  -dgr < log10(rmomentumThickness/rcrit) < dgr
 
     const double rnorm = (gr - (grcrit - dgr)) / (2.0 * dgr);
     double rn_hk = -grc_hk / (2.0 * dgr);

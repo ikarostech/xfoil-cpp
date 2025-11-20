@@ -189,12 +189,12 @@ XFoil::TangentialVelocityResult XFoil::qiset() const {
 VectorXd XFoil::qvfue() const {
   VectorXd updated_qvis = qvis;
   for (int is = 1; is <= 2; is++) {
-    const auto& vti_side = boundaryLayerWorkflow.lattice.get(is).vti;
-    const auto& uedg_side = boundaryLayerWorkflow.lattice.get(is).sideState.uedg;
+    const auto& panelInfluenceFactor_side = boundaryLayerWorkflow.lattice.get(is).panelInfluenceFactor;
+    const auto& edgeVelocity_side = boundaryLayerWorkflow.lattice.get(is).profiles.edgeVelocity;
     const int limit = boundaryLayerWorkflow.lattice.get(is).stationCount - 1;
     for (int ibl = 0; ibl < limit; ++ibl) {
       int i = boundaryLayerWorkflow.lattice.get(is).stationToPanel[ibl];
-      updated_qvis[i] = vti_side[ibl] * uedg_side[ibl];
+      updated_qvis[i] = panelInfluenceFactor_side[ibl] * edgeVelocity_side[ibl];
     }
   }
 
@@ -231,11 +231,11 @@ XFoil::EdgeVelocitySwapResult XFoil::swapEdgeVelocities(
     const SidePair<VectorXd> &usav) const {
   EdgeVelocitySwapResult result;
   result.swappedUsav = usav;
-  result.restoredUedg.top = boundaryLayerWorkflow.lattice.top.sideState.uedg;
-  result.restoredUedg.bottom = boundaryLayerWorkflow.lattice.bottom.sideState.uedg;
+  result.restoredUedg.top = boundaryLayerWorkflow.lattice.top.profiles.edgeVelocity;
+  result.restoredUedg.bottom = boundaryLayerWorkflow.lattice.bottom.profiles.edgeVelocity;
   for (int is = 1; is <= 2; ++is) {
     for (int ibl = 0; ibl < boundaryLayerWorkflow.lattice.get(is).stationCount - 1; ++ibl) {
-      result.swappedUsav.get(is)[ibl] = boundaryLayerWorkflow.lattice.get(is).sideState.uedg[ibl];
+      result.swappedUsav.get(is)[ibl] = boundaryLayerWorkflow.lattice.get(is).profiles.edgeVelocity[ibl];
       result.restoredUedg.get(is)[ibl] = usav.get(is)[ibl];
     }
   }
@@ -255,11 +255,11 @@ XFoil::LeTeSensitivities XFoil::computeLeTeSensitivities(int ile1, int ile2,
     for (int jbl = 0; jbl < boundaryLayerWorkflow.lattice.get(js).stationCount - 1; ++jbl) {
       const int j = boundaryLayerWorkflow.lattice.get(js).stationToPanel[jbl];
       const int jv = boundaryLayerWorkflow.lattice.get(js).stationToSystem[jbl];
-      const double vti_js = boundaryLayerWorkflow.lattice.get(js).vti[jbl];
-      sensitivities.ule1_m[jv] = -boundaryLayerWorkflow.lattice.top.vti[0] * vti_js * dij(ile1, j);
-      sensitivities.ule2_m[jv] = -boundaryLayerWorkflow.lattice.bottom.vti[0] * vti_js * dij(ile2, j);
-      sensitivities.ute1_m[jv] = -boundaryLayerWorkflow.lattice.top.vti[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex] * vti_js * dij(ite1, j);
-      sensitivities.ute2_m[jv] = -boundaryLayerWorkflow.lattice.bottom.vti[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex] * vti_js * dij(ite2, j);
+      const double panelInfluenceFactor_js = boundaryLayerWorkflow.lattice.get(js).panelInfluenceFactor[jbl];
+      sensitivities.ule1_m[jv] = -boundaryLayerWorkflow.lattice.top.panelInfluenceFactor[0] * panelInfluenceFactor_js * dij(ile1, j);
+      sensitivities.ule2_m[jv] = -boundaryLayerWorkflow.lattice.bottom.panelInfluenceFactor[0] * panelInfluenceFactor_js * dij(ile2, j);
+      sensitivities.ute1_m[jv] = -boundaryLayerWorkflow.lattice.top.panelInfluenceFactor[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex] * panelInfluenceFactor_js * dij(ite1, j);
+      sensitivities.ute2_m[jv] = -boundaryLayerWorkflow.lattice.bottom.panelInfluenceFactor[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex] * panelInfluenceFactor_js * dij(ite2, j);
     }
   }
   return sensitivities;
@@ -298,19 +298,19 @@ XFoil::EdgeVelocityDistribution XFoil::computeNewUeDistribution() const {
         for (int jbl = 0; jbl < boundaryLayerWorkflow.lattice.get(js).stationCount - 1; ++jbl) {
           const int j = boundaryLayerWorkflow.lattice.get(js).stationToPanel[jbl];
           const int jv = boundaryLayerWorkflow.lattice.get(js).stationToSystem[jbl];
-          const double ue_m = -boundaryLayerWorkflow.lattice.get(is).vti[ibl] * boundaryLayerWorkflow.lattice.get(js).vti[jbl] *
+          const double ue_m = -boundaryLayerWorkflow.lattice.get(is).panelInfluenceFactor[ibl] * boundaryLayerWorkflow.lattice.get(js).panelInfluenceFactor[jbl] *
                               dij(i, j);
-          dui += ue_m * (boundaryLayerWorkflow.lattice.get(js).sideState.mass[jbl] + vdel[jv](2, 0));
+          dui += ue_m * (boundaryLayerWorkflow.lattice.get(js).profiles.massFlux[jbl] + vdel[jv](2, 0));
           dui_ac += ue_m * (-vdel[jv](2, 1));
         }
       }
 
-      const double uinv_ac = analysis_state_.controlByAlpha
+      const double inviscidEdgeVelocityDerivativec = analysis_state_.controlByAlpha
                                  ? 0.0
-                                 : boundaryLayerWorkflow.lattice.get(is).uinv_a[ibl];
+                                 : boundaryLayerWorkflow.lattice.get(is).inviscidEdgeVelocityDerivative[ibl];
       // Store unew/u_ac at 0-based station index
-      distribution.unew.get(is)[ibl] = boundaryLayerWorkflow.lattice.get(is).uinv[ibl] + dui;
-      distribution.u_ac.get(is)[ibl] = uinv_ac + dui_ac;
+      distribution.unew.get(is)[ibl] = boundaryLayerWorkflow.lattice.get(is).inviscidEdgeVelocity[ibl] + dui;
+      distribution.u_ac.get(is)[ibl] = inviscidEdgeVelocityDerivativec + dui_ac;
     }
   }
   return distribution;
@@ -331,8 +331,8 @@ XFoil::QtanResult XFoil::computeQtan(const EdgeVelocityDistribution& distributio
     const VectorXd &uac_vec = (is == 1) ? u_ac.top : u_ac.bottom;
     for (int ibl = 0; ibl < boundaryLayerWorkflow.lattice.get(is).trailingEdgeIndex; ++ibl) {
       const int i = boundaryLayerWorkflow.lattice.get(is).stationToPanel[ibl];
-      result.qnew[i] = boundaryLayerWorkflow.lattice.get(is).vti[ibl] * unew_vec[ibl];
-      result.q_ac[i] = boundaryLayerWorkflow.lattice.get(is).vti[ibl] * uac_vec[ibl];
+      result.qnew[i] = boundaryLayerWorkflow.lattice.get(is).panelInfluenceFactor[ibl] * unew_vec[ibl];
+      result.q_ac[i] = boundaryLayerWorkflow.lattice.get(is).panelInfluenceFactor[ibl] * uac_vec[ibl];
     }
   }
   return result;
@@ -440,28 +440,28 @@ XFoil::BoundaryLayerDelta XFoil::buildBoundaryLayerDelta(
   if (len <= 0)
     return delta;
 
-  delta.dctau = VectorXd(len);
-  delta.dthet = VectorXd(len);
-  delta.ddstr = VectorXd(len);
-  delta.duedg = VectorXd(len);
+  delta.dskinFrictionCoeff = VectorXd(len);
+  delta.dmomentumThickness = VectorXd(len);
+  delta.ddisplacementThickness = VectorXd(len);
+  delta.dedgeVelocity = VectorXd(len);
 
   const auto iv = boundaryLayerWorkflow.lattice.get(side).stationToSystem.segment(0, len);
   VectorXd dmass(len);
   for (int j = 0; j < len; ++j) {
     const int idx = iv[j];
-    delta.dctau[j] = vdel[idx](0, 0) - dac * vdel[idx](0, 1);
-    delta.dthet[j] = vdel[idx](1, 0) - dac * vdel[idx](1, 1);
+    delta.dskinFrictionCoeff[j] = vdel[idx](0, 0) - dac * vdel[idx](0, 1);
+    delta.dmomentumThickness[j] = vdel[idx](1, 0) - dac * vdel[idx](1, 1);
     dmass[j] = vdel[idx](2, 0) - dac * vdel[idx](2, 1);
   }
 
-  const VectorXd uedg_segment = boundaryLayerWorkflow.lattice.get(side).sideState.uedg.head(len);
-  const VectorXd dstr_segment = boundaryLayerWorkflow.lattice.get(side).sideState.dstr.head(len);
+  const VectorXd edgeVelocity_segment = boundaryLayerWorkflow.lattice.get(side).profiles.edgeVelocity.head(len);
+  const VectorXd displacementThickness_segment = boundaryLayerWorkflow.lattice.get(side).profiles.displacementThickness.head(len);
   const VectorXd unew_segment = unew_side.head(len);
   const VectorXd uac_segment = u_ac_side.head(len);
 
-  delta.duedg = unew_segment + dac * uac_segment - uedg_segment;
-  delta.ddstr = (dmass - dstr_segment.cwiseProduct(delta.duedg))
-                    .cwiseQuotient(uedg_segment);
+  delta.dedgeVelocity = unew_segment + dac * uac_segment - edgeVelocity_segment;
+  delta.ddisplacementThickness = (dmass - displacementThickness_segment.cwiseProduct(delta.dedgeVelocity))
+                    .cwiseQuotient(edgeVelocity_segment);
 
   return delta;
 }
@@ -471,24 +471,24 @@ XFoil::BoundaryLayerMetrics XFoil::evaluateSegmentRelaxation(
     int side, const BoundaryLayerDelta &delta, double dhi, double dlo,
     double &relaxation) const {
   BoundaryLayerMetrics metrics;
-  const int len = delta.dctau.size();
+  const int len = delta.dskinFrictionCoeff.size();
   if (len <= 0)
     return metrics;
 
-  const VectorXd ctau_segment = boundaryLayerWorkflow.lattice.get(side).sideState.ctau.head(len);
-  const VectorXd thet_segment = boundaryLayerWorkflow.lattice.get(side).sideState.thet.head(len);
-  const VectorXd dstr_segment = boundaryLayerWorkflow.lattice.get(side).sideState.dstr.head(len);
+  const VectorXd skinFrictionCoeff_segment = boundaryLayerWorkflow.lattice.get(side).profiles.skinFrictionCoeff.head(len);
+  const VectorXd momentumThickness_segment = boundaryLayerWorkflow.lattice.get(side).profiles.momentumThickness.head(len);
+  const VectorXd displacementThickness_segment = boundaryLayerWorkflow.lattice.get(side).profiles.displacementThickness.head(len);
 
   VectorXd dn1(len);
   const int transition_index = boundaryLayerWorkflow.lattice.get(side).transitionIndex;
   for (int idx = 0; idx < len; ++idx) {
     dn1[idx] =
-        (idx < transition_index) ? delta.dctau[idx] / 10.0
-                                 : delta.dctau[idx] / ctau_segment[idx];
+        (idx < transition_index) ? delta.dskinFrictionCoeff[idx] / 10.0
+                                 : delta.dskinFrictionCoeff[idx] / skinFrictionCoeff_segment[idx];
   }
-  const VectorXd dn2 = delta.dthet.cwiseQuotient(thet_segment);
-  const VectorXd dn3 = delta.ddstr.cwiseQuotient(dstr_segment);
-  const VectorXd dn4 = delta.duedg.array().abs() / 0.25;
+  const VectorXd dn2 = delta.dmomentumThickness.cwiseQuotient(momentumThickness_segment);
+  const VectorXd dn3 = delta.ddisplacementThickness.cwiseQuotient(displacementThickness_segment);
+  const VectorXd dn4 = delta.dedgeVelocity.array().abs() / 0.25;
 
   applyRelaxationLimit(dn1, dhi, dlo, relaxation);
   applyRelaxationLimit(dn2, dhi, dlo, relaxation);
@@ -510,27 +510,27 @@ XFoil::BoundaryLayerMetrics XFoil::evaluateSegmentRelaxation(
 }
 
 
-BoundaryLayerSideState XFoil::applyBoundaryLayerDelta(
+BoundaryLayerSideProfiles XFoil::applyBoundaryLayerDelta(
     int side, const BoundaryLayerDelta &delta, double relaxation) {
-  BoundaryLayerSideState state;
-  state.ctau = boundaryLayerWorkflow.lattice.get(side).sideState.ctau;
-  state.thet = boundaryLayerWorkflow.lattice.get(side).sideState.thet;
-  state.dstr = boundaryLayerWorkflow.lattice.get(side).sideState.dstr;
-  state.uedg = boundaryLayerWorkflow.lattice.get(side).sideState.uedg;
-  state.mass = boundaryLayerWorkflow.lattice.get(side).sideState.mass;
+  BoundaryLayerSideProfiles state;
+  state.skinFrictionCoeff = boundaryLayerWorkflow.lattice.get(side).profiles.skinFrictionCoeff;
+  state.momentumThickness = boundaryLayerWorkflow.lattice.get(side).profiles.momentumThickness;
+  state.displacementThickness = boundaryLayerWorkflow.lattice.get(side).profiles.displacementThickness;
+  state.edgeVelocity = boundaryLayerWorkflow.lattice.get(side).profiles.edgeVelocity;
+  state.massFlux = boundaryLayerWorkflow.lattice.get(side).profiles.massFlux;
 
-  const int len = delta.dctau.size();
+  const int len = delta.dskinFrictionCoeff.size();
   if (len <= 0)
     return state;
 
-  state.ctau.head(len) += relaxation * delta.dctau;
-  state.thet.head(len) += relaxation * delta.dthet;
-  state.dstr.head(len) += relaxation * delta.ddstr;
-  state.uedg.head(len) += relaxation * delta.duedg;
+  state.skinFrictionCoeff.head(len) += relaxation * delta.dskinFrictionCoeff;
+  state.momentumThickness.head(len) += relaxation * delta.dmomentumThickness;
+  state.displacementThickness.head(len) += relaxation * delta.ddisplacementThickness;
+  state.edgeVelocity.head(len) += relaxation * delta.dedgeVelocity;
 
   const int transition_index = std::max(0, boundaryLayerWorkflow.lattice.get(side).transitionIndex);
   for (int idx = transition_index; idx < len; ++idx) {
-    state.ctau[idx] = std::min(state.ctau[idx], 0.25);
+    state.skinFrictionCoeff[idx] = std::min(state.skinFrictionCoeff[idx], 0.25);
   }
 
   for (int ibl = 0; ibl < len; ++ibl) {
@@ -541,14 +541,14 @@ BoundaryLayerSideState XFoil::applyBoundaryLayerDelta(
     }
 
     const double hklim = (ibl <= boundaryLayerWorkflow.lattice.get(side).trailingEdgeIndex) ? 1.02 : 1.00005;
-    const double uedg_val = state.uedg[ibl];
-    const double uedg_sq = uedg_val * uedg_val;
-    const double denom = 1.0 - 0.5 * uedg_sq * hstinv;
-    const double msq = uedg_sq * hstinv / (gamm1 * denom);
-    double dsw = state.dstr[ibl] - dswaki;
-    dslim(dsw, state.thet[ibl], msq, hklim);
-    state.dstr[ibl] = dsw + dswaki;
-    state.mass[ibl] = state.dstr[ibl] * state.uedg[ibl];
+    const double edgeVelocity_val = state.edgeVelocity[ibl];
+    const double edgeVelocity_sq = edgeVelocity_val * edgeVelocity_val;
+    const double denom = 1.0 - 0.5 * edgeVelocity_sq * hstinv;
+    const double msq = edgeVelocity_sq * hstinv / (gamm1 * denom);
+    double dsw = state.displacementThickness[ibl] - dswaki;
+    dslim(dsw, state.momentumThickness[ibl], msq, hklim);
+    state.displacementThickness[ibl] = dsw + dswaki;
+    state.massFlux[ibl] = state.displacementThickness[ibl] * state.edgeVelocity[ibl];
   }
 
   return state;
@@ -600,7 +600,7 @@ bool XFoil::update() {
 
   SidePair<BoundaryLayerDelta> deltas;
   SidePair<BoundaryLayerMetrics> metrics;
-  SidePair<BoundaryLayerSideState> updated_boundary_layer;
+  SidePair<BoundaryLayerSideProfiles> updated_boundary_layer;
   for (int side = 1; side <= 2; ++side) {
     deltas.get(side) =
         buildBoundaryLayerDelta(side, ue_distribution.unew.get(side), ue_distribution.u_ac.get(side), dac);
@@ -621,29 +621,29 @@ bool XFoil::update() {
         analysis_state_.alpha + rlx * dac;
 
   for (int side = 1; side <= 2; ++side) {
-    boundaryLayerWorkflow.lattice.get(side).sideState.ctau =
-        updated_boundary_layer.get(side).ctau;
-    boundaryLayerWorkflow.lattice.get(side).sideState.thet =
-        updated_boundary_layer.get(side).thet;
-    boundaryLayerWorkflow.lattice.get(side).sideState.dstr =
-        updated_boundary_layer.get(side).dstr;
-    boundaryLayerWorkflow.lattice.get(side).sideState.uedg =
-        updated_boundary_layer.get(side).uedg;
-    boundaryLayerWorkflow.lattice.get(side).sideState.mass =
-        updated_boundary_layer.get(side).mass;
+    boundaryLayerWorkflow.lattice.get(side).profiles.skinFrictionCoeff =
+        updated_boundary_layer.get(side).skinFrictionCoeff;
+    boundaryLayerWorkflow.lattice.get(side).profiles.momentumThickness =
+        updated_boundary_layer.get(side).momentumThickness;
+    boundaryLayerWorkflow.lattice.get(side).profiles.displacementThickness =
+        updated_boundary_layer.get(side).displacementThickness;
+    boundaryLayerWorkflow.lattice.get(side).profiles.edgeVelocity =
+        updated_boundary_layer.get(side).edgeVelocity;
+    boundaryLayerWorkflow.lattice.get(side).profiles.massFlux =
+        updated_boundary_layer.get(side).massFlux;
   }
 
   //--- equate upper wake arrays to lower wake arrays
   for (int kbl = 1; kbl <= boundaryLayerWorkflow.lattice.bottom.stationCount - (boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex + 1); kbl++) {
-    boundaryLayerWorkflow.lattice.top.sideState.ctau[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex + kbl] =
-        boundaryLayerWorkflow.lattice.bottom.sideState.ctau[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex + kbl];
-    boundaryLayerWorkflow.lattice.top.sideState.thet[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex + kbl] =
-        boundaryLayerWorkflow.lattice.bottom.sideState.thet[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex + kbl];
-    boundaryLayerWorkflow.lattice.top.sideState.dstr[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex + kbl] =
-        boundaryLayerWorkflow.lattice.bottom.sideState.dstr[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex + kbl];
-    boundaryLayerWorkflow.lattice.top.sideState.uedg[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex + kbl] =
-        boundaryLayerWorkflow.lattice.bottom.sideState.uedg[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex + kbl];
-    boundaryLayerWorkflow.lattice.top.ctq[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex + kbl] = boundaryLayerWorkflow.lattice.bottom.ctq[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex + kbl];
+    boundaryLayerWorkflow.lattice.top.profiles.skinFrictionCoeff[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex + kbl] =
+        boundaryLayerWorkflow.lattice.bottom.profiles.skinFrictionCoeff[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex + kbl];
+    boundaryLayerWorkflow.lattice.top.profiles.momentumThickness[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex + kbl] =
+        boundaryLayerWorkflow.lattice.bottom.profiles.momentumThickness[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex + kbl];
+    boundaryLayerWorkflow.lattice.top.profiles.displacementThickness[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex + kbl] =
+        boundaryLayerWorkflow.lattice.bottom.profiles.displacementThickness[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex + kbl];
+    boundaryLayerWorkflow.lattice.top.profiles.edgeVelocity[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex + kbl] =
+        boundaryLayerWorkflow.lattice.bottom.profiles.edgeVelocity[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex + kbl];
+    boundaryLayerWorkflow.lattice.top.skinFrictionCoeffHistory[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex + kbl] = boundaryLayerWorkflow.lattice.bottom.skinFrictionCoeffHistory[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex + kbl];
   }
 
   return true;
@@ -689,16 +689,16 @@ bool XFoil::viscal() {
     boundaryLayerWorkflow.iblsys(*this);
   }
 
-  //	---- set inviscid bl edge velocity uinv from qinv
+  //	---- set inviscid bl edge velocity inviscidEdgeVelocity from qinv
   boundaryLayerWorkflow.uicalc(*this);
 
   if (!lblini) {
     //	----- set initial ue from inviscid ue
     for (int ibl = 0; ibl < boundaryLayerWorkflow.lattice.top.stationCount - 1; ibl++) {
-      boundaryLayerWorkflow.lattice.top.sideState.uedg[ibl] = boundaryLayerWorkflow.lattice.top.uinv[ibl];
+      boundaryLayerWorkflow.lattice.top.profiles.edgeVelocity[ibl] = boundaryLayerWorkflow.lattice.top.inviscidEdgeVelocity[ibl];
     }
     for (int ibl = 0; ibl < boundaryLayerWorkflow.lattice.bottom.stationCount - 1; ibl++) {
-      boundaryLayerWorkflow.lattice.bottom.sideState.uedg[ibl] = boundaryLayerWorkflow.lattice.bottom.uinv[ibl];
+      boundaryLayerWorkflow.lattice.bottom.profiles.edgeVelocity[ibl] = boundaryLayerWorkflow.lattice.bottom.inviscidEdgeVelocity[ibl];
     }
   }
 
@@ -756,14 +756,14 @@ bool XFoil::ViscousIter() {
     minf_cl = getActualMach(cl, analysis_state_.machType);
     reinf_cl = getActualReynolds(cl, analysis_state_.reynoldsType);
     comset();
-  } else { //	------- set new inviscid speeds qinv and uinv for new alpha
+  } else { //	------- set new inviscid speeds qinv and inviscidEdgeVelocity for new alpha
     auto qiset_result = qiset();
     qinv = std::move(qiset_result.qinv);
     qinv_a = std::move(qiset_result.qinv_a);
     boundaryLayerWorkflow.uicalc(*this);
   }
 
-  qvis = qvfue();  //	------ calculate edge velocities qvis(.) from uedg(..)
+  qvis = qvfue();  //	------ calculate edge velocities qvis(.) from edgeVelocity(..)
   surface_vortex = gamqv();  //	------ set gam distribution from qvis
   boundaryLayerWorkflow.stmove(*this); //	------ relocate stagnation point
 

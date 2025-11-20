@@ -55,7 +55,7 @@ boundary_layer::ThicknessShapeParameterResult boundary_layer::hst(double hk, dou
     const double dhsinf = 0.015;
 
     //---- ###  12/4/94
-    //---- limited rtheta dependence for rtheta < 200
+    //---- limited rmomentumThickness dependence for rmomentumThickness < 200
 
     double ho, ho_rt;
     if (rt > 400.0) {

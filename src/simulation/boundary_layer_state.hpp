@@ -52,27 +52,27 @@ struct BoundaryLayerState {
  * @brief Holds the per-station vectors that describe a single side of the
  *        boundary layer.
  */
-struct BoundaryLayerSideState {
-  Eigen::VectorXd ctau;
-  Eigen::VectorXd thet;
-  Eigen::VectorXd dstr;
-  Eigen::VectorXd uedg;
-  Eigen::VectorXd mass;
+struct BoundaryLayerSideProfiles {
+  Eigen::VectorXd skinFrictionCoeff;
+  Eigen::VectorXd momentumThickness;
+  Eigen::VectorXd displacementThickness;
+  Eigen::VectorXd edgeVelocity;
+  Eigen::VectorXd massFlux;
 
   void clear() {
-    ctau.resize(0);
-    thet.resize(0);
-    dstr.resize(0);
-    uedg.resize(0);
-    mass.resize(0);
+    skinFrictionCoeff.resize(0);
+    momentumThickness.resize(0);
+    displacementThickness.resize(0);
+    edgeVelocity.resize(0);
+    massFlux.resize(0);
   }
 
   void resize(int size) {
-    ctau.resize(size);
-    thet.resize(size);
-    dstr.resize(size);
-    uedg.resize(size);
-    mass.resize(size);
+    skinFrictionCoeff.resize(size);
+    momentumThickness.resize(size);
+    displacementThickness.resize(size);
+    edgeVelocity.resize(size);
+    massFlux.resize(size);
   }
 };
 
@@ -88,13 +88,13 @@ struct BoundaryLayerLattice {
 
   double transitionLocation = 0.0;
 
-  BoundaryLayerSideState sideState;
+  BoundaryLayerSideProfiles profiles;
 
-  Eigen::VectorXd ctq;
-  Eigen::VectorXd xssi;
-  Eigen::VectorXd uinv;
-  Eigen::VectorXd uinv_a;
-  Eigen::VectorXd vti;
+  Eigen::VectorXd skinFrictionCoeffHistory;
+  Eigen::VectorXd arcLengthCoordinates;
+  Eigen::VectorXd inviscidEdgeVelocity;
+  Eigen::VectorXd inviscidEdgeVelocityDerivative;
+  Eigen::VectorXd panelInfluenceFactor;
 
   int transitionIndex = 0;
 
@@ -106,22 +106,22 @@ struct BoundaryLayerLattice {
     transitionLocation = 0.0;
     transitionIndex = 0;
 
-    sideState.clear();
-    ctq.resize(0);
-    xssi.resize(0);
-    uinv.resize(0);
-    uinv_a.resize(0);
-    vti.resize(0);
+    profiles.clear();
+    skinFrictionCoeffHistory.resize(0);
+    arcLengthCoordinates.resize(0);
+    inviscidEdgeVelocity.resize(0);
+    inviscidEdgeVelocityDerivative.resize(0);
+    panelInfluenceFactor.resize(0);
   }
 
   void resize(int size) {
     stationToPanel.resize(size);
     stationToSystem.resize(size);
-    sideState.resize(size);
-    ctq.resize(size);
-    xssi.resize(size);
-    uinv.resize(size);
-    uinv_a.resize(size);
-    vti.resize(size);
+    profiles.resize(size);
+    skinFrictionCoeffHistory.resize(size);
+    arcLengthCoordinates.resize(size);
+    inviscidEdgeVelocity.resize(size);
+    inviscidEdgeVelocityDerivative.resize(size);
+    panelInfluenceFactor.resize(size);
   }
 };

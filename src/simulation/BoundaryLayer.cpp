@@ -17,15 +17,15 @@ bool BoundaryLayerWorkflow::isStartOfWake(const XFoil& xfoil, int side,
 void BoundaryLayerWorkflow::updateSystemMatricesForStation(
     XFoil& xfoil, int side, int stationIndex, BoundaryContext& ctx) {
   if (isStartOfWake(xfoil, side, stationIndex)) {
-    ctx.tte = lattice.get(1).sideState.thet[lattice.top.trailingEdgeIndex] +
-              lattice.get(2).sideState.thet[lattice.bottom.trailingEdgeIndex];
-    ctx.dte = lattice.get(1).sideState.dstr[lattice.top.trailingEdgeIndex] +
-              lattice.get(2).sideState.dstr[lattice.bottom.trailingEdgeIndex] + xfoil.foil.edge.ante;
+    ctx.tte = lattice.get(1).profiles.momentumThickness[lattice.top.trailingEdgeIndex] +
+              lattice.get(2).profiles.momentumThickness[lattice.bottom.trailingEdgeIndex];
+    ctx.dte = lattice.get(1).profiles.displacementThickness[lattice.top.trailingEdgeIndex] +
+              lattice.get(2).profiles.displacementThickness[lattice.bottom.trailingEdgeIndex] + xfoil.foil.edge.ante;
     ctx.cte =
-        (lattice.get(1).sideState.ctau[lattice.top.trailingEdgeIndex] *
-             lattice.get(1).sideState.thet[lattice.top.trailingEdgeIndex] +
-         lattice.get(2).sideState.ctau[lattice.bottom.trailingEdgeIndex] *
-             lattice.get(2).sideState.thet[lattice.bottom.trailingEdgeIndex]) /
+        (lattice.get(1).profiles.skinFrictionCoeff[lattice.top.trailingEdgeIndex] *
+             lattice.get(1).profiles.momentumThickness[lattice.top.trailingEdgeIndex] +
+         lattice.get(2).profiles.skinFrictionCoeff[lattice.bottom.trailingEdgeIndex] *
+             lattice.get(2).profiles.momentumThickness[lattice.bottom.trailingEdgeIndex]) /
         ctx.tte;
     tesys(xfoil, ctx.cte, ctx.tte, ctx.dte);
   } else {
@@ -46,13 +46,13 @@ void BoundaryLayerWorkflow::initializeFirstIterationState(
     double dsm;
     double thm;
     if (stationIndex > 0) {
-      uem = lattice.get(side).sideState.uedg[stationIndex - 1];
-      dsm = lattice.get(side).sideState.dstr[stationIndex - 1];
-      thm = lattice.get(side).sideState.thet[stationIndex - 1];
+      uem = lattice.get(side).profiles.edgeVelocity[stationIndex - 1];
+      dsm = lattice.get(side).profiles.displacementThickness[stationIndex - 1];
+      thm = lattice.get(side).profiles.momentumThickness[stationIndex - 1];
     } else {
-      uem = lattice.get(side).sideState.uedg[stationIndex];
-      dsm = lattice.get(side).sideState.dstr[stationIndex];
-      thm = lattice.get(side).sideState.thet[stationIndex];
+      uem = lattice.get(side).profiles.edgeVelocity[stationIndex];
+      dsm = lattice.get(side).profiles.displacementThickness[stationIndex];
+      thm = lattice.get(side).profiles.momentumThickness[stationIndex];
     }
     const double uem_sq = uem * uem;
     const double msq =
@@ -65,16 +65,16 @@ void BoundaryLayerWorkflow::initializeFirstIterationState(
 
   if (stationIndex < previousTransition) {
     if (xfoil.tran) {
-      lattice.get(side).sideState.ctau[stationIndex] = 0.03;
+      lattice.get(side).profiles.skinFrictionCoeff[stationIndex] = 0.03;
     }
     if (xfoil.turb) {
       const double prev =
-          (stationIndex >= 1) ? lattice.get(side).sideState.ctau[stationIndex - 1]
-                              : lattice.get(side).sideState.ctau[stationIndex];
-      lattice.get(side).sideState.ctau[stationIndex] = prev;
+          (stationIndex >= 1) ? lattice.get(side).profiles.skinFrictionCoeff[stationIndex - 1]
+                              : lattice.get(side).profiles.skinFrictionCoeff[stationIndex];
+      lattice.get(side).profiles.skinFrictionCoeff[stationIndex] = prev;
     }
     if (xfoil.tran || xfoil.turb) {
-      ctx.cti = lattice.get(side).sideState.ctau[stationIndex - 1];
+      ctx.cti = lattice.get(side).profiles.skinFrictionCoeff[stationIndex - 1];
       state.station2.param.sz = ctx.cti;
     }
   }
@@ -306,7 +306,7 @@ bool BoundaryLayerWorkflow::iblpan(XFoil& xfoil) {
 
   for (int i = 0; i <= xfoil.i_stagnation; i++) {
     lattice.top.stationToPanel[i] = xfoil.i_stagnation - i;
-    lattice.top.vti[i] = 1.0;
+    lattice.top.panelInfluenceFactor[i] = 1.0;
   }
 
   lattice.top.trailingEdgeIndex = xfoil.i_stagnation;
@@ -314,7 +314,7 @@ bool BoundaryLayerWorkflow::iblpan(XFoil& xfoil) {
 
   for (int index = 0; index <= point_count - xfoil.i_stagnation; ++index) {
     lattice.bottom.stationToPanel[index] = xfoil.i_stagnation + 1 + index;
-    lattice.bottom.vti[index] = -1.0;
+    lattice.bottom.panelInfluenceFactor[index] = -1.0;
   }
 
   lattice.bottom.trailingEdgeIndex = point_count - xfoil.i_stagnation - 2;
@@ -323,7 +323,7 @@ bool BoundaryLayerWorkflow::iblpan(XFoil& xfoil) {
     const int panel = point_count + iw;
     const int index = lattice.bottom.trailingEdgeIndex + iw + 2;
     lattice.bottom.stationToPanel[index - 1] = panel;
-    lattice.bottom.vti[index - 1] = -1.0;
+    lattice.bottom.panelInfluenceFactor[index - 1] = -1.0;
   }
 
   lattice.bottom.stationCount = lattice.bottom.trailingEdgeIndex + xfoil.nw + 2;
@@ -331,7 +331,7 @@ bool BoundaryLayerWorkflow::iblpan(XFoil& xfoil) {
   for (int iw = 0; iw < xfoil.nw; iw++) {
     lattice.top.stationToPanel[lattice.top.trailingEdgeIndex + iw + 1] =
         lattice.bottom.stationToPanel[lattice.bottom.trailingEdgeIndex + iw + 1];
-    lattice.top.vti[lattice.top.trailingEdgeIndex + iw + 1] = 1.0;
+    lattice.top.panelInfluenceFactor[lattice.top.trailingEdgeIndex + iw + 1] = 1.0;
   }
 
   const int iblmax = std::max(lattice.top.trailingEdgeIndex, lattice.bottom.trailingEdgeIndex) +
@@ -439,10 +439,10 @@ bool BoundaryLayerWorkflow::stmove(XFoil& xfoil) {
       }
 
       const double dudx =
-          lattice.top.sideState.uedg[delta] / lattice.top.xssi[delta];
+          lattice.top.profiles.edgeVelocity[delta] / lattice.top.arcLengthCoordinates[delta];
       for (int ibl = delta; ibl >= 1; --ibl) {
         copyStationState(1, ibl - 1, delta);
-        lattice.top.sideState.uedg[ibl - 1] = dudx * lattice.top.xssi[ibl - 1];
+        lattice.top.profiles.edgeVelocity[ibl - 1] = dudx * lattice.top.arcLengthCoordinates[ibl - 1];
       }
 
       for (int ibl = 0; ibl < lattice.bottom.stationCount - 1; ++ibl) {
@@ -459,10 +459,10 @@ bool BoundaryLayerWorkflow::stmove(XFoil& xfoil) {
       }
 
       const double dudx =
-          lattice.bottom.sideState.uedg[delta] / lattice.bottom.xssi[delta];
+          lattice.bottom.profiles.edgeVelocity[delta] / lattice.bottom.arcLengthCoordinates[delta];
       for (int ibl = delta; ibl >= 1; --ibl) {
         copyStationState(2, ibl - 1, delta);
-        lattice.bottom.sideState.uedg[ibl - 1] = dudx * lattice.bottom.xssi[ibl - 1];
+        lattice.bottom.profiles.edgeVelocity[ibl - 1] = dudx * lattice.bottom.arcLengthCoordinates[ibl - 1];
       }
 
       for (int ibl = 0; ibl < lattice.top.stationCount - 1; ++ibl) {
@@ -473,8 +473,8 @@ bool BoundaryLayerWorkflow::stmove(XFoil& xfoil) {
 
   for (int is = 1; is <= 2; ++is) {
     for (int ibl = 0; ibl < lattice.get(is).stationCount - 1; ++ibl) {
-      lattice.get(is).sideState.mass[ibl] =
-          lattice.get(is).sideState.dstr[ibl] * lattice.get(is).sideState.uedg[ibl];
+      lattice.get(is).profiles.massFlux[ibl] =
+          lattice.get(is).profiles.displacementThickness[ibl] * lattice.get(is).profiles.edgeVelocity[ibl];
     }
   }
 
@@ -486,12 +486,12 @@ bool BoundaryLayerWorkflow::uicalc(XFoil& xfoil) {
   //     sets inviscid ue from panel inviscid tangential velocity
   //--------------------------------------------------------------
   for (int side = 1; side <= 2; ++side) {
-    lattice.get(side).uinv[0] = 0.0;
-    lattice.get(side).uinv_a[0] = 0.0;
+    lattice.get(side).inviscidEdgeVelocity[0] = 0.0;
+    lattice.get(side).inviscidEdgeVelocityDerivative[0] = 0.0;
     for (int stationIndex = 0; stationIndex < lattice.get(side).stationCount - 1; ++stationIndex) {
       const int panelIndex = lattice.get(side).stationToPanel[stationIndex];
-      lattice.get(side).uinv[stationIndex] = lattice.get(side).vti[stationIndex] * xfoil.qinv[panelIndex];
-      lattice.get(side).uinv_a[stationIndex] = lattice.get(side).vti[stationIndex] * xfoil.qinv_a[panelIndex];
+      lattice.get(side).inviscidEdgeVelocity[stationIndex] = lattice.get(side).panelInfluenceFactor[stationIndex] * xfoil.qinv[panelIndex];
+      lattice.get(side).inviscidEdgeVelocityDerivative[stationIndex] = lattice.get(side).panelInfluenceFactor[stationIndex] * xfoil.qinv_a[panelIndex];
     }
   }
 
@@ -519,12 +519,12 @@ bool BoundaryLayerWorkflow::tesys(XFoil& xfoil, double cte, double tte, double d
 }
 
 void BoundaryLayerWorkflow::copyStationState(int side, int destination, int source) {
-  lattice.get(side).sideState.ctau[destination] =
-      lattice.get(side).sideState.ctau[source];
-  lattice.get(side).sideState.thet[destination] =
-      lattice.get(side).sideState.thet[source];
-  lattice.get(side).sideState.dstr[destination] =
-      lattice.get(side).sideState.dstr[source];
-  lattice.get(side).sideState.uedg[destination] =
-      lattice.get(side).sideState.uedg[source];
+  lattice.get(side).profiles.skinFrictionCoeff[destination] =
+      lattice.get(side).profiles.skinFrictionCoeff[source];
+  lattice.get(side).profiles.momentumThickness[destination] =
+      lattice.get(side).profiles.momentumThickness[source];
+  lattice.get(side).profiles.displacementThickness[destination] =
+      lattice.get(side).profiles.displacementThickness[source];
+  lattice.get(side).profiles.edgeVelocity[destination] =
+      lattice.get(side).profiles.edgeVelocity[source];
 }

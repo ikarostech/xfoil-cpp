@@ -234,7 +234,7 @@ class XFoil {
   
   VectorXd cpcalc(int n, VectorXd q, double qinf, double minf);
 
-  bool dslim(double &dstr, double thet, double msq, double hklim);
+  bool dslim(double &displacementThickness, double momentumThickness, double msq, double hklim);
 
   Matrix2Xd gamqv() const;
   bool ggcalc();
@@ -308,10 +308,10 @@ class XFoil {
 
   ClContributions computeClFromEdgeVelocityDistribution(const EdgeVelocityDistribution& distribution) const;
   struct BoundaryLayerDelta {
-    VectorXd dctau;
-    VectorXd dthet;
-    VectorXd ddstr;
-    VectorXd duedg;
+    VectorXd dskinFrictionCoeff;
+    VectorXd dmomentumThickness;
+    VectorXd ddisplacementThickness;
+    VectorXd dedgeVelocity;
   };
   struct BoundaryLayerMetrics {
     double rmsContribution = 0.0;
@@ -329,7 +329,7 @@ class XFoil {
                                                  const BoundaryLayerDelta& delta,
                                                  double dhi, double dlo,
                                                  double& relaxation) const;
-  BoundaryLayerSideState applyBoundaryLayerDelta(int side,
+  BoundaryLayerSideProfiles applyBoundaryLayerDelta(int side,
                                                  const BoundaryLayerDelta& delta,
                                                  double relaxation);
   bool xicalc();
@@ -414,9 +414,9 @@ class XFoil {
   c-    sccon  =  shear coefficient lag constant
   c-    gacon  =  g-beta locus constants...
   c-    gbcon  =  g = gacon * sqrt(1.0 + gbcon*beta)
-  c-    gccon  =         + gccon / [h*rtheta*sqrt(cf/2)]   <-- wall term
+  c-    gccon  =         + gccon / [h*rmomentumThickness*sqrt(cf/2)]   <-- wall term
   c-    dlcon  =  wall/wake dissipation length ratio  lo/l
-  c-    ctcon  =  ctau weighting coefficient (implied by g-beta constants)
+  c-    ctcon  =  skinFrictionCoeff weighting coefficient (implied by g-beta constants)
 
   c   version     version number of this xfoil implementation
   c
@@ -740,18 +740,18 @@ class XFoil {
   c
   c~~~~~~~~~~~~~~
   c
-  c   xssi[..]    bl arc length coordinate array on each surface
-  c   uedg[..]    bl edge velocity array
-  c   uinv[..]    bl edge velocity array without mass defect influence
-  c   mass[..]    bl mass defect array  [ = uedg*dstr ]
-  c   thet[..]    bl momentum thickness array
-  c   dstr[..]    bl displacement thickness array
-  c   ctau[..]    sqrt[max shear coefficient] array
+  c   arcLengthCoordinates[..]    bl arc length coordinate array on each surface
+  c   edgeVelocity[..]    bl edge velocity array
+  c   inviscidEdgeVelocity[..]    bl edge velocity array without mass defect influence
+  c   mass[..]    bl mass defect array  [ = edgeVelocity*displacementThickness ]
+  c   momentumThickness[..]    bl momentum thickness array
+  c   displacementThickness[..]    bl displacement thickness array
+  c   skinFrictionCoeff[..]    sqrt[max shear coefficient] array
   c               [in laminar regions, log of amplification ratio]
   c
-  c   ctq[..]     sqrt[equilibrium max shear coefficient] array [  "  ]
-  c   vti[..]     +/-1 conversion factor between panel and bl variables
-  c   uinv_a[..]  duinv/dalfa array
+  c   skinFrictionCoeffHistory[..]     sqrt[equilibrium max shear coefficient] array [  "  ]
+  c   panelInfluenceFactor[..]     +/-1 conversion factor between panel and bl variables
+  c   inviscidEdgeVelocityDerivative[..]  dinviscidEdgeVelocity/dalfa array
   c
   c   reinf1      reynolds number  vinf c / ve  for cl=1
   c   reinf       reynolds number for current cl
@@ -762,7 +762,7 @@ class XFoil {
   c               transition trip -s/s_side locations [if xtrip < 0],
   c   xoctr[.]    actual transition x/c locations
   c   yoctr[.]    actual transition y/c locations
-  c   xssitr[.]   actual transition xi locations
+  c   arcLengthCoordinatestr[.]   actual transition xi locations
   c
   c   iblte[.]    bl array index at trailing edge
   c   nbl[.]      max bl array index

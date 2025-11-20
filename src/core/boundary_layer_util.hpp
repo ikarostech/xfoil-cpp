@@ -19,8 +19,8 @@ public:
         double ax_a1;
         double ax_a2;
     };
-    static AxResult axset(double hk1, double thet1, double rt1, double a1, double hk2,
-        double thet2, double rt2, double a2, double acrit);
+    static AxResult axset(double hk1, double momentumThickness1, double rt1, double a1, double hk2,
+        double momentumThickness2, double rt2, double a2, double acrit);
     private:
-    static EnvEnResult dampl(double hk, double thet, double rt);
+    static EnvEnResult dampl(double hk, double momentumThickness, double rt);
 };

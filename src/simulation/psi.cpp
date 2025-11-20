@@ -237,26 +237,26 @@ PsiResult psisig(const Foil& foil, int iNode, int jo, Vector2d point,
   const double x0 = 0.5 * (x1 + x2);
   const double rs0 = x0 * x0 + yy * yy;
   const double logr0 = log(rs0);
-  const double theta0 =
+  const double momentumThickness0 =
       atan2(sgn * x0, sgn * yy) + (0.5 - 0.5 * sgn) * std::numbers::pi;
 
   double dxinv = 1.0 / (x1 - x0);
-  double psum = x0 * (theta0 - apan) - x1 * (t1 - apan) +
+  double psum = x0 * (momentumThickness0 - apan) - x1 * (t1 - apan) +
                 0.5 * yy * (logr12 - logr0);
   double pdif = ((x1 + x0) * psum + rs1 * (t1 - apan) -
-                 rs0 * (theta0 - apan) + (x0 - x1) * yy) *
+                 rs0 * (momentumThickness0 - apan) + (x0 - x1) * yy) *
                 dxinv;
 
   double psx1 = -(t1 - apan);
-  double psx0 = theta0 - apan;
+  double psx0 = momentumThickness0 - apan;
   double psyy = 0.5 * (logr12 - logr0);
 
   double pdx1 =
       ((x1 + x0) * psx1 + psum + 2.0 * x1 * (t1 - apan) - pdif) * dxinv;
   double pdx0 =
-      ((x1 + x0) * psx0 + psum - 2.0 * x0 * (theta0 - apan) + pdif) * dxinv;
+      ((x1 + x0) * psx0 + psum - 2.0 * x0 * (momentumThickness0 - apan) + pdif) * dxinv;
   double pdyy =
-      ((x1 + x0) * psyy + 2.0 * (x0 - x1 + yy * (t1 - theta0))) * dxinv;
+      ((x1 + x0) * psyy + 2.0 * (x0 - x1 + yy * (t1 - momentumThickness0))) * dxinv;
 
   const double dsm = (points.col(jp) - points.col(jm)).norm();
   const double dsim = 1.0 / dsm;
@@ -274,22 +274,22 @@ PsiResult psisig(const Foil& foil, int iNode, int jo, Vector2d point,
   psi_result.dqdm[jp] += cfac * (psni * (dsio + dsim) + pdni * (dsio - dsim));
 
   dxinv = 1.0 / (x0 - x2);
-  psum = x2 * (t2 - apan) - x0 * (theta0 - apan) +
+  psum = x2 * (t2 - apan) - x0 * (momentumThickness0 - apan) +
          0.5 * yy * (logr0 - logr22);
-  pdif = ((x0 + x2) * psum + rs0 * (theta0 - apan) - rs2 * (t2 - apan) +
+  pdif = ((x0 + x2) * psum + rs0 * (momentumThickness0 - apan) - rs2 * (t2 - apan) +
           (x2 - x0) * yy) *
          dxinv;
 
-  psx0 = -(theta0 - apan);
+  psx0 = -(momentumThickness0 - apan);
   double psx2 = t2 - apan;
   psyy = 0.5 * (logr0 - logr22);
 
   pdx0 =
-      ((x0 + x2) * psx0 + psum + 2.0 * x0 * (theta0 - apan) - pdif) * dxinv;
+      ((x0 + x2) * psx0 + psum + 2.0 * x0 * (momentumThickness0 - apan) - pdif) * dxinv;
   double pdx2 =
       ((x0 + x2) * psx2 + psum - 2.0 * x2 * (t2 - apan) + pdif) * dxinv;
   pdyy =
-      ((x0 + x2) * psyy + 2.0 * (x2 - x0 + yy * (theta0 - t2))) * dxinv;
+      ((x0 + x2) * psyy + 2.0 * (x2 - x0 + yy * (momentumThickness0 - t2))) * dxinv;
 
   const double dsp = (points.col(jq) - points.col(jo)).norm();
   const double dsip = 1.0 / dsp;
