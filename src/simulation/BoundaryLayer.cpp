@@ -304,20 +304,20 @@ bool BoundaryLayerWorkflow::iblpan(XFoil& xfoil) {
   std::stringstream ss;
   const int point_count = xfoil.foil.foil_shape.n;
 
-  for (int i = 0; i <= xfoil.i_stagnation; i++) {
-    lattice.top.stationToPanel[i] = xfoil.i_stagnation - i;
+  for (int i = 0; i <= stagnationIndex; i++) {
+    lattice.top.stationToPanel[i] = stagnationIndex - i;
     lattice.top.panelInfluenceFactor[i] = 1.0;
   }
 
-  lattice.top.trailingEdgeIndex = xfoil.i_stagnation;
+  lattice.top.trailingEdgeIndex = stagnationIndex;
   lattice.top.stationCount = lattice.top.trailingEdgeIndex + 2;
 
-  for (int index = 0; index <= point_count - xfoil.i_stagnation; ++index) {
-    lattice.bottom.stationToPanel[index] = xfoil.i_stagnation + 1 + index;
+  for (int index = 0; index <= point_count - stagnationIndex; ++index) {
+    lattice.bottom.stationToPanel[index] = stagnationIndex + 1 + index;
     lattice.bottom.panelInfluenceFactor[index] = -1.0;
   }
 
-  lattice.bottom.trailingEdgeIndex = point_count - xfoil.i_stagnation - 2;
+  lattice.bottom.trailingEdgeIndex = point_count - stagnationIndex - 2;
 
   for (int iw = 0; iw < xfoil.foil.wake_shape.n; iw++) {
     const int panel = point_count + iw;
@@ -383,7 +383,7 @@ bool BoundaryLayerWorkflow::stfind(XFoil& xfoil) {
     stagnation_index = point_count / 2;
   }
 
-  xfoil.i_stagnation = stagnation_index;
+  stagnationIndex = stagnation_index;
   const double dgam = xfoil.surface_vortex(0, stagnation_index + 1) -
                       xfoil.surface_vortex(0, stagnation_index);
   const double ds = xfoil.foil.foil_shape.spline_length[stagnation_index + 1] -
@@ -417,10 +417,10 @@ bool BoundaryLayerWorkflow::stfind(XFoil& xfoil) {
 }
 
 bool BoundaryLayerWorkflow::stmove(XFoil& xfoil) {
-  const int previous = xfoil.i_stagnation;
+  const int previous = stagnationIndex;
   stfind(xfoil);
 
-  if (previous == xfoil.i_stagnation) {
+  if (previous == stagnationIndex) {
     xfoil.xicalc();
   } else {
     iblpan(xfoil);
@@ -428,8 +428,8 @@ bool BoundaryLayerWorkflow::stmove(XFoil& xfoil) {
     xfoil.xicalc();
     iblsys(xfoil);
 
-    if (xfoil.i_stagnation > previous) {
-      const int delta = xfoil.i_stagnation - previous;
+    if (stagnationIndex > previous) {
+      const int delta = stagnationIndex - previous;
 
       lattice.top.transitionIndex += delta;
       lattice.bottom.transitionIndex -= delta;
@@ -449,7 +449,7 @@ bool BoundaryLayerWorkflow::stmove(XFoil& xfoil) {
         copyStationState(2, ibl, ibl + delta);
       }
     } else {
-      const int delta = previous - xfoil.i_stagnation;
+      const int delta = previous - stagnationIndex;
 
       lattice.top.transitionIndex -= delta;
       lattice.bottom.transitionIndex += delta;

@@ -378,7 +378,6 @@ class XFoil {
   int nsys;
 
   double wgap[IWX];
-  int i_stagnation;
 
 
   double cl_alf, cl_msq;

@@ -133,6 +133,7 @@ public:
   SidePair<BoundaryLayerLattice> lattice;
   BlSystemCoeffs blc;
   BoundaryLayerState state;
+  int stagnationIndex = 0;
 };
 
 template <typename StationContext>
