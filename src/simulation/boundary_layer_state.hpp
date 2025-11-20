@@ -49,6 +49,34 @@ struct BoundaryLayerState {
 };
 
 /**
+ * @brief Holds the per-station vectors that describe a single side of the
+ *        boundary layer.
+ */
+struct BoundaryLayerSideState {
+  Eigen::VectorXd ctau;
+  Eigen::VectorXd thet;
+  Eigen::VectorXd dstr;
+  Eigen::VectorXd uedg;
+  Eigen::VectorXd mass;
+
+  void clear() {
+    ctau.resize(0);
+    thet.resize(0);
+    dstr.resize(0);
+    uedg.resize(0);
+    mass.resize(0);
+  }
+
+  void resize(int size) {
+    ctau.resize(size);
+    thet.resize(size);
+    dstr.resize(size);
+    uedg.resize(size);
+    mass.resize(size);
+  }
+};
+
+/**
  * @brief Aggregates per-side arrays and indices that describe the boundary-layer
  *        lattice along the airfoil and wake.
  */
@@ -60,15 +88,12 @@ struct BoundaryLayerLattice {
 
   double transitionLocation = 0.0;
 
-  Eigen::VectorXd ctau;
-  Eigen::VectorXd thet;
-  Eigen::VectorXd dstr;
-  Eigen::VectorXd uedg;
+  BoundaryLayerSideState sideState;
+
   Eigen::VectorXd ctq;
   Eigen::VectorXd xssi;
   Eigen::VectorXd uinv;
   Eigen::VectorXd uinv_a;
-  Eigen::VectorXd mass;
   Eigen::VectorXd vti;
 
   int transitionIndex = 0;
@@ -81,32 +106,22 @@ struct BoundaryLayerLattice {
     transitionLocation = 0.0;
     transitionIndex = 0;
 
-    auto resetVector = [](Eigen::VectorXd& vector) { vector.resize(0); };
-
-    resetVector(ctau);
-    resetVector(thet);
-    resetVector(dstr);
-    resetVector(uedg);
-    resetVector(ctq);
-    resetVector(xssi);
-    resetVector(uinv);
-    resetVector(uinv_a);
-    resetVector(mass);
-    resetVector(vti);
+    sideState.clear();
+    ctq.resize(0);
+    xssi.resize(0);
+    uinv.resize(0);
+    uinv_a.resize(0);
+    vti.resize(0);
   }
 
   void resize(int size) {
     stationToPanel.resize(size);
     stationToSystem.resize(size);
-    ctau.resize(size);
-    thet.resize(size);
-    dstr.resize(size);
-    uedg.resize(size);
+    sideState.resize(size);
     ctq.resize(size);
     xssi.resize(size);
     uinv.resize(size);
     uinv_a.resize(size);
-    mass.resize(size);
     vti.resize(size);
   }
 };

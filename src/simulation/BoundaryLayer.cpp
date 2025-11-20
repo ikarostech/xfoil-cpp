@@ -17,14 +17,15 @@ bool BoundaryLayerWorkflow::isStartOfWake(const XFoil& xfoil, int side,
 void BoundaryLayerWorkflow::updateSystemMatricesForStation(
     XFoil& xfoil, int side, int stationIndex, BoundaryContext& ctx) {
   if (isStartOfWake(xfoil, side, stationIndex)) {
-    ctx.tte = lattice.get(1).thet[lattice.top.trailingEdgeIndex] +
-              lattice.get(2).thet[lattice.bottom.trailingEdgeIndex];
-    ctx.dte = lattice.get(1).dstr[lattice.top.trailingEdgeIndex] +
-              lattice.get(2).dstr[lattice.bottom.trailingEdgeIndex] + xfoil.foil.edge.ante;
+    ctx.tte = lattice.get(1).sideState.thet[lattice.top.trailingEdgeIndex] +
+              lattice.get(2).sideState.thet[lattice.bottom.trailingEdgeIndex];
+    ctx.dte = lattice.get(1).sideState.dstr[lattice.top.trailingEdgeIndex] +
+              lattice.get(2).sideState.dstr[lattice.bottom.trailingEdgeIndex] + xfoil.foil.edge.ante;
     ctx.cte =
-        (lattice.get(1).ctau[lattice.top.trailingEdgeIndex] * lattice.get(1).thet[lattice.top.trailingEdgeIndex] +
-         lattice.get(2).ctau[lattice.bottom.trailingEdgeIndex] *
-             lattice.get(2).thet[lattice.bottom.trailingEdgeIndex]) /
+        (lattice.get(1).sideState.ctau[lattice.top.trailingEdgeIndex] *
+             lattice.get(1).sideState.thet[lattice.top.trailingEdgeIndex] +
+         lattice.get(2).sideState.ctau[lattice.bottom.trailingEdgeIndex] *
+             lattice.get(2).sideState.thet[lattice.bottom.trailingEdgeIndex]) /
         ctx.tte;
     tesys(xfoil, ctx.cte, ctx.tte, ctx.dte);
   } else {
@@ -45,13 +46,13 @@ void BoundaryLayerWorkflow::initializeFirstIterationState(
     double dsm;
     double thm;
     if (stationIndex > 0) {
-      uem = lattice.get(side).uedg[stationIndex - 1];
-      dsm = lattice.get(side).dstr[stationIndex - 1];
-      thm = lattice.get(side).thet[stationIndex - 1];
+      uem = lattice.get(side).sideState.uedg[stationIndex - 1];
+      dsm = lattice.get(side).sideState.dstr[stationIndex - 1];
+      thm = lattice.get(side).sideState.thet[stationIndex - 1];
     } else {
-      uem = lattice.get(side).uedg[stationIndex];
-      dsm = lattice.get(side).dstr[stationIndex];
-      thm = lattice.get(side).thet[stationIndex];
+      uem = lattice.get(side).sideState.uedg[stationIndex];
+      dsm = lattice.get(side).sideState.dstr[stationIndex];
+      thm = lattice.get(side).sideState.thet[stationIndex];
     }
     const double uem_sq = uem * uem;
     const double msq =
@@ -64,16 +65,16 @@ void BoundaryLayerWorkflow::initializeFirstIterationState(
 
   if (stationIndex < previousTransition) {
     if (xfoil.tran) {
-      lattice.get(side).ctau[stationIndex] = 0.03;
+      lattice.get(side).sideState.ctau[stationIndex] = 0.03;
     }
     if (xfoil.turb) {
       const double prev =
-          (stationIndex >= 1) ? lattice.get(side).ctau[stationIndex - 1]
-                              : lattice.get(side).ctau[stationIndex];
-      lattice.get(side).ctau[stationIndex] = prev;
+          (stationIndex >= 1) ? lattice.get(side).sideState.ctau[stationIndex - 1]
+                              : lattice.get(side).sideState.ctau[stationIndex];
+      lattice.get(side).sideState.ctau[stationIndex] = prev;
     }
     if (xfoil.tran || xfoil.turb) {
-      ctx.cti = lattice.get(side).ctau[stationIndex - 1];
+      ctx.cti = lattice.get(side).sideState.ctau[stationIndex - 1];
       state.station2.param.sz = ctx.cti;
     }
   }
@@ -438,10 +439,10 @@ bool BoundaryLayerWorkflow::stmove(XFoil& xfoil) {
       }
 
       const double dudx =
-          lattice.top.uedg[delta] / lattice.top.xssi[delta];
+          lattice.top.sideState.uedg[delta] / lattice.top.xssi[delta];
       for (int ibl = delta; ibl >= 1; --ibl) {
         copyStationState(1, ibl - 1, delta);
-        lattice.top.uedg[ibl - 1] = dudx * lattice.top.xssi[ibl - 1];
+        lattice.top.sideState.uedg[ibl - 1] = dudx * lattice.top.xssi[ibl - 1];
       }
 
       for (int ibl = 0; ibl < lattice.bottom.stationCount - 1; ++ibl) {
@@ -458,10 +459,10 @@ bool BoundaryLayerWorkflow::stmove(XFoil& xfoil) {
       }
 
       const double dudx =
-          lattice.bottom.uedg[delta] / lattice.bottom.xssi[delta];
+          lattice.bottom.sideState.uedg[delta] / lattice.bottom.xssi[delta];
       for (int ibl = delta; ibl >= 1; --ibl) {
         copyStationState(2, ibl - 1, delta);
-        lattice.bottom.uedg[ibl - 1] = dudx * lattice.bottom.xssi[ibl - 1];
+        lattice.bottom.sideState.uedg[ibl - 1] = dudx * lattice.bottom.xssi[ibl - 1];
       }
 
       for (int ibl = 0; ibl < lattice.top.stationCount - 1; ++ibl) {
@@ -472,8 +473,8 @@ bool BoundaryLayerWorkflow::stmove(XFoil& xfoil) {
 
   for (int is = 1; is <= 2; ++is) {
     for (int ibl = 0; ibl < lattice.get(is).stationCount - 1; ++ibl) {
-      lattice.get(is).mass[ibl] =
-          lattice.get(is).dstr[ibl] * lattice.get(is).uedg[ibl];
+      lattice.get(is).sideState.mass[ibl] =
+          lattice.get(is).sideState.dstr[ibl] * lattice.get(is).sideState.uedg[ibl];
     }
   }
 
@@ -518,8 +519,12 @@ bool BoundaryLayerWorkflow::tesys(XFoil& xfoil, double cte, double tte, double d
 }
 
 void BoundaryLayerWorkflow::copyStationState(int side, int destination, int source) {
-  lattice.get(side).ctau[destination] = lattice.get(side).ctau[source];
-  lattice.get(side).thet[destination] = lattice.get(side).thet[source];
-  lattice.get(side).dstr[destination] = lattice.get(side).dstr[source];
-  lattice.get(side).uedg[destination] = lattice.get(side).uedg[source];
+  lattice.get(side).sideState.ctau[destination] =
+      lattice.get(side).sideState.ctau[source];
+  lattice.get(side).sideState.thet[destination] =
+      lattice.get(side).sideState.thet[source];
+  lattice.get(side).sideState.dstr[destination] =
+      lattice.get(side).sideState.dstr[source];
+  lattice.get(side).sideState.uedg[destination] =
+      lattice.get(side).sideState.uedg[source];
 }

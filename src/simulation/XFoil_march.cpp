@@ -17,15 +17,15 @@ XFoil::MixedModeStationContext XFoil::prepareMixedModeStation(int side, int ibl,
   ctx.simi = (ibl == 0);
   ctx.wake = ibl > boundaryLayerWorkflow.lattice.get(side).trailingEdgeIndex;
   ctx.xsi = boundaryLayerWorkflow.lattice.get(side).xssi[ibl];
-  ctx.uei = boundaryLayerWorkflow.lattice.get(side).uedg[ibl];
-  ctx.thi = boundaryLayerWorkflow.lattice.get(side).thet[ibl];
-  ctx.dsi = boundaryLayerWorkflow.lattice.get(side).dstr[ibl];
+  ctx.uei = boundaryLayerWorkflow.lattice.get(side).sideState.uedg[ibl];
+  ctx.thi = boundaryLayerWorkflow.lattice.get(side).sideState.thet[ibl];
+  ctx.dsi = boundaryLayerWorkflow.lattice.get(side).sideState.dstr[ibl];
 
   if (ibl < itrold) {
-    ami = boundaryLayerWorkflow.lattice.get(side).ctau[ibl];
+    ami = boundaryLayerWorkflow.lattice.get(side).sideState.ctau[ibl];
     ctx.cti = 0.03;
   } else {
-    ctx.cti = boundaryLayerWorkflow.lattice.get(side).ctau[ibl];
+    ctx.cti = boundaryLayerWorkflow.lattice.get(side).sideState.ctau[ibl];
     if (ctx.cti <= 0.0) {
       ctx.cti = 0.03;
     }
@@ -173,11 +173,11 @@ SetblInputView XFoil::makeSetblInputView() const {
   const auto& lattice = boundaryLayerWorkflow.lattice;
   return SetblInputView{
       lblini,
-      {lattice.top.uedg, lattice.bottom.uedg},
-      {lattice.top.ctau, lattice.bottom.ctau},
-      {lattice.top.thet, lattice.bottom.thet},
-      {lattice.top.dstr, lattice.bottom.dstr},
-      {lattice.top.mass, lattice.bottom.mass},
+      {lattice.top.sideState.uedg, lattice.bottom.sideState.uedg},
+      {lattice.top.sideState.ctau, lattice.bottom.sideState.ctau},
+      {lattice.top.sideState.thet, lattice.bottom.sideState.thet},
+      {lattice.top.sideState.dstr, lattice.bottom.sideState.dstr},
+      {lattice.top.sideState.mass, lattice.bottom.sideState.mass},
       {lattice.top.ctq, lattice.bottom.ctq},
       {lattice.top.transitionIndex, lattice.bottom.transitionIndex}};
 }
@@ -198,11 +198,11 @@ SetblOutputView XFoil::makeSetblOutputView() {
       reybl_re,
       reybl_ms,
       amcrit,
-      {lattice.top.uedg, lattice.bottom.uedg},
-      {lattice.top.ctau, lattice.bottom.ctau},
-      {lattice.top.thet, lattice.bottom.thet},
-      {lattice.top.dstr, lattice.bottom.dstr},
-      {lattice.top.mass, lattice.bottom.mass},
+      {lattice.top.sideState.uedg, lattice.bottom.sideState.uedg},
+      {lattice.top.sideState.ctau, lattice.bottom.sideState.ctau},
+      {lattice.top.sideState.thet, lattice.bottom.sideState.thet},
+      {lattice.top.sideState.dstr, lattice.bottom.sideState.dstr},
+      {lattice.top.sideState.mass, lattice.bottom.sideState.mass},
       {lattice.top.ctq, lattice.bottom.ctq},
       {lattice.top.transitionIndex, lattice.bottom.transitionIndex},
       va,
@@ -1281,10 +1281,11 @@ bool XFoil::ueset() {
           double ue_m = -boundaryLayerWorkflow.lattice.get(is).vti[ibl] * boundaryLayerWorkflow.lattice.get(js).vti[jbl] *
                         dij(boundaryLayerWorkflow.lattice.get(is).stationToPanel[ibl],
                             boundaryLayerWorkflow.lattice.get(js).stationToPanel[jbl]);
-          dui += ue_m * boundaryLayerWorkflow.lattice.get(js).mass[jbl];
+          dui += ue_m * boundaryLayerWorkflow.lattice.get(js).sideState.mass[jbl];
         }
       }
-      boundaryLayerWorkflow.lattice.get(is).uedg[ibl] = boundaryLayerWorkflow.lattice.get(is).uinv[ibl] + dui;
+      boundaryLayerWorkflow.lattice.get(is).sideState.uedg[ibl] =
+          boundaryLayerWorkflow.lattice.get(is).uinv[ibl] + dui;
     }
   }
   return true;

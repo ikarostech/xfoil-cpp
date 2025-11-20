@@ -317,13 +317,6 @@ class XFoil {
     double rmsContribution = 0.0;
     double maxChange = 0.0;
   };
-  struct BoundaryLayerSideState {
-    VectorXd ctau;
-    VectorXd thet;
-    VectorXd dstr;
-    VectorXd uedg;
-    VectorXd mass;
-  };
   double computeAcChange(double clnew, double cl_current, double cl_target,
                          double cl_ac, double cl_a, double cl_ms) const;
   double clampRelaxationForGlobalChange(double relaxation, double dac,
