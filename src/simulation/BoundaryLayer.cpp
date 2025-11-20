@@ -319,23 +319,23 @@ bool BoundaryLayerWorkflow::iblpan(XFoil& xfoil) {
 
   lattice.bottom.trailingEdgeIndex = point_count - xfoil.i_stagnation - 2;
 
-  for (int iw = 0; iw < xfoil.nw; iw++) {
+  for (int iw = 0; iw < xfoil.foil.wake_shape.n; iw++) {
     const int panel = point_count + iw;
     const int index = lattice.bottom.trailingEdgeIndex + iw + 2;
     lattice.bottom.stationToPanel[index - 1] = panel;
     lattice.bottom.panelInfluenceFactor[index - 1] = -1.0;
   }
 
-  lattice.bottom.stationCount = lattice.bottom.trailingEdgeIndex + xfoil.nw + 2;
+  lattice.bottom.stationCount = lattice.bottom.trailingEdgeIndex + xfoil.foil.wake_shape.n + 2;
 
-  for (int iw = 0; iw < xfoil.nw; iw++) {
+  for (int iw = 0; iw < xfoil.foil.wake_shape.n; iw++) {
     lattice.top.stationToPanel[lattice.top.trailingEdgeIndex + iw + 1] =
         lattice.bottom.stationToPanel[lattice.bottom.trailingEdgeIndex + iw + 1];
     lattice.top.panelInfluenceFactor[lattice.top.trailingEdgeIndex + iw + 1] = 1.0;
   }
 
   const int iblmax = std::max(lattice.top.trailingEdgeIndex, lattice.bottom.trailingEdgeIndex) +
-                     xfoil.nw + 2;
+                     xfoil.foil.wake_shape.n + 2;
   if (iblmax > IVX) {
     ss << "iblpan :  ***  bl array overflow\n";
     ss << "Increase IVX to at least " << iblmax << "\n";

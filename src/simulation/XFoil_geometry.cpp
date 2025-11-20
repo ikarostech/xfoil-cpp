@@ -27,11 +27,12 @@ bool XFoil::abcopy(Matrix2Xd copyFrom) {
     }
   }
   //--- number of wake points
-  nw = point_count / 8 + 2;
-  if (nw > IWX) {
+  int wake_point_count = point_count / 8 + 2;
+  if (wake_point_count > IWX) {
     writeString(" XYWake: array size (IWX) too small.\n  Last wake point index reduced.");
-    nw = IWX;
+    wake_point_count = IWX;
   }
+  foil.wake_shape.n = wake_point_count;
   Matrix2Xd foil_points = Matrix2Xd::Zero(2, IZX);
   foil_points.leftCols(point_count) = copyFrom.leftCols(point_count);
 
@@ -39,6 +40,7 @@ bool XFoil::abcopy(Matrix2Xd copyFrom) {
   initialize();  
   
   foil = Foil(foil_points, point_count);
+  foil.wake_shape.n = wake_point_count;
   updateTrailingEdgeState();
   apanel.head(point_count) = apcalc(foil.foil_shape.points);
 
@@ -125,7 +127,7 @@ void XFoil::updateTrailingEdgeState() {
 }
 
 bool XFoil::xyWake() {
-  if (!foil.xyWake(nw, apanel, gamu, surface_vortex, analysis_state_.alpha,
+  if (!foil.xyWake(foil.wake_shape.n, apanel, gamu, surface_vortex, analysis_state_.alpha,
                    analysis_state_.qinf)) {
     return false;
   }

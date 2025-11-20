@@ -20,8 +20,8 @@ class Foil {
     Foil() = default;
     Foil(const Eigen::Matrix2Xd& points, int n) {
       foil_shape = FoilShape(points, n);
+      wake_shape.n = foil_shape.n / 8 + 2;
       edge = Edge(foil_shape);
-      // xyWake();
     }
 
     bool xyWake(int wake_point_count, Eigen::VectorXd &apanel,

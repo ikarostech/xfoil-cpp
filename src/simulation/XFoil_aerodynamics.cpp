@@ -401,10 +401,10 @@ bool specConverge(XFoil &xfoil, SpecTarget target) {
                              xfoil.analysis_state_.qinf,
                              xfoil.analysis_state_.currentMach);
     if (xfoil.analysis_state_.viscous) {
-      xfoil.cpv = xfoil.cpcalc(xfoil.foil.foil_shape.n + xfoil.nw, xfoil.qvis,
+      xfoil.cpv = xfoil.cpcalc(xfoil.foil.foil_shape.n + xfoil.foil.wake_shape.n, xfoil.qvis,
                                xfoil.analysis_state_.qinf,
                                xfoil.analysis_state_.currentMach);
-      xfoil.cpi = xfoil.cpcalc(xfoil.foil.foil_shape.n + xfoil.nw, xfoil.qinv,
+      xfoil.cpi = xfoil.cpcalc(xfoil.foil.foil_shape.n + xfoil.foil.wake_shape.n, xfoil.qinv,
                                xfoil.analysis_state_.qinf,
                                xfoil.analysis_state_.currentMach);
     } else
@@ -447,10 +447,10 @@ bool specConverge(XFoil &xfoil, SpecTarget target) {
   applyQiset();
 
   if (xfoil.analysis_state_.viscous) {
-    xfoil.cpv = xfoil.cpcalc(xfoil.foil.foil_shape.n + xfoil.nw, xfoil.qvis,
+    xfoil.cpv = xfoil.cpcalc(xfoil.foil.foil_shape.n + xfoil.foil.wake_shape.n, xfoil.qvis,
                              xfoil.analysis_state_.qinf,
                              xfoil.analysis_state_.currentMach);
-    xfoil.cpi = xfoil.cpcalc(xfoil.foil.foil_shape.n + xfoil.nw, xfoil.qinv,
+    xfoil.cpi = xfoil.cpcalc(xfoil.foil.foil_shape.n + xfoil.foil.wake_shape.n, xfoil.qinv,
                              xfoil.analysis_state_.qinf,
                              xfoil.analysis_state_.currentMach);
 

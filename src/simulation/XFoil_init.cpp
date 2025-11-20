@@ -55,7 +55,7 @@ bool XFoil::initialize() {
 
 void XFoil::initializeDataStructures() {
   const int point_count = foil.foil_shape.n;
-  const int total_nodes_with_wake = point_count + nw;
+  const int total_nodes_with_wake = point_count + foil.wake_shape.n;
   apanel = VectorXd::Zero(total_nodes_with_wake);
   auto& cache = ensureInitState(this);
   cache.blsav.fill(blData{});
@@ -255,7 +255,7 @@ bool XFoil::setMach() {
   const int point_count = foil.foil_shape.n;
   cpi = cpcalc(point_count, qinv, analysis_state_.qinf, analysis_state_.currentMach);
   if (analysis_state_.viscous) {
-    cpv = cpcalc(point_count + nw, qvis, analysis_state_.qinf, analysis_state_.currentMach);
+    cpv = cpcalc(point_count + foil.wake_shape.n, qvis, analysis_state_.qinf, analysis_state_.currentMach);
   }
   const auto cl_result = clcalc(cmref);
   applyClComputation(cl_result);

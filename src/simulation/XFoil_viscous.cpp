@@ -81,7 +81,7 @@ bool XFoil::initXFoilAnalysis(double Re, double alpha, double Mach,
  *	   (dzdm) and dqtan/dsig (dqdm).
  *
  *			airfoil:  1   < i < n
- *			wake:	  n+1 < i < n+nw
+ *			wake:	  n+1 < i < n+foil.wake_shape.n
  *-------------------------------------------------------------------- */
 /** ------------------------------------------------------
  *         calculates source panel influence coefficient
@@ -108,26 +108,26 @@ bool XFoil::qdcalc() {
   for (int i = 0; i < point_count; i++) {
     PsiResult psi_result =
         pswlin(foil, i, foil.foil_shape.points.col(i),
-               foil.foil_shape.normal_vector.col(i), point_count, nw, apanel);
-    bij.row(i).segment(point_count, nw) = -psi_result.dzdm.segment(point_count, nw).transpose();
+               foil.foil_shape.normal_vector.col(i), point_count, foil.wake_shape.n, apanel);
+    bij.row(i).segment(point_count, foil.wake_shape.n) = -psi_result.dzdm.segment(point_count, foil.wake_shape.n).transpose();
   }
 
   //---- set up kutta condition (no direct source influence)
 
-  bij.row(point_count).segment(point_count, nw).setZero();
+  bij.row(point_count).segment(point_count, foil.wake_shape.n).setZero();
 
   //---- multiply by inverse of factored dpsi/dgam matrix
-  bij.block(0, point_count, point_count + 1, nw) =
-      psi_gamma_lu.solve(bij.block(0, point_count, point_count + 1, nw)).eval();
+  bij.block(0, point_count, point_count + 1, foil.wake_shape.n) =
+      psi_gamma_lu.solve(bij.block(0, point_count, point_count + 1, foil.wake_shape.n)).eval();
   //---- set the source influence matrix for the wake sources
-  dij.block(0, point_count, point_count, nw) = bij.block(0, point_count, point_count, nw);
+  dij.block(0, point_count, point_count, foil.wake_shape.n) = bij.block(0, point_count, point_count, foil.wake_shape.n);
 
   //**** now we need to calculate the influence of sources on the wake
   // velocities
 
   //---- calculate dqtan/dgam and dqtan/dsig at the wake points
-  MatrixXd cij = MatrixXd::Zero(nw, point_count);
-  for (int i = point_count; i < point_count + nw; i++) {
+  MatrixXd cij = MatrixXd::Zero(foil.wake_shape.n, point_count);
+  for (int i = point_count; i < point_count + foil.wake_shape.n; i++) {
     int iw = i - point_count;
     //------ airfoil contribution at wake panel node
     PsiResult psi_result =
@@ -141,15 +141,15 @@ bool XFoil::qdcalc() {
     //------ wake contribution
     psi_result =
         pswlin(foil, i, foil.wake_shape.points.col(i),
-               foil.wake_shape.normal_vector.col(i), point_count, nw, apanel);
-    dij.row(i).segment(point_count, nw) = psi_result.dqdm.segment(point_count, nw).transpose();
+               foil.wake_shape.normal_vector.col(i), point_count, foil.wake_shape.n, apanel);
+    dij.row(i).segment(point_count, foil.wake_shape.n) = psi_result.dqdm.segment(point_count, foil.wake_shape.n).transpose();
   }
 
   //---- add on effect of all sources on airfoil vorticity which effects wake
   // qtan
-  dij.block(point_count, 0, nw, point_count) += cij * dij.topLeftCorner(point_count, point_count);
+  dij.block(point_count, 0, foil.wake_shape.n, point_count) += cij * dij.topLeftCorner(point_count, point_count);
 
-  dij.block(point_count, point_count, nw, nw) += cij * bij.block(0, point_count, point_count, nw);
+  dij.block(point_count, point_count, foil.wake_shape.n, foil.wake_shape.n) += cij * bij.block(0, point_count, point_count, foil.wake_shape.n);
 
   //---- make sure first wake point has same velocity as trailing edge
   dij.row(point_count) = dij.row(point_count - 1);
@@ -168,7 +168,7 @@ XFoil::TangentialVelocityResult XFoil::qiset() const {
       {cos(analysis_state_.alpha), sin(analysis_state_.alpha)},
       {-sin(analysis_state_.alpha), cos(analysis_state_.alpha)}};
   const int point_count = foil.foil_shape.n;
-  const int total_nodes_with_wake = point_count + nw;
+  const int total_nodes_with_wake = point_count + foil.wake_shape.n;
 
   TangentialVelocityResult result;
   result.qinv = VectorXd::Zero(total_nodes_with_wake);
@@ -214,7 +214,7 @@ Matrix2Xd XFoil::qwcalc() {
     updated_qinvu.col(point_count) = updated_qinvu.col(point_count - 1);
   }
 
-  for (int i = point_count + 1; i < point_count + nw; i++) {
+  for (int i = point_count + 1; i < point_count + foil.wake_shape.n; i++) {
     updated_qinvu.col(i) =
         psilin(foil, i, foil.wake_shape.points.col(i),
                foil.wake_shape.normal_vector.col(i), false, point_count, gamu,
@@ -655,7 +655,7 @@ bool XFoil::viscal() {
   //     converges viscous operating point
   ////--------------------------------------
   const int point_count = foil.foil_shape.n;
-  const int total_nodes_with_wake = point_count + nw;
+  const int total_nodes_with_wake = point_count + foil.wake_shape.n;
 
   //---- calculate wake trajectory from current inviscid solution if necessary
   if (!lwake)
@@ -732,7 +732,7 @@ bool XFoil::viscal() {
 
 XFoil::ViscalEndResult XFoil::ViscalEnd() {
   ViscalEndResult result;
-  const int total_nodes_with_wake = foil.foil_shape.n + nw;
+  const int total_nodes_with_wake = foil.foil_shape.n + foil.wake_shape.n;
   result.inviscidCp = cpcalc(total_nodes_with_wake, qinv, analysis_state_.qinf,
                              analysis_state_.currentMach);
   result.viscousCp = cpcalc(total_nodes_with_wake, qvis, analysis_state_.qinf,

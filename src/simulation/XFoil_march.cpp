@@ -1334,13 +1334,13 @@ bool XFoil::xicalc() {
   const double bb = -2.0 - telrat * dwdxte;
 
   if (foil.edge.sharp) {
-    for (int iw0 = 0; iw0 < nw; iw0++)
+    for (int iw0 = 0; iw0 < foil.wake_shape.n; iw0++)
       wgap[iw0] = 0.0;
   }
 
   else {
-    //----- set te flap (wake gap) array (0-based: iw0=0..nw-1)
-    for (int iw0 = 0; iw0 < nw; iw0++) {
+    //----- set te flap (wake gap) array (0-based: iw0=0..foil.wake_shape.n-1)
+    for (int iw0 = 0; iw0 < foil.wake_shape.n; iw0++) {
       const int te_bot_0b = boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex; // 0-based TE for array indexing
       const double zn = 1.0 - (boundaryLayerWorkflow.lattice.bottom.arcLengthCoordinates[te_bot_0b + (iw0 + 1)] -
                                boundaryLayerWorkflow.lattice.bottom.arcLengthCoordinates[te_bot_0b]) /

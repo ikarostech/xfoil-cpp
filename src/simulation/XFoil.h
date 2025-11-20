@@ -378,7 +378,7 @@ class XFoil {
   int nsys;
 
   double wgap[IWX];
-  int nw, i_stagnation;
+  int i_stagnation;
 
 
   double cl_alf, cl_msq;
@@ -457,7 +457,7 @@ class XFoil {
   c   qinvu[..]   qinv for alpha = 0, 90 deg.
   c   qinv_a[.]   dqinv/dalpha
   c
-  c   x[.],y[.]   airfoil [1<i<n] and wake [n+1<i<n+nw] coordinate arrays
+  c   x[.],y[.]   airfoil [1<i<n] and wake [n+1<i<n+foil.wake_shape.n] coordinate arrays
   c   xp[.],yp[.] dx/ds, dy/ds arrays for spline evaluation
   c   s[.]        arc length along airfoil [spline parameter]
   c   sle         value of s at leading edge
@@ -584,7 +584,7 @@ class XFoil {
   c
   c   n           number of points on airfoil
   c   nb          number of points in buffer airfoil array
-  c   nw          number of points in wake
+  c   foil.wake_shape.n          number of points in wake
   c   npan        default/specified number of points on airfoil
   c
   c   ist         stagnation point lies between s[ist], s[ist+1]

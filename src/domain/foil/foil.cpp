@@ -86,7 +86,7 @@ bool Foil::xyWake(int wake_point_count, Eigen::VectorXd& apanel,
   const int total_nodes = point_count + wake_point_count;
 
   wake_shape.points = Eigen::Matrix2Xd::Zero(2, total_nodes);
-  wake_shape.n = total_nodes;
+  wake_shape.n = wake_point_count;
   wake_shape.normal_vector = Eigen::Matrix2Xd::Zero(2, total_nodes);
   wake_shape.spline_length = Eigen::VectorXd::Zero(total_nodes);
   wake_shape.points.block(0, 0, 2, point_count) = foil_shape.points;
