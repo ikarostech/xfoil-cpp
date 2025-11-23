@@ -66,6 +66,47 @@ double BoundaryLayerWorkflow::fallbackEdgeVelocity(
   return lattice.get(side).profiles.edgeVelocity[stationIndex];
 }
 
+BoundaryLayerWorkflow::EdgeVelocityDistribution
+BoundaryLayerWorkflow::computeNewUeDistribution(const XFoil& xfoil) const {
+  EdgeVelocityDistribution distribution;
+  distribution.unew.top = Eigen::VectorXd::Zero(IVX);
+  distribution.unew.bottom = Eigen::VectorXd::Zero(IVX);
+  distribution.u_ac.top = Eigen::VectorXd::Zero(IVX);
+  distribution.u_ac.bottom = Eigen::VectorXd::Zero(IVX);
+
+  for (int side = 1; side <= 2; ++side) {
+    for (int station = 0; station < lattice.get(side).stationCount - 1; ++station) {
+      const int panelIndex = lattice.get(side).stationToPanel[station];
+      double dui = 0.0;
+      double dui_ac = 0.0;
+      for (int otherSide = 1; otherSide <= 2; ++otherSide) {
+        for (int otherStation = 0; otherStation < lattice.get(otherSide).stationCount - 1; ++otherStation) {
+          const int otherPanel = lattice.get(otherSide).stationToPanel[otherStation];
+          const int systemIndex = lattice.get(otherSide).stationToSystem[otherStation];
+          const double influence =
+              -lattice.get(side).panelInfluenceFactor[station] *
+              lattice.get(otherSide).panelInfluenceFactor[otherStation] *
+              xfoil.dij(panelIndex, otherPanel);
+          dui += influence *
+                 (lattice.get(otherSide).profiles.massFlux[otherStation] +
+                  xfoil.vdel[systemIndex](2, 0));
+          dui_ac += influence * (-xfoil.vdel[systemIndex](2, 1));
+        }
+      }
+
+      const double inviscidDerivative =
+          xfoil.analysis_state_.controlByAlpha
+              ? 0.0
+              : lattice.get(side).inviscidEdgeVelocityDerivative[station];
+      distribution.unew.get(side)[station] =
+          lattice.get(side).inviscidEdgeVelocity[station] + dui;
+      distribution.u_ac.get(side)[station] =
+          inviscidDerivative + dui_ac;
+    }
+  }
+  return distribution;
+}
+
 void BoundaryLayerWorkflow::syncStationRegimeStates(int side,
                                                     int stationIndex,
                                                     bool wake,

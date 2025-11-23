@@ -89,6 +89,7 @@ class XFoil {
   using FullPivLU = Eigen::FullPivLU<T>;
   using Matrix3x2d = Eigen::Matrix<double, 3, 2>;
   using Matrix3x2dVector = std::vector<Matrix3x2d>;
+  using EdgeVelocityDistribution = BoundaryLayerWorkflow::EdgeVelocityDistribution;
 
  public:
 
@@ -288,11 +289,6 @@ class XFoil {
   bool trdif();
   bool ueset();
   bool update();
-  struct EdgeVelocityDistribution {
-    SidePair<VectorXd> unew;
-    SidePair<VectorXd> u_ac;
-  };
-  EdgeVelocityDistribution computeNewUeDistribution() const;
   struct QtanResult {
     VectorXd qnew;
     VectorXd q_ac;

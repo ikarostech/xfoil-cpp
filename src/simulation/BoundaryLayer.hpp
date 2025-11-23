@@ -18,6 +18,10 @@ class BoundaryLayerWorkflow {
     UsePreviousStation,
     AverageNeighbors
   };
+  struct EdgeVelocityDistribution {
+    SidePair<Eigen::VectorXd> unew;
+    SidePair<Eigen::VectorXd> u_ac;
+  };
   struct MixedModeStationContext {
     bool simi = false;
     bool wake = false;
@@ -115,6 +119,7 @@ class BoundaryLayerWorkflow {
                                           EdgeVelocityFallbackMode edgeMode);
   double fallbackEdgeVelocity(int side, int stationIndex,
                               EdgeVelocityFallbackMode edgeMode) const;
+  EdgeVelocityDistribution computeNewUeDistribution(const XFoil& xfoil) const;
   void syncStationRegimeStates(int side, int stationIndex, bool wake,
                                XFoil& xfoil);
 

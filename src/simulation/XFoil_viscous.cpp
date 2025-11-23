@@ -281,43 +281,6 @@ XFoil::DerivativeVectors XFoil::clearDerivativeVectors(const VectorXd &u_m,
 
 
 /**
- * @brief Compute new edge velocities and their sensitivities.
- */
-XFoil::EdgeVelocityDistribution XFoil::computeNewUeDistribution() const {
-  EdgeVelocityDistribution distribution;
-  distribution.unew.top = VectorXd::Zero(IVX);
-  distribution.unew.bottom = VectorXd::Zero(IVX);
-  distribution.u_ac.top = VectorXd::Zero(IVX);
-  distribution.u_ac.bottom = VectorXd::Zero(IVX);
-  for (int is = 1; is <= 2; is++) {
-    for (int ibl = 0; ibl < boundaryLayerWorkflow.lattice.get(is).stationCount - 1; ++ibl) {
-      const int i = boundaryLayerWorkflow.lattice.get(is).stationToPanel[ibl];
-      double dui = 0.0;
-      double dui_ac = 0.0;
-      for (int js = 1; js <= 2; js++) {
-        for (int jbl = 0; jbl < boundaryLayerWorkflow.lattice.get(js).stationCount - 1; ++jbl) {
-          const int j = boundaryLayerWorkflow.lattice.get(js).stationToPanel[jbl];
-          const int jv = boundaryLayerWorkflow.lattice.get(js).stationToSystem[jbl];
-          const double ue_m = -boundaryLayerWorkflow.lattice.get(is).panelInfluenceFactor[ibl] * boundaryLayerWorkflow.lattice.get(js).panelInfluenceFactor[jbl] *
-                              dij(i, j);
-          dui += ue_m * (boundaryLayerWorkflow.lattice.get(js).profiles.massFlux[jbl] + vdel[jv](2, 0));
-          dui_ac += ue_m * (-vdel[jv](2, 1));
-        }
-      }
-
-      const double inviscidEdgeVelocityDerivativec = analysis_state_.controlByAlpha
-                                 ? 0.0
-                                 : boundaryLayerWorkflow.lattice.get(is).inviscidEdgeVelocityDerivative[ibl];
-      // Store unew/u_ac at 0-based station index
-      distribution.unew.get(is)[ibl] = boundaryLayerWorkflow.lattice.get(is).inviscidEdgeVelocity[ibl] + dui;
-      distribution.u_ac.get(is)[ibl] = inviscidEdgeVelocityDerivativec + dui_ac;
-    }
-  }
-  return distribution;
-}
-
-
-/**
  * @brief Convert edge velocities to tangential velocities.
  */
 XFoil::QtanResult XFoil::computeQtan(const EdgeVelocityDistribution& distribution) const {
@@ -577,7 +540,7 @@ bool XFoil::update() {
            (1.0 + 0.5 * gamm1 * analysis_state_.currentMach * analysis_state_.currentMach);
 
   //--- calculate new ue distribution and tangential velocities
-  const auto ue_distribution = computeNewUeDistribution();
+  const auto ue_distribution = boundaryLayerWorkflow.computeNewUeDistribution(*this);
   const auto cl_contributions = computeClFromEdgeVelocityDistribution(ue_distribution);
 
   //--- initialize under-relaxation factor
