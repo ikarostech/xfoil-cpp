@@ -54,49 +54,20 @@ bool XFoil::initialize() {
 }
 
 void XFoil::initializeDataStructures() {
-  const int point_count = foil.foil_shape.n;
-  const int total_nodes_with_wake = point_count + foil.wake_shape.n;
+  const int total_nodes_with_wake = foil.foil_shape.n + foil.wake_shape.n;
   apanel = VectorXd::Zero(total_nodes_with_wake);
   auto& cache = ensureInitState(this);
   cache.blsav.fill(blData{});
 
-  boundaryLayerWorkflow.lattice.top.clear();
-  boundaryLayerWorkflow.lattice.bottom.clear();
-  boundaryLayerWorkflow.lattice.top.resize(IVX);
-  boundaryLayerWorkflow.lattice.bottom.resize(IVX);
-  boundaryLayerWorkflow.lattice.top.stationToPanel.setZero();
-  boundaryLayerWorkflow.lattice.bottom.stationToPanel.setZero();
-  boundaryLayerWorkflow.lattice.top.stationToSystem.setZero();
-  boundaryLayerWorkflow.lattice.bottom.stationToSystem.setZero();
-  boundaryLayerWorkflow.lattice.top.transitionIndex = 0;
-  boundaryLayerWorkflow.lattice.bottom.transitionIndex = 0;
-  boundaryLayerWorkflow.lattice.top.profiles.skinFrictionCoeff.setZero();
-  boundaryLayerWorkflow.lattice.bottom.profiles.skinFrictionCoeff.setZero();
-  boundaryLayerWorkflow.lattice.top.skinFrictionCoeffHistory.setZero();
-  boundaryLayerWorkflow.lattice.bottom.skinFrictionCoeffHistory.setZero();
-  boundaryLayerWorkflow.lattice.top.profiles.displacementThickness.setZero();
-  boundaryLayerWorkflow.lattice.bottom.profiles.displacementThickness.setZero();
-  boundaryLayerWorkflow.lattice.top.profiles.momentumThickness.setZero();
-  boundaryLayerWorkflow.lattice.bottom.profiles.momentumThickness.setZero();
-  boundaryLayerWorkflow.lattice.top.profiles.edgeVelocity.setZero();
-  boundaryLayerWorkflow.lattice.bottom.profiles.edgeVelocity.setZero();
-  boundaryLayerWorkflow.lattice.top.arcLengthCoordinates.setZero();
-  boundaryLayerWorkflow.lattice.bottom.arcLengthCoordinates.setZero();
-  boundaryLayerWorkflow.lattice.top.inviscidEdgeVelocity.setZero();
-  boundaryLayerWorkflow.lattice.bottom.inviscidEdgeVelocity.setZero();
-  boundaryLayerWorkflow.lattice.top.inviscidEdgeVelocityDerivative.setZero();
-  boundaryLayerWorkflow.lattice.bottom.inviscidEdgeVelocityDerivative.setZero();
-  boundaryLayerWorkflow.lattice.top.profiles.massFlux.setZero();
-  boundaryLayerWorkflow.lattice.bottom.profiles.massFlux.setZero();
-  boundaryLayerWorkflow.lattice.top.panelInfluenceFactor.setZero();
-  boundaryLayerWorkflow.lattice.bottom.panelInfluenceFactor.setZero();
+  boundaryLayerWorkflow.lattice.top = BoundaryLayerLattice(IVX);
+  boundaryLayerWorkflow.lattice.bottom = BoundaryLayerLattice(IVX);
 
   bij = MatrixXd::Zero(IQX, IZX);
   dij = MatrixXd::Zero(IZX, IZX);
   cpi = VectorXd::Zero(total_nodes_with_wake);
-  cpv = VectorXd::Zero(point_count);
-  gamu = Matrix2Xd::Zero(2, point_count + 1);
-  surface_vortex = Matrix2Xd::Zero(2, point_count);
+  cpv = VectorXd::Zero(foil.foil_shape.n);
+  gamu = Matrix2Xd::Zero(2, foil.foil_shape.n + 1);
+  surface_vortex = Matrix2Xd::Zero(2, foil.foil_shape.n);
   std::ranges::fill(cache.qf0, 0.0);
   std::ranges::fill(cache.qf1, 0.0);
   std::ranges::fill(cache.qf2, 0.0);

@@ -124,4 +124,6 @@ struct BoundaryLayerLattice {
     inviscidEdgeVelocityDerivative.resize(size);
     panelInfluenceFactor.resize(size);
   }
+  BoundaryLayerLattice() = default;
+  BoundaryLayerLattice(const int size) { resize(size); }
 };
