@@ -90,6 +90,8 @@ class XFoil {
   using Matrix3x2d = Eigen::Matrix<double, 3, 2>;
   using Matrix3x2dVector = std::vector<Matrix3x2d>;
   using EdgeVelocityDistribution = BoundaryLayerWorkflow::EdgeVelocityDistribution;
+  using BoundaryLayerDelta = BoundaryLayerWorkflow::BoundaryLayerDelta;
+  using BoundaryLayerMetrics = BoundaryLayerWorkflow::BoundaryLayerMetrics;
 
  public:
 
@@ -263,8 +265,6 @@ class XFoil {
   VectorXd qvfue() const;
   Matrix2Xd qwcalc();
 
-  SetblInputView makeSetblInputView() const;
-  SetblOutputView makeSetblOutputView();
   SetblOutputView setbl(const SetblInputView& input, SetblOutputView output);
   struct EdgeVelocitySwapResult {
     SidePair<VectorXd> swappedUsav;
@@ -289,45 +289,12 @@ class XFoil {
   bool trdif();
   bool ueset();
   bool update();
-  struct QtanResult {
-    VectorXd qnew;
-    VectorXd q_ac;
-  };
-
-  QtanResult computeQtan(const EdgeVelocityDistribution& distribution) const;
-  struct ClContributions {
-    double cl = 0.0;
-    double cl_a = 0.0;
-    double cl_ms = 0.0;
-    double cl_ac = 0.0;
-  };
-
-  ClContributions computeClFromEdgeVelocityDistribution(const EdgeVelocityDistribution& distribution) const;
-  struct BoundaryLayerDelta {
-    VectorXd dskinFrictionCoeff;
-    VectorXd dmomentumThickness;
-    VectorXd ddisplacementThickness;
-    VectorXd dedgeVelocity;
-  };
-  struct BoundaryLayerMetrics {
-    double rmsContribution = 0.0;
-    double maxChange = 0.0;
-  };
+  using QtanResult = BoundaryLayerWorkflow::QtanResult;
+  using ClContributions = BoundaryLayerWorkflow::ClContributions;
   double computeAcChange(double clnew, double cl_current, double cl_target,
                          double cl_ac, double cl_a, double cl_ms) const;
   double clampRelaxationForGlobalChange(double relaxation, double dac,
                                         double lower, double upper) const;
-  BoundaryLayerDelta buildBoundaryLayerDelta(int side,
-                                             const VectorXd& unew_side,
-                                             const VectorXd& u_ac_side,
-                                             double dac) const;
-  BoundaryLayerMetrics evaluateSegmentRelaxation(int side,
-                                                 const BoundaryLayerDelta& delta,
-                                                 double dhi, double dlo,
-                                                 double& relaxation) const;
-  BoundaryLayerSideProfiles applyBoundaryLayerDelta(int side,
-                                                 const BoundaryLayerDelta& delta,
-                                                 double relaxation);
   bool xicalc();
   double xifset(int is);
   bool xyWake();

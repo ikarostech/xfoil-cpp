@@ -3,6 +3,10 @@
 #include "Eigen/Core"
 #include "infrastructure/xfoil_params.h"
 
+struct XFoil;
+
+struct XFoil;
+
 struct SetblInputView {
   const bool& lblini;
   SidePairRef<const Eigen::VectorXd> edgeVelocity;
@@ -12,6 +16,8 @@ struct SetblInputView {
   SidePairRef<const Eigen::VectorXd> massFlux;
   SidePairRef<const Eigen::VectorXd> skinFrictionCoeffHistory;
   SidePairRef<const int> itran;
+
+  static SetblInputView fromXFoil(const XFoil& xfoil);
 };
 
 struct SetblOutputView {
@@ -45,4 +51,6 @@ struct SetblOutputView {
   bool& wake;
   bool& simi;
   double& xiforc;
+
+  static SetblOutputView fromXFoil(XFoil& xfoil);
 };

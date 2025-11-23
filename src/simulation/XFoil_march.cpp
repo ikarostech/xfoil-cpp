@@ -9,6 +9,54 @@ using Eigen::Vector;
 using Eigen::Vector2d;
 using Eigen::VectorXd;
 
+SetblInputView SetblInputView::fromXFoil(const XFoil& xfoil) {
+  const auto& lattice = xfoil.boundaryLayerWorkflow.lattice;
+  return SetblInputView{
+      xfoil.lblini,
+      {lattice.top.profiles.edgeVelocity, lattice.bottom.profiles.edgeVelocity},
+      {lattice.top.profiles.skinFrictionCoeff, lattice.bottom.profiles.skinFrictionCoeff},
+      {lattice.top.profiles.momentumThickness, lattice.bottom.profiles.momentumThickness},
+      {lattice.top.profiles.displacementThickness, lattice.bottom.profiles.displacementThickness},
+      {lattice.top.profiles.massFlux, lattice.bottom.profiles.massFlux},
+      {lattice.top.skinFrictionCoeffHistory, lattice.bottom.skinFrictionCoeffHistory},
+      {lattice.top.transitionIndex, lattice.bottom.transitionIndex}};
+}
+
+SetblOutputView SetblOutputView::fromXFoil(XFoil& xfoil) {
+  auto& lattice = xfoil.boundaryLayerWorkflow.lattice;
+  return SetblOutputView{
+      xfoil.lblini,
+      xfoil.gm1bl,
+      xfoil.qinfbl,
+      xfoil.tkbl,
+      xfoil.tkbl_ms,
+      xfoil.rstbl,
+      xfoil.rstbl_ms,
+      xfoil.hstinv,
+      xfoil.hstinv_ms,
+      xfoil.reybl,
+      xfoil.reybl_re,
+      xfoil.reybl_ms,
+      xfoil.amcrit,
+      {lattice.top.profiles.edgeVelocity, lattice.bottom.profiles.edgeVelocity},
+      {lattice.top.profiles.skinFrictionCoeff, lattice.bottom.profiles.skinFrictionCoeff},
+      {lattice.top.profiles.momentumThickness, lattice.bottom.profiles.momentumThickness},
+      {lattice.top.profiles.displacementThickness, lattice.bottom.profiles.displacementThickness},
+      {lattice.top.profiles.massFlux, lattice.bottom.profiles.massFlux},
+      {lattice.top.skinFrictionCoeffHistory, lattice.bottom.skinFrictionCoeffHistory},
+      {lattice.top.transitionIndex, lattice.bottom.transitionIndex},
+      xfoil.va,
+      xfoil.vb,
+      xfoil.vdel,
+      xfoil.vm,
+      xfoil.vz,
+      xfoil.tran,
+      xfoil.turb,
+      xfoil.wake,
+      xfoil.simi,
+      xfoil.xiforc};
+}
+
 XFoil::MixedModeStationContext XFoil::prepareMixedModeStation(int side, int ibl,
                                                               int itrold,
                                                               double& ami) {
@@ -168,55 +216,6 @@ double XFoil::calcHtarg(int ibl, int is, bool wake) {
            0.15 * (boundaryLayerWorkflow.state.station2.param.xz - boundaryLayerWorkflow.state.station1.param.xz) / boundaryLayerWorkflow.state.station1.param.tz;
   }
 }
-
-SetblInputView XFoil::makeSetblInputView() const {
-  const auto& lattice = boundaryLayerWorkflow.lattice;
-  return SetblInputView{
-      lblini,
-      {lattice.top.profiles.edgeVelocity, lattice.bottom.profiles.edgeVelocity},
-      {lattice.top.profiles.skinFrictionCoeff, lattice.bottom.profiles.skinFrictionCoeff},
-      {lattice.top.profiles.momentumThickness, lattice.bottom.profiles.momentumThickness},
-      {lattice.top.profiles.displacementThickness, lattice.bottom.profiles.displacementThickness},
-      {lattice.top.profiles.massFlux, lattice.bottom.profiles.massFlux},
-      {lattice.top.skinFrictionCoeffHistory, lattice.bottom.skinFrictionCoeffHistory},
-      {lattice.top.transitionIndex, lattice.bottom.transitionIndex}};
-}
-
-SetblOutputView XFoil::makeSetblOutputView() {
-  auto& lattice = boundaryLayerWorkflow.lattice;
-  return SetblOutputView{
-      lblini,
-      gm1bl,
-      qinfbl,
-      tkbl,
-      tkbl_ms,
-      rstbl,
-      rstbl_ms,
-      hstinv,
-      hstinv_ms,
-      reybl,
-      reybl_re,
-      reybl_ms,
-      amcrit,
-      {lattice.top.profiles.edgeVelocity, lattice.bottom.profiles.edgeVelocity},
-      {lattice.top.profiles.skinFrictionCoeff, lattice.bottom.profiles.skinFrictionCoeff},
-      {lattice.top.profiles.momentumThickness, lattice.bottom.profiles.momentumThickness},
-      {lattice.top.profiles.displacementThickness, lattice.bottom.profiles.displacementThickness},
-      {lattice.top.profiles.massFlux, lattice.bottom.profiles.massFlux},
-      {lattice.top.skinFrictionCoeffHistory, lattice.bottom.skinFrictionCoeffHistory},
-      {lattice.top.transitionIndex, lattice.bottom.transitionIndex},
-      va,
-      vb,
-      vdel,
-      vm,
-      vz,
-      tran,
-      turb,
-      wake,
-      simi,
-      xiforc};
-}
-
 
 SetblOutputView XFoil::setbl(const SetblInputView& input,
                                     SetblOutputView output) {

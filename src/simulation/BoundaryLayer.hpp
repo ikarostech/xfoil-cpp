@@ -22,6 +22,26 @@ class BoundaryLayerWorkflow {
     SidePair<Eigen::VectorXd> unew;
     SidePair<Eigen::VectorXd> u_ac;
   };
+  struct QtanResult {
+    Eigen::VectorXd qnew;
+    Eigen::VectorXd q_ac;
+  };
+  struct ClContributions {
+    double cl = 0.0;
+    double cl_a = 0.0;
+    double cl_ms = 0.0;
+    double cl_ac = 0.0;
+  };
+  struct BoundaryLayerDelta {
+    Eigen::VectorXd dskinFrictionCoeff;
+    Eigen::VectorXd dmomentumThickness;
+    Eigen::VectorXd ddisplacementThickness;
+    Eigen::VectorXd dedgeVelocity;
+  };
+  struct BoundaryLayerMetrics {
+    double rmsContribution = 0.0;
+    double maxChange = 0.0;
+  };
   struct MixedModeStationContext {
     bool simi = false;
     bool wake = false;
@@ -120,6 +140,19 @@ class BoundaryLayerWorkflow {
   double fallbackEdgeVelocity(int side, int stationIndex,
                               EdgeVelocityFallbackMode edgeMode) const;
   EdgeVelocityDistribution computeNewUeDistribution(const XFoil& xfoil) const;
+  QtanResult computeQtan(const EdgeVelocityDistribution& distribution) const;
+  ClContributions computeClFromEdgeVelocityDistribution(
+      const XFoil& xfoil, const EdgeVelocityDistribution& distribution) const;
+  BoundaryLayerDelta buildBoundaryLayerDelta(
+      int side, const Eigen::VectorXd& unew_side,
+      const Eigen::VectorXd& u_ac_side, double dac,
+      const XFoil& xfoil) const;
+  BoundaryLayerMetrics evaluateSegmentRelaxation(
+      int side, const BoundaryLayerDelta& delta, double dhi, double dlo,
+      double& relaxation) const;
+  BoundaryLayerSideProfiles applyBoundaryLayerDelta(
+      int side, const BoundaryLayerDelta& delta, double relaxation,
+      XFoil& xfoil) const;
   void syncStationRegimeStates(int side, int stationIndex, bool wake,
                                XFoil& xfoil);
 
