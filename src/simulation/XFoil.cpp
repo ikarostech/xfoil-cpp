@@ -33,9 +33,18 @@ XFoil::CompressibilityParams XFoil::buildCompressibilityParams() const {
   const double current_mach = analysis_state_.currentMach;
   const double beta = std::sqrt(1.0 - current_mach * current_mach);
   const double beta_msq = -0.5 / beta;
-  const double bfac = 0.5 * current_mach * current_mach / (1.0 + beta);
-  const double bfac_msq = 0.5 / (1.0 + beta) - bfac / (1.0 + beta) * beta_msq;
-  return {beta, beta_msq, bfac, bfac_msq};
+  const double prandtlGlauertFactor =
+      0.5 * current_mach * current_mach / (1.0 + beta);
+  const double prandtlGlauertFactor_msq =
+      0.5 / (1.0 + beta) -
+      prandtlGlauertFactor / (1.0 + beta) * beta_msq;
+  const double karmanTsienFactor =
+      (current_mach / (1.0 + beta)) * (current_mach / (1.0 + beta));
+  const double karmanTsienFactor_msq =
+      1.0 / ((1.0 + beta) * (1.0 + beta)) -
+      2.0 * karmanTsienFactor / (1.0 + beta) * beta_msq;
+  return {beta, beta_msq, karmanTsienFactor, karmanTsienFactor_msq,
+          prandtlGlauertFactor, prandtlGlauertFactor_msq};
 }
 
 XFoil::PressureCoefficientResult XFoil::computePressureCoefficient(
@@ -43,18 +52,19 @@ XFoil::PressureCoefficientResult XFoil::computePressureCoefficient(
     const CompressibilityParams &params) const {
   const double velocity_ratio = tangential_velocity / analysis_state_.qinf;
   const double cginc = 1.0 - velocity_ratio * velocity_ratio;
-  const double denom = params.beta + params.bfac * cginc;
+  const double denom = params.beta + params.prandtlGlauertFactor * cginc;
   const double pressure_coefficient = cginc / denom;
   const double cp_msq =
       -pressure_coefficient / denom *
-      (params.beta_msq + params.bfac_msq * cginc);
+      (params.beta_msq + params.prandtlGlauertFactor_msq * cginc);
 
   double cp_velocity_derivative = 0.0;
   if (velocity_derivative != 0.0) {
     const double freestream_speed = analysis_state_.qinf;
     const double cpi =
         -2.0 * tangential_velocity / (freestream_speed * freestream_speed);
-    const double cpc_cpi = (1.0 - params.bfac * pressure_coefficient) / denom;
+    const double cpc_cpi =
+        (1.0 - params.prandtlGlauertFactor * pressure_coefficient) / denom;
     cp_velocity_derivative = cpc_cpi * cpi * velocity_derivative;
   }
 

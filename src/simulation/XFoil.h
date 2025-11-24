@@ -195,8 +195,10 @@ class XFoil {
   struct CompressibilityParams {
     double beta;
     double beta_msq;
-    double bfac;
-    double bfac_msq;
+    double karmanTsienFactor;
+    double karmanTsienFactor_msq;
+    double prandtlGlauertFactor;
+    double prandtlGlauertFactor_msq;
   };
 
   struct PressureCoefficientResult {

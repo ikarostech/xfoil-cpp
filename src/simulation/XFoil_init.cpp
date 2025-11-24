@@ -143,15 +143,9 @@ void XFoil::resetVariables() {
 }
 
 bool XFoil::comset() {
-  //---- set karman-tsien parameter tklam
-  double beta, beta_msq;
-  const double current_mach = analysis_state_.currentMach;
-  beta = sqrt(1.0 - current_mach * current_mach);
-  beta_msq = -0.5 / beta;
-
-  tklam = MathUtil::pow(current_mach / (1.0 + beta), 2);
-  tkl_msq = 1.0 / MathUtil::pow(1.0 + beta, 2) -
-            2.0 * tklam / (1.0 + beta) * beta_msq;
+  const auto params = buildCompressibilityParams();
+  tklam = params.karmanTsienFactor;
+  tkl_msq = params.karmanTsienFactor_msq;
   return true;
 }
 

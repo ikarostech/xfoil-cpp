@@ -150,14 +150,13 @@ void XFoil::applyClComputation(const ClComputation &result) {
 VectorXd XFoil::cpcalc(int n, VectorXd q, double qinf, double minf) {
   VectorXd cp = VectorXd::Zero(n);
   bool denneg = false;
-  double beta, bfac;
-
-  beta = sqrt(1.0 - MathUtil::pow(minf, 2));
-  bfac = 0.5 * MathUtil::pow(minf, 2) / (1.0 + beta);
+  const double beta = sqrt(1.0 - MathUtil::pow(minf, 2));
+  const double prandtlGlauertFactor =
+      0.5 * MathUtil::pow(minf, 2) / (1.0 + beta);
 
   for (int i = 0; i < n; i++) {
     const double cpinc = 1.0 - (q[i] / qinf) * (q[i] / qinf);
-    const double den = beta + bfac * cpinc;
+    const double den = beta + prandtlGlauertFactor * cpinc;
     cp[i] = cpinc / den;
     if (den <= 0.0)
       denneg = true;
