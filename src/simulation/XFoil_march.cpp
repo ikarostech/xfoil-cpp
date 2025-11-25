@@ -264,7 +264,9 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
   msq_clmr = 2.0 * analysis_state_.currentMach * ma_clmr;
 
   //---- set compressibility parameter tklam and derivative tk_msq
-  comset();
+  const auto compressibility = buildCompressibilityParams();
+  tklam = compressibility.karmanTsienFactor;
+  tkl_msq = compressibility.karmanTsienFactor_msq;
 
   //---- set gas constant (= cp/cv)
   output.gm1bl = gamm1;

@@ -177,7 +177,6 @@ class XFoil {
   bool setMach();
 
   // TODO ActualMachにあわせる
-  bool comset();
   double getActualMach(double cls, MachType mach_type);
   double getActualReynolds(double cls, ReynoldsType reynolds_type);
   bool restoreblData(int icom);

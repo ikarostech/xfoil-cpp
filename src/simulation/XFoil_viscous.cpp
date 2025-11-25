@@ -511,7 +511,9 @@ bool XFoil::ViscousIter() {
   if (analysis_state_.controlByAlpha) { //	------- set new freestream mach, re from new cl
     minf_cl = getActualMach(cl, analysis_state_.machType);
     reinf_cl = getActualReynolds(cl, analysis_state_.reynoldsType);
-    comset();
+    const auto params = buildCompressibilityParams();
+    tklam = params.karmanTsienFactor;
+    tkl_msq = params.karmanTsienFactor_msq;
   } else { //	------- set new inviscid speeds qinv and inviscidEdgeVelocity for new alpha
     auto qiset_result = qiset();
     qinv = std::move(qiset_result.qinv);

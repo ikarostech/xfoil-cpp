@@ -142,13 +142,6 @@ void XFoil::resetVariables() {
   xt_x2 = xt_t2 = xt_d2 = xt_u2 = 0.0;
 }
 
-bool XFoil::comset() {
-  const auto params = buildCompressibilityParams();
-  tklam = params.karmanTsienFactor;
-  tkl_msq = params.karmanTsienFactor_msq;
-  return true;
-}
-
 void XFoil::writeString(std::string str) { *m_pOutStream << str; }
 
 double XFoil::getActualMach(double cls, MachType mach_control) {
@@ -216,7 +209,9 @@ bool XFoil::saveblData(int icom) {
 bool XFoil::setMach() {
   minf_cl = getActualMach(1.0, analysis_state_.machType);
   reinf_cl = getActualReynolds(1.0, analysis_state_.reynoldsType);
-  comset();
+  const auto params = buildCompressibilityParams();
+  tklam = params.karmanTsienFactor;
+  tkl_msq = params.karmanTsienFactor_msq;
   const int point_count = foil.foil_shape.n;
   cpi = cpcalc(point_count, qinv, analysis_state_.qinf, analysis_state_.currentMach);
   if (analysis_state_.viscous) {
