@@ -75,7 +75,7 @@ Eigen::Vector2d computePsiGradient(const Foil& foil, int node_index,
 
 }  // namespace
 
-bool Foil::xyWake(int wake_point_count, Eigen::VectorXd& apanel,
+bool Foil::xyWake(int wake_point_count,
                   const Eigen::Matrix2Xd& gamu,
                   const Eigen::Matrix2Xd& surface_vortex, double alfa,
                   double qinf) {
@@ -89,9 +89,11 @@ bool Foil::xyWake(int wake_point_count, Eigen::VectorXd& apanel,
   wake_shape.n = wake_point_count;
   wake_shape.normal_vector = Eigen::Matrix2Xd::Zero(2, total_nodes);
   wake_shape.spline_length = Eigen::VectorXd::Zero(total_nodes);
+  wake_shape.angle_panel = Eigen::VectorXd::Zero(total_nodes);
   wake_shape.points.block(0, 0, 2, point_count) = foil_shape.points;
   wake_shape.normal_vector.block(0, 0, 2, point_count) = foil_shape.normal_vector;
   wake_shape.spline_length.head(point_count) = foil_shape.spline_length;
+  wake_shape.angle_panel.head(point_count) = foil_shape.angle_panel;
 
   double ds1 = 0.5 * (foil_shape.spline_length[1] - foil_shape.spline_length[0] +
                       foil_shape.spline_length[point_count - 1] -
@@ -112,9 +114,9 @@ bool Foil::xyWake(int wake_point_count, Eigen::VectorXd& apanel,
   Eigen::Vector2d psi = computePsiGradient(*this, point_count,
                                            wake_shape.points.col(point_count),
                                            gamu, surface_vortex, alfa, qinf,
-                                           apanel);
+                                           wake_shape.angle_panel);
   wake_shape.normal_vector.col(point_count + 1) = -psi.normalized();
-  apanel[point_count] = std::atan2(psi.y(), psi.x());
+  wake_shape.angle_panel[point_count] = std::atan2(psi.y(), psi.x());
 
   for (int i = point_count + 1; i < total_nodes; i++) {
     const double ds = wake_spacing[i - point_count] -
@@ -133,9 +135,9 @@ bool Foil::xyWake(int wake_point_count, Eigen::VectorXd& apanel,
 
     Eigen::Vector2d psi_next =
         computePsiGradient(*this, i, wake_shape.points.col(i), gamu,
-                           surface_vortex, alfa, qinf, apanel);
+                           surface_vortex, alfa, qinf, wake_shape.angle_panel);
     wake_shape.normal_vector.col(i + 1) = -psi_next.normalized();
-    apanel[i] = std::atan2(psi_next.y(), psi_next.x());
+    wake_shape.angle_panel[i] = std::atan2(psi_next.y(), psi_next.x());
   }
 
   return true;

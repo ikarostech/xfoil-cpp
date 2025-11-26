@@ -108,7 +108,7 @@ bool XFoil::qdcalc() {
   for (int i = 0; i < point_count; i++) {
     PsiResult psi_result =
         pswlin(foil, i, foil.foil_shape.points.col(i),
-               foil.foil_shape.normal_vector.col(i), point_count, foil.wake_shape.n, apanel);
+               foil.foil_shape.normal_vector.col(i), point_count, foil.wake_shape.n, foil.wake_shape.angle_panel);
     bij.row(i).segment(point_count, foil.wake_shape.n) = -psi_result.dzdm.segment(point_count, foil.wake_shape.n).transpose();
   }
 
@@ -134,14 +134,14 @@ bool XFoil::qdcalc() {
         psilin(foil, i, foil.wake_shape.points.col(i),
                foil.wake_shape.normal_vector.col(i), true, point_count, gamu,
                surface_vortex, analysis_state_.alpha, analysis_state_.qinf,
-               apanel, foil.edge.sharp, foil.edge.ante, foil.edge.dste,
+               foil.wake_shape.angle_panel, foil.edge.sharp, foil.edge.ante, foil.edge.dste,
                foil.edge.aste);
     cij.row(iw) = psi_result.dqdg.head(point_count).transpose();
     dij.row(i).head(point_count) = psi_result.dqdm.head(point_count).transpose();
     //------ wake contribution
     psi_result =
         pswlin(foil, i, foil.wake_shape.points.col(i),
-               foil.wake_shape.normal_vector.col(i), point_count, foil.wake_shape.n, apanel);
+               foil.wake_shape.normal_vector.col(i), point_count, foil.wake_shape.n, foil.wake_shape.angle_panel);
     dij.row(i).segment(point_count, foil.wake_shape.n) = psi_result.dqdm.segment(point_count, foil.wake_shape.n).transpose();
   }
 
@@ -219,7 +219,7 @@ Matrix2Xd XFoil::qwcalc() {
         psilin(foil, i, foil.wake_shape.points.col(i),
                foil.wake_shape.normal_vector.col(i), false, point_count, gamu,
                surface_vortex, analysis_state_.alpha, analysis_state_.qinf,
-               apanel, foil.edge.sharp,
+               foil.wake_shape.angle_panel, foil.edge.sharp,
                foil.edge.ante, foil.edge.dste, foil.edge.aste)
             .qtan;
   }

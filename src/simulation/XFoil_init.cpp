@@ -55,7 +55,6 @@ bool XFoil::initialize() {
 
 void XFoil::initializeDataStructures() {
   const int total_nodes_with_wake = foil.foil_shape.n + foil.wake_shape.n;
-  apanel = VectorXd::Zero(total_nodes_with_wake);
   auto& cache = ensureInitState(this);
   cache.blsav.fill(blData{});
 

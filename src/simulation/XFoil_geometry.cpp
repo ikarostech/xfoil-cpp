@@ -42,7 +42,6 @@ bool XFoil::abcopy(Matrix2Xd copyFrom) {
   foil = Foil(foil_points, point_count);
   foil.wake_shape.n = wake_point_count;
   updateTrailingEdgeState();
-  apanel.head(point_count) = apcalc(foil.foil_shape.points);
 
   lgamu = false;
   lwake = false;
@@ -65,10 +64,6 @@ VectorXd XFoil::apcalc(Matrix2Xd points) {
   for (int i = 0; i < point_count; i++) {
     Vector2d diff = points.col((i + 1) % point_count) - points.col(i);
     result[i] = atan2(diff.x(), -diff.y());
-  }
-  //---- TE panel
-  if (foil.edge.sharp) {
-    result[point_count - 1] = std::numbers::pi;
   }
   return result;
 }
@@ -127,7 +122,7 @@ void XFoil::updateTrailingEdgeState() {
 }
 
 bool XFoil::xyWake() {
-  if (!foil.xyWake(foil.wake_shape.n, apanel, gamu, surface_vortex, analysis_state_.alpha,
+  if (!foil.xyWake(foil.wake_shape.n, gamu, surface_vortex, analysis_state_.alpha,
                    analysis_state_.qinf)) {
     return false;
   }

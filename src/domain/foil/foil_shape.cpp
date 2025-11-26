@@ -39,6 +39,18 @@ Eigen::Matrix2Xd FoilShape::calcNormalVector(const Eigen::Matrix2Xd &dpoints_ds)
   return normal_vector;
 }
 
+Eigen::VectorXd FoilShape::calcAnglePanel() const {
+  Eigen::VectorXd result = Eigen::VectorXd::Zero(n);
+  if (n == 0) {
+    return result;
+  }
+  //---- set angles of airfoil panels
+  for (int i = 0; i < n; i++) {
+    Eigen::Vector2d diff = points.col((i + 1) % n) - points.col(i);
+    result[i] = std::atan2(diff.x(), -diff.y());
+  }
+  return result;
+}
 FoilShape::FoilShape(const Eigen::Matrix2Xd& points, int n) {
   setFoilShape(points, n);
 }
@@ -49,4 +61,5 @@ void FoilShape::setFoilShape(const Eigen::Matrix2Xd& points, int n) {
   this->spline_length = calcSpline();
   this->dpoints_ds = calcDPointsDs();
   this->normal_vector = calcNormalVector(this->dpoints_ds);
+  this->angle_panel = calcAnglePanel();
 }

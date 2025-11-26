@@ -24,7 +24,7 @@ class Foil {
       edge = Edge(foil_shape);
     }
 
-    bool xyWake(int wake_point_count, Eigen::VectorXd &apanel,
+    bool xyWake(int wake_point_count,
                 const Eigen::Matrix2Xd &gamu,
                 const Eigen::Matrix2Xd &surface_vortex,
                 double alfa, double qinf);

@@ -205,7 +205,7 @@ bool XFoil::ggcalc() {
         psilin(foil, i, foil.foil_shape.points.col(i),
                foil.foil_shape.normal_vector.col(i), true, point_count, gamu,
                surface_vortex, analysis_state_.alpha, analysis_state_.qinf,
-               apanel, foil.edge.sharp, foil.edge.ante, foil.edge.dste,
+               foil.foil_shape.angle_panel, foil.edge.sharp, foil.edge.ante, foil.edge.dste,
                foil.edge.aste);
 
     const Vector2d res = analysis_state_.qinf *
@@ -263,7 +263,7 @@ bool XFoil::ggcalc() {
     PsiResult psi_result =
         psilin(foil, -1, bis, normal_bis, true, point_count, gamu,
                surface_vortex, analysis_state_.alpha, analysis_state_.qinf,
-               apanel, foil.edge.sharp, foil.edge.ante, foil.edge.dste,
+               foil.foil_shape.angle_panel, foil.edge.sharp, foil.edge.ante, foil.edge.dste,
                foil.edge.aste);
 
     //----- dres/dgamma

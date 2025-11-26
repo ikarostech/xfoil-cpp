@@ -350,7 +350,6 @@ class XFoil {
 
   Matrix2Xd surface_vortex;
   Matrix2Xd gamu;
-  VectorXd apanel;
   double sst, sst_go, sst_gp, gamte, sigte;
   Matrix2Xd qinvu;
   VectorXd qinv, qinv_a, qvis;
