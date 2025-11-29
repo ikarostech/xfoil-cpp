@@ -189,6 +189,7 @@ Matrix2Xd XFoil::gamqv() const {
 bool XFoil::ggcalc() {
 
   double res;
+  auto& cache = aerodynamicCache;
 
   writeString("   Calculating unit vorticity distributions ...\n");
   const int point_count = foil.foil_shape.n;
@@ -203,7 +204,7 @@ bool XFoil::ggcalc() {
     //------ calculate psi and dpsi/dgamma array for current node
     PsiResult psi_result =
         psilin(foil, i, foil.foil_shape.points.col(i),
-               foil.foil_shape.normal_vector.col(i), true, point_count, gamu,
+               foil.foil_shape.normal_vector.col(i), true, point_count, cache.gamu,
                surface_vortex, analysis_state_.alpha, analysis_state_.qinf,
                foil.foil_shape.angle_panel, foil.edge.sharp, foil.edge.ante, foil.edge.dste,
                foil.edge.aste);
@@ -214,7 +215,7 @@ bool XFoil::ggcalc() {
 
     //------ dres/dgamma
     dpsi_dgam.row(i).head(point_count) = psi_result.dzdg.head(point_count);
-    bij.row(i).head(point_count) = -psi_result.dzdm.head(point_count);
+    cache.bij.row(i).head(point_count) = -psi_result.dzdm.head(point_count);
 
     //------ dres/dpsio
     dpsi_dgam(i, point_count) = -1.0;
@@ -234,7 +235,7 @@ bool XFoil::ggcalc() {
   psi.col(point_count).y() = -res;
 
   //---- set up Kutta condition (no direct source influence)
-  bij.row(point_count).head(point_count) = VectorXd::Zero(point_count);
+  cache.bij.row(point_count).head(point_count) = VectorXd::Zero(point_count);
 
   if (foil.edge.sharp) {
     //----- set zero internal velocity in TE corner
@@ -261,7 +262,7 @@ bool XFoil::ggcalc() {
 
     //----- set velocity component along bisector line
     PsiResult psi_result =
-        psilin(foil, -1, bis, normal_bis, true, point_count, gamu,
+        psilin(foil, -1, bis, normal_bis, true, point_count, cache.gamu,
                surface_vortex, analysis_state_.alpha, analysis_state_.qinf,
                foil.foil_shape.angle_panel, foil.edge.sharp, foil.edge.ante, foil.edge.dste,
                foil.edge.aste);
@@ -269,7 +270,7 @@ bool XFoil::ggcalc() {
     //----- dres/dgamma
     dpsi_dgam.row(point_count - 1).head(point_count) = psi_result.dzdg.head(point_count);
     //----- -dres/dmass
-    bij.row(point_count - 1).head(point_count) = -psi_result.dzdm.head(point_count);
+    cache.bij.row(point_count - 1).head(point_count) = -psi_result.dzdm.head(point_count);
 
     //----- dres/dpsio
     dpsi_dgam(point_count - 1, point_count);
@@ -279,25 +280,25 @@ bool XFoil::ggcalc() {
   }
 
   //---- lu-factor coefficient matrix aij
-  psi_gamma_lu = FullPivLU<MatrixXd>(dpsi_dgam);
+  cache.psi_gamma_lu = FullPivLU<MatrixXd>(dpsi_dgam);
   lqaij = true;
   VectorXd gamu_temp(point_count + 1);
   //---- solve system for the two vorticity distributions
 
-  gamu_temp = psi_gamma_lu.solve(psi.row(0).transpose());
+  gamu_temp = cache.psi_gamma_lu.solve(psi.row(0).transpose());
 
   for (int iu = 0; iu <= point_count; iu++) {
-    gamu.col(iu).x() = gamu_temp[iu];
+    cache.gamu.col(iu).x() = gamu_temp[iu];
   }
 
-  gamu_temp = psi_gamma_lu.solve(psi.row(1).transpose());
+  gamu_temp = cache.psi_gamma_lu.solve(psi.row(1).transpose());
   for (int iu = 0; iu <= point_count; iu++) {
-    gamu.col(iu).y() = gamu_temp[iu];
+    cache.gamu.col(iu).y() = gamu_temp[iu];
   }
 
   //---- set inviscid alpha=0,90 surface speeds for this geometry
   for (int i = 0; i <= point_count; i++) {
-    qinvu.col(i) = gamu.col(i);
+    cache.qinvu.col(i) = cache.gamu.col(i);
   }
 
   lgamu = true;
@@ -317,8 +318,8 @@ void updateSurfaceVortexFromGamu(XFoil &xfoil) {
       {-sin(xfoil.analysis_state_.alpha), cos(xfoil.analysis_state_.alpha)}};
 
   for (int i = 0; i < xfoil.foil.foil_shape.n; i++) {
-    xfoil.surface_vortex(0, i) = rotateMatrix.row(0).dot(xfoil.gamu.col(i));
-    xfoil.surface_vortex(1, i) = rotateMatrix.row(1).dot(xfoil.gamu.col(i));
+    xfoil.surface_vortex(0, i) = rotateMatrix.row(0).dot(xfoil.aerodynamicCache.gamu.col(i));
+    xfoil.surface_vortex(1, i) = rotateMatrix.row(1).dot(xfoil.aerodynamicCache.gamu.col(i));
   }
 }
 

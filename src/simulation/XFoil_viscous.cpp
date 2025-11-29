@@ -95,11 +95,11 @@ bool XFoil::qdcalc() {
   if (!ladij) {
     //----- calculate source influence matrix for airfoil surface if it doesn't
     // exist
-    bij.block(0, 0, point_count + 1, point_count) =
-        psi_gamma_lu.solve(bij.block(0, 0, point_count + 1, point_count)).eval();
+    aerodynamicCache.bij.block(0, 0, point_count + 1, point_count) =
+        aerodynamicCache.psi_gamma_lu.solve(aerodynamicCache.bij.block(0, 0, point_count + 1, point_count)).eval();
 
     //------- store resulting dgam/dsig = dqtan/dsig vector
-    dij.block(0, 0, point_count, point_count) = bij.block(0, 0, point_count, point_count);
+    aerodynamicCache.dij.block(0, 0, point_count, point_count) = aerodynamicCache.bij.block(0, 0, point_count, point_count);
 
     ladij = true;
   }
@@ -109,18 +109,18 @@ bool XFoil::qdcalc() {
     PsiResult psi_result =
         pswlin(foil, i, foil.foil_shape.points.col(i),
                foil.foil_shape.normal_vector.col(i), point_count, foil.wake_shape.n, foil.wake_shape.angle_panel);
-    bij.row(i).segment(point_count, foil.wake_shape.n) = -psi_result.dzdm.segment(point_count, foil.wake_shape.n).transpose();
+    aerodynamicCache.bij.row(i).segment(point_count, foil.wake_shape.n) = -psi_result.dzdm.segment(point_count, foil.wake_shape.n).transpose();
   }
 
   //---- set up kutta condition (no direct source influence)
 
-  bij.row(point_count).segment(point_count, foil.wake_shape.n).setZero();
+  aerodynamicCache.bij.row(point_count).segment(point_count, foil.wake_shape.n).setZero();
 
   //---- multiply by inverse of factored dpsi/dgam matrix
-  bij.block(0, point_count, point_count + 1, foil.wake_shape.n) =
-      psi_gamma_lu.solve(bij.block(0, point_count, point_count + 1, foil.wake_shape.n)).eval();
+  aerodynamicCache.bij.block(0, point_count, point_count + 1, foil.wake_shape.n) =
+      aerodynamicCache.psi_gamma_lu.solve(aerodynamicCache.bij.block(0, point_count, point_count + 1, foil.wake_shape.n)).eval();
   //---- set the source influence matrix for the wake sources
-  dij.block(0, point_count, point_count, foil.wake_shape.n) = bij.block(0, point_count, point_count, foil.wake_shape.n);
+  aerodynamicCache.dij.block(0, point_count, point_count, foil.wake_shape.n) = aerodynamicCache.bij.block(0, point_count, point_count, foil.wake_shape.n);
 
   //**** now we need to calculate the influence of sources on the wake
   // velocities
@@ -132,27 +132,27 @@ bool XFoil::qdcalc() {
     //------ airfoil contribution at wake panel node
     PsiResult psi_result =
         psilin(foil, i, foil.wake_shape.points.col(i),
-               foil.wake_shape.normal_vector.col(i), true, point_count, gamu,
+               foil.wake_shape.normal_vector.col(i), true, point_count, aerodynamicCache.gamu,
                surface_vortex, analysis_state_.alpha, analysis_state_.qinf,
                foil.wake_shape.angle_panel, foil.edge.sharp, foil.edge.ante, foil.edge.dste,
                foil.edge.aste);
     cij.row(iw) = psi_result.dqdg.head(point_count).transpose();
-    dij.row(i).head(point_count) = psi_result.dqdm.head(point_count).transpose();
+    aerodynamicCache.dij.row(i).head(point_count) = psi_result.dqdm.head(point_count).transpose();
     //------ wake contribution
     psi_result =
         pswlin(foil, i, foil.wake_shape.points.col(i),
                foil.wake_shape.normal_vector.col(i), point_count, foil.wake_shape.n, foil.wake_shape.angle_panel);
-    dij.row(i).segment(point_count, foil.wake_shape.n) = psi_result.dqdm.segment(point_count, foil.wake_shape.n).transpose();
+    aerodynamicCache.dij.row(i).segment(point_count, foil.wake_shape.n) = psi_result.dqdm.segment(point_count, foil.wake_shape.n).transpose();
   }
 
   //---- add on effect of all sources on airfoil vorticity which effects wake
   // qtan
-  dij.block(point_count, 0, foil.wake_shape.n, point_count) += cij * dij.topLeftCorner(point_count, point_count);
+  aerodynamicCache.dij.block(point_count, 0, foil.wake_shape.n, point_count) += cij * aerodynamicCache.dij.topLeftCorner(point_count, point_count);
 
-  dij.block(point_count, point_count, foil.wake_shape.n, foil.wake_shape.n) += cij * bij.block(0, point_count, point_count, foil.wake_shape.n);
+  aerodynamicCache.dij.block(point_count, point_count, foil.wake_shape.n, foil.wake_shape.n) += cij * aerodynamicCache.bij.block(0, point_count, point_count, foil.wake_shape.n);
 
   //---- make sure first wake point has same velocity as trailing edge
-  dij.row(point_count) = dij.row(point_count - 1);
+  aerodynamicCache.dij.row(point_count) = aerodynamicCache.dij.row(point_count - 1);
 
   lwdij = true;
   return true;
@@ -175,8 +175,8 @@ XFoil::TangentialVelocityResult XFoil::qiset() const {
   result.qinv_a = VectorXd::Zero(total_nodes_with_wake);
 
   for (int i = 0; i < total_nodes_with_wake; i++) {
-    result.qinv[i] = rotateMatrix.row(0).dot(qinvu.col(i));
-    result.qinv_a[i] = rotateMatrix.row(1).dot(qinvu.col(i));
+    result.qinv[i] = rotateMatrix.row(0).dot(aerodynamicCache.qinvu.col(i));
+    result.qinv_a[i] = rotateMatrix.row(1).dot(aerodynamicCache.qinvu.col(i));
   }
 
   return result;
@@ -208,7 +208,7 @@ VectorXd XFoil::qvfue() const {
  * --------------------------------------------------------------- */
 Matrix2Xd XFoil::qwcalc() {
   const int point_count = foil.foil_shape.n;
-  Matrix2Xd updated_qinvu = qinvu;
+  Matrix2Xd updated_qinvu = aerodynamicCache.qinvu;
 
   if (point_count >= 1 && point_count < updated_qinvu.cols()) {
     updated_qinvu.col(point_count) = updated_qinvu.col(point_count - 1);
@@ -217,7 +217,7 @@ Matrix2Xd XFoil::qwcalc() {
   for (int i = point_count + 1; i < point_count + foil.wake_shape.n; i++) {
     updated_qinvu.col(i) =
         psilin(foil, i, foil.wake_shape.points.col(i),
-               foil.wake_shape.normal_vector.col(i), false, point_count, gamu,
+               foil.wake_shape.normal_vector.col(i), false, point_count, aerodynamicCache.gamu,
                surface_vortex, analysis_state_.alpha, analysis_state_.qinf,
                foil.wake_shape.angle_panel, foil.edge.sharp,
                foil.edge.ante, foil.edge.dste, foil.edge.aste)
@@ -256,10 +256,10 @@ XFoil::LeTeSensitivities XFoil::computeLeTeSensitivities(int ile1, int ile2,
       const int j = boundaryLayerWorkflow.lattice.get(js).stationToPanel[jbl];
       const int jv = boundaryLayerWorkflow.lattice.get(js).stationToSystem[jbl];
       const double panelInfluenceFactor_js = boundaryLayerWorkflow.lattice.get(js).panelInfluenceFactor[jbl];
-      sensitivities.ule1_m[jv] = -boundaryLayerWorkflow.lattice.top.panelInfluenceFactor[0] * panelInfluenceFactor_js * dij(ile1, j);
-      sensitivities.ule2_m[jv] = -boundaryLayerWorkflow.lattice.bottom.panelInfluenceFactor[0] * panelInfluenceFactor_js * dij(ile2, j);
-      sensitivities.ute1_m[jv] = -boundaryLayerWorkflow.lattice.top.panelInfluenceFactor[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex] * panelInfluenceFactor_js * dij(ite1, j);
-      sensitivities.ute2_m[jv] = -boundaryLayerWorkflow.lattice.bottom.panelInfluenceFactor[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex] * panelInfluenceFactor_js * dij(ite2, j);
+      sensitivities.ule1_m[jv] = -boundaryLayerWorkflow.lattice.top.panelInfluenceFactor[0] * panelInfluenceFactor_js * aerodynamicCache.dij(ile1, j);
+      sensitivities.ule2_m[jv] = -boundaryLayerWorkflow.lattice.bottom.panelInfluenceFactor[0] * panelInfluenceFactor_js * aerodynamicCache.dij(ile2, j);
+      sensitivities.ute1_m[jv] = -boundaryLayerWorkflow.lattice.top.panelInfluenceFactor[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex] * panelInfluenceFactor_js * aerodynamicCache.dij(ite1, j);
+      sensitivities.ute2_m[jv] = -boundaryLayerWorkflow.lattice.bottom.panelInfluenceFactor[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex] * panelInfluenceFactor_js * aerodynamicCache.dij(ite2, j);
     }
   }
   return sensitivities;
@@ -417,7 +417,7 @@ bool XFoil::viscal() {
     xyWake();
 
   //	---- set velocities on wake from airfoil vorticity for alpha=0, 90
-  qinvu = qwcalc();
+  aerodynamicCache.qinvu = qwcalc();
 
   //	---- set velocities on airfoil and wake for initial alpha
   {

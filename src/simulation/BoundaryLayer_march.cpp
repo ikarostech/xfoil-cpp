@@ -110,7 +110,7 @@ BoundaryLayerWorkflow::computeNewUeDistribution(const XFoil& xfoil) const {
           const double influence =
               -lattice.get(side).panelInfluenceFactor[station] *
               lattice.get(otherSide).panelInfluenceFactor[otherStation] *
-              xfoil.dij(panelIndex, otherPanel);
+              xfoil.aerodynamicCache.dij(panelIndex, otherPanel);
           dui += influence *
                  (lattice.get(otherSide).profiles.massFlux[otherStation] +
                   xfoil.vdel[systemIndex](2, 0));

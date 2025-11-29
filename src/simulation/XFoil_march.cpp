@@ -398,7 +398,7 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
         for (int jbl = 0; jbl < boundaryLayerWorkflow.lattice.get(js).stationCount - 1; ++jbl) {
           int jv = boundaryLayerWorkflow.lattice.get(js).stationToSystem[jbl];
           u2_m[jv] = -boundaryLayerWorkflow.lattice.get(is).panelInfluenceFactor[ibl] * boundaryLayerWorkflow.lattice.get(js).panelInfluenceFactor[jbl] *
-                     dij(boundaryLayerWorkflow.lattice.get(is).stationToPanel[ibl], boundaryLayerWorkflow.lattice.get(js).stationToPanel[jbl]);
+                     aerodynamicCache.dij(boundaryLayerWorkflow.lattice.get(is).stationToPanel[ibl], boundaryLayerWorkflow.lattice.get(js).stationToPanel[jbl]);
           d2_m[jv] = d2_u2 * u2_m[jv];
         }
       }
@@ -1280,7 +1280,7 @@ bool XFoil::ueset() {
       for (int js = 1; js <= 2; js++) {
         for (int jbl = 0; jbl < boundaryLayerWorkflow.lattice.get(js).stationCount - 1; ++jbl) {
           double ue_m = -boundaryLayerWorkflow.lattice.get(is).panelInfluenceFactor[ibl] * boundaryLayerWorkflow.lattice.get(js).panelInfluenceFactor[jbl] *
-                        dij(boundaryLayerWorkflow.lattice.get(is).stationToPanel[ibl],
+                        aerodynamicCache.dij(boundaryLayerWorkflow.lattice.get(is).stationToPanel[ibl],
                             boundaryLayerWorkflow.lattice.get(js).stationToPanel[jbl]);
           dui += ue_m * boundaryLayerWorkflow.lattice.get(js).profiles.massFlux[jbl];
         }

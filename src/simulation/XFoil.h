@@ -59,6 +59,7 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 #include "domain/boundary_layer/boundary_layer_diff_solver.hpp"
 #include "domain/boundary_layer/boundary_layer_variables_solver.hpp"
 #include "domain/foil/foil.hpp"
+#include "domain/foil/FoilAerodynamicCache.hpp"
 #include "simulation/psi.hpp"
 #include "simulation/skin_friction_coefficients.hpp"
 #include "simulation/boundary_layer_state.hpp"
@@ -349,13 +350,9 @@ class XFoil {
 
 
   Matrix2Xd surface_vortex;
-  Matrix2Xd gamu;
+  FoilAerodynamicCache aerodynamicCache;
   double sst, sst_go, sst_gp, gamte, sigte;
-  Matrix2Xd qinvu;
   VectorXd qinv, qinv_a, qvis;
-  FullPivLU<MatrixXd> psi_gamma_lu;
-  
-  MatrixXd bij, dij;
 
   // Grouped BL Newton system coefficients (Proposal A)
   bool trforc, simi, tran, turb, wake, trfree;

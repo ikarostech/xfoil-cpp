@@ -61,11 +61,11 @@ void XFoil::initializeDataStructures() {
   boundaryLayerWorkflow.lattice.top = BoundaryLayerLattice(IVX);
   boundaryLayerWorkflow.lattice.bottom = BoundaryLayerLattice(IVX);
 
-  bij = MatrixXd::Zero(IQX, IZX);
-  dij = MatrixXd::Zero(IZX, IZX);
+  aerodynamicCache.bij = MatrixXd::Zero(IQX, IZX);
+  aerodynamicCache.dij = MatrixXd::Zero(IZX, IZX);
   cpi = VectorXd::Zero(total_nodes_with_wake);
   cpv = VectorXd::Zero(foil.foil_shape.n);
-  gamu = Matrix2Xd::Zero(2, foil.foil_shape.n + 1);
+  aerodynamicCache.gamu = Matrix2Xd::Zero(2, foil.foil_shape.n + 1);
   surface_vortex = Matrix2Xd::Zero(2, foil.foil_shape.n);
   std::ranges::fill(cache.qf0, 0.0);
   std::ranges::fill(cache.qf1, 0.0);
@@ -73,7 +73,7 @@ void XFoil::initializeDataStructures() {
   std::ranges::fill(cache.qf3, 0.0);
   qinv = VectorXd::Zero(total_nodes_with_wake);
   qinv_a = VectorXd::Zero(total_nodes_with_wake);
-  qinvu = Matrix2Xd::Zero(2, total_nodes_with_wake);
+  aerodynamicCache.qinvu = Matrix2Xd::Zero(2, total_nodes_with_wake);
   qvis = VectorXd::Zero(total_nodes_with_wake);
 
   memset(wgap, 0, sizeof(wgap));

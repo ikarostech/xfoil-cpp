@@ -122,7 +122,7 @@ void XFoil::updateTrailingEdgeState() {
 }
 
 bool XFoil::xyWake() {
-  if (!foil.xyWake(foil.wake_shape.n, gamu, surface_vortex, analysis_state_.alpha,
+  if (!foil.xyWake(foil.wake_shape.n, aerodynamicCache.gamu, surface_vortex, analysis_state_.alpha,
                    analysis_state_.qinf)) {
     return false;
   }
