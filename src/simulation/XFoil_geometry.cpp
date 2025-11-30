@@ -43,9 +43,7 @@ bool XFoil::abcopy(Matrix2Xd copyFrom) {
   foil.wake_shape.n = wake_point_count;
   updateTrailingEdgeState();
 
-  lgamu = false;
   lwake = false;
-  lqaij = false;
   ladij = false;
   lwdij = false;
   lipan = false;

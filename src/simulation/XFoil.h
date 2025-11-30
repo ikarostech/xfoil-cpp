@@ -338,7 +338,7 @@ class XFoil {
 
   double minf_cl, reinf_cl;
 
-  bool lgamu, lqaij, ladij, lwdij;
+  bool ladij, lwdij;
 
   int nsys;
 

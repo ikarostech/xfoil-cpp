@@ -281,7 +281,6 @@ bool XFoil::ggcalc() {
 
   //---- lu-factor coefficient matrix aij
   cache.psi_gamma_lu = FullPivLU<MatrixXd>(dpsi_dgam);
-  lqaij = true;
   VectorXd gamu_temp(point_count + 1);
   //---- solve system for the two vorticity distributions
 
@@ -300,8 +299,6 @@ bool XFoil::ggcalc() {
   for (int i = 0; i <= point_count; i++) {
     cache.qinvu.col(i) = cache.gamu.col(i);
   }
-
-  lgamu = true;
 
   return true;
 }

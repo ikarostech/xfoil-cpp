@@ -88,8 +88,8 @@ void XFoil::initializeDataStructures() {
 }
 
 void XFoil::resetFlags() {
-  lgamu = lwake = lblini = lipan = false;
-  lqaij = ladij = lwdij = lvconv = false;
+  lwake = lblini = lipan = false;
+  ladij = lwdij = lvconv = false;
   analysis_state_.viscous = false;
   analysis_state_.controlByAlpha = false;
   foil.edge.sharp = false;
