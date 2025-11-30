@@ -324,10 +324,6 @@ void updateSurfaceVortexFromGamu(XFoil &xfoil) {
 }
 
 bool specConverge(XFoil &xfoil, SpecTarget target) {
-  // Ensure unit vorticity distributions are available.
-  if (!xfoil.lgamu || !xfoil.lqaij)
-    xfoil.ggcalc();
-
   updateSurfaceVortexFromGamu(xfoil);
 
   auto applyQiset = [&xfoil]() {

@@ -34,6 +34,7 @@ bool XFoil::initXFoilGeometry(int fn, const double *fx, const double *fy) {
   }
 
   abcopy(buffer_points);
+  ggcalc();
   return true;
 }
 
@@ -42,8 +43,6 @@ bool XFoil::initXFoilAnalysis(double Re, double alpha, double Mach,
                               double NCrit, double XtrTop, double XtrBot,
                               ReynoldsType reType, MachType maType,
                               bool bViscous, std::stringstream &outStream) {
-  // Sets Analysis parameters in XFoil
-  m_pOutStream = &outStream;
 
   lblini = false;
   lipan = false;

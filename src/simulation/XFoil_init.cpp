@@ -141,7 +141,12 @@ void XFoil::resetVariables() {
   xt_x2 = xt_t2 = xt_d2 = xt_u2 = 0.0;
 }
 
-void XFoil::writeString(std::string str) { *m_pOutStream << str; }
+void XFoil::writeString(std::string str) {
+  if (!m_pOutStream) {
+    return;
+  }
+  *m_pOutStream << str;
+}
 
 double XFoil::getActualMach(double cls, MachType mach_control) {
   AnalysisState& state = analysis_state_;
