@@ -8,6 +8,8 @@
 #include "domain/coefficient/skin_friction.hpp"
 
 using BoundaryContext = BoundaryLayerWorkflow::MixedModeStationContext;
+using Eigen::Matrix;
+using Eigen::Vector;
 
 bool BoundaryLayerWorkflow::isStartOfWake(const XFoil& xfoil, int side,
                                           int stationIndex) {
@@ -266,7 +268,7 @@ bool BoundaryLayerWorkflow::blsys(XFoil& xfoil) {
   }
 
   if (xfoil.tran) {
-    xfoil.trdif();
+    trdif(xfoil);
   } else if (xfoil.simi) {
     blc = xfoil.blDiffSolver.solve(FlowRegimeEnum::Similarity, state,
                                    skinFriction, xfoil.amcrit);
@@ -296,6 +298,273 @@ bool BoundaryLayerWorkflow::blsys(XFoil& xfoil) {
     blc.d_msq[k] =
         res_u1 * previous.param.uz_ms + res_u2 * current.param.uz_ms + res_ms;
   }
+
+  return true;
+}
+
+bool BoundaryLayerWorkflow::trdif(XFoil& xfoil) {
+  //-----------------------------------------------
+  //     sets up the newton system governing the
+  //     transition interval.  equations governing
+  //     the  laminar  part  x1 < xi < xt  and
+  //     the turbulent part  xt < xi < x2
+  //     are simply summed.
+  //-----------------------------------------------
+  Matrix<double, 4, 5> bl1, bl2, bt1, bt2;
+  Vector<double, 4> blrez, blm, blr, blx, btrez, btm, btr, btx;
+
+  double tt, tt_a1, tt_x1, tt_x2, tt_t1, tt_t2, tt_d1, tt_d2, tt_u1, tt_u2;
+  double tt_ms, tt_re, tt_xf, dt, dt_a1, dt_x1, dt_x2, dt_t1, dt_t2;
+  double dt_d1, dt_d2, dt_u1, dt_u2, dt_ms, dt_re, dt_xf;
+  double ut, ut_a1, ut_x1, ut_x2, ut_t1, ut_t2, ut_d1, ut_d2, ut_u1, ut_u2;
+  double ut_ms, ut_re, ut_xf;
+  double st, st_tt, st_dt, st_ut, st_ms, st_re, st_a1, st_x1, st_x2, st_t1,
+      st_t2;
+  double st_d1, st_d2, st_u1, st_u2, st_xf;
+  double ctr, ctr_hk2;
+
+  xfoil.saveblData(1);
+  xfoil.saveblData(2);
+
+  //---- weighting factors for linear interpolation to transition point
+  double wf2 = (xfoil.xt - state.station1.param.xz) / (state.station2.param.xz - state.station1.param.xz);
+  double wf2_xt = 1.0 / (state.station2.param.xz - state.station1.param.xz);
+
+  double wf2_a1 = wf2_xt * xfoil.xt_a1;
+  double wf2_x1 =
+      wf2_xt * xfoil.xt_x1 + (wf2 - 1.0) / (state.station2.param.xz - state.station1.param.xz);
+  double wf2_x2 = wf2_xt * xfoil.xt_x2 - wf2 / (state.station2.param.xz - state.station1.param.xz);
+  double wf2_t1 = wf2_xt * xfoil.xt_t1;
+  double wf2_t2 = wf2_xt * xfoil.xt_t2;
+  double wf2_d1 = wf2_xt * xfoil.xt_d1;
+  double wf2_d2 = wf2_xt * xfoil.xt_d2;
+  double wf2_u1 = wf2_xt * xfoil.xt_u1;
+  double wf2_u2 = wf2_xt * xfoil.xt_u2;
+  double wf2_ms = wf2_xt * xfoil.xt_ms;
+  double wf2_re = wf2_xt * xfoil.xt_re;
+  double wf2_xf = wf2_xt * xfoil.xt_xf;
+
+  double wf1 = 1.0 - wf2;
+  double wf1_a1 = -wf2_a1;
+  double wf1_x1 = -wf2_x1;
+  double wf1_x2 = -wf2_x2;
+  double wf1_t1 = -wf2_t1;
+  double wf1_t2 = -wf2_t2;
+  double wf1_d1 = -wf2_d1;
+  double wf1_d2 = -wf2_d2;
+  double wf1_u1 = -wf2_u1;
+  double wf1_u2 = -wf2_u2;
+  double wf1_ms = -wf2_ms;
+  double wf1_re = -wf2_re;
+  double wf1_xf = -wf2_xf;
+
+  //-----interpolate primary variables to transition point
+  tt = state.station1.param.tz * wf1 + state.station2.param.tz * wf2;
+  tt_a1 = state.station1.param.tz * wf1_a1 + state.station2.param.tz * wf2_a1;
+  tt_x1 = state.station1.param.tz * wf1_x1 + state.station2.param.tz * wf2_x1;
+  tt_x2 = state.station1.param.tz * wf1_x2 + state.station2.param.tz * wf2_x2;
+  tt_t1 = state.station1.param.tz * wf1_t1 + state.station2.param.tz * wf2_t1 + wf1;
+  tt_t2 = state.station1.param.tz * wf1_t2 + state.station2.param.tz * wf2_t2 + wf2;
+  tt_d1 = state.station1.param.tz * wf1_d1 + state.station2.param.tz * wf2_d1;
+  tt_d2 = state.station1.param.tz * wf1_d2 + state.station2.param.tz * wf2_d2;
+  tt_u1 = state.station1.param.tz * wf1_u1 + state.station2.param.tz * wf2_u1;
+  tt_u2 = state.station1.param.tz * wf1_u2 + state.station2.param.tz * wf2_u2;
+  tt_ms = state.station1.param.tz * wf1_ms + state.station2.param.tz * wf2_ms;
+  tt_re = state.station1.param.tz * wf1_re + state.station2.param.tz * wf2_re;
+  tt_xf = state.station1.param.tz * wf1_xf + state.station2.param.tz * wf2_xf;
+
+  dt = state.station1.param.dz * wf1 + state.station2.param.dz * wf2;
+  dt_a1 = state.station1.param.dz * wf1_a1 + state.station2.param.dz * wf2_a1;
+  dt_x1 = state.station1.param.dz * wf1_x1 + state.station2.param.dz * wf2_x1;
+  dt_x2 = state.station1.param.dz * wf1_x2 + state.station2.param.dz * wf2_x2;
+  dt_t1 = state.station1.param.dz * wf1_t1 + state.station2.param.dz * wf2_t1;
+  dt_t2 = state.station1.param.dz * wf1_t2 + state.station2.param.dz * wf2_t2;
+  dt_d1 = state.station1.param.dz * wf1_d1 + state.station2.param.dz * wf2_d1 + wf1;
+  dt_d2 = state.station1.param.dz * wf1_d2 + state.station2.param.dz * wf2_d2 + wf2;
+  dt_u1 = state.station1.param.dz * wf1_u1 + state.station2.param.dz * wf2_u1;
+  dt_u2 = state.station1.param.dz * wf1_u2 + state.station2.param.dz * wf2_u2;
+  dt_ms = state.station1.param.dz * wf1_ms + state.station2.param.dz * wf2_ms;
+  dt_re = state.station1.param.dz * wf1_re + state.station2.param.dz * wf2_re;
+  dt_xf = state.station1.param.dz * wf1_xf + state.station2.param.dz * wf2_xf;
+
+  ut = state.station1.param.uz * wf1 + state.station2.param.uz * wf2;
+  ut_a1 = state.station1.param.uz * wf1_a1 + state.station2.param.uz * wf2_a1;
+  ut_x1 = state.station1.param.uz * wf1_x1 + state.station2.param.uz * wf2_x1;
+  ut_x2 = state.station1.param.uz * wf1_x2 + state.station2.param.uz * wf2_x2;
+  ut_t1 = state.station1.param.uz * wf1_t1 + state.station2.param.uz * wf2_t1;
+  ut_t2 = state.station1.param.uz * wf1_t2 + state.station2.param.uz * wf2_t2;
+  ut_d1 = state.station1.param.uz * wf1_d1 + state.station2.param.uz * wf2_d1;
+  ut_d2 = state.station1.param.uz * wf1_d2 + state.station2.param.uz * wf2_d2;
+  ut_u1 = state.station1.param.uz * wf1_u1 + state.station2.param.uz * wf2_u1 + wf1;
+  ut_u2 = state.station1.param.uz * wf1_u2 + state.station2.param.uz * wf2_u2 + wf2;
+  ut_ms = state.station1.param.uz * wf1_ms + state.station2.param.uz * wf2_ms;
+  ut_re = state.station1.param.uz * wf1_re + state.station2.param.uz * wf2_re;
+  ut_xf = state.station1.param.uz * wf1_xf + state.station2.param.uz * wf2_xf;
+
+  //---- set primary "t" variables at xt  (really placed into "2" variables)
+  state.station2.param.xz = xfoil.xt;
+  state.station2.param.tz = tt;
+  state.station2.param.dz = dt;
+  state.station2.param.uz = ut;
+
+  state.station2.param.amplz = xfoil.amcrit;
+  state.station2.param.sz = 0.0;
+
+  //---- calculate laminar secondary "t" variables
+  xfoil.blkin(state);
+  state.station2 = blvar(state.station2, FlowRegimeEnum::Laminar);
+
+  //---- calculate x1-xt midpoint cfm value
+  SkinFrictionCoefficients laminarSkinFriction =
+      blmid(xfoil, FlowRegimeEnum::Laminar);
+
+  //=    at this point, all "2" variables are really "t" variables at xt
+
+  //---- set up newton system for dam, dth, dds, due, dxi  at  x1 and xt
+  blc = xfoil.blDiffSolver.solve(FlowRegimeEnum::Laminar, state, laminarSkinFriction, xfoil.amcrit);
+
+  //---- the current newton system is in terms of "1" and "t" variables,
+  //-    so calculate its equivalent in terms of "1" and "2" variables.
+  //-    in other words, convert residual sensitivities wrt "t" variables
+  //-    into sensitivities wrt "1" and "2" variables.  the amplification
+  //-    equation is unnecessary here, so the k=1 row is left empty.
+  for (int k = 1; k < 3; k++) {
+    blrez[k] = blc.rhs[k];
+    blm[k] = blc.d_msq[k] + blc.a2(k, 1) * tt_ms + blc.a2(k, 2) * dt_ms +
+             blc.a2(k, 3) * ut_ms + blc.a2(k, 4) * xfoil.xt_ms;
+    blr[k] = blc.d_re[k] + blc.a2(k, 1) * tt_re + blc.a2(k, 2) * dt_re +
+             blc.a2(k, 3) * ut_re + blc.a2(k, 4) * xfoil.xt_re;
+    blx[k] = blc.d_xi[k] + blc.a2(k, 1) * tt_xf + blc.a2(k, 2) * dt_xf +
+             blc.a2(k, 3) * ut_xf + blc.a2(k, 4) * xfoil.xt_xf;
+
+    bl1(k, 0) = blc.a1(k, 0) + blc.a2(k, 1) * tt_a1 + blc.a2(k, 2) * dt_a1 +
+                blc.a2(k, 3) * ut_a1 + blc.a2(k, 4) * xfoil.xt_a1;
+    bl1(k, 1) = blc.a1(k, 1) + blc.a2(k, 1) * tt_t1 + blc.a2(k, 2) * dt_t1 +
+                blc.a2(k, 3) * ut_t1 + blc.a2(k, 4) * xfoil.xt_t1;
+    bl1(k, 2) = blc.a1(k, 2) + blc.a2(k, 1) * tt_d1 + blc.a2(k, 2) * dt_d1 +
+                blc.a2(k, 3) * ut_d1 + blc.a2(k, 4) * xfoil.xt_d1;
+    bl1(k, 3) = blc.a1(k, 3) + blc.a2(k, 1) * tt_u1 + blc.a2(k, 2) * dt_u1 +
+                blc.a2(k, 3) * ut_u1 + blc.a2(k, 4) * xfoil.xt_u1;
+    bl1(k, 4) = blc.a1(k, 4) + blc.a2(k, 1) * tt_x1 + blc.a2(k, 2) * dt_x1 +
+                blc.a2(k, 3) * ut_x1 + blc.a2(k, 4) * xfoil.xt_x1;
+
+    bl2(k, 0) = 0.0;
+    bl2(k, 1) = blc.a2(k, 1) * tt_t2 + blc.a2(k, 2) * dt_t2 + blc.a2(k, 3) * ut_t2 +
+                blc.a2(k, 4) * xfoil.xt_t2;
+    bl2(k, 2) = blc.a2(k, 1) * tt_d2 + blc.a2(k, 2) * dt_d2 + blc.a2(k, 3) * ut_d2 +
+                blc.a2(k, 4) * xfoil.xt_d2;
+    bl2(k, 3) = blc.a2(k, 1) * tt_u2 + blc.a2(k, 2) * dt_u2 + blc.a2(k, 3) * ut_u2 +
+                blc.a2(k, 4) * xfoil.xt_u2;
+    bl2(k, 4) = blc.a2(k, 1) * tt_x2 + blc.a2(k, 2) * dt_x2 + blc.a2(k, 3) * ut_x2 +
+                blc.a2(k, 4) * xfoil.xt_x2;
+  }
+
+  //**** second, set up turbulent part between xt and x2  ****
+
+  //---- calculate equilibrium shear coefficient cqt at transition point
+  state.station2 = blvar(state.station2, FlowRegimeEnum::Turbulent);
+
+  //---- set initial shear coefficient value st at transition point
+  //-    ( note that cq2, cq2_t2, etc. are really "cqt", "cqt_tt", etc.)
+
+  ctr = 1.8 * exp(-3.3 / (state.station2.hkz.scalar - 1.0));
+  ctr_hk2 = ctr * 3.3 / (state.station2.hkz.scalar - 1.0) / (state.station2.hkz.scalar - 1.0);
+
+  st = ctr * state.station2.cqz.scalar;
+  st_tt =
+      ctr * state.station2.cqz.t() + state.station2.cqz.scalar * ctr_hk2 * state.station2.hkz.t();
+  st_dt =
+      ctr * state.station2.cqz.d() + state.station2.cqz.scalar * ctr_hk2 * state.station2.hkz.d();
+  st_ut =
+      ctr * state.station2.cqz.u() + state.station2.cqz.scalar * ctr_hk2 * state.station2.hkz.u();
+  st_ms =
+      ctr * state.station2.cqz.ms() + state.station2.cqz.scalar * ctr_hk2 * state.station2.hkz.ms();
+  st_re = ctr * state.station2.cqz.re();
+
+  //---- calculate st sensitivities wrt the actual "1" and "2" variables
+  st_a1 = st_tt * tt_a1 + st_dt * dt_a1 + st_ut * ut_a1;
+  st_x1 = st_tt * tt_x1 + st_dt * dt_x1 + st_ut * ut_x1;
+  st_x2 = st_tt * tt_x2 + st_dt * dt_x2 + st_ut * ut_x2;
+  st_t1 = st_tt * tt_t1 + st_dt * dt_t1 + st_ut * ut_t1;
+  st_t2 = st_tt * tt_t2 + st_dt * dt_t2 + st_ut * ut_t2;
+  st_d1 = st_tt * tt_d1 + st_dt * dt_d1 + st_ut * ut_d1;
+  st_d2 = st_tt * tt_d2 + st_dt * dt_d2 + st_ut * ut_d2;
+  st_u1 = st_tt * tt_u1 + st_dt * dt_u1 + st_ut * ut_u1;
+  st_u2 = st_tt * tt_u2 + st_dt * dt_u2 + st_ut * ut_u2;
+  st_ms = st_tt * tt_ms + st_dt * dt_ms + st_ut * ut_ms + st_ms;
+  st_re = st_tt * tt_re + st_dt * dt_re + st_ut * ut_re + st_re;
+  st_xf = st_tt * tt_xf + st_dt * dt_xf + st_ut * ut_xf;
+
+  state.station2.param.amplz = 0.0;
+  state.station2.param.sz = st;
+
+  //---- recalculate turbulent secondary "t" variables using proper cti
+  state.station2 = blvar(state.station2, FlowRegimeEnum::Turbulent);
+
+  state.stepbl();
+  xfoil.restoreblData(2);
+
+  //---- calculate xt-x2 midpoint cfm value
+  SkinFrictionCoefficients turbulentSkinFriction =
+      blmid(xfoil, FlowRegimeEnum::Turbulent);
+
+  //---- set up newton system for dct, dth, dds, due, dxi  at  xt and x2
+  blc = xfoil.blDiffSolver.solve(FlowRegimeEnum::Turbulent, state, turbulentSkinFriction, xfoil.amcrit);
+
+  //---- convert sensitivities wrt "t" variables into sensitivities
+  //-    wrt "1" and "2" variables as done before for the laminar part
+  Matrix<double, 5, 5> bt1_right =
+      Matrix<double, 5, 5>{{st_a1, st_t1, st_d1, st_u1, st_x1},
+                           {tt_a1, tt_t1, tt_d1, tt_u1, tt_x1},
+                           {dt_a1, dt_t1, dt_d1, dt_u1, dt_x1},
+                           {ut_a1, ut_t1, ut_d1, ut_u1, ut_x1},
+                           {xfoil.xt_a1, xfoil.xt_t1, xfoil.xt_d1, xfoil.xt_u1, xfoil.xt_x1}};
+
+  Matrix<double, 5, 5> bt2_right =
+      Matrix<double, 5, 5>{{0, st_t2, st_d2, st_u2, st_x2},
+                           {0, tt_t2, tt_d2, tt_u2, tt_x2},
+                           {0, dt_t2, dt_d2, dt_u2, dt_x2},
+                           {0, ut_t2, ut_d2, ut_u2, ut_x2},
+                           {0, xfoil.xt_t2, xfoil.xt_d2, xfoil.xt_u2, xfoil.xt_x2}};
+  bt1.block(0, 0, 3, 5) = blc.a1.block(0, 0, 3, 5) * bt1_right;
+  bt2.block(0, 0, 3, 5) = blc.a1.block(0, 0, 3, 5) * bt2_right;
+  bt2 += blc.a2;
+  for (int k = 0; k < 3; k++) {
+    btrez[k] = blc.rhs[k];
+    btm[k] = blc.d_msq[k] + blc.a1(k, 0) * st_ms + blc.a1(k, 1) * tt_ms +
+             blc.a1(k, 2) * dt_ms + blc.a1(k, 3) * ut_ms + blc.a1(k, 4) * xfoil.xt_ms;
+    btr[k] = blc.d_re[k] + blc.a1(k, 0) * st_re + blc.a1(k, 1) * tt_re +
+             blc.a1(k, 2) * dt_re + blc.a1(k, 3) * ut_re + blc.a1(k, 4) * xfoil.xt_re;
+    btx[k] = blc.d_xi[k] + blc.a1(k, 0) * st_xf + blc.a1(k, 1) * tt_xf +
+             blc.a1(k, 2) * dt_xf + blc.a1(k, 3) * ut_xf + blc.a1(k, 4) * xfoil.xt_xf;
+  }
+
+  //---- add up laminar and turbulent parts to get final system
+  //-    in terms of honest-to-god "1" and "2" variables.
+  blc.rhs[0] = btrez[0];
+  blc.rhs[1] = blrez[1] + btrez[1];
+  blc.rhs[2] = blrez[2] + btrez[2];
+  blc.d_msq[0] = btm[0];
+  blc.d_msq[1] = blm[1] + btm[1];
+  blc.d_msq[2] = blm[2] + btm[2];
+  blc.d_re[0] = btr[0];
+  blc.d_re[1] = blr[1] + btr[1];
+  blc.d_re[2] = blr[2] + btr[2];
+  blc.d_xi[0] = btx[0];
+  blc.d_xi[1] = blx[1] + btx[1];
+  blc.d_xi[2] = blx[2] + btx[2];
+  blc.a1.row(0) = bt1.row(0);
+  blc.a2.row(0) = bt2.row(0);
+  blc.a1.middleRows(1, 2) = bl1.middleRows(1, 2) + bt1.middleRows(1, 2);
+  blc.a2.middleRows(1, 2) = bl2.middleRows(1, 2) + bt2.middleRows(1, 2);
+
+  //---- to be sanitary, restore "1" quantities which got clobbered
+  //-    in all of the numerical gymnastics above.  the "2" variables
+  //-    were already restored for the xt-x2 differencing part.
+  //	for (icom=1; icom<=ncom;icom++){
+  //		com1[icom] = c1sav[icom];
+  //	}
+  xfoil.restoreblData(1);
 
   return true;
 }

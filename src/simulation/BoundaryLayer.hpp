@@ -100,6 +100,7 @@ class BoundaryLayerWorkflow {
   blData blprv(XFoil& xfoil, blData data, double xsi, double ami, double cti,
                double thi, double dsi, double dswaki, double uei) const;
   bool blsys(XFoil& xfoil);
+  bool trdif(XFoil& xfoil);
   bool mrchdu(XFoil& xfoil);
   bool mrchdu(BoundaryLayerState& state, SidePair<BoundaryLayerLattice>& lattice,
               XFoil& xfoil);
