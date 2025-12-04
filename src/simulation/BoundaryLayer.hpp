@@ -156,6 +156,9 @@ class BoundaryLayerWorkflow {
       XFoil& xfoil) const;
   void syncStationRegimeStates(int side, int stationIndex, bool wake,
                                XFoil& xfoil);
+  FlowRegimeEnum determineRegimeForStation(int side, int stationIndex,
+                                           bool similarity,
+                                           bool wake) const;
 
   bool iblpan(XFoil& xfoil);
   bool iblsys(XFoil& xfoil);

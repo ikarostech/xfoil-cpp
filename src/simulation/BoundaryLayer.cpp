@@ -66,16 +66,16 @@ void BoundaryLayerWorkflow::initializeFirstIterationState(
   }
 
   if (stationIndex < previousTransition) {
-    if (xfoil.tran) {
+    if (xfoil.flowRegime == FlowRegimeEnum::Transition) {
       lattice.get(side).profiles.skinFrictionCoeff[stationIndex] = 0.03;
     }
-    if (xfoil.turb) {
+    if (xfoil.flowRegime == FlowRegimeEnum::Turbulent || xfoil.flowRegime == FlowRegimeEnum::Wake) {
       const double prev =
           (stationIndex >= 1) ? lattice.get(side).profiles.skinFrictionCoeff[stationIndex - 1]
                               : lattice.get(side).profiles.skinFrictionCoeff[stationIndex];
       lattice.get(side).profiles.skinFrictionCoeff[stationIndex] = prev;
     }
-    if (xfoil.tran || xfoil.turb) {
+    if (xfoil.flowRegime == FlowRegimeEnum::Transition || xfoil.flowRegime == FlowRegimeEnum::Turbulent || xfoil.flowRegime == FlowRegimeEnum::Wake) {
       ctx.cti = lattice.get(side).profiles.skinFrictionCoeff[stationIndex - 1];
       state.station2.param.sz = ctx.cti;
     }
@@ -175,7 +175,7 @@ SkinFrictionCoefficients BoundaryLayerWorkflow::blmid(
   blData& previous = state.previous();
   blData& current = state.current();
 
-  if (xfoil.simi) {
+  if (xfoil.flowRegime == FlowRegimeEnum::Similarity) {
     previous.hkz = current.hkz;
     previous.rtz = current.rtz;
     previous.param.mz = current.param.mz;
@@ -252,10 +252,10 @@ bool BoundaryLayerWorkflow::blsys(XFoil& xfoil) {
 
   SkinFrictionCoefficients skinFriction;
 
-  if (xfoil.wake) {
+  if (xfoil.flowRegime == FlowRegimeEnum::Wake) {
     current = blvar(current, FlowRegimeEnum::Wake);
     skinFriction = blmid(xfoil, FlowRegimeEnum::Wake);
-  } else if (xfoil.turb || xfoil.tran) {
+  } else if (xfoil.flowRegime == FlowRegimeEnum::Transition || xfoil.flowRegime == FlowRegimeEnum::Turbulent || xfoil.flowRegime == FlowRegimeEnum::Wake) {
     current = blvar(current, FlowRegimeEnum::Turbulent);
     skinFriction = blmid(xfoil, FlowRegimeEnum::Turbulent);
   } else {
@@ -263,19 +263,19 @@ bool BoundaryLayerWorkflow::blsys(XFoil& xfoil) {
     skinFriction = blmid(xfoil, FlowRegimeEnum::Laminar);
   }
 
-  if (xfoil.simi) {
+  if (xfoil.flowRegime == FlowRegimeEnum::Similarity) {
     state.stepbl();
   }
 
-  if (xfoil.tran) {
+  if (xfoil.flowRegime == FlowRegimeEnum::Transition) {
     trdif(xfoil);
-  } else if (xfoil.simi) {
+  } else if (xfoil.flowRegime == FlowRegimeEnum::Similarity) {
     blc = xfoil.blDiffSolver.solve(FlowRegimeEnum::Similarity, state,
                                    skinFriction, xfoil.amcrit);
-  } else if (!xfoil.turb) {
+  } else if (!(xfoil.flowRegime == FlowRegimeEnum::Turbulent || xfoil.flowRegime == FlowRegimeEnum::Wake)) {
     blc = xfoil.blDiffSolver.solve(FlowRegimeEnum::Laminar, state,
                                    skinFriction, xfoil.amcrit);
-  } else if (xfoil.wake) {
+  } else if (xfoil.flowRegime == FlowRegimeEnum::Wake) {
     blc = xfoil.blDiffSolver.solve(FlowRegimeEnum::Wake, state,
                                    skinFriction, xfoil.amcrit);
   } else {
@@ -283,7 +283,7 @@ bool BoundaryLayerWorkflow::blsys(XFoil& xfoil) {
                                    skinFriction, xfoil.amcrit);
   }
 
-  if (xfoil.simi) {
+  if (xfoil.flowRegime == FlowRegimeEnum::Similarity) {
     blc.a2 += blc.a1;
     blc.a1.setZero();
   }

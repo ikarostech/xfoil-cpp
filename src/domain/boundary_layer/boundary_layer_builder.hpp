@@ -2,6 +2,7 @@
 #include "core/side_pair.hpp"
 #include "Eigen/Core"
 #include "infrastructure/xfoil_params.h"
+#include "domain/flow_regime.hpp"
 
 struct XFoil;
 
@@ -46,10 +47,7 @@ struct SetblOutputView {
   std::vector<Eigen::Matrix<double, 3, 2>>& vdel;
   double (&vm)[3][IZX][IZX];
   double (&vz)[3][2];
-  bool& tran;
-  bool& turb;
-  bool& wake;
-  bool& simi;
+  FlowRegimeEnum& flowRegime;
   double& xiforc;
 
   static SetblOutputView fromXFoil(XFoil& xfoil);

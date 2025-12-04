@@ -50,10 +50,7 @@ SetblOutputView SetblOutputView::fromXFoil(XFoil& xfoil) {
       xfoil.vdel,
       xfoil.vm,
       xfoil.vz,
-      xfoil.tran,
-      xfoil.turb,
-      xfoil.wake,
-      xfoil.simi,
+      xfoil.flowRegime,
       xfoil.xiforc};
 }
 
@@ -90,21 +87,20 @@ XFoil::MixedModeStationContext XFoil::prepareMixedModeStation(int side, int ibl,
   double thickness_limit = (ibl <= boundaryLayerWorkflow.lattice.get(side).trailingEdgeIndex) ? 1.02 : 1.00005;
   ctx.dsi = std::max(ctx.dsi - ctx.dswaki, thickness_limit * ctx.thi) + ctx.dswaki;
 
-  simi = ctx.simi;
-  wake = ctx.wake;
+  flowRegime = boundaryLayerWorkflow.determineRegimeForStation(side, ibl, ctx.simi, ctx.wake);
 
   return ctx;
 }
 
 void XFoil::checkTransitionIfNeeded(int side, int ibl, bool skipCheck,
                                     int laminarAdvance, double& ami) {
-  if (skipCheck || turb) {
+  if (skipCheck || flowRegime == FlowRegimeEnum::Turbulent || flowRegime == FlowRegimeEnum::Wake) {
     return;
   }
 
   trchek();
   ami = boundaryLayerWorkflow.state.station2.param.amplz;
-  if (tran) {
+  if (flowRegime == FlowRegimeEnum::Transition) {
     boundaryLayerWorkflow.lattice.get(side).transitionIndex = ibl;
   } else {
     boundaryLayerWorkflow.lattice.get(side).transitionIndex = ibl + laminarAdvance;
@@ -359,18 +355,19 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
     //---- set forced transition arc length position
     output.xiforc = xifset(is);
 
-    output.tran = false;
-    output.turb = false;
-
     //**** sweep downstream setting up bl equation linearizations
     for (int ibl = 0; ibl < boundaryLayerWorkflow.lattice.get(is).stationCount - 1; ++ibl) {
       
       int iv = boundaryLayerWorkflow.lattice.get(is).stationToSystem[ibl];
 
-      output.simi = (ibl == 0);
-      output.wake = (ibl > boundaryLayerWorkflow.lattice.get(is).trailingEdgeIndex);
-      output.tran = (ibl == output.itran.get(is));
-      output.turb = (ibl > output.itran.get(is));
+      const bool stationIsSimilarity = (ibl == 0);
+      const bool stationIsWake = (ibl > boundaryLayerWorkflow.lattice.get(is).trailingEdgeIndex);
+      const bool stationIsTransitionCandidate = (ibl == output.itran.get(is));
+      const bool stationIsDownstreamOfTransition = (ibl > output.itran.get(is));
+      output.flowRegime =
+          boundaryLayerWorkflow.determineRegimeForStation(is, ibl,
+                                                          stationIsSimilarity,
+                                                          stationIsWake);
 
       //---- set primary variables for current station
       xsi = boundaryLayerWorkflow.lattice.get(is).arcLengthCoordinates[ibl];
@@ -384,7 +381,7 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
 
       dsi = mdi / uei;
 
-      if (output.wake) {
+      if (stationIsWake) {
         int iw = ibl - boundaryLayerWorkflow.lattice.get(is).trailingEdgeIndex;
         dswaki = wgap[iw - 1];
       } else
@@ -421,13 +418,13 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
   } // cti
       blkin(boundaryLayerWorkflow.state);
 
-      //---- check for transition and set output.tran, xt, etc. if found
-      if (output.tran) {
+      //---- check for transition and set xt, etc. if found
+      if (stationIsTransitionCandidate) {
         trchek();
         ami = boundaryLayerWorkflow.state.station2.param.amplz;
       }
 
-      if (ibl == output.itran.get(is) && !output.tran) {
+      if (stationIsTransitionCandidate && flowRegime != FlowRegimeEnum::Transition) {
         // TRACE("setbl: xtr???  n1=%d n2=%d: \n", ampl1, ampl2);
 
         ss << "setbl: xtr???  n1=" << boundaryLayerWorkflow.state.station1.param.amplz
@@ -602,20 +599,16 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
       }
 
       //---- turbulent intervals will follow if currently at transition interval
-      if (output.tran) {
-        output.turb = true;
-
+      if (flowRegime == FlowRegimeEnum::Transition) {
         //------ save transition location
         output.itran.get(is) = ibl;
+        output.flowRegime = FlowRegimeEnum::Turbulent;
       }
-
-      output.tran = false;
 
       if (ibl == boundaryLayerWorkflow.lattice.get(is).trailingEdgeIndex) {
         //----- set "2" variables at te to output.wake correlations for next station
 
-        output.turb = true;
-        output.wake = true;
+        output.flowRegime = FlowRegimeEnum::Wake;
         boundaryLayerWorkflow.state.station2 =
             boundaryLayerWorkflow.blvar(
                 boundaryLayerWorkflow.state.station2,
@@ -846,9 +839,11 @@ bool XFoil::trchek() {
   trforc = (xiforc > boundaryLayerWorkflow.state.station1.param.xz) && (xiforc <= boundaryLayerWorkflow.state.station2.param.xz);
 
   //---- set transition interval flag
-  tran = (trforc || trfree);
+  const bool transitionDetected = (trforc || trfree);
+  flowRegime = transitionDetected ? FlowRegimeEnum::Transition
+                                   : FlowRegimeEnum::Laminar;
 
-  if (!tran)
+  if (!transitionDetected)
     return false;
 
   //---- resolve if both forced and free transition

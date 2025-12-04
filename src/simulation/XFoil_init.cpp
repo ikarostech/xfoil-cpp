@@ -93,7 +93,8 @@ void XFoil::resetFlags() {
   analysis_state_.viscous = false;
   analysis_state_.controlByAlpha = false;
   foil.edge.sharp = false;
-  trforc = simi = tran = turb = wake = trfree = false;
+  trforc = trfree = false;
+  flowRegime = FlowRegimeEnum::Laminar;
 }
 
 void XFoil::resetVariables() {
