@@ -7,13 +7,14 @@
 #include "domain/coefficient/bl_newton.hpp"
 #include "domain/boundary_layer/boundary_layer_variables_solver.hpp"
 #include "simulation/skin_friction_coefficients.hpp"
-
+#include "domain/boundary_layer/boundary_layer_diff_solver.hpp"
 class XFoil;
 enum class FlowRegimeEnum;
 
 class BoundaryLayerWorkflow {
  public:
   BoundaryLayerVariablesSolver boundaryLayerVariablesSolver;
+  BlDiffSolver blDiffSolver;
   enum class EdgeVelocityFallbackMode {
     UsePreviousStation,
     AverageNeighbors

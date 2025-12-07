@@ -186,7 +186,6 @@ class XFoil {
   VectorXd apcalc(Matrix2Xd points);
   void updateTrailingEdgeState();
 
-  BlDiffSolver blDiffSolver;
   bool blkin(BoundaryLayerState& state);
   bool blsolve();
   double cang(Matrix2Xd points);
