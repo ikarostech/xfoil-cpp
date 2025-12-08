@@ -183,7 +183,6 @@ class XFoil {
   bool restoreblData(int icom);
   bool saveblData(int icom);
 
-  VectorXd apcalc(Matrix2Xd points);
   void updateTrailingEdgeState();
 
   bool blkin(BoundaryLayerState& state);

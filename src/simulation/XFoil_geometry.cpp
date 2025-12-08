@@ -52,20 +52,6 @@ bool XFoil::abcopy(Matrix2Xd copyFrom) {
   return true;
 }
 
-VectorXd XFoil::apcalc(Matrix2Xd points) {
-  const int point_count = foil.foil_shape.n;
-  VectorXd result = VectorXd::Zero(point_count);
-  if (point_count == 0) {
-    return result;
-  }
-  //---- set angles of airfoil panels
-  for (int i = 0; i < point_count; i++) {
-    Vector2d diff = points.col((i + 1) % point_count) - points.col(i);
-    result[i] = atan2(diff.x(), -diff.y());
-  }
-  return result;
-}
-
 double XFoil::atanc(double y, double x, double thold) {
   double tpi, thnew, dmomentumThickness, dtcorr;
   tpi = 6.2831853071795864769;
