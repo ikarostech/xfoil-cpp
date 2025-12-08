@@ -47,14 +47,14 @@ skin_friction::C_f skin_friction::cft(double hk, double rt, double msq) {
 }
 
 skin_friction::C_f skin_friction::getSkinFriction(double hk, double rt, double msq, FlowRegimeEnum flowRegimeType) {
-    if (flowRegimeType == FlowRegimeEnum::Wake) {
-        return C_f(); // Wake flow has no skin friction
-    }
-    else if (flowRegimeType == FlowRegimeEnum::Laminar) {
+  switch (flowRegimeType) {
+    case FlowRegimeEnum::Laminar:
         return skin_friction::cfl(hk, rt);
-    } else {
+    case FlowRegimeEnum::Wake:
+        return C_f(); // Wake flow has no skin friction
+    default:
         C_f cfl = skin_friction::cfl(hk, rt);
         C_f cft = skin_friction::cft(hk, rt, msq);
         return cfl.cf > cft.cf ? cfl : cft;
-    }
+  }
 }

@@ -250,18 +250,14 @@ bool BoundaryLayerWorkflow::blsys(XFoil& xfoil) {
   blData& previous = state.previous();
   blData& current = state.current();
 
-  SkinFrictionCoefficients skinFriction;
-
   if (xfoil.flowRegime == FlowRegimeEnum::Wake) {
     current = blvar(current, FlowRegimeEnum::Wake);
-    skinFriction = blmid(xfoil, FlowRegimeEnum::Wake);
   } else if (xfoil.flowRegime == FlowRegimeEnum::Transition || xfoil.flowRegime == FlowRegimeEnum::Turbulent || xfoil.flowRegime == FlowRegimeEnum::Wake) {
     current = blvar(current, FlowRegimeEnum::Turbulent);
-    skinFriction = blmid(xfoil, FlowRegimeEnum::Turbulent);
   } else {
     current = blvar(current, FlowRegimeEnum::Laminar);
-    skinFriction = blmid(xfoil, FlowRegimeEnum::Laminar);
   }
+  SkinFrictionCoefficients skinFriction = blmid(xfoil, xfoil.flowRegime);
 
   if (xfoil.flowRegime == FlowRegimeEnum::Similarity) {
     state.stepbl();
