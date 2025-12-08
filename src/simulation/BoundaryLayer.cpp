@@ -471,20 +471,6 @@ bool BoundaryLayerWorkflow::trdif(XFoil& xfoil) {
       ctr * state.station2.cqz.ms() + state.station2.cqz.scalar * ctr_hk2 * state.station2.hkz.ms();
   st_re = ctr * state.station2.cqz.re();
 
-  //---- calculate st sensitivities wrt the actual "1" and "2" variables
-  st_a1 = st_tt * tt_a1 + st_dt * dt_a1 + st_ut * ut_a1;
-  st_x1 = st_tt * tt_x1 + st_dt * dt_x1 + st_ut * ut_x1;
-  st_x2 = st_tt * tt_x2 + st_dt * dt_x2 + st_ut * ut_x2;
-  st_t1 = st_tt * tt_t1 + st_dt * dt_t1 + st_ut * ut_t1;
-  st_t2 = st_tt * tt_t2 + st_dt * dt_t2 + st_ut * ut_t2;
-  st_d1 = st_tt * tt_d1 + st_dt * dt_d1 + st_ut * ut_d1;
-  st_d2 = st_tt * tt_d2 + st_dt * dt_d2 + st_ut * ut_d2;
-  st_u1 = st_tt * tt_u1 + st_dt * dt_u1 + st_ut * ut_u1;
-  st_u2 = st_tt * tt_u2 + st_dt * dt_u2 + st_ut * ut_u2;
-  st_ms = st_tt * tt_ms + st_dt * dt_ms + st_ut * ut_ms + st_ms;
-  st_re = st_tt * tt_re + st_dt * dt_re + st_ut * ut_re + st_re;
-  st_xf = st_tt * tt_xf + st_dt * dt_xf + st_ut * ut_xf;
-
   state.station2.param.amplz = 0.0;
   state.station2.param.sz = st;
 
@@ -503,19 +489,43 @@ bool BoundaryLayerWorkflow::trdif(XFoil& xfoil) {
 
   //---- convert sensitivities wrt "t" variables into sensitivities
   //-    wrt "1" and "2" variables as done before for the laminar part
+  Eigen::VectorXd common_st = Eigen::Vector3d{st_tt, st_dt, st_ut};
+  Eigen::VectorXd st1 = 
+    Eigen::Matrix<double, 5, 3>{
+      {tt_a1, dt_a1, ut_a1},
+      {tt_t1, dt_t1, ut_t1},
+      {tt_d1, dt_d1, ut_d1},
+      {tt_u1, dt_u1, ut_u1},
+      {tt_x1, dt_x1, ut_x1}
+    } * common_st;
+  Eigen::VectorXd st2 = 
+    Eigen::Matrix<double, 5, 3>{
+      {0, 0, 0},
+      {tt_t2, dt_t2, ut_t2},
+      {tt_d2, dt_d2, ut_d2},
+      {tt_u2, dt_u2, ut_u2},
+      {tt_x2, dt_x2, ut_x2}
+    } * common_st;
+
+  st_ms = st_tt * tt_ms + st_dt * dt_ms + st_ut * ut_ms + st_ms;
+  st_re = st_tt * tt_re + st_dt * dt_re + st_ut * ut_re + st_re;
+  st_xf = st_tt * tt_xf + st_dt * dt_xf + st_ut * ut_xf;
+
   Matrix<double, 5, 5> bt1_right =
-      Matrix<double, 5, 5>{{st_a1, st_t1, st_d1, st_u1, st_x1},
+      Matrix<double, 5, 5>{{0, 0, 0, 0, 0},
                            {tt_a1, tt_t1, tt_d1, tt_u1, tt_x1},
                            {dt_a1, dt_t1, dt_d1, dt_u1, dt_x1},
                            {ut_a1, ut_t1, ut_d1, ut_u1, ut_x1},
                            {xfoil.xt_a1, xfoil.xt_t1, xfoil.xt_d1, xfoil.xt_u1, xfoil.xt_x1}};
+  bt1_right.row(0) = st1;
 
   Matrix<double, 5, 5> bt2_right =
-      Matrix<double, 5, 5>{{0, st_t2, st_d2, st_u2, st_x2},
+      Matrix<double, 5, 5>{{0, 0, 0, 0, 0},
                            {0, tt_t2, tt_d2, tt_u2, tt_x2},
                            {0, dt_t2, dt_d2, dt_u2, dt_x2},
                            {0, ut_t2, ut_d2, ut_u2, ut_x2},
                            {0, xfoil.xt_t2, xfoil.xt_d2, xfoil.xt_u2, xfoil.xt_x2}};
+  bt2_right.row(0) = st2;
   bt1.block(0, 0, 3, 5) = blc.a1.block(0, 0, 3, 5) * bt1_right;
   bt2.block(0, 0, 3, 5) = blc.a1.block(0, 0, 3, 5) * bt2_right;
   bt2 += blc.a2;
