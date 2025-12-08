@@ -18,8 +18,7 @@ class BoundaryLayerVariablesSolver {
                                          FlowRegimeEnum flowRegimeType) const;
   blData computeDissipation(const blData& ref,
                             FlowRegimeEnum flowRegimeType) const;
-  blData computeThickness(const blData& ref,
-                          FlowRegimeEnum flowRegimeType) const;
+  blData computeThickness(const blData& ref) const;
 
   static constexpr double kGbcon = 0.75;
   static constexpr double kGccon = 18.0;
