@@ -308,78 +308,66 @@ bool BoundaryLayerWorkflow::trdif(XFoil& xfoil) {
 
   //---- weighting factors for linear interpolation to transition point
   double wf2 = (xfoil.xt - state.station1.param.xz) / (state.station2.param.xz - state.station1.param.xz);
-  double wf2_xt = 1.0 / (state.station2.param.xz - state.station1.param.xz);
+  double wf_xt = 1.0 / (state.station2.param.xz - state.station1.param.xz);
 
-  double wf2_a1 = wf2_xt * xfoil.xt_a1;
-  double wf2_x1 =
-      wf2_xt * xfoil.xt_x1 + (wf2 - 1.0) / (state.station2.param.xz - state.station1.param.xz);
-  double wf2_x2 = wf2_xt * xfoil.xt_x2 - wf2 / (state.station2.param.xz - state.station1.param.xz);
-  double wf2_t1 = wf2_xt * xfoil.xt_t1;
-  double wf2_t2 = wf2_xt * xfoil.xt_t2;
-  double wf2_d1 = wf2_xt * xfoil.xt_d1;
-  double wf2_d2 = wf2_xt * xfoil.xt_d2;
-  double wf2_u1 = wf2_xt * xfoil.xt_u1;
-  double wf2_u2 = wf2_xt * xfoil.xt_u2;
-  double wf2_ms = wf2_xt * xfoil.xt_ms;
-  double wf2_re = wf2_xt * xfoil.xt_re;
-  double wf2_xf = wf2_xt * xfoil.xt_xf;
+  double wf_a1 = wf_xt * xfoil.xt_a1;
+  double wf_x1 =
+      wf_xt * xfoil.xt_x1 + (wf2 - 1.0) / (state.station2.param.xz - state.station1.param.xz);
+  double wf_x2 = wf_xt * xfoil.xt_x2 - wf2 / (state.station2.param.xz - state.station1.param.xz);
+  double wf_t1 = wf_xt * xfoil.xt_t1;
+  double wf_t2 = wf_xt * xfoil.xt_t2;
+  double wf_d1 = wf_xt * xfoil.xt_d1;
+  double wf_d2 = wf_xt * xfoil.xt_d2;
+  double wf_u1 = wf_xt * xfoil.xt_u1;
+  double wf_u2 = wf_xt * xfoil.xt_u2;
+  double wf_ms = wf_xt * xfoil.xt_ms;
+  double wf_re = wf_xt * xfoil.xt_re;
+  double wf_xf = wf_xt * xfoil.xt_xf;
 
   double wf1 = 1.0 - wf2;
-  double wf1_a1 = -wf2_a1;
-  double wf1_x1 = -wf2_x1;
-  double wf1_x2 = -wf2_x2;
-  double wf1_t1 = -wf2_t1;
-  double wf1_t2 = -wf2_t2;
-  double wf1_d1 = -wf2_d1;
-  double wf1_d2 = -wf2_d2;
-  double wf1_u1 = -wf2_u1;
-  double wf1_u2 = -wf2_u2;
-  double wf1_ms = -wf2_ms;
-  double wf1_re = -wf2_re;
-  double wf1_xf = -wf2_xf;
 
   //-----interpolate primary variables to transition point
   tt = state.station1.param.tz * wf1 + state.station2.param.tz * wf2;
-  tt_a1 = state.station1.param.tz * wf1_a1 + state.station2.param.tz * wf2_a1;
-  tt_x1 = state.station1.param.tz * wf1_x1 + state.station2.param.tz * wf2_x1;
-  tt_x2 = state.station1.param.tz * wf1_x2 + state.station2.param.tz * wf2_x2;
-  tt_t1 = state.station1.param.tz * wf1_t1 + state.station2.param.tz * wf2_t1 + wf1;
-  tt_t2 = state.station1.param.tz * wf1_t2 + state.station2.param.tz * wf2_t2 + wf2;
-  tt_d1 = state.station1.param.tz * wf1_d1 + state.station2.param.tz * wf2_d1;
-  tt_d2 = state.station1.param.tz * wf1_d2 + state.station2.param.tz * wf2_d2;
-  tt_u1 = state.station1.param.tz * wf1_u1 + state.station2.param.tz * wf2_u1;
-  tt_u2 = state.station1.param.tz * wf1_u2 + state.station2.param.tz * wf2_u2;
-  tt_ms = state.station1.param.tz * wf1_ms + state.station2.param.tz * wf2_ms;
-  tt_re = state.station1.param.tz * wf1_re + state.station2.param.tz * wf2_re;
-  tt_xf = state.station1.param.tz * wf1_xf + state.station2.param.tz * wf2_xf;
+  tt_a1 = (state.station2.param.tz - state.station1.param.tz) * wf_a1;
+  tt_x1 = (state.station2.param.tz - state.station1.param.tz) * wf_x1;
+  tt_x2 = (state.station2.param.tz - state.station1.param.tz) * wf_x2;
+  tt_t1 = (state.station2.param.tz - state.station1.param.tz) * wf_t1 + wf1;
+  tt_t2 = (state.station2.param.tz - state.station1.param.tz) * wf_t2 + wf2;
+  tt_d1 = (state.station2.param.tz - state.station1.param.tz) * wf_d1;
+  tt_d2 = (state.station2.param.tz - state.station1.param.tz) * wf_d2;
+  tt_u1 = (state.station2.param.tz - state.station1.param.tz) * wf_u1;
+  tt_u2 = (state.station2.param.tz - state.station1.param.tz) * wf_u2;
+  tt_ms = (state.station2.param.tz - state.station1.param.tz) * wf_ms;
+  tt_re = (state.station2.param.tz - state.station1.param.tz) * wf_re;
+  tt_xf = (state.station2.param.tz - state.station1.param.tz) * wf_xf;
 
   dt = state.station1.param.dz * wf1 + state.station2.param.dz * wf2;
-  dt_a1 = state.station1.param.dz * wf1_a1 + state.station2.param.dz * wf2_a1;
-  dt_x1 = state.station1.param.dz * wf1_x1 + state.station2.param.dz * wf2_x1;
-  dt_x2 = state.station1.param.dz * wf1_x2 + state.station2.param.dz * wf2_x2;
-  dt_t1 = state.station1.param.dz * wf1_t1 + state.station2.param.dz * wf2_t1;
-  dt_t2 = state.station1.param.dz * wf1_t2 + state.station2.param.dz * wf2_t2;
-  dt_d1 = state.station1.param.dz * wf1_d1 + state.station2.param.dz * wf2_d1 + wf1;
-  dt_d2 = state.station1.param.dz * wf1_d2 + state.station2.param.dz * wf2_d2 + wf2;
-  dt_u1 = state.station1.param.dz * wf1_u1 + state.station2.param.dz * wf2_u1;
-  dt_u2 = state.station1.param.dz * wf1_u2 + state.station2.param.dz * wf2_u2;
-  dt_ms = state.station1.param.dz * wf1_ms + state.station2.param.dz * wf2_ms;
-  dt_re = state.station1.param.dz * wf1_re + state.station2.param.dz * wf2_re;
-  dt_xf = state.station1.param.dz * wf1_xf + state.station2.param.dz * wf2_xf;
+  dt_a1 = (state.station2.param.dz - state.station1.param.dz) * wf_a1;
+  dt_x1 = (state.station2.param.dz - state.station1.param.dz) * wf_x1;
+  dt_x2 = (state.station2.param.dz - state.station1.param.dz) * wf_x2;
+  dt_t1 = (state.station2.param.dz - state.station1.param.dz) * wf_t1;
+  dt_t2 = (state.station2.param.dz - state.station1.param.dz) * wf_t2;
+  dt_d1 = (state.station2.param.dz - state.station1.param.dz) * wf_d1 + wf1;
+  dt_d2 = (state.station2.param.dz - state.station1.param.dz) * wf_d2 + wf2;
+  dt_u1 = (state.station2.param.dz - state.station1.param.dz) * wf_u1;
+  dt_u2 = (state.station2.param.dz - state.station1.param.dz) * wf_u2;
+  dt_ms = (state.station2.param.dz - state.station1.param.dz) * wf_ms;
+  dt_re = (state.station2.param.dz - state.station1.param.dz) * wf_re;
+  dt_xf = (state.station2.param.dz - state.station1.param.dz) * wf_xf;
 
   ut = state.station1.param.uz * wf1 + state.station2.param.uz * wf2;
-  ut_a1 = state.station1.param.uz * wf1_a1 + state.station2.param.uz * wf2_a1;
-  ut_x1 = state.station1.param.uz * wf1_x1 + state.station2.param.uz * wf2_x1;
-  ut_x2 = state.station1.param.uz * wf1_x2 + state.station2.param.uz * wf2_x2;
-  ut_t1 = state.station1.param.uz * wf1_t1 + state.station2.param.uz * wf2_t1;
-  ut_t2 = state.station1.param.uz * wf1_t2 + state.station2.param.uz * wf2_t2;
-  ut_d1 = state.station1.param.uz * wf1_d1 + state.station2.param.uz * wf2_d1;
-  ut_d2 = state.station1.param.uz * wf1_d2 + state.station2.param.uz * wf2_d2;
-  ut_u1 = state.station1.param.uz * wf1_u1 + state.station2.param.uz * wf2_u1 + wf1;
-  ut_u2 = state.station1.param.uz * wf1_u2 + state.station2.param.uz * wf2_u2 + wf2;
-  ut_ms = state.station1.param.uz * wf1_ms + state.station2.param.uz * wf2_ms;
-  ut_re = state.station1.param.uz * wf1_re + state.station2.param.uz * wf2_re;
-  ut_xf = state.station1.param.uz * wf1_xf + state.station2.param.uz * wf2_xf;
+  ut_a1 = (state.station2.param.uz - state.station1.param.uz) * wf_a1;
+  ut_x1 = (state.station2.param.uz - state.station1.param.uz) * wf_x1;
+  ut_x2 = (state.station2.param.uz - state.station1.param.uz) * wf_x2;
+  ut_t1 = (state.station2.param.uz - state.station1.param.uz) * wf_t1;
+  ut_t2 = (state.station2.param.uz - state.station1.param.uz) * wf_t2;
+  ut_d1 = (state.station2.param.uz - state.station1.param.uz) * wf_d1;
+  ut_d2 = (state.station2.param.uz - state.station1.param.uz) * wf_d2;
+  ut_u1 = (state.station2.param.uz - state.station1.param.uz) * wf_u1 + wf1;
+  ut_u2 = (state.station2.param.uz - state.station1.param.uz) * wf_u2 + wf2;
+  ut_ms = (state.station2.param.uz - state.station1.param.uz) * wf_ms;
+  ut_re = (state.station2.param.uz - state.station1.param.uz) * wf_re;
+  ut_xf = (state.station2.param.uz - state.station1.param.uz) * wf_xf;
 
   //---- set primary "t" variables at xt  (really placed into "2" variables)
   state.station2.param.xz = xfoil.xt;
