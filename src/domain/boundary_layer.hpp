@@ -44,6 +44,49 @@ class blData {
       rz, rz_uz, rz_ms;
       */
 };
+
+// TODO blVectorとの関係性を調査
+class blDiff {
+  public:
+  Eigen::Vector<double, 12> vector;
+  double scalar;
+  double& a() {
+    return vector[0];
+  }
+  double& t1() {
+    return vector[1];
+  }
+  double& d1() {
+    return vector[2];
+  }
+  double& u1() {
+    return vector[3];
+  }
+  double& x1() {
+    return vector[4];
+  }
+  double& t2() {
+    return vector[5];
+  }
+  double& d2() {
+    return vector[6];
+  }
+  double& u2() {
+    return vector[7];
+  }
+  double& x2() {
+    return vector[8];
+  }
+  double& ms() {
+    return vector[9];
+  }
+  double& re() {
+    return vector[10];
+  }
+  double& xf() {
+    return vector[11];
+  }
+};
 class boundary_layer {
     public:
 

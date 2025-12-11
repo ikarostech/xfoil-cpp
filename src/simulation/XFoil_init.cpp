@@ -137,9 +137,6 @@ void XFoil::resetVariables() {
   cl_alf = cl_msq = 0.0;
   tklam = tkl_msq = 0.0;
   sst = sst_go = sst_gp = 0.0;
-  xt = xt_a1 = xt_ms = xt_re = xt_xf = 0.0;
-  xt_x1 = xt_t1 = xt_d1 = xt_u1 = 0.0;
-  xt_x2 = xt_t2 = xt_d2 = xt_u2 = 0.0;
 }
 
 void XFoil::writeString(std::string str) {

@@ -193,7 +193,7 @@ double XFoil::calcHtarg(int ibl, int is, bool wake) {
            0.03 * (boundaryLayerWorkflow.state.station2.param.xz - boundaryLayerWorkflow.state.station1.param.xz) / boundaryLayerWorkflow.state.station1.param.tz;
   } else if (ibl == boundaryLayerWorkflow.lattice.get(is).transitionIndex) {
     return boundaryLayerWorkflow.state.station1.hkz.scalar +
-           (0.03 * (xt - boundaryLayerWorkflow.state.station1.param.xz) - 0.15 * (boundaryLayerWorkflow.state.station2.param.xz - xt)) /
+           (0.03 * (xt.scalar - boundaryLayerWorkflow.state.station1.param.xz) - 0.15 * (boundaryLayerWorkflow.state.station2.param.xz - xt.scalar)) /
                boundaryLayerWorkflow.state.station1.param.tz;
   } else if (wake) {
     const double cst =
@@ -741,7 +741,7 @@ bool XFoil::trchek() {
       }
 
       //---- interpolate bl variables to xt
-      xt = boundaryLayerWorkflow.state.station1.param.xz * (1 - wf) + boundaryLayerWorkflow.state.station2.param.xz * wf;
+      xt.scalar = boundaryLayerWorkflow.state.station1.param.xz * (1 - wf) + boundaryLayerWorkflow.state.station2.param.xz * wf;
       tt = boundaryLayerWorkflow.state.station1.param.tz * (1 - wf) + boundaryLayerWorkflow.state.station2.param.tz * wf;
       dt = boundaryLayerWorkflow.state.station1.param.dz * (1 - wf) + boundaryLayerWorkflow.state.station2.param.dz * wf;
       ut = boundaryLayerWorkflow.state.station1.param.uz * (1 - wf) + boundaryLayerWorkflow.state.station2.param.uz * wf;
@@ -752,7 +752,7 @@ bool XFoil::trchek() {
       ut_a2 = (boundaryLayerWorkflow.state.station2.param.uz - boundaryLayerWorkflow.state.station1.param.uz) * wf_a2;
 
       //---- temporarily set "2" variables from "t" for blkin
-      boundaryLayerWorkflow.state.station2.param.xz = xt;
+      boundaryLayerWorkflow.state.station2.param.xz = xt.scalar;
       boundaryLayerWorkflow.state.station2.param.tz = tt;
       boundaryLayerWorkflow.state.station2.param.dz = dt;
       boundaryLayerWorkflow.state.station2.param.uz = ut;
@@ -848,57 +848,57 @@ bool XFoil::trchek() {
 
   //---- resolve if both forced and free transition
   if (trfree && trforc) {
-    trforc = xiforc < xt;
-    trfree = xiforc >= xt;
+    trforc = xiforc < xt.scalar;
+    trfree = xiforc >= xt.scalar;
   }
 
   if (trforc) {
     //----- if forced transition, then xt is prescribed,
     //-     no sense calculating the sensitivities, since we know them...
-    xt = xiforc;
-    xt_a1 = 0.0;
-    xt_x1 = 0.0;
-    xt_t1 = 0.0;
-    xt_d1 = 0.0;
-    xt_u1 = 0.0;
-    xt_x2 = 0.0;
-    xt_t2 = 0.0;
-    xt_d2 = 0.0;
-    xt_u2 = 0.0;
-    xt_ms = 0.0;
-    xt_re = 0.0;
-    xt_xf = 1.0;
+    xt.scalar = xiforc;
+    xt.a() = 0.0;
+    xt.x1() = 0.0;
+    xt.t1() = 0.0;
+    xt.d1() = 0.0;
+    xt.u1() = 0.0;
+    xt.x2() = 0.0;
+    xt.t2() = 0.0;
+    xt.d2() = 0.0;
+    xt.u2() = 0.0;
+    xt.ms() = 0.0;
+    xt.re() = 0.0;
+    xt.xf() = 1.0;
     return true;
   }
 
   //---- free transition ... set sensitivities of xt
 
-  xt_x1 = (1 - wf);
+  xt.x1() = (1 - wf);
   tt_t1 = (1 - wf);
   dt_d1 = (1 - wf);
   ut_u1 = (1 - wf);
 
-  xt_x2 = wf;
+  xt.x2() = wf;
   tt_t2 = wf;
   dt_d2 = wf;
   ut_u2 = wf;
 
-  xt_a1 = (boundaryLayerWorkflow.state.station2.param.xz - boundaryLayerWorkflow.state.station1.param.xz) * wf_a1;
+  xt.a() = (boundaryLayerWorkflow.state.station2.param.xz - boundaryLayerWorkflow.state.station1.param.xz) * wf_a1;
   tt_a1 = (boundaryLayerWorkflow.state.station2.param.tz - boundaryLayerWorkflow.state.station1.param.tz) * wf_a1;
   dt_a1 = (boundaryLayerWorkflow.state.station2.param.dz - boundaryLayerWorkflow.state.station1.param.dz) * wf_a1;
   ut_a1 = (boundaryLayerWorkflow.state.station2.param.uz - boundaryLayerWorkflow.state.station1.param.uz) * wf_a1;
 
-  xt_x1 += (boundaryLayerWorkflow.state.station2.param.xz - boundaryLayerWorkflow.state.station1.param.xz) * wf_x1;
+  xt.x1() += (boundaryLayerWorkflow.state.station2.param.xz - boundaryLayerWorkflow.state.station1.param.xz) * wf_x1;
   tt_x1 = (boundaryLayerWorkflow.state.station2.param.tz - boundaryLayerWorkflow.state.station1.param.tz) * wf_x1;
   dt_x1 = (boundaryLayerWorkflow.state.station2.param.dz - boundaryLayerWorkflow.state.station1.param.dz) * wf_x1;
   ut_x1 = (boundaryLayerWorkflow.state.station2.param.uz - boundaryLayerWorkflow.state.station1.param.uz) * wf_x1;
 
-  xt_x2 += (boundaryLayerWorkflow.state.station2.param.xz - boundaryLayerWorkflow.state.station1.param.xz) * wf_x2;
+  xt.x2() += (boundaryLayerWorkflow.state.station2.param.xz - boundaryLayerWorkflow.state.station1.param.xz) * wf_x2;
   tt_x2 = (boundaryLayerWorkflow.state.station2.param.tz - boundaryLayerWorkflow.state.station1.param.tz) * wf_x2;
   dt_x2 = (boundaryLayerWorkflow.state.station2.param.dz - boundaryLayerWorkflow.state.station1.param.dz) * wf_x2;
   ut_x2 = (boundaryLayerWorkflow.state.station2.param.uz - boundaryLayerWorkflow.state.station1.param.uz) * wf_x2;
 
-  xt_xf = (boundaryLayerWorkflow.state.station2.param.xz - boundaryLayerWorkflow.state.station1.param.xz) * wf_xf;
+  xt.xf() = (boundaryLayerWorkflow.state.station2.param.xz - boundaryLayerWorkflow.state.station1.param.xz) * wf_xf;
 
   //---- at this point, ax = ax( hk1, t1, rt1, a1, hkt, tt, rtt, at )
   blData::blVector hkt = boundaryLayerWorkflow.state.station2.hkz;
@@ -974,18 +974,18 @@ bool XFoil::trchek() {
   z_re = z_ax * ax_re;
 
   //---- set sensitivities of xt, with res being stationary for a2 constraint
-  xt_a1 = xt_a1 - (xt_a2 / z_a2) * z_a1;
-  xt_t1 = -(xt_a2 / z_a2) * z_t1;
-  xt_d1 = -(xt_a2 / z_a2) * z_d1;
-  xt_u1 = -(xt_a2 / z_a2) * z_u1;
-  xt_x1 = xt_x1 - (xt_a2 / z_a2) * z_x1;
-  xt_t2 = -(xt_a2 / z_a2) * z_t2;
-  xt_d2 = -(xt_a2 / z_a2) * z_d2;
-  xt_u2 = -(xt_a2 / z_a2) * z_u2;
-  xt_x2 = xt_x2 - (xt_a2 / z_a2) * z_x2;
-  xt_ms = -(xt_a2 / z_a2) * z_ms;
-  xt_re = -(xt_a2 / z_a2) * z_re;
-  xt_xf = 0.0;
+  xt.a() = xt.a() - (xt_a2 / z_a2) * z_a1;
+  xt.t1() = -(xt_a2 / z_a2) * z_t1;
+  xt.d1() = -(xt_a2 / z_a2) * z_d1;
+  xt.u1() = -(xt_a2 / z_a2) * z_u1;
+  xt.x1() = xt.x1() - (xt_a2 / z_a2) * z_x1;
+  xt.t2() = -(xt_a2 / z_a2) * z_t2;
+  xt.d2() = -(xt_a2 / z_a2) * z_d2;
+  xt.u2() = -(xt_a2 / z_a2) * z_u2;
+  xt.x2() = xt.x2() - (xt_a2 / z_a2) * z_x2;
+  xt.ms() = -(xt_a2 / z_a2) * z_ms;
+  xt.re() = -(xt_a2 / z_a2) * z_re;
+  xt.xf() = 0.0;
 
   return true;
 }
