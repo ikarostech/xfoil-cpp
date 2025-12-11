@@ -396,36 +396,32 @@ bool BoundaryLayerWorkflow::trdif(XFoil& xfoil) {
   //-    in other words, convert residual sensitivities wrt "t" variables
   //-    into sensitivities wrt "1" and "2" variables.  the amplification
   //-    equation is unnecessary here, so the k=1 row is left empty.
+  blrez = blc.rhs;
   for (int k = 1; k < 3; k++) {
-    blrez[k] = blc.rhs[k];
     blm[k] = blc.d_msq[k] + blc.a2(k, 1) * tt_ms + blc.a2(k, 2) * dt_ms +
              blc.a2(k, 3) * ut_ms + blc.a2(k, 4) * xfoil.xt_ms;
     blr[k] = blc.d_re[k] + blc.a2(k, 1) * tt_re + blc.a2(k, 2) * dt_re +
              blc.a2(k, 3) * ut_re + blc.a2(k, 4) * xfoil.xt_re;
     blx[k] = blc.d_xi[k] + blc.a2(k, 1) * tt_xf + blc.a2(k, 2) * dt_xf +
              blc.a2(k, 3) * ut_xf + blc.a2(k, 4) * xfoil.xt_xf;
-
-    bl1(k, 0) = blc.a1(k, 0) + blc.a2(k, 1) * tt_a1 + blc.a2(k, 2) * dt_a1 +
-                blc.a2(k, 3) * ut_a1 + blc.a2(k, 4) * xfoil.xt_a1;
-    bl1(k, 1) = blc.a1(k, 1) + blc.a2(k, 1) * tt_t1 + blc.a2(k, 2) * dt_t1 +
-                blc.a2(k, 3) * ut_t1 + blc.a2(k, 4) * xfoil.xt_t1;
-    bl1(k, 2) = blc.a1(k, 2) + blc.a2(k, 1) * tt_d1 + blc.a2(k, 2) * dt_d1 +
-                blc.a2(k, 3) * ut_d1 + blc.a2(k, 4) * xfoil.xt_d1;
-    bl1(k, 3) = blc.a1(k, 3) + blc.a2(k, 1) * tt_u1 + blc.a2(k, 2) * dt_u1 +
-                blc.a2(k, 3) * ut_u1 + blc.a2(k, 4) * xfoil.xt_u1;
-    bl1(k, 4) = blc.a1(k, 4) + blc.a2(k, 1) * tt_x1 + blc.a2(k, 2) * dt_x1 +
-                blc.a2(k, 3) * ut_x1 + blc.a2(k, 4) * xfoil.xt_x1;
-
-    bl2(k, 0) = 0.0;
-    bl2(k, 1) = blc.a2(k, 1) * tt_t2 + blc.a2(k, 2) * dt_t2 + blc.a2(k, 3) * ut_t2 +
-                blc.a2(k, 4) * xfoil.xt_t2;
-    bl2(k, 2) = blc.a2(k, 1) * tt_d2 + blc.a2(k, 2) * dt_d2 + blc.a2(k, 3) * ut_d2 +
-                blc.a2(k, 4) * xfoil.xt_d2;
-    bl2(k, 3) = blc.a2(k, 1) * tt_u2 + blc.a2(k, 2) * dt_u2 + blc.a2(k, 3) * ut_u2 +
-                blc.a2(k, 4) * xfoil.xt_u2;
-    bl2(k, 4) = blc.a2(k, 1) * tt_x2 + blc.a2(k, 2) * dt_x2 + blc.a2(k, 3) * ut_x2 +
-                blc.a2(k, 4) * xfoil.xt_x2;
   }
+  const Eigen::Matrix<double, 4, 5> bl1_transform{
+    {tt_a1, tt_t1, tt_d1, tt_u1, tt_x1},
+    {dt_a1, dt_t1, dt_d1, dt_u1, dt_x1},
+    {ut_a1, ut_t1, ut_d1, ut_u1, ut_x1},
+    {xfoil.xt_a1, xfoil.xt_t1, xfoil.xt_d1, xfoil.xt_u1, xfoil.xt_x1}
+  };
+  bl1.block<2, 5>(1, 0) =
+      blc.a1.middleRows<2>(1) + blc.a2.block<2, 4>(1, 1) * bl1_transform;
+
+  const Eigen::Matrix<double, 4, 4> bl2_transform{
+    {tt_t2, dt_t2, ut_t2, xfoil.xt_t2},
+    {tt_d2, dt_d2, ut_d2, xfoil.xt_d2},
+    {tt_u2, dt_u2, ut_u2, xfoil.xt_u2},
+    {tt_x2, dt_x2, ut_x2, xfoil.xt_x2}
+  };
+  bl2.block<2, 1>(1, 0).setZero();
+  bl2.block<2, 4>(1, 1) = blc.a2.block<2, 4>(1, 1) * bl2_transform.transpose();
 
   //**** second, set up turbulent part between xt and x2  ****
 
