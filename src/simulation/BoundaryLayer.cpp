@@ -293,87 +293,48 @@ bool BoundaryLayerWorkflow::trdif(XFoil& xfoil) {
   Matrix<double, 4, 5> bl1, bl2, bt1, bt2;
   Vector<double, 4> blrez, blm, blr, blx, btrez, btm, btr, btx;
 
-  double tt, tt_a1, tt_x1, tt_x2, tt_t1, tt_t2, tt_d1, tt_d2, tt_u1, tt_u2;
-  double tt_ms, tt_re, tt_xf, dt, dt_a1, dt_x1, dt_x2, dt_t1, dt_t2;
-  double dt_d1, dt_d2, dt_u1, dt_u2, dt_ms, dt_re, dt_xf;
-  double ut, ut_a1, ut_x1, ut_x2, ut_t1, ut_t2, ut_d1, ut_d2, ut_u1, ut_u2;
-  double ut_ms, ut_re, ut_xf;
-  double st, st_tt, st_dt, st_ut, st_ms, st_re, st_a1, st_x1, st_x2, st_t1,
-      st_t2;
-  double st_d1, st_d2, st_u1, st_u2, st_xf;
   double ctr, ctr_hk2;
 
   xfoil.saveblData(1);
   xfoil.saveblData(2);
 
   //---- weighting factors for linear interpolation to transition point
+  blDiff wf;
+  wf.scalar = (xfoil.xt.scalar - state.station1.param.xz) /
+                  (state.station2.param.xz - state.station1.param.xz);
+  
   double wf2 = (xfoil.xt.scalar - state.station1.param.xz) / (state.station2.param.xz - state.station1.param.xz);
   double wf_xt = 1.0 / (state.station2.param.xz - state.station1.param.xz);
-  
-  double wf_a1 = wf_xt * xfoil.xt.a();
-  double wf_x1 =
-      wf_xt * xfoil.xt.x1() + (wf2 - 1.0) / (state.station2.param.xz - state.station1.param.xz);
-  double wf_x2 = wf_xt * xfoil.xt.x2() - wf2 / (state.station2.param.xz - state.station1.param.xz);
-  double wf_t1 = wf_xt * xfoil.xt.t1();
-  double wf_t2 = wf_xt * xfoil.xt.t2();
-  double wf_d1 = wf_xt * xfoil.xt.d1();
-  double wf_d2 = wf_xt * xfoil.xt.d2();
-  double wf_u1 = wf_xt * xfoil.xt.u1();
-  double wf_u2 = wf_xt * xfoil.xt.u2();
-  double wf_ms = wf_xt * xfoil.xt.ms();
-  double wf_re = wf_xt * xfoil.xt.re();
-  double wf_xf = wf_xt * xfoil.xt.xf();
+  wf.vector = xfoil.xt.vector * wf_xt;
+  wf.x1() += (wf2 - 1.0) / (state.station2.param.xz - state.station1.param.xz);
+  wf.x2() -= wf2 / (state.station2.param.xz - state.station1.param.xz);
 
   double wf1 = 1.0 - wf2;
 
   //-----interpolate primary variables to transition point
-  tt = state.station1.param.tz * wf1 + state.station2.param.tz * wf2;
-  tt_a1 = (state.station2.param.tz - state.station1.param.tz) * wf_a1;
-  tt_x1 = (state.station2.param.tz - state.station1.param.tz) * wf_x1;
-  tt_x2 = (state.station2.param.tz - state.station1.param.tz) * wf_x2;
-  tt_t1 = (state.station2.param.tz - state.station1.param.tz) * wf_t1 + wf1;
-  tt_t2 = (state.station2.param.tz - state.station1.param.tz) * wf_t2 + wf2;
-  tt_d1 = (state.station2.param.tz - state.station1.param.tz) * wf_d1;
-  tt_d2 = (state.station2.param.tz - state.station1.param.tz) * wf_d2;
-  tt_u1 = (state.station2.param.tz - state.station1.param.tz) * wf_u1;
-  tt_u2 = (state.station2.param.tz - state.station1.param.tz) * wf_u2;
-  tt_ms = (state.station2.param.tz - state.station1.param.tz) * wf_ms;
-  tt_re = (state.station2.param.tz - state.station1.param.tz) * wf_re;
-  tt_xf = (state.station2.param.tz - state.station1.param.tz) * wf_xf;
+  blDiff tt;
+  tt.scalar = state.station1.param.tz * wf1 + state.station2.param.tz * wf2;
+  tt.vector = (state.station2.param.tz - state.station1.param.tz) * wf.vector;
+  tt.t1() += wf1;
+  tt.t2() += wf2;
 
-  dt = state.station1.param.dz * wf1 + state.station2.param.dz * wf2;
-  dt_a1 = (state.station2.param.dz - state.station1.param.dz) * wf_a1;
-  dt_x1 = (state.station2.param.dz - state.station1.param.dz) * wf_x1;
-  dt_x2 = (state.station2.param.dz - state.station1.param.dz) * wf_x2;
-  dt_t1 = (state.station2.param.dz - state.station1.param.dz) * wf_t1;
-  dt_t2 = (state.station2.param.dz - state.station1.param.dz) * wf_t2;
-  dt_d1 = (state.station2.param.dz - state.station1.param.dz) * wf_d1 + wf1;
-  dt_d2 = (state.station2.param.dz - state.station1.param.dz) * wf_d2 + wf2;
-  dt_u1 = (state.station2.param.dz - state.station1.param.dz) * wf_u1;
-  dt_u2 = (state.station2.param.dz - state.station1.param.dz) * wf_u2;
-  dt_ms = (state.station2.param.dz - state.station1.param.dz) * wf_ms;
-  dt_re = (state.station2.param.dz - state.station1.param.dz) * wf_re;
-  dt_xf = (state.station2.param.dz - state.station1.param.dz) * wf_xf;
+  blDiff dt;
+  dt.scalar = state.station1.param.dz * wf1 + state.station2.param.dz * wf2;
+  dt.vector = (state.station2.param.dz - state.station1.param.dz) * wf.vector;
+  dt.d1() += wf1;
+  dt.d2() += wf2;
 
-  ut = state.station1.param.uz * wf1 + state.station2.param.uz * wf2;
-  ut_a1 = (state.station2.param.uz - state.station1.param.uz) * wf_a1;
-  ut_x1 = (state.station2.param.uz - state.station1.param.uz) * wf_x1;
-  ut_x2 = (state.station2.param.uz - state.station1.param.uz) * wf_x2;
-  ut_t1 = (state.station2.param.uz - state.station1.param.uz) * wf_t1;
-  ut_t2 = (state.station2.param.uz - state.station1.param.uz) * wf_t2;
-  ut_d1 = (state.station2.param.uz - state.station1.param.uz) * wf_d1;
-  ut_d2 = (state.station2.param.uz - state.station1.param.uz) * wf_d2;
-  ut_u1 = (state.station2.param.uz - state.station1.param.uz) * wf_u1 + wf1;
-  ut_u2 = (state.station2.param.uz - state.station1.param.uz) * wf_u2 + wf2;
-  ut_ms = (state.station2.param.uz - state.station1.param.uz) * wf_ms;
-  ut_re = (state.station2.param.uz - state.station1.param.uz) * wf_re;
-  ut_xf = (state.station2.param.uz - state.station1.param.uz) * wf_xf;
+  blDiff ut;
+  ut.scalar = state.station1.param.uz * wf1 + state.station2.param.uz * wf2;
+  ut.vector = (state.station2.param.uz - state.station1.param.uz) * wf.vector;
+  ut.u1() += wf1;
+  ut.u2() += wf2;
 
   //---- set primary "t" variables at xt  (really placed into "2" variables)
   state.station2.param.xz = xfoil.xt.scalar;
-  state.station2.param.tz = tt;
-  state.station2.param.dz = dt;
-  state.station2.param.uz = ut;
+  state.station2.param.tz = tt.scalar;
+  state.station2.param.dz = dt.scalar;
+  state.station2.param.uz = ut.scalar;
 
   state.station2.param.amplz = xfoil.amcrit;
   state.station2.param.sz = 0.0;
@@ -398,27 +359,27 @@ bool BoundaryLayerWorkflow::trdif(XFoil& xfoil) {
   //-    equation is unnecessary here, so the k=1 row is left empty.
   blrez = blc.rhs;
   for (int k = 1; k < 3; k++) {
-    blm[k] = blc.d_msq[k] + blc.a2(k, 1) * tt_ms + blc.a2(k, 2) * dt_ms +
-             blc.a2(k, 3) * ut_ms + blc.a2(k, 4) * xfoil.xt.ms();
-    blr[k] = blc.d_re[k] + blc.a2(k, 1) * tt_re + blc.a2(k, 2) * dt_re +
-             blc.a2(k, 3) * ut_re + blc.a2(k, 4) * xfoil.xt.re();
-    blx[k] = blc.d_xi[k] + blc.a2(k, 1) * tt_xf + blc.a2(k, 2) * dt_xf +
-             blc.a2(k, 3) * ut_xf + blc.a2(k, 4) * xfoil.xt.xf();
+    blm[k] = blc.d_msq[k] + blc.a2(k, 1) * tt.ms() + blc.a2(k, 2) * dt.ms() +
+             blc.a2(k, 3) * ut.ms() + blc.a2(k, 4) * xfoil.xt.ms();
+    blr[k] = blc.d_re[k] + blc.a2(k, 1) * tt.re() + blc.a2(k, 2) * dt.re() +
+             blc.a2(k, 3) * ut.re() + blc.a2(k, 4) * xfoil.xt.re();
+    blx[k] = blc.d_xi[k] + blc.a2(k, 1) * tt.xf() + blc.a2(k, 2) * dt.xf() +
+             blc.a2(k, 3) * ut.xf() + blc.a2(k, 4) * xfoil.xt.xf();
   }
   const Eigen::Matrix<double, 4, 5> bl1_transform{
-    {tt_a1, tt_t1, tt_d1, tt_u1, tt_x1},
-    {dt_a1, dt_t1, dt_d1, dt_u1, dt_x1},
-    {ut_a1, ut_t1, ut_d1, ut_u1, ut_x1},
+    {tt.a(), tt.t1(), tt.d1(), tt.u1(), tt.x1()},
+    {dt.a(), dt.t1(), dt.d1(), dt.u1(), dt.x1()},
+    {ut.a(), ut.t1(), ut.d1(), ut.u1(), ut.x1()},
     {xfoil.xt.a(), xfoil.xt.t1(), xfoil.xt.d1(), xfoil.xt.u1(), xfoil.xt.x1()}
   };
   bl1.block<2, 5>(1, 0) =
       blc.a1.middleRows<2>(1) + blc.a2.block<2, 4>(1, 1) * bl1_transform;
 
   const Eigen::Matrix<double, 4, 4> bl2_transform{
-    {tt_t2, dt_t2, ut_t2, xfoil.xt.t2()},
-    {tt_d2, dt_d2, ut_d2, xfoil.xt.d2()},
-    {tt_u2, dt_u2, ut_u2, xfoil.xt.u2()},
-    {tt_x2, dt_x2, ut_x2, xfoil.xt.x2()}
+    {tt.t2(), dt.t2(), ut.t2(), xfoil.xt.t2()},
+    {tt.d2(), dt.d2(), ut.d2(), xfoil.xt.d2()},
+    {tt.u2(), dt.u2(), ut.u2(), xfoil.xt.u2()},
+    {tt.x2(), dt.x2(), ut.x2(), xfoil.xt.x2()}
   };
   bl2.block<2, 1>(1, 0).setZero();
   bl2.block<2, 4>(1, 1) = blc.a2.block<2, 4>(1, 1) * bl2_transform.transpose();
@@ -434,16 +395,16 @@ bool BoundaryLayerWorkflow::trdif(XFoil& xfoil) {
   ctr = 1.8 * exp(-3.3 / (state.station2.hkz.scalar - 1.0));
   ctr_hk2 = ctr * 3.3 / (state.station2.hkz.scalar - 1.0) / (state.station2.hkz.scalar - 1.0);
 
-  st = ctr * state.station2.cqz.scalar;
-  st_tt =
+  double st = ctr * state.station2.cqz.scalar;
+  double st_tt =
       ctr * state.station2.cqz.t() + state.station2.cqz.scalar * ctr_hk2 * state.station2.hkz.t();
-  st_dt =
+  double st_dt =
       ctr * state.station2.cqz.d() + state.station2.cqz.scalar * ctr_hk2 * state.station2.hkz.d();
-  st_ut =
+  double st_ut =
       ctr * state.station2.cqz.u() + state.station2.cqz.scalar * ctr_hk2 * state.station2.hkz.u();
-  st_ms =
+  double st_ms =
       ctr * state.station2.cqz.ms() + state.station2.cqz.scalar * ctr_hk2 * state.station2.hkz.ms();
-  st_re = ctr * state.station2.cqz.re();
+  double st_re = ctr * state.station2.cqz.re();
 
   state.station2.param.amplz = 0.0;
   state.station2.param.sz = st;
@@ -466,38 +427,38 @@ bool BoundaryLayerWorkflow::trdif(XFoil& xfoil) {
   Eigen::VectorXd common_st = Eigen::Vector3d{st_tt, st_dt, st_ut};
   Eigen::VectorXd st1 = 
     Eigen::Matrix<double, 5, 3>{
-      {tt_a1, dt_a1, ut_a1},
-      {tt_t1, dt_t1, ut_t1},
-      {tt_d1, dt_d1, ut_d1},
-      {tt_u1, dt_u1, ut_u1},
-      {tt_x1, dt_x1, ut_x1}
+      {tt.a(), dt.a(), ut.a()},
+      {tt.t1(), dt.t1(), ut.t1()},
+      {tt.d1(), dt.d1(), ut.d1()},
+      {tt.u1(), dt.u1(), ut.u1()},
+      {tt.x1(), dt.x1(), ut.x1()}
     } * common_st;
   Eigen::VectorXd st2 = 
     Eigen::Matrix<double, 5, 3>{
       {0, 0, 0},
-      {tt_t2, dt_t2, ut_t2},
-      {tt_d2, dt_d2, ut_d2},
-      {tt_u2, dt_u2, ut_u2},
-      {tt_x2, dt_x2, ut_x2}
+      {tt.t2(), dt.t2(), ut.t2()},
+      {tt.d2(), dt.d2(), ut.d2()},
+      {tt.u2(), dt.u2(), ut.u2()},
+      {tt.x2(), dt.x2(), ut.x2()}
     } * common_st;
 
-  st_ms = st_tt * tt_ms + st_dt * dt_ms + st_ut * ut_ms + st_ms;
-  st_re = st_tt * tt_re + st_dt * dt_re + st_ut * ut_re + st_re;
-  st_xf = st_tt * tt_xf + st_dt * dt_xf + st_ut * ut_xf;
+  st_ms = st_tt * tt.ms() + st_dt * dt.ms() + st_ut * ut.ms() + st_ms;
+  st_re = st_tt * tt.re() + st_dt * dt.re() + st_ut * ut.re() + st_re;
+  double st_xf = st_tt * tt.xf() + st_dt * dt.xf() + st_ut * ut.xf();
 
   Matrix<double, 5, 5> bt1_right =
       Matrix<double, 5, 5>{{0, 0, 0, 0, 0},
-                           {tt_a1, tt_t1, tt_d1, tt_u1, tt_x1},
-                           {dt_a1, dt_t1, dt_d1, dt_u1, dt_x1},
-                           {ut_a1, ut_t1, ut_d1, ut_u1, ut_x1},
+                           {tt.a(), tt.t1(), tt.d1(), tt.u1(), tt.x1()},
+                           {dt.a(), dt.t1(), dt.d1(), dt.u1(), dt.x1()},
+                           {ut.a(), ut.t1(), ut.d1(), ut.u1(), ut.x1()},
                            {xfoil.xt.a(), xfoil.xt.t1(), xfoil.xt.d1(), xfoil.xt.u1(), xfoil.xt.x1()}};
   bt1_right.row(0) = st1;
 
   Matrix<double, 5, 5> bt2_right =
       Matrix<double, 5, 5>{{0, 0, 0, 0, 0},
-                           {0, tt_t2, tt_d2, tt_u2, tt_x2},
-                           {0, dt_t2, dt_d2, dt_u2, dt_x2},
-                           {0, ut_t2, ut_d2, ut_u2, ut_x2},
+                           {0, tt.t2(), tt.d2(), tt.u2(), tt.x2()},
+                           {0, dt.t2(), dt.d2(), dt.u2(), dt.x2()},
+                           {0, ut.t2(), ut.d2(), ut.u2(), ut.x2()},
                            {0, xfoil.xt.t2(), xfoil.xt.d2(), xfoil.xt.u2(), xfoil.xt.x2()}};
   bt2_right.row(0) = st2;
   bt1.block(0, 0, 3, 5) = blc.a1.block(0, 0, 3, 5) * bt1_right;
@@ -505,12 +466,12 @@ bool BoundaryLayerWorkflow::trdif(XFoil& xfoil) {
   bt2 += blc.a2;
   for (int k = 0; k < 3; k++) {
     btrez[k] = blc.rhs[k];
-    btm[k] = blc.d_msq[k] + blc.a1(k, 0) * st_ms + blc.a1(k, 1) * tt_ms +
-             blc.a1(k, 2) * dt_ms + blc.a1(k, 3) * ut_ms + blc.a1(k, 4) * xfoil.xt.ms();
-    btr[k] = blc.d_re[k] + blc.a1(k, 0) * st_re + blc.a1(k, 1) * tt_re +
-             blc.a1(k, 2) * dt_re + blc.a1(k, 3) * ut_re + blc.a1(k, 4) * xfoil.xt.re();
-    btx[k] = blc.d_xi[k] + blc.a1(k, 0) * st_xf + blc.a1(k, 1) * tt_xf +
-             blc.a1(k, 2) * dt_xf + blc.a1(k, 3) * ut_xf + blc.a1(k, 4) * xfoil.xt.xf();
+    btm[k] = blc.d_msq[k] + blc.a1(k, 0) * st_ms + blc.a1(k, 1) * tt.ms() +
+             blc.a1(k, 2) * dt.ms() + blc.a1(k, 3) * ut.ms() + blc.a1(k, 4) * xfoil.xt.ms();
+    btr[k] = blc.d_re[k] + blc.a1(k, 0) * st_re + blc.a1(k, 1) * tt.re() +
+             blc.a1(k, 2) * dt.re() + blc.a1(k, 3) * ut.re() + blc.a1(k, 4) * xfoil.xt.re();
+    btx[k] = blc.d_xi[k] + blc.a1(k, 0) * st_xf + blc.a1(k, 1) * tt.xf() +
+             blc.a1(k, 2) * dt.xf() + blc.a1(k, 3) * ut.xf() + blc.a1(k, 4) * xfoil.xt.xf();
   }
 
   //---- add up laminar and turbulent parts to get final system
