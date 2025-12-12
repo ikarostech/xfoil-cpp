@@ -376,13 +376,14 @@ bool BoundaryLayerWorkflow::trdif(XFoil& xfoil) {
       blc.a1.middleRows<2>(1) + blc.a2.block<2, 4>(1, 1) * bl1_transform;
 
   const Eigen::Matrix<double, 4, 4> bl2_transform{
-    {tt.t2(), dt.t2(), ut.t2(), xfoil.xt.t2()},
-    {tt.d2(), dt.d2(), ut.d2(), xfoil.xt.d2()},
-    {tt.u2(), dt.u2(), ut.u2(), xfoil.xt.u2()},
-    {tt.x2(), dt.x2(), ut.x2(), xfoil.xt.x2()}
-  };
+  {tt.t2(), tt.d2(), tt.u2(), tt.x2()},
+  {dt.t2(), dt.d2(), dt.u2(), dt.x2()},
+  {ut.t2(), ut.d2(), ut.u2(), ut.x2()},
+  {xfoil.xt.t2(), xfoil.xt.d2(), xfoil.xt.u2(), xfoil.xt.x2()}
+};
+
   bl2.block<2, 1>(1, 0).setZero();
-  bl2.block<2, 4>(1, 1) = blc.a2.block<2, 4>(1, 1) * bl2_transform.transpose();
+  bl2.block<2, 4>(1, 1) = blc.a2.block<2, 4>(1, 1) * bl2_transform;
 
   //**** second, set up turbulent part between xt and x2  ****
 
