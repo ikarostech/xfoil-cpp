@@ -447,21 +447,13 @@ bool BoundaryLayerWorkflow::trdif(XFoil& xfoil) {
   st_re = st_tt * tt.re() + st_dt * dt.re() + st_ut * ut.re() + st_re;
   double st_xf = st_tt * tt.xf() + st_dt * dt.xf() + st_ut * ut.xf();
 
-  Matrix<double, 5, 5> bt1_right =
-      Matrix<double, 5, 5>{{0, 0, 0, 0, 0},
-                           {tt.a(), tt.t1(), tt.d1(), tt.u1(), tt.x1()},
-                           {dt.a(), dt.t1(), dt.d1(), dt.u1(), dt.x1()},
-                           {ut.a(), ut.t1(), ut.d1(), ut.u1(), ut.x1()},
-                           {xfoil.xt.a(), xfoil.xt.t1(), xfoil.xt.d1(), xfoil.xt.u1(), xfoil.xt.x1()}};
-  bt1_right.row(0) = st1;
+  Matrix<double, 5, 5> bt1_right = Matrix<double, 5, 5>::Zero();
+  bt1_right.block<4, 5>(1, 0) = bl1_transform;
+  bt1_right.row(0) = st1.transpose();
 
-  Matrix<double, 5, 5> bt2_right =
-      Matrix<double, 5, 5>{{0, 0, 0, 0, 0},
-                           {0, tt.t2(), tt.d2(), tt.u2(), tt.x2()},
-                           {0, dt.t2(), dt.d2(), dt.u2(), dt.x2()},
-                           {0, ut.t2(), ut.d2(), ut.u2(), ut.x2()},
-                           {0, xfoil.xt.t2(), xfoil.xt.d2(), xfoil.xt.u2(), xfoil.xt.x2()}};
-  bt2_right.row(0) = st2;
+  Matrix<double, 5, 5> bt2_right = Matrix<double, 5, 5>::Zero();
+  bt2_right.block<4, 4>(1, 1) = bl2_transform;
+  bt2_right.row(0) = st2.transpose();
   bt1.block(0, 0, 3, 5) = blc.a1.block(0, 0, 3, 5) * bt1_right;
   bt2.block(0, 0, 3, 5) = blc.a1.block(0, 0, 3, 5) * bt2_right;
   bt2 += blc.a2;
