@@ -183,7 +183,6 @@ class XFoil {
 
   void updateTrailingEdgeState();
 
-  bool blkin(BoundaryLayerState& state);
   bool blsolve();
   double cang(Matrix2Xd points);
   double cdcalc() const;

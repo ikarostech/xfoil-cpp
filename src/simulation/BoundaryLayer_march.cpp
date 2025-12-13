@@ -36,7 +36,7 @@ void BoundaryLayerWorkflow::storeStationStateCommon(
         blprv(xfoil, state.current(), xsi, ami, cti, thi, dsi, dswaki, uei);
     state.current() = updatedCurrent;
   }
-  xfoil.blkin(state);
+  blkin(xfoil, state);
   state.stepbl();
 
   if (xfoil.flowRegime == FlowRegimeEnum::Wake) {
@@ -580,7 +580,7 @@ bool BoundaryLayerWorkflow::performMrchueNewtonLoop(
                 ctx.dsi, ctx.dswaki, ctx.uei);
       state.current() = updatedCurrent;
     }
-    xfoil.blkin(state);
+    blkin(xfoil, state);
 
     if ((!ctx.simi) && (!(xfoil.flowRegime == FlowRegimeEnum::Turbulent || xfoil.flowRegime == FlowRegimeEnum::Wake))) {
       xfoil.trchek();
@@ -759,7 +759,7 @@ void BoundaryLayerWorkflow::handleMrchueStationFailure(
               ctx.dsi, ctx.dswaki, ctx.uei);
     state.current() = updatedCurrent;
   }
-  xfoil.blkin(state);
+  blkin(xfoil, state);
 
   xfoil.checkTransitionIfNeeded(side, stationIndex, ctx.simi, 2, ctx.ami);
   syncStationRegimeStates(side, stationIndex, ctx.wake, xfoil);

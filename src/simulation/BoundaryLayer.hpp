@@ -167,6 +167,7 @@ class BoundaryLayerWorkflow {
   bool stfind(XFoil& xfoil);
   bool stmove(XFoil& xfoil);
   bool uicalc(XFoil& xfoil);
+  bool blkin(XFoil& xfoil, BoundaryLayerState& state);
   bool tesys(XFoil& xfoil, double cte, double tte, double dte);
   bool trchek(XFoil& xfoil);
   bool saveblData(int icom);

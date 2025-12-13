@@ -118,13 +118,13 @@ bool XFoil::performMixedModeNewtonIteration(int side, int ibl, int itrold,
 
   for (int itbl = 1; itbl <= 25; ++itbl) {
     {
-  blData updatedCurrent =
+    blData updatedCurrent =
       boundaryLayerWorkflow.blprv(*this, boundaryLayerWorkflow.state.current(),
                                   ctx.xsi, ami, ctx.cti, ctx.thi, ctx.dsi,
                                   ctx.dswaki, ctx.uei);
       boundaryLayerWorkflow.state.current() = updatedCurrent;
     }
-    blkin(boundaryLayerWorkflow.state);
+    boundaryLayerWorkflow.blkin(*this, boundaryLayerWorkflow.state);
 
     checkTransitionIfNeeded(side, ibl, ctx.simi, 1, ami);
 
@@ -178,7 +178,7 @@ void XFoil::handleMixedModeNonConvergence(int side, int ibl,
             ctx.cti, ctx.thi, ctx.dsi, ctx.dswaki, ctx.uei);
     boundaryLayerWorkflow.state.current() = updatedCurrent;
   }
-  blkin(boundaryLayerWorkflow.state);
+  boundaryLayerWorkflow.blkin(*this, boundaryLayerWorkflow.state);
 
   checkTransitionIfNeeded(side, ibl, ctx.simi, 2, ami);
 
@@ -416,7 +416,7 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
                                     ami, cti, thi, dsi, dswaki, uei);
     boundaryLayerWorkflow.state.current() = updatedCurrent;
   } // cti
-      blkin(boundaryLayerWorkflow.state);
+      boundaryLayerWorkflow.blkin(*this, boundaryLayerWorkflow.state);
 
       //---- check for transition and set xt, etc. if found
       if (stationIsTransitionCandidate) {
