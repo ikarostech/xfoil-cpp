@@ -161,7 +161,7 @@ BoundaryLayerWorkflow::computeClFromEdgeVelocityDistribution(
   const Eigen::VectorXd& qnew = qtan.qnew;
   const Eigen::VectorXd& q_ac = qtan.q_ac;
   const auto compressibility = xfoil.buildCompressibilityParams();
-  const Eigen::Matrix2d rotateMatrix = xfoil.buildBodyToFreestreamRotation();
+  const Eigen::Matrix2d rotateMatrix = MathUtil::getRotateMatrix(xfoil.analysis_state_.alpha);
   const int point_count = xfoil.foil.foil_shape.n;
   if (point_count == 0) {
     return contributions;

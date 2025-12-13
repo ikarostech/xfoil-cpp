@@ -62,12 +62,7 @@ bool XFoil::initXFoilAnalysis(double Re, double alpha, double Mach,
   boundaryLayerWorkflow.lattice.bottom.transitionLocation = XtrBot;
 
   if (Mach > 0.000001) {
-    if (!setMach()) {
-      writeString(
-          "... Invalid Analysis Settings\nCpCalc: local speed too large\n "
-          "Compressibility corrections invalid ");
-      return false;
-    }
+    setMach();
   }
 
   return true;

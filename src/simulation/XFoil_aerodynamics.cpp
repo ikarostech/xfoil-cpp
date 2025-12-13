@@ -79,7 +79,7 @@ XFoil::ClComputation XFoil::clcalc(Vector2d ref) const {
   double xcp_accumulator = 0.0;
 
   const auto compressibility = buildCompressibilityParams();
-  const Matrix2d rotateMatrix = buildBodyToFreestreamRotation();
+  const Matrix2d rotateMatrix = MathUtil::getRotateMatrix(analysis_state_.alpha);
   const int point_count = foil.foil_shape.n;
 
   const PressureCoefficientResult cp_first = computePressureCoefficient(

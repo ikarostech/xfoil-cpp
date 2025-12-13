@@ -206,7 +206,6 @@ class XFoil {
   PressureCoefficientResult computePressureCoefficient(double tangential_velocity,
                                                        double velocity_derivative,
                                                        const CompressibilityParams &params) const;
-  Matrix2d buildBodyToFreestreamRotation() const;
 
   enum class SideType {
     TOP = 1,

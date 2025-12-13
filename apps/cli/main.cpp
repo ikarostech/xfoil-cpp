@@ -113,10 +113,7 @@ int main() {
     std::cout << "Initialization error!" << std::endl;
     return 1;
   }
-  if (!foil->initXFoilAnalysis(100000, 0, 0.0, 9.0, 1.0, 1.0, XFoil::ReynoldsType::CONSTANT, XFoil::MachType::CONSTANT, true, ss)) {
-    std::cout << "Initialization error!" << std::endl;
-    return 1;
-  }
+  foil->initXFoilAnalysis(100000, 0, 0.0, 9.0, 1.0, 1.0, XFoil::ReynoldsType::CONSTANT, XFoil::MachType::CONSTANT, true, ss);
 
   IterationContext iterationContext{};
 

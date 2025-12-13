@@ -71,14 +71,6 @@ XFoil::PressureCoefficientResult XFoil::computePressureCoefficient(
   return {pressure_coefficient, cp_msq, cp_velocity_derivative};
 }
 
-Matrix2d XFoil::buildBodyToFreestreamRotation() const {
-  const double ca = std::cos(analysis_state_.alpha);
-  const double sa = std::sin(analysis_state_.alpha);
-  Matrix2d rotation;
-  rotation << ca, sa, -sa, ca;
-  return rotation;
-}
-
 XFoil::XFoil() : analysis_state_() {
 
   m_pOutStream = nullptr;

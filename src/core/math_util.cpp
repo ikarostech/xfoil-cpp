@@ -1,6 +1,7 @@
 #include "math_util.hpp"
 
 #include <Eigen/Core>
+#include <cmath>
 #include <iostream>
 
 ThomasAlgorithmResult MathUtil::tridiagonalSolve(Eigen::MatrixXd A, Eigen::VectorXd d) {
@@ -49,4 +50,12 @@ double MathUtil::pow(double a, int b) {
 
 double MathUtil::cross2(const Eigen::Vector2d& a, const Eigen::Vector2d& b) {
     return a[0] * b[1] - a[1] * b[0];
+}
+
+Eigen::Matrix2d MathUtil::getRotateMatrix(double alpha) {
+    const double ca = std::cos(alpha);
+    const double sa = std::sin(alpha);
+    Eigen::Matrix2d rotation;
+    rotation << ca, sa, -sa, ca;
+    return rotation;
 }
