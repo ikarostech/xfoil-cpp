@@ -12,6 +12,24 @@ using BoundaryContext = BoundaryLayerWorkflow::MixedModeStationContext;
 using Eigen::Matrix;
 using Eigen::Vector;
 
+bool BoundaryLayerWorkflow::saveblData(int icom) {
+  if (icom == 1) {
+    blsav[icom] = state.station1;
+  } else {
+    blsav[icom] = state.station2;
+  }
+  return true;
+}
+
+bool BoundaryLayerWorkflow::restoreblData(int icom) {
+  if (icom == 1) {
+    state.station1 = blsav[icom];
+  } else if (icom == 2) {
+    state.station2 = blsav[icom];
+  }
+  return true;
+}
+
 bool BoundaryLayerWorkflow::isStartOfWake(const XFoil& xfoil, int side,
                                           int stationIndex) {
   return stationIndex == lattice.get(side).trailingEdgeIndex + 1;
@@ -296,8 +314,8 @@ bool BoundaryLayerWorkflow::trdif(XFoil& xfoil) {
 
   double ctr, ctr_hk2;
 
-  xfoil.saveblData(1);
-  xfoil.saveblData(2);
+  saveblData(1);
+  saveblData(2);
 
   //---- weighting factors for linear interpolation to transition point
   blDiff wf;
@@ -415,7 +433,7 @@ bool BoundaryLayerWorkflow::trdif(XFoil& xfoil) {
   state.station2 = blvar(state.station2, FlowRegimeEnum::Turbulent);
 
   state.stepbl();
-  xfoil.restoreblData(2);
+  restoreblData(2);
 
   //---- calculate xt-x2 midpoint cfm value
   SkinFrictionCoefficients turbulentSkinFriction =
@@ -493,7 +511,7 @@ bool BoundaryLayerWorkflow::trdif(XFoil& xfoil) {
   //	for (icom=1; icom<=ncom;icom++){
   //		com1[icom] = c1sav[icom];
   //	}
-  xfoil.restoreblData(1);
+  restoreblData(1);
 
   return true;
 }
@@ -544,7 +562,7 @@ bool BoundaryLayerWorkflow::trchek(XFoil& xfoil) {
   ut_a2 = 0.0;
 
   //---- save variables and sensitivities at ibl ("2") for future restoration
-  xfoil.saveblData(2);
+  saveblData(2);
 
   //---- calculate average amplification rate ax over x1..x2 interval
   BoundaryLayerUtil::AxResult ax_result =
@@ -632,7 +650,7 @@ bool BoundaryLayerWorkflow::trchek(XFoil& xfoil) {
       //---- restore clobbered "2" variables, except for ampl2
       amsave = state.station2.param.amplz;
 
-      xfoil.restoreblData(2);
+      restoreblData(2);
 
       state.station2.param.amplz = amsave;
 

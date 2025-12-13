@@ -15,7 +15,6 @@ struct InitState {
   std::array<double, IQX + 1> qf1{};
   std::array<double, IQX + 1> qf2{};
   std::array<double, IQX + 1> qf3{};
-  std::array<blData, 3> blsav{};
 };
 
 using InitStateRegistry = std::unordered_map<const XFoil*, InitState>;
@@ -56,7 +55,6 @@ bool XFoil::initialize() {
 void XFoil::initializeDataStructures() {
   const int total_nodes_with_wake = foil.foil_shape.n + foil.wake_shape.n;
   auto& cache = ensureInitState(this);
-  cache.blsav.fill(blData{});
 
   boundaryLayerWorkflow.lattice.top = BoundaryLayerLattice(IVX);
   boundaryLayerWorkflow.lattice.bottom = BoundaryLayerLattice(IVX);
@@ -186,26 +184,6 @@ double XFoil::getActualReynolds(double cls, ReynoldsType reynolds_control) {
   default:
     return 0;
   }
-}
-
-bool XFoil::restoreblData(int icom) {
-  auto& cache = ensureInitState(this);
-  if (icom == 1) {
-    boundaryLayerWorkflow.state.station1 = cache.blsav[icom];
-  } else if (icom == 2) {
-    boundaryLayerWorkflow.state.station2 = cache.blsav[icom];
-  }
-  return true;
-}
-
-bool XFoil::saveblData(int icom) {
-  auto& cache = ensureInitState(this);
-  if (icom == 1) {
-    cache.blsav[icom] = boundaryLayerWorkflow.state.station1;
-  } else {
-    cache.blsav[icom] = boundaryLayerWorkflow.state.station2;
-  }
-  return true;
 }
 
 bool XFoil::setMach() {

@@ -180,8 +180,6 @@ class XFoil {
   // TODO ActualMachにあわせる
   double getActualMach(double cls, MachType mach_type);
   double getActualReynolds(double cls, ReynoldsType reynolds_type);
-  bool restoreblData(int icom);
-  bool saveblData(int icom);
 
   void updateTrailingEdgeState();
 
