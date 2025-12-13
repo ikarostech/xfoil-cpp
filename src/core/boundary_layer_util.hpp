@@ -1,3 +1,5 @@
+#pragma once
+
 class BoundaryLayerUtil {
 public:
     class EnvEnResult {

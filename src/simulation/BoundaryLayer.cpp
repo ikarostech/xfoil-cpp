@@ -6,6 +6,7 @@
 
 #include "XFoil.h"
 #include "domain/coefficient/skin_friction.hpp"
+#include "core/boundary_layer_util.hpp"
 
 using BoundaryContext = BoundaryLayerWorkflow::MixedModeStationContext;
 using Eigen::Matrix;
@@ -493,6 +494,364 @@ bool BoundaryLayerWorkflow::trdif(XFoil& xfoil) {
   //		com1[icom] = c1sav[icom];
   //	}
   xfoil.restoreblData(1);
+
+  return true;
+}
+
+bool BoundaryLayerWorkflow::trchek(XFoil& xfoil) {
+  //----------------------------------------------------------------
+  //     new second-order version:  december 1994.
+  //
+  //     checks if transition occurs in the current interval x1..x2.
+  //     if transition occurs, then set transition location xt, and
+  //     its sensitivities to "1" and "2" variables.  if no transition,
+  //     set amplification ampl2.
+  //
+  //     solves the implicit amplification equation for n2:
+  //
+  //       n2 - n1     n'(xt,nt) + n'(x1,n1)
+  //       -------  =  ---------------------
+  //       x2 - x1               2
+  //
+  //     in effect, a 2-point central difference is used between
+  //     x1..x2 (no transition), or x1..xt (transition).  the switch
+  //     is done by defining xt,nt in the equation above depending
+  //     on whether n2 exceeds ncrit.
+  //
+  //  if n2<ncrit:  nt=n2    , xt=x2                  (no transition)
+  //
+  //  if n2>ncrit:  nt=ncrit , xt=(ncrit-n1)/(n2-n1)  (transition)
+  //
+  //----------------------------------------------------------------
+  double amplt, sfa, sfa_a1, sfa_a2, sfx;
+  double sfx_x1, sfx_x2, sfx_xf;
+  double tt, dt, ut, amsave;
+  double res = 0.0, res_a2 = 0.0;
+  double da2 = 0.0, dxt = 0.0, tt_t1 = 0.0, dt_d1 = 0.0, ut_u1 = 0.0;
+  double tt_t2 = 0.0, dt_d2 = 0.0, ut_u2 = 0.0, tt_a1 = 0.0, dt_a1 = 0.0;
+  double ut_a1 = 0.0, tt_x1 = 0.0, dt_x1 = 0.0, ut_x1 = 0.0, tt_x2 = 0.0,
+         dt_x2 = 0.0, ut_x2 = 0.0;
+  double z_ax = 0.0, z_a1 = 0.0, z_t1 = 0.0, z_d1 = 0.0, z_u1 = 0.0, z_x1 = 0.0,
+         z_a2 = 0.0, z_t2 = 0.0, z_d2 = 0.0, z_u2 = 0.0, z_x2 = 0.0, z_ms = 0.0,
+         z_re = 0.0;
+  double amplt_a2, wf, wf_a1, wf_a2, wf_xf, wf_x1, wf_x2;
+  double xt_a2, dt_a2, tt_a2;
+  double ut_a2;
+  double daeps = 0.00005;
+
+  amplt_a2 = 0.0;
+  xt_a2 = dt_a2 = tt_a2 = 0.0;
+  ut_a2 = 0.0;
+
+  //---- save variables and sensitivities at ibl ("2") for future restoration
+  xfoil.saveblData(2);
+
+  //---- calculate average amplification rate ax over x1..x2 interval
+  BoundaryLayerUtil::AxResult ax_result =
+      BoundaryLayerUtil::axset(state.station1.hkz.scalar, state.station1.param.tz, state.station1.rtz.scalar,
+            state.station1.param.amplz, state.station2.hkz.scalar, state.station2.param.tz,
+            state.station2.rtz.scalar, state.station2.param.amplz, xfoil.amcrit);
+
+  //---- set initial guess for iterate n2 (ampl2) at x2
+  state.station2.param.amplz = state.station1.param.amplz +
+                        ax_result.ax * (state.station2.param.xz - state.station1.param.xz);
+  //---- solve implicit system for amplification ampl2
+  auto iterateAmplification = [&]() -> bool {
+    for (int itam = 0; itam < 30; itam++) {
+      //---- define weighting factors wf1,wf2 for defining "t" quantities
+      if (state.station2.param.amplz <= xfoil.amcrit) {
+        //------ there is no transition yet,  "t" is the same as "2"
+        amplt = state.station2.param.amplz;
+        amplt_a2 = 1.0;
+        sfa = 1.0;
+        sfa_a1 = 0.0;
+        sfa_a2 = 0.0;
+      } else {
+        //------ there is transition in x1..x2, "t" is set from n1, n2
+        amplt = xfoil.amcrit;
+        amplt_a2 = 0.0;
+        sfa = (amplt - state.station1.param.amplz) /
+              (state.station2.param.amplz - state.station1.param.amplz);
+        sfa_a1 = (sfa - 1.0) / (state.station2.param.amplz - state.station1.param.amplz);
+        sfa_a2 = (-sfa) / (state.station2.param.amplz - state.station1.param.amplz);
+      }
+
+      if (xfoil.xiforc < state.station2.param.xz) {
+        sfx = (xfoil.xiforc - state.station1.param.xz) /
+              (state.station2.param.xz - state.station1.param.xz);
+        sfx_x1 = (sfx - 1.0) / (state.station2.param.xz - state.station1.param.xz);
+        sfx_x2 = (-sfx) / (state.station2.param.xz - state.station1.param.xz);
+        sfx_xf = 1.0 / (state.station2.param.xz - state.station1.param.xz);
+      } else {
+        sfx = 1.0;
+        sfx_x1 = 0.0;
+        sfx_x2 = 0.0;
+        sfx_xf = 0.0;
+      }
+
+      //---- set weighting factor from free or forced transition
+      if (sfa < sfx) {
+        wf = sfa;
+        wf_a1 = sfa_a1;
+        wf_a2 = sfa_a2;
+        wf_x1 = 0.0;
+        wf_x2 = 0.0;
+        wf_xf = 0.0;
+      } else {
+        wf = sfx;
+        wf_a1 = 0.0;
+        wf_a2 = 0.0;
+        wf_x1 = sfx_x1;
+        wf_x2 = sfx_x2;
+        wf_xf = sfx_xf;
+      }
+
+      //---- interpolate bl variables to xt
+      xfoil.xt.scalar = state.station1.param.xz * (1 - wf) + state.station2.param.xz * wf;
+      tt = state.station1.param.tz * (1 - wf) + state.station2.param.tz * wf;
+      dt = state.station1.param.dz * (1 - wf) + state.station2.param.dz * wf;
+      ut = state.station1.param.uz * (1 - wf) + state.station2.param.uz * wf;
+
+      xt_a2 = (state.station2.param.xz - state.station1.param.xz) * wf_a2;
+      tt_a2 = (state.station2.param.tz - state.station1.param.tz) * wf_a2;
+      dt_a2 = (state.station2.param.dz - state.station1.param.dz) * wf_a2;
+      ut_a2 = (state.station2.param.uz - state.station1.param.uz) * wf_a2;
+
+      //---- temporarily set "2" variables from "t" for blkin
+      state.station2.param.xz = xfoil.xt.scalar;
+      state.station2.param.tz = tt;
+      state.station2.param.dz = dt;
+      state.station2.param.uz = ut;
+
+      //---- calculate laminar secondary "t" variables hkt, rtt
+      xfoil.blkin(state);
+
+      blData::blVector hkt = state.station2.hkz;
+      blData::blVector rtt = state.station2.rtz;
+
+      //---- restore clobbered "2" variables, except for ampl2
+      amsave = state.station2.param.amplz;
+
+      xfoil.restoreblData(2);
+
+      state.station2.param.amplz = amsave;
+
+      //---- calculate amplification rate ax over current x1-xt interval
+      ax_result = BoundaryLayerUtil::axset(state.station1.hkz.scalar, state.station1.param.tz,
+                        state.station1.rtz.scalar, state.station1.param.amplz, hkt.scalar, tt, rtt.scalar,
+                        amplt, xfoil.amcrit);
+
+      //---- punch out early if there is no amplification here
+      if (ax_result.ax <= 0.0) {
+        return true;
+      }
+
+      //---- set sensitivity of ax(a2)
+      ax_result.ax_a2 =
+          (ax_result.ax_hk2 * hkt.t() + ax_result.ax_t2 +
+           ax_result.ax_rt2 * rtt.t()) *
+              tt_a2 +
+          (ax_result.ax_hk2 * hkt.d()) * dt_a2 +
+          (ax_result.ax_hk2 * hkt.u() + ax_result.ax_rt2 * rtt.u()) * ut_a2 +
+          ax_result.ax_a2 * amplt_a2;
+
+      //---- residual for implicit ampl2 definition (amplification equation)
+      res = state.station2.param.amplz - state.station1.param.amplz -
+            ax_result.ax * (state.station2.param.xz - state.station1.param.xz);
+      res_a2 = 1.0 - ax_result.ax_a2 * (state.station2.param.xz - state.station1.param.xz);
+
+      da2 = -res / res_a2;
+
+      xfoil.rlx = 1.0;
+      dxt = xt_a2 * da2;
+
+      if (xfoil.rlx * fabs(dxt / (state.station2.param.xz - state.station1.param.xz)) > 0.05) {
+        xfoil.rlx = 0.05 * fabs((state.station2.param.xz - state.station1.param.xz) / dxt);
+      }
+
+      if (xfoil.rlx * fabs(da2) > 1.0) {
+        xfoil.rlx = 1.0 * fabs(1.0 / da2);
+      }
+
+      //---- check if converged
+      if (fabs(da2) < daeps) {
+        return true;
+      }
+
+      if ((state.station2.param.amplz > xfoil.amcrit &&
+           state.station2.param.amplz + xfoil.rlx * da2 < xfoil.amcrit) ||
+          (state.station2.param.amplz < xfoil.amcrit &&
+           state.station2.param.amplz + xfoil.rlx * da2 > xfoil.amcrit)) {
+        //------ limited newton step so ampl2 doesn't step across amcrit either
+        // way
+        state.station2.param.amplz = xfoil.amcrit;
+      } else {
+        //------ regular newton step
+        state.station2.param.amplz = state.station2.param.amplz + xfoil.rlx * da2;
+      }
+    }
+    return false;
+  };
+
+  if (!iterateAmplification()) {
+    // TRACE("trchek2 - n2 convergence failed\n");
+    xfoil.writeString("trchek2 - n2 convergence failed\n");
+    if (XFoil::isCancelled())
+      return false;
+  }
+
+  //---- test for free or forced transition
+  xfoil.trfree = (state.station2.param.amplz >= xfoil.amcrit);
+  xfoil.trforc = (xfoil.xiforc > state.station1.param.xz) && (xfoil.xiforc <= state.station2.param.xz);
+
+  //---- set transition interval flag
+  const bool transitionDetected = (xfoil.trforc || xfoil.trfree);
+  xfoil.flowRegime = transitionDetected ? FlowRegimeEnum::Transition
+                                   : FlowRegimeEnum::Laminar;
+
+  if (!transitionDetected)
+    return false;
+
+  //---- resolve if both forced and free transition
+  if (xfoil.trfree && xfoil.trforc) {
+    xfoil.trforc = xfoil.xiforc < xfoil.xt.scalar;
+    xfoil.trfree = xfoil.xiforc >= xfoil.xt.scalar;
+  }
+
+  if (xfoil.trforc) {
+    //----- if forced transition, then xt is prescribed,
+    //-     no sense calculating the sensitivities, since we know them...
+    xfoil.xt.scalar = xfoil.xiforc;
+    xfoil.xt.a() = 0.0;
+    xfoil.xt.x1() = 0.0;
+    xfoil.xt.t1() = 0.0;
+    xfoil.xt.d1() = 0.0;
+    xfoil.xt.u1() = 0.0;
+    xfoil.xt.x2() = 0.0;
+    xfoil.xt.t2() = 0.0;
+    xfoil.xt.d2() = 0.0;
+    xfoil.xt.u2() = 0.0;
+    xfoil.xt.ms() = 0.0;
+    xfoil.xt.re() = 0.0;
+    xfoil.xt.xf() = 1.0;
+    return true;
+  }
+
+  //---- free transition ... set sensitivities of xt
+
+  xfoil.xt.x1() = (1 - wf);
+  tt_t1 = (1 - wf);
+  dt_d1 = (1 - wf);
+  ut_u1 = (1 - wf);
+
+  xfoil.xt.x2() = wf;
+  tt_t2 = wf;
+  dt_d2 = wf;
+  ut_u2 = wf;
+
+  xfoil.xt.a() = (state.station2.param.xz - state.station1.param.xz) * wf_a1;
+  tt_a1 = (state.station2.param.tz - state.station1.param.tz) * wf_a1;
+  dt_a1 = (state.station2.param.dz - state.station1.param.dz) * wf_a1;
+  ut_a1 = (state.station2.param.uz - state.station1.param.uz) * wf_a1;
+
+  xfoil.xt.x1() += (state.station2.param.xz - state.station1.param.xz) * wf_x1;
+  tt_x1 = (state.station2.param.tz - state.station1.param.tz) * wf_x1;
+  dt_x1 = (state.station2.param.dz - state.station1.param.dz) * wf_x1;
+  ut_x1 = (state.station2.param.uz - state.station1.param.uz) * wf_x1;
+
+  xfoil.xt.x2() += (state.station2.param.xz - state.station1.param.xz) * wf_x2;
+  tt_x2 = (state.station2.param.tz - state.station1.param.tz) * wf_x2;
+  dt_x2 = (state.station2.param.dz - state.station1.param.dz) * wf_x2;
+  ut_x2 = (state.station2.param.uz - state.station1.param.uz) * wf_x2;
+
+  xfoil.xt.xf() = (state.station2.param.xz - state.station1.param.xz) * wf_xf;
+
+  //---- at this point, ax = ax( hk1, t1, rt1, a1, hkt, tt, rtt, at )
+  blData::blVector hkt = state.station2.hkz;
+  blData::blVector rtt = state.station2.rtz;
+
+  //---- set sensitivities of ax( t1 d1 u1 a1 t2 d2 u2 a2 ms re )
+  double ax_t1 = ax_result.ax_hk1 * state.station1.hkz.t() + ax_result.ax_t1 +
+                 ax_result.ax_rt1 * state.station1.rtz.t() +
+                 (ax_result.ax_hk2 * hkt.t() + ax_result.ax_t2 +
+                  ax_result.ax_rt2 * rtt.t()) *
+                     tt_t1;
+  double ax_d1 =
+      ax_result.ax_hk1 * state.station1.hkz.d() + (ax_result.ax_hk2 * hkt.d()) * dt_d1;
+  double ax_u1 =
+      ax_result.ax_hk1 * state.station1.hkz.u() + ax_result.ax_rt1 * state.station1.rtz.u() +
+      (ax_result.ax_hk2 * hkt.u() + ax_result.ax_rt2 * rtt.u()) * ut_u1;
+  double ax_a1 =
+      ax_result.ax_a1 +
+      (ax_result.ax_hk2 * hkt.t() + ax_result.ax_t2 +
+       ax_result.ax_rt2 * rtt.t()) *
+          tt_a1 +
+      (ax_result.ax_hk2 * hkt.d()) * dt_a1 +
+      (ax_result.ax_hk2 * hkt.u() + ax_result.ax_rt2 * rtt.u()) * ut_a1;
+  double ax_x1 =
+      (ax_result.ax_hk2 * hkt.t() + ax_result.ax_t2 +
+       ax_result.ax_rt2 * rtt.t()) *
+          tt_x1 +
+      (ax_result.ax_hk2 * hkt.d()) * dt_x1 +
+      (ax_result.ax_hk2 * hkt.u() + ax_result.ax_rt2 * rtt.u()) * ut_x1;
+
+  double ax_t2 = (ax_result.ax_hk2 * hkt.t() + ax_result.ax_t2 +
+                  ax_result.ax_rt2 * rtt.t()) *
+                 tt_t2;
+  double ax_d2 = (ax_result.ax_hk2 * hkt.d()) * dt_d2;
+  double ax_u2 =
+      (ax_result.ax_hk2 * hkt.u() + ax_result.ax_rt2 * rtt.u()) * ut_u2;
+  double ax_a2 =
+      ax_result.ax_a2 * amplt_a2 +
+      (ax_result.ax_hk2 * hkt.t() + ax_result.ax_t2 +
+       ax_result.ax_rt2 * rtt.t()) *
+          tt_a2 +
+      (ax_result.ax_hk2 * hkt.d()) * dt_a2 +
+      (ax_result.ax_hk2 * hkt.u() + ax_result.ax_rt2 * rtt.u()) * ut_a2;
+  double ax_x2 =
+      (ax_result.ax_hk2 * hkt.t() + ax_result.ax_t2 +
+       ax_result.ax_rt2 * rtt.t()) *
+          tt_x2 +
+      (ax_result.ax_hk2 * hkt.d()) * dt_x2 +
+      (ax_result.ax_hk2 * hkt.u() + ax_result.ax_rt2 * rtt.u()) * ut_x2;
+
+  double ax_ms = ax_result.ax_hk2 * hkt.ms() + ax_result.ax_rt2 * rtt.ms() +
+                 ax_result.ax_hk1 * state.station1.hkz.ms() +
+                 ax_result.ax_rt1 * state.station1.rtz.ms();
+  double ax_re =
+      ax_result.ax_rt2 * rtt.re() + ax_result.ax_rt1 * state.station1.rtz.re();
+
+  //---- set sensitivities of residual res
+  z_ax = -(state.station2.param.xz - state.station1.param.xz);
+
+  z_a1 = z_ax * ax_a1 - 1.0;
+  z_t1 = z_ax * ax_t1;
+  z_d1 = z_ax * ax_d1;
+  z_u1 = z_ax * ax_u1;
+  z_x1 = z_ax * ax_x1 + ax_result.ax;
+
+  z_a2 = z_ax * ax_a2 + 1.0;
+  z_t2 = z_ax * ax_t2;
+  z_d2 = z_ax * ax_d2;
+  z_u2 = z_ax * ax_u2;
+  z_x2 = z_ax * ax_x2 - ax_result.ax;
+
+  z_ms = z_ax * ax_ms;
+  z_re = z_ax * ax_re;
+
+  //---- set sensitivities of xt, with res being stationary for a2 constraint
+  xfoil.xt.a() = xfoil.xt.a() - (xt_a2 / z_a2) * z_a1;
+  xfoil.xt.t1() = -(xt_a2 / z_a2) * z_t1;
+  xfoil.xt.d1() = -(xt_a2 / z_a2) * z_d1;
+  xfoil.xt.u1() = -(xt_a2 / z_a2) * z_u1;
+  xfoil.xt.x1() = xfoil.xt.x1() - (xt_a2 / z_a2) * z_x1;
+  xfoil.xt.t2() = -(xt_a2 / z_a2) * z_t2;
+  xfoil.xt.d2() = -(xt_a2 / z_a2) * z_d2;
+  xfoil.xt.u2() = -(xt_a2 / z_a2) * z_u2;
+  xfoil.xt.x2() = xfoil.xt.x2() - (xt_a2 / z_a2) * z_x2;
+  xfoil.xt.ms() = -(xt_a2 / z_a2) * z_ms;
+  xfoil.xt.re() = -(xt_a2 / z_a2) * z_re;
+  xfoil.xt.xf() = 0.0;
 
   return true;
 }
