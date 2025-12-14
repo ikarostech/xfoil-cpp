@@ -309,19 +309,8 @@ bool XFoil::ggcalc() {
 namespace {
 enum class SpecTarget { AngleOfAttack, LiftCoefficient };
 
-void updateSurfaceVortexFromGamu(XFoil &xfoil) {
-  Matrix2d rotateMatrix = Matrix2d{
-      {cos(xfoil.analysis_state_.alpha), sin(xfoil.analysis_state_.alpha)},
-      {-sin(xfoil.analysis_state_.alpha), cos(xfoil.analysis_state_.alpha)}};
-
-  for (int i = 0; i < xfoil.foil.foil_shape.n; i++) {
-    xfoil.surface_vortex(0, i) = rotateMatrix.row(0).dot(xfoil.aerodynamicCache.gamu.col(i));
-    xfoil.surface_vortex(1, i) = rotateMatrix.row(1).dot(xfoil.aerodynamicCache.gamu.col(i));
-  }
-}
-
 bool specConverge(XFoil &xfoil, SpecTarget target) {
-  updateSurfaceVortexFromGamu(xfoil);
+  xfoil.surface_vortex = MathUtil::getRotateMatrix(xfoil.analysis_state_.alpha) * xfoil.aerodynamicCache.gamu;
 
   auto applyQiset = [&xfoil]() {
     auto qiset_result = xfoil.qiset();
@@ -421,8 +410,6 @@ bool specConverge(XFoil &xfoil, SpecTarget target) {
 
     xfoil.analysis_state_.alpha =
         xfoil.analysis_state_.alpha + xfoil.rlx * dalfa;
-
-    updateSurfaceVortexFromGamu(xfoil);
 
     //------ set new cl(alpha)
     xfoil.applyClComputation(xfoil.clcalc(xfoil.cmref));

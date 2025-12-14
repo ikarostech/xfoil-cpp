@@ -465,7 +465,6 @@ bool XFoil::viscal() {
                    analysis_state_.currentMach);
     }
 
-    surface_vortex = gamqv();
     const auto cl_result = clcalc(cmref);
     applyClComputation(cl_result);
     cd = cdcalc();
