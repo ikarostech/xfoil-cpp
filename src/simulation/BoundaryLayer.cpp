@@ -12,24 +12,6 @@ using BoundaryContext = BoundaryLayerWorkflow::MixedModeStationContext;
 using Eigen::Matrix;
 using Eigen::Vector;
 
-bool BoundaryLayerWorkflow::saveblData(int icom) {
-  if (icom == 1) {
-    blsav[icom] = state.station1;
-  } else {
-    blsav[icom] = state.station2;
-  }
-  return true;
-}
-
-bool BoundaryLayerWorkflow::restoreblData(int icom) {
-  if (icom == 1) {
-    state.station1 = blsav[icom];
-  } else if (icom == 2) {
-    state.station2 = blsav[icom];
-  }
-  return true;
-}
-
 bool BoundaryLayerWorkflow::blkin(XFoil& xfoil, BoundaryLayerState& state) {
   //----------------------------------------------------------
   //     calculates turbulence-independent secondary "2"
@@ -375,8 +357,8 @@ bool BoundaryLayerWorkflow::trdif(XFoil& xfoil) {
 
   double ctr, ctr_hk2;
 
-  saveblData(1);
-  saveblData(2);
+  boundaryLayerStore.saveblData(state.station1, 1);
+  boundaryLayerStore.saveblData(state.station2, 2);
 
   //---- weighting factors for linear interpolation to transition point
   blDiff wf;
@@ -494,7 +476,7 @@ bool BoundaryLayerWorkflow::trdif(XFoil& xfoil) {
   state.station2 = blvar(state.station2, FlowRegimeEnum::Turbulent);
 
   state.stepbl();
-  restoreblData(2);
+  state.station2 = boundaryLayerStore.restoreblData(2);
 
   //---- calculate xt-x2 midpoint cfm value
   SkinFrictionCoefficients turbulentSkinFriction =
@@ -566,13 +548,7 @@ bool BoundaryLayerWorkflow::trdif(XFoil& xfoil) {
   blc.a1.middleRows(1, 2) = bl1.middleRows(1, 2) + bt1.middleRows(1, 2);
   blc.a2.middleRows(1, 2) = bl2.middleRows(1, 2) + bt2.middleRows(1, 2);
 
-  //---- to be sanitary, restore "1" quantities which got clobbered
-  //-    in all of the numerical gymnastics above.  the "2" variables
-  //-    were already restored for the xt-x2 differencing part.
-  //	for (icom=1; icom<=ncom;icom++){
-  //		com1[icom] = c1sav[icom];
-  //	}
-  restoreblData(1);
+  state.station1 = boundaryLayerStore.restoreblData(1);
 
   return true;
 }
@@ -623,7 +599,7 @@ bool BoundaryLayerWorkflow::trchek(XFoil& xfoil) {
   ut_a2 = 0.0;
 
   //---- save variables and sensitivities at ibl ("2") for future restoration
-  saveblData(2);
+  boundaryLayerStore.saveblData(state.station2, 2);
 
   //---- calculate average amplification rate ax over x1..x2 interval
   BoundaryLayerUtil::AxResult ax_result =
@@ -711,7 +687,7 @@ bool BoundaryLayerWorkflow::trchek(XFoil& xfoil) {
       //---- restore clobbered "2" variables, except for ampl2
       amsave = state.station2.param.amplz;
 
-      restoreblData(2);
+      state.station2 = boundaryLayerStore.restoreblData(2);
 
       state.station2.param.amplz = amsave;
 

@@ -9,13 +9,17 @@
 #include "domain/boundary_layer/boundary_layer_variables_solver.hpp"
 #include "simulation/skin_friction_coefficients.hpp"
 #include "domain/boundary_layer/boundary_layer_diff_solver.hpp"
+#include "simulation/BoundaryLayerStore.hpp"
+
 class XFoil;
 enum class FlowRegimeEnum;
 
 class BoundaryLayerWorkflow {
  public:
   BoundaryLayerVariablesSolver boundaryLayerVariablesSolver;
+  BoundaryLayerStore boundaryLayerStore;
   BlDiffSolver blDiffSolver;
+
   enum class EdgeVelocityFallbackMode {
     UsePreviousStation,
     AverageNeighbors
@@ -170,8 +174,6 @@ class BoundaryLayerWorkflow {
   bool blkin(XFoil& xfoil, BoundaryLayerState& state);
   bool tesys(XFoil& xfoil, double cte, double tte, double dte);
   bool trchek(XFoil& xfoil);
-  bool saveblData(int icom);
-  bool restoreblData(int icom);
 
 private:
   void copyStationState(int side, int destination, int source);
@@ -181,7 +183,6 @@ public:
   BlSystemCoeffs blc;
   BoundaryLayerState state;
   int stagnationIndex = 0;
-  std::array<blData, 3> blsav{};
 };
 
 template <typename StationContext>
