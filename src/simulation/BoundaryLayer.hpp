@@ -173,15 +173,18 @@ class BoundaryLayerWorkflow {
   bool uicalc(XFoil& xfoil);
   bool blkin(XFoil& xfoil, BoundaryLayerState& state);
   bool tesys(XFoil& xfoil, double cte, double tte, double dte);
+  double calcHtarg(int ibl, int is, bool wake);
   bool trchek(XFoil& xfoil);
 
 private:
+  double computeTransitionLocation(double weightingFactor) const;
   void copyStationState(int side, int destination, int source);
 
 public:
   SidePair<BoundaryLayerLattice> lattice;
   BlSystemCoeffs blc;
   BoundaryLayerState state;
+  blDiff xt;
   int stagnationIndex = 0;
 };
 

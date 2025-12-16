@@ -658,7 +658,7 @@ bool BoundaryLayerWorkflow::performMrchueNewtonLoop(
                 : kHtmax;
         direct = (hktest < hmax);
         if (!direct) {
-          htarg = xfoil.calcHtarg(stationIndex, side, ctx.wake);
+          htarg = calcHtarg(stationIndex, side, ctx.wake);
           if (ctx.wake) {
             htarg = std::max(htarg, 1.01);
           } else {

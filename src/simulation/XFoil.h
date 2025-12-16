@@ -248,7 +248,6 @@ class XFoil {
                                      MixedModeStationContext& ctx, double& ami);
   void checkTransitionIfNeeded(int side, int ibl, bool skipCheck,
                                int laminarAdvance, double& ami);
-  double calcHtarg(int ibl, int is, bool wake);
   Matrix2Xd ncalc(Matrix2Xd point, VectorXd spline_length, int n);
 
   bool qdcalc();
@@ -357,7 +356,6 @@ class XFoil {
   //---- sutherland's const./to	(assumes stagnation conditions are at stp)
   const double hvrat = 0.35;
 
-  blDiff xt;
   Matrix3x2dVector va, vb, vdel;
   double vm[3][IZX][IZX], vz[3][2];
 

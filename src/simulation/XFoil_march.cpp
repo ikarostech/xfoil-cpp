@@ -187,32 +187,6 @@ void XFoil::handleMixedModeNonConvergence(int side, int ibl,
   ctx.ami = ami;
 }
 
-double XFoil::calcHtarg(int ibl, int is, bool wake) {
-  if (ibl < boundaryLayerWorkflow.lattice.get(is).transitionIndex) {
-    return boundaryLayerWorkflow.state.station1.hkz.scalar +
-           0.03 * (boundaryLayerWorkflow.state.station2.param.xz - boundaryLayerWorkflow.state.station1.param.xz) / boundaryLayerWorkflow.state.station1.param.tz;
-  } else if (ibl == boundaryLayerWorkflow.lattice.get(is).transitionIndex) {
-    return boundaryLayerWorkflow.state.station1.hkz.scalar +
-           (0.03 * (xt.scalar - boundaryLayerWorkflow.state.station1.param.xz) - 0.15 * (boundaryLayerWorkflow.state.station2.param.xz - xt.scalar)) /
-               boundaryLayerWorkflow.state.station1.param.tz;
-  } else if (wake) {
-    const double cst =
-        0.03 * (boundaryLayerWorkflow.state.station2.param.xz - boundaryLayerWorkflow.state.station1.param.xz) / boundaryLayerWorkflow.state.station1.param.tz;
-    auto euler = [](double hk2, double hk1, double cst) {
-      return hk2 - (hk2 + cst * pow(hk2 - 1, 3) - hk1) /
-                       (1 + 3 * cst * pow(hk2 - 1, 2));
-    };
-    boundaryLayerWorkflow.state.station2.hkz.scalar = boundaryLayerWorkflow.state.station1.hkz.scalar;
-    for (int i = 0; i < 3; i++) {
-      boundaryLayerWorkflow.state.station2.hkz.scalar = euler(boundaryLayerWorkflow.state.station2.hkz.scalar, boundaryLayerWorkflow.state.station1.hkz.scalar, cst);
-    }
-    return boundaryLayerWorkflow.state.station2.hkz.scalar;
-  } else {
-    return boundaryLayerWorkflow.state.station1.hkz.scalar -
-           0.15 * (boundaryLayerWorkflow.state.station2.param.xz - boundaryLayerWorkflow.state.station1.param.xz) / boundaryLayerWorkflow.state.station1.param.tz;
-  }
-}
-
 SetblOutputView XFoil::setbl(const SetblInputView& input,
                                     SetblOutputView output) {
   //-------------------------------------------------
