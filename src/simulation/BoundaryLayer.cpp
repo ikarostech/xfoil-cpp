@@ -624,9 +624,6 @@ bool BoundaryLayerWorkflow::trchek(XFoil& xfoil) {
   double tt_t2 = 0.0, dt_d2 = 0.0, ut_u2 = 0.0, tt_a1 = 0.0, dt_a1 = 0.0;
   double ut_a1 = 0.0, tt_x1 = 0.0, dt_x1 = 0.0, ut_x1 = 0.0, tt_x2 = 0.0,
          dt_x2 = 0.0, ut_x2 = 0.0;
-  double z_ax = 0.0, z_a1 = 0.0, z_t1 = 0.0, z_d1 = 0.0, z_u1 = 0.0, z_x1 = 0.0,
-         z_a2 = 0.0, z_t2 = 0.0, z_d2 = 0.0, z_u2 = 0.0, z_x2 = 0.0, z_ms = 0.0,
-         z_re = 0.0;
   double amplt_a2, wf, wf_a1, wf_a2, wf_xf, wf_x1, wf_x2;
   double xt_a2, dt_a2, tt_a2;
   double ut_a2;
@@ -864,87 +861,66 @@ bool BoundaryLayerWorkflow::trchek(XFoil& xfoil) {
   blData::blVector rtt = state.station2.rtz;
 
   //---- set sensitivities of ax( t1 d1 u1 a1 t2 d2 u2 a2 ms re )
-  double ax_t1 = ax_result.ax_hk1 * state.station1.hkz.t() + ax_result.ax_t1 +
-                 ax_result.ax_rt1 * state.station1.rtz.t() +
-                 (ax_result.ax_hk2 * hkt.t() + ax_result.ax_t2 +
-                  ax_result.ax_rt2 * rtt.t()) *
-                     tt_t1;
-  double ax_d1 =
+  blDiff ax;
+  ax.scalar = 0.0;  // store a2 sensitivity in scalar slot to keep ax terms together
+
+  ax.t1() = ax_result.ax_hk1 * state.station1.hkz.t() + ax_result.ax_t1 +
+            ax_result.ax_rt1 * state.station1.rtz.t() +
+            (ax_result.ax_hk2 * hkt.t() + ax_result.ax_t2 +
+             ax_result.ax_rt2 * rtt.t()) *
+                tt_t1;
+  ax.d1() =
       ax_result.ax_hk1 * state.station1.hkz.d() + (ax_result.ax_hk2 * hkt.d()) * dt_d1;
-  double ax_u1 =
-      ax_result.ax_hk1 * state.station1.hkz.u() + ax_result.ax_rt1 * state.station1.rtz.u() +
-      (ax_result.ax_hk2 * hkt.u() + ax_result.ax_rt2 * rtt.u()) * ut_u1;
-  double ax_a1 =
-      ax_result.ax_a1 +
-      (ax_result.ax_hk2 * hkt.t() + ax_result.ax_t2 +
-       ax_result.ax_rt2 * rtt.t()) *
-          tt_a1 +
-      (ax_result.ax_hk2 * hkt.d()) * dt_a1 +
-      (ax_result.ax_hk2 * hkt.u() + ax_result.ax_rt2 * rtt.u()) * ut_a1;
-  double ax_x1 =
+  ax.u1() = ax_result.ax_hk1 * state.station1.hkz.u() +
+            ax_result.ax_rt1 * state.station1.rtz.u() +
+            (ax_result.ax_hk2 * hkt.u() + ax_result.ax_rt2 * rtt.u()) * ut_u1;
+  ax.a() = ax_result.ax_a1 +
+           (ax_result.ax_hk2 * hkt.t() + ax_result.ax_t2 +
+            ax_result.ax_rt2 * rtt.t()) *
+               tt_a1 +
+           (ax_result.ax_hk2 * hkt.d()) * dt_a1 +
+           (ax_result.ax_hk2 * hkt.u() + ax_result.ax_rt2 * rtt.u()) * ut_a1;
+  ax.x1() =
       (ax_result.ax_hk2 * hkt.t() + ax_result.ax_t2 +
        ax_result.ax_rt2 * rtt.t()) *
           tt_x1 +
       (ax_result.ax_hk2 * hkt.d()) * dt_x1 +
       (ax_result.ax_hk2 * hkt.u() + ax_result.ax_rt2 * rtt.u()) * ut_x1;
 
-  double ax_t2 = (ax_result.ax_hk2 * hkt.t() + ax_result.ax_t2 +
-                  ax_result.ax_rt2 * rtt.t()) *
-                 tt_t2;
-  double ax_d2 = (ax_result.ax_hk2 * hkt.d()) * dt_d2;
-  double ax_u2 =
-      (ax_result.ax_hk2 * hkt.u() + ax_result.ax_rt2 * rtt.u()) * ut_u2;
-  double ax_a2 =
+  ax.t2() = (ax_result.ax_hk2 * hkt.t() + ax_result.ax_t2 +
+             ax_result.ax_rt2 * rtt.t()) *
+            tt_t2;
+  ax.d2() = (ax_result.ax_hk2 * hkt.d()) * dt_d2;
+  ax.u2() = (ax_result.ax_hk2 * hkt.u() + ax_result.ax_rt2 * rtt.u()) * ut_u2;
+  ax.scalar =
       ax_result.ax_a2 * amplt_a2 +
       (ax_result.ax_hk2 * hkt.t() + ax_result.ax_t2 +
        ax_result.ax_rt2 * rtt.t()) *
           tt_a2 +
       (ax_result.ax_hk2 * hkt.d()) * dt_a2 +
       (ax_result.ax_hk2 * hkt.u() + ax_result.ax_rt2 * rtt.u()) * ut_a2;
-  double ax_x2 =
+  ax.x2() =
       (ax_result.ax_hk2 * hkt.t() + ax_result.ax_t2 +
        ax_result.ax_rt2 * rtt.t()) *
           tt_x2 +
       (ax_result.ax_hk2 * hkt.d()) * dt_x2 +
       (ax_result.ax_hk2 * hkt.u() + ax_result.ax_rt2 * rtt.u()) * ut_x2;
 
-  double ax_ms = ax_result.ax_hk2 * hkt.ms() + ax_result.ax_rt2 * rtt.ms() +
-                 ax_result.ax_hk1 * state.station1.hkz.ms() +
-                 ax_result.ax_rt1 * state.station1.rtz.ms();
-  double ax_re =
-      ax_result.ax_rt2 * rtt.re() + ax_result.ax_rt1 * state.station1.rtz.re();
+  ax.ms() = ax_result.ax_hk2 * hkt.ms() + ax_result.ax_rt2 * rtt.ms() +
+            ax_result.ax_hk1 * state.station1.hkz.ms() +
+            ax_result.ax_rt1 * state.station1.rtz.ms();
+  ax.re() = ax_result.ax_rt2 * rtt.re() + ax_result.ax_rt1 * state.station1.rtz.re();
 
   //---- set sensitivities of residual res
-  z_ax = -(state.station2.param.xz - state.station1.param.xz);
-
-  z_a1 = z_ax * ax_a1 - 1.0;
-  z_t1 = z_ax * ax_t1;
-  z_d1 = z_ax * ax_d1;
-  z_u1 = z_ax * ax_u1;
-  z_x1 = z_ax * ax_x1 + ax_result.ax;
-
-  z_a2 = z_ax * ax_a2 + 1.0;
-  z_t2 = z_ax * ax_t2;
-  z_d2 = z_ax * ax_d2;
-  z_u2 = z_ax * ax_u2;
-  z_x2 = z_ax * ax_x2 - ax_result.ax;
-
-  z_ms = z_ax * ax_ms;
-  z_re = z_ax * ax_re;
+  blDiff z;
+  z.scalar = -(state.station2.param.xz - state.station1.param.xz);
+  z.vector = z.scalar * ax.vector;
+  z.a() -= 1.0;
+  z.x1() += ax_result.ax;
+  z.x2() -= ax_result.ax;
 
   //---- set sensitivities of xt, with res being stationary for a2 constraint
-  xt.a() = xt.a() - (xt_a2 / z_a2) * z_a1;
-  xt.t1() = -(xt_a2 / z_a2) * z_t1;
-  xt.d1() = -(xt_a2 / z_a2) * z_d1;
-  xt.u1() = -(xt_a2 / z_a2) * z_u1;
-  xt.x1() = xt.x1() - (xt_a2 / z_a2) * z_x1;
-  xt.t2() = -(xt_a2 / z_a2) * z_t2;
-  xt.d2() = -(xt_a2 / z_a2) * z_d2;
-  xt.u2() = -(xt_a2 / z_a2) * z_u2;
-  xt.x2() = xt.x2() - (xt_a2 / z_a2) * z_x2;
-  xt.ms() = -(xt_a2 / z_a2) * z_ms;
-  xt.re() = -(xt_a2 / z_a2) * z_re;
-  xt.xf() = 0.0;
+  xt.vector -= (xt_a2 / (z.scalar * ax.scalar + 1.0)) * z.vector;
 
   return true;
 }
