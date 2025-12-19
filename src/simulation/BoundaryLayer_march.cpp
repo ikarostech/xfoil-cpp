@@ -343,7 +343,8 @@ BoundaryLayerSideProfiles BoundaryLayerWorkflow::applyBoundaryLayerDelta(
     const double msq =
         edgeVelocity_sq * xfoil.hstinv / (xfoil.gamm1 * denom);
     double dsw = state.displacementThickness[ibl] - dswaki;
-    xfoil.dslim(dsw, state.momentumThickness[ibl], msq, hklim);
+    dsw = adjustDisplacementForHkLimit(
+        dsw, state.momentumThickness[ibl], msq, hklim);
     state.displacementThickness[ibl] = dsw + dswaki;
     state.massFlux[ibl] =
         state.displacementThickness[ibl] * state.edgeVelocity[ibl];
@@ -722,7 +723,7 @@ bool BoundaryLayerWorkflow::performMrchueNewtonLoop(
         (xfoil.gm1bl *
          (1.0 - 0.5 * ctx.uei * ctx.uei * xfoil.hstinv));
     double dsw = ctx.dsi - ctx.dswaki;
-    xfoil.dslim(dsw, ctx.thi, msq, hklim);
+    dsw = adjustDisplacementForHkLimit(dsw, ctx.thi, msq, hklim);
     ctx.dsi = dsw + ctx.dswaki;
 
     if (dmax_local <= 0.00001) {

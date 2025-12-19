@@ -12,6 +12,18 @@ using BoundaryContext = BoundaryLayerWorkflow::MixedModeStationContext;
 using Eigen::Matrix;
 using Eigen::Vector;
 
+double BoundaryLayerWorkflow::adjustDisplacementForHkLimit(
+    double displacementThickness, double momentumThickness, double msq,
+    double hklim) {
+  const double h = displacementThickness / momentumThickness;
+
+  boundary_layer::KineticShapeParameterResult hkin_result =
+      boundary_layer::hkin(h, msq);
+
+  const double dh = std::max(0.0, hklim - hkin_result.hk) / hkin_result.hk_h;
+  return displacementThickness + dh * momentumThickness;
+}
+
 bool BoundaryLayerWorkflow::blkin(XFoil& xfoil, BoundaryLayerState& state) {
   //----------------------------------------------------------
   //     calculates turbulence-independent secondary "2"
@@ -221,7 +233,7 @@ bool BoundaryLayerWorkflow::applyMixedModeNewtonStep(
   const double msq = uei_sq * xfoil.hstinv /
                      (xfoil.gm1bl * (1.0 - 0.5 * uei_sq * xfoil.hstinv));
   double dsw = ctx.dsi - ctx.dswaki;
-  xfoil.dslim(dsw, ctx.thi, msq, hklim);
+  dsw = adjustDisplacementForHkLimit(dsw, ctx.thi, msq, hklim);
   ctx.dsi = dsw + ctx.dswaki;
 
   return ctx.dmax <= deps;

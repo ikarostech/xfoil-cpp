@@ -233,8 +233,6 @@ class XFoil {
   
   VectorXd cpcalc(int n, VectorXd q, double qinf, double minf);
 
-  bool dslim(double &displacementThickness, double momentumThickness, double msq, double hklim);
-
   Matrix2Xd gamqv() const;
   bool ggcalc();
 

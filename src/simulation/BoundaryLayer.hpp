@@ -177,6 +177,9 @@ class BoundaryLayerWorkflow {
   bool trchek(XFoil& xfoil);
 
 private:
+  static double adjustDisplacementForHkLimit(double displacementThickness,
+                                             double momentumThickness,
+                                             double msq, double hklim);
   double computeTransitionLocation(double weightingFactor) const;
   void copyStationState(int side, int destination, int source);
 
