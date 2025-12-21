@@ -1,4 +1,5 @@
 #include "XFoil.h"
+#include "simulation/Blsolve.hpp"
 #include <algorithm>
 #include <cstring>
 #include <cmath>
@@ -497,7 +498,19 @@ bool XFoil::ViscousIter() {
   setbl(SetblInputView::fromXFoil(*this),
         SetblOutputView::fromXFoil(*this)); //	------ fill newton system for bl variables
 
-  blsolve(); //	------ solve newton system with custom solver
+  Blsolve solver;
+  int ivte1 = boundaryLayerWorkflow.lattice.top.stationToSystem[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex];
+  int ivz = boundaryLayerWorkflow.lattice.bottom.stationToSystem[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex];
+  auto result = solver.solve(nsys, ivte1, ivz, VAccel(), va, vb, vm, vdel, vz);
+  auto vmIndex = [](int k, int i, int j) { return (k * IZX + i) * IZX + j; };
+  for (int k = 0; k < 3; ++k) {
+    for (int i = 0; i < IZX; ++i) {
+      for (int j = 0; j < IZX; ++j) {
+        vm[k][i][j] = result.vm[vmIndex(k, i, j)];
+      }
+    }
+  }
+  vdel = std::move(result.vdel);
 
   update(); //	------ update bl variables
 

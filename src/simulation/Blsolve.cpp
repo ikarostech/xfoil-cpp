@@ -1,13 +1,16 @@
 /**
- * BL Newton system custom solver split from XFoil.cpp
+ * BL Newton system custom solver extracted from XFoil.cpp
  */
 
-#include "XFoil.h"
+#include "simulation/Blsolve.hpp"
 
-#include <array>
-#include <vector>
+#include <cmath>
+#include <utility>
 
 namespace {
+using VmVector = std::vector<double>;
+using VzArray = std::array<std::array<double, 2>, 3>;
+
 inline void plu3x3(double m[3][3], int piv[3]) {
   piv[0] = 0;
   piv[1] = 1;
@@ -66,31 +69,35 @@ inline void luSolve3x3x6(const double m[3][3], const int piv[3],
     b[2][j] = x2;
   }
 }
-} // namespace
-
-namespace {
-using VmVector = std::vector<double>;
-using VzArray = std::array<std::array<double, 2>, 3>;
-
-struct BlSolveOutput {
-  VmVector vm;
-  XFoil::Matrix3x2dVector vdel;
-};
 
 inline int vmIndex(int k, int i, int j) {
   return (k * IZX + i) * IZX + j;
 }
+} // namespace
 
-BlSolveOutput blsolvePure(
-    int nsys,
-    int ivte1,
-    int ivz,
-    double vaccel,
-    const XFoil::Matrix3x2dVector& va,
-    const XFoil::Matrix3x2dVector& vb,
-    VmVector vm,
-    XFoil::Matrix3x2dVector vdel,
-    const VzArray& vz) {
+Blsolve::Output Blsolve::solve(int nsys,
+                               int ivte1,
+                               int ivz,
+                               double vaccel,
+                               const Matrix3x2dVector& va,
+                               const Matrix3x2dVector& vb,
+                               const double (&vm_raw)[3][IZX][IZX],
+                               Matrix3x2dVector vdel,
+                               const double (&vz_raw)[3][2]) const {
+  VmVector vm(3 * IZX * IZX, 0.0);
+  for (int k = 0; k < 3; ++k) {
+    for (int i = 0; i < IZX; ++i) {
+      for (int j = 0; j < IZX; ++j) {
+        vm[vmIndex(k, i, j)] = vm_raw[k][i][j];
+      }
+    }
+  }
+  VzArray vz{};
+  for (int k = 0; k < 3; ++k) {
+    for (int j = 0; j < 2; ++j) {
+      vz[k][j] = vz_raw[k][j];
+    }
+  }
   auto eliminateVaBlock = [&](int iv, int ivp) {
     double D[3][3] = {{va[iv](0, 0), va[iv](0, 1), vm[vmIndex(0, iv, iv)]},
                       {va[iv](1, 0), va[iv](1, 1), vm[vmIndex(1, iv, iv)]},
@@ -245,36 +252,4 @@ BlSolveOutput blsolvePure(
 
   backSubstitute();
   return {std::move(vm), std::move(vdel)};
-}
-} // namespace
-
-bool XFoil::blsolve() {
-  VmVector vm_input(3 * IZX * IZX, 0.0);
-  for (int k = 0; k < 3; ++k) {
-    for (int i = 0; i < IZX; ++i) {
-      for (int j = 0; j < IZX; ++j) {
-        vm_input[vmIndex(k, i, j)] = vm[k][i][j];
-      }
-    }
-  }
-  VzArray vz_input{};
-  for (int k = 0; k < 3; ++k) {
-    for (int j = 0; j < 2; ++j) {
-      vz_input[k][j] = vz[k][j];
-    }
-  }
-
-  int ivte1 = boundaryLayerWorkflow.lattice.top.stationToSystem[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex];
-  int ivz = boundaryLayerWorkflow.lattice.bottom.stationToSystem[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex];
-
-  auto result = blsolvePure(nsys, ivte1, ivz, VAccel(), va, vb, vm_input, vdel, vz_input);
-  for (int k = 0; k < 3; ++k) {
-    for (int i = 0; i < IZX; ++i) {
-      for (int j = 0; j < IZX; ++j) {
-        vm[k][i][j] = result.vm[vmIndex(k, i, j)];
-      }
-    }
-  }
-  vdel = std::move(result.vdel);
-  return true;
 }
