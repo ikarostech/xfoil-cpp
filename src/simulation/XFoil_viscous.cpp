@@ -499,9 +499,11 @@ bool XFoil::ViscousIter() {
         SetblOutputView::fromXFoil(*this)); //	------ fill newton system for bl variables
 
   Blsolve solver;
-  int ivte1 = boundaryLayerWorkflow.lattice.top.stationToSystem[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex];
-  int ivz = boundaryLayerWorkflow.lattice.bottom.stationToSystem[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex];
-  auto result = solver.solve(nsys, ivte1, ivz, VAccel(), va, vb, vm, vdel, vz);
+  SidePair<int> ivte{
+      boundaryLayerWorkflow.lattice.top.stationToSystem[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex],
+      boundaryLayerWorkflow.lattice.bottom.stationToSystem[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex]
+  };
+  auto result = solver.solve(nsys, ivte, VAccel(), va, vb, vm, vdel, vz);
   auto vmIndex = [](int k, int i, int j) { return (k * IZX + i) * IZX + j; };
   for (int k = 0; k < 3; ++k) {
     for (int i = 0; i < IZX; ++i) {

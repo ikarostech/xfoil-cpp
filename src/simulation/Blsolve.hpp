@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "Eigen/Core"
+#include "core/side_pair.hpp"
 #include "infrastructure/xfoil_params.h"
 
 class Blsolve {
@@ -16,8 +17,7 @@ class Blsolve {
   };
 
   Output solve(int nsys,
-               int ivte1,
-               int ivz,
+               const SidePair<int>& ivte,
                double vaccel,
                const Matrix3x2dVector& va,
                const Matrix3x2dVector& vb,

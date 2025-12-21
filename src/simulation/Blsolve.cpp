@@ -76,8 +76,7 @@ inline int vmIndex(int k, int i, int j) {
 } // namespace
 
 Blsolve::Output Blsolve::solve(int nsys,
-                               int ivte1,
-                               int ivz,
+                               const SidePair<int>& ivte,
                                double vaccel,
                                const Matrix3x2dVector& va,
                                const Matrix3x2dVector& vb,
@@ -173,7 +172,7 @@ Blsolve::Output Blsolve::solve(int nsys,
     for (int k = 0; k < 3; ++k)
       vdel[ivp](k, 1) -= D[k][0] * col[0] + D[k][1] * col[1] + D[k][2] * col[2];
 
-    if (iv == ivte1) {
+    if (iv == ivte.top) {
       double Dz[3][2] = {{vz[0][0], vz[0][1]},
                          {vz[1][0], vz[1][1]},
                          {vz[2][0], vz[2][1]}};
@@ -182,18 +181,19 @@ Blsolve::Output Blsolve::solve(int nsys,
         col[0] = vm[vmIndex(0, l, iv)];
         col[1] = vm[vmIndex(1, l, iv)];
         for (int k = 0; k < 3; ++k)
-          vm[vmIndex(k, l, ivz)] -= Dz[k][0] * col[0] + Dz[k][1] * col[1];
+          vm[vmIndex(k, l, ivte.bottom)] -=
+              Dz[k][0] * col[0] + Dz[k][1] * col[1];
       }
 
       col[0] = vdel[iv](0, 0);
       col[1] = vdel[iv](1, 0);
       for (int k = 0; k < 3; ++k)
-        vdel[ivz](k, 0) -= Dz[k][0] * col[0] + Dz[k][1] * col[1];
+        vdel[ivte.bottom](k, 0) -= Dz[k][0] * col[0] + Dz[k][1] * col[1];
 
       col[0] = vdel[iv](0, 1);
       col[1] = vdel[iv](1, 1);
       for (int k = 0; k < 3; ++k)
-        vdel[ivz](k, 1) -= Dz[k][0] * col[0] + Dz[k][1] * col[1];
+        vdel[ivte.bottom](k, 1) -= Dz[k][0] * col[0] + Dz[k][1] * col[1];
     }
   };
 
