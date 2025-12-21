@@ -312,14 +312,9 @@ enum class SpecTarget { AngleOfAttack, LiftCoefficient };
 bool specConverge(XFoil &xfoil, SpecTarget target) {
   xfoil.surface_vortex = MathUtil::getRotateMatrix(xfoil.analysis_state_.alpha) * xfoil.aerodynamicCache.gamu;
 
-  auto applyQiset = [&xfoil]() {
-    auto qiset_result = xfoil.qiset();
-    xfoil.qinv_matrix = std::move(qiset_result.qinv_matrix);
-  };
-
   if (target == SpecTarget::AngleOfAttack) {
     xfoil.updateTrailingEdgeState();
-    applyQiset();
+    xfoil.qinv_matrix = xfoil.qiset();
   } else {
     xfoil.minf_cl = xfoil.getActualMach(xfoil.analysis_state_.clspec,
                                         xfoil.analysis_state_.machType);
@@ -377,7 +372,7 @@ bool specConverge(XFoil &xfoil, SpecTarget target) {
     }
 
     //---- set final mach, cl, cp distributions, and hinge moment
-    applyQiset();
+    xfoil.qinv_matrix = xfoil.qiset();
     xfoil.applyClComputation(xfoil.clcalc(xfoil.cmref));
 
     xfoil.cpi = xfoil.cpcalc(xfoil.foil.foil_shape.n,
@@ -428,7 +423,7 @@ bool specConverge(XFoil &xfoil, SpecTarget target) {
 
   //---- set final surface speed and cp distributions
   xfoil.updateTrailingEdgeState();
-  applyQiset();
+  xfoil.qinv_matrix = xfoil.qiset();
 
   if (xfoil.analysis_state_.viscous) {
     xfoil.cpv = xfoil.cpcalc(xfoil.foil.foil_shape.n + xfoil.foil.wake_shape.n, xfoil.qvis,

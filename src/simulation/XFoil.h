@@ -252,7 +252,7 @@ class XFoil {
     Matrix2Xd qinv_matrix;
   };
 
-  TangentialVelocityResult qiset() const;
+  Matrix2Xd qiset() const;
   VectorXd qvfue() const;
   Matrix2Xd qwcalc();
 

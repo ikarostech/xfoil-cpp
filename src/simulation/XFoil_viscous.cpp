@@ -158,19 +158,16 @@ bool XFoil::qdcalc() {
  *     sets inviscid panel tangential velocity for
  *      current alpha.
  * -------------------------------------------------------- */
-XFoil::TangentialVelocityResult XFoil::qiset() const {
-  Matrix2d rotateMatrix = Matrix2d{
-      {cos(analysis_state_.alpha), sin(analysis_state_.alpha)},
-      {-sin(analysis_state_.alpha), cos(analysis_state_.alpha)}};
+XFoil::Matrix2Xd XFoil::qiset() const {
   const int point_count = foil.foil_shape.n;
   const int total_nodes_with_wake = point_count + foil.wake_shape.n;
 
-  TangentialVelocityResult result;
-  result.qinv_matrix = Matrix2Xd::Zero(2, total_nodes_with_wake);
+  Matrix2Xd result = Matrix2Xd::Zero(2, total_nodes_with_wake);
 
   for (int i = 0; i < total_nodes_with_wake; i++) {
-    result.qinv_matrix.col(i) = rotateMatrix * aerodynamicCache.qinvu.col(i);
+    result.col(i) = MathUtil::getRotateMatrix(analysis_state_.alpha) * aerodynamicCache.qinvu.col(i);
   }
+  result = MathUtil::getRotateMatrix(analysis_state_.alpha) * aerodynamicCache.qinvu;
 
   return result;
 }
@@ -413,10 +410,8 @@ bool XFoil::viscal() {
   aerodynamicCache.qinvu = qwcalc();
 
   //	---- set velocities on airfoil and wake for initial alpha
-  {
-    auto qiset_result = qiset();
-    qinv_matrix = std::move(qiset_result.qinv_matrix);
-  }
+  qinv_matrix = qiset();
+  
 
   if (!lipan) {
     if (lblini)
@@ -523,8 +518,7 @@ bool XFoil::ViscousIter() {
     tklam = params.karmanTsienFactor;
     tkl_msq = params.karmanTsienFactor_msq;
   } else { //	------- set new inviscid speeds qinv_matrix and inviscidEdgeVelocity for new alpha
-    auto qiset_result = qiset();
-    qinv_matrix = std::move(qiset_result.qinv_matrix);
+    qinv_matrix = qiset();
     boundaryLayerWorkflow.uicalc(*this);
   }
 
