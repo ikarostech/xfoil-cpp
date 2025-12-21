@@ -175,7 +175,7 @@ Matrix2Xd XFoil::gamqv() const {
   Matrix2Xd updated_surface_vortex(2, point_count);
   for (int i = 0; i < point_count; i++) {
     updated_surface_vortex(0, i) = qvis[i];
-    updated_surface_vortex(1, i) = qinv_a[i];
+    updated_surface_vortex(1, i) = qinv_matrix(1, i);
   }
   return updated_surface_vortex;
 }
@@ -314,8 +314,7 @@ bool specConverge(XFoil &xfoil, SpecTarget target) {
 
   auto applyQiset = [&xfoil]() {
     auto qiset_result = xfoil.qiset();
-    xfoil.qinv = std::move(qiset_result.qinv);
-    xfoil.qinv_a = std::move(qiset_result.qinv_a);
+    xfoil.qinv_matrix = std::move(qiset_result.qinv_matrix);
   };
 
   if (target == SpecTarget::AngleOfAttack) {
@@ -381,18 +380,21 @@ bool specConverge(XFoil &xfoil, SpecTarget target) {
     applyQiset();
     xfoil.applyClComputation(xfoil.clcalc(xfoil.cmref));
 
-    xfoil.cpi = xfoil.cpcalc(xfoil.foil.foil_shape.n, xfoil.qinv,
+    xfoil.cpi = xfoil.cpcalc(xfoil.foil.foil_shape.n,
+                             xfoil.qinv_matrix.row(0).transpose(),
                              xfoil.analysis_state_.qinf,
                              xfoil.analysis_state_.currentMach);
     if (xfoil.analysis_state_.viscous) {
       xfoil.cpv = xfoil.cpcalc(xfoil.foil.foil_shape.n + xfoil.foil.wake_shape.n, xfoil.qvis,
                                xfoil.analysis_state_.qinf,
                                xfoil.analysis_state_.currentMach);
-      xfoil.cpi = xfoil.cpcalc(xfoil.foil.foil_shape.n + xfoil.foil.wake_shape.n, xfoil.qinv,
+      xfoil.cpi = xfoil.cpcalc(xfoil.foil.foil_shape.n + xfoil.foil.wake_shape.n,
+                               xfoil.qinv_matrix.row(0).transpose(),
                                xfoil.analysis_state_.qinf,
                                xfoil.analysis_state_.currentMach);
     } else
-      xfoil.cpi = xfoil.cpcalc(xfoil.foil.foil_shape.n, xfoil.qinv,
+      xfoil.cpi = xfoil.cpcalc(xfoil.foil.foil_shape.n,
+                               xfoil.qinv_matrix.row(0).transpose(),
                                xfoil.analysis_state_.qinf,
                                xfoil.analysis_state_.currentMach);
 
@@ -432,12 +434,14 @@ bool specConverge(XFoil &xfoil, SpecTarget target) {
     xfoil.cpv = xfoil.cpcalc(xfoil.foil.foil_shape.n + xfoil.foil.wake_shape.n, xfoil.qvis,
                              xfoil.analysis_state_.qinf,
                              xfoil.analysis_state_.currentMach);
-    xfoil.cpi = xfoil.cpcalc(xfoil.foil.foil_shape.n + xfoil.foil.wake_shape.n, xfoil.qinv,
+    xfoil.cpi = xfoil.cpcalc(xfoil.foil.foil_shape.n + xfoil.foil.wake_shape.n,
+                             xfoil.qinv_matrix.row(0).transpose(),
                              xfoil.analysis_state_.qinf,
                              xfoil.analysis_state_.currentMach);
 
   } else {
-    xfoil.cpi = xfoil.cpcalc(xfoil.foil.foil_shape.n, xfoil.qinv,
+    xfoil.cpi = xfoil.cpcalc(xfoil.foil.foil_shape.n,
+                             xfoil.qinv_matrix.row(0).transpose(),
                              xfoil.analysis_state_.qinf,
                              xfoil.analysis_state_.currentMach);
   }

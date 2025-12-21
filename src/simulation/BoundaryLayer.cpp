@@ -1127,8 +1127,10 @@ bool BoundaryLayerWorkflow::uicalc(XFoil& xfoil) {
     lattice.get(side).inviscidEdgeVelocityDerivative[0] = 0.0;
     for (int stationIndex = 0; stationIndex < lattice.get(side).stationCount - 1; ++stationIndex) {
       const int panelIndex = lattice.get(side).stationToPanel[stationIndex];
-      lattice.get(side).inviscidEdgeVelocity[stationIndex] = lattice.get(side).panelInfluenceFactor[stationIndex] * xfoil.qinv[panelIndex];
-      lattice.get(side).inviscidEdgeVelocityDerivative[stationIndex] = lattice.get(side).panelInfluenceFactor[stationIndex] * xfoil.qinv_a[panelIndex];
+      lattice.get(side).inviscidEdgeVelocity[stationIndex] =
+          lattice.get(side).panelInfluenceFactor[stationIndex] * xfoil.qinv_matrix(0, panelIndex);
+      lattice.get(side).inviscidEdgeVelocityDerivative[stationIndex] =
+          lattice.get(side).panelInfluenceFactor[stationIndex] * xfoil.qinv_matrix(1, panelIndex);
     }
   }
 

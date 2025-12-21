@@ -69,8 +69,7 @@ void XFoil::initializeDataStructures() {
   std::ranges::fill(cache.qf1, 0.0);
   std::ranges::fill(cache.qf2, 0.0);
   std::ranges::fill(cache.qf3, 0.0);
-  qinv = VectorXd::Zero(total_nodes_with_wake);
-  qinv_a = VectorXd::Zero(total_nodes_with_wake);
+  qinv_matrix = Matrix2Xd::Zero(2, total_nodes_with_wake);
   aerodynamicCache.qinvu = Matrix2Xd::Zero(2, total_nodes_with_wake);
   qvis = VectorXd::Zero(total_nodes_with_wake);
 
@@ -193,7 +192,8 @@ bool XFoil::setMach() {
   tklam = params.karmanTsienFactor;
   tkl_msq = params.karmanTsienFactor_msq;
   const int point_count = foil.foil_shape.n;
-  cpi = cpcalc(point_count, qinv, analysis_state_.qinf, analysis_state_.currentMach);
+  cpi = cpcalc(point_count, qinv_matrix.row(0).transpose(),
+               analysis_state_.qinf, analysis_state_.currentMach);
   if (analysis_state_.viscous) {
     cpv = cpcalc(point_count + foil.wake_shape.n, qvis, analysis_state_.qinf, analysis_state_.currentMach);
   }

@@ -249,8 +249,7 @@ class XFoil {
 
   bool qdcalc();
   struct TangentialVelocityResult {
-    VectorXd qinv;
-    VectorXd qinv_a;
+    Matrix2Xd qinv_matrix;
   };
 
   TangentialVelocityResult qiset() const;
@@ -342,7 +341,8 @@ class XFoil {
   Matrix2Xd surface_vortex;
   FoilAerodynamicCache aerodynamicCache;
   double sst, sst_go, sst_gp, gamte, sigte;
-  VectorXd qinv, qinv_a, qvis;
+  Matrix2Xd qinv_matrix;
+  VectorXd qvis;
 
   // Grouped BL Newton system coefficients (Proposal A)
   bool trforc, trfree;
@@ -400,10 +400,10 @@ class XFoil {
   c   bij[..]     dgam/dsig  influence coefficient matrix
   c   cij[..]     dqtan/dgam influence coefficient matrix
   c   dij[..]     dqtan/dsig influence coefficient matrix
-  c   qinv[.]     tangential velocity due to surface vorticity
+  c   qinv_matrix[.,.] tangential velocity due to surface vorticity
   c   qvis[.]     tangential velocity due to surface vorticity & mass sources
   c   qinvu[..]   qinv for alpha = 0, 90 deg.
-  c   qinv_a[.]   dqinv/dalpha
+  c   qinv_matrix row(1) dqinv/dalpha
   c
   c   x[.],y[.]   airfoil [1<i<n] and wake [n+1<i<n+foil.wake_shape.n] coordinate arrays
   c   xp[.],yp[.] dx/ds, dy/ds arrays for spline evaluation

@@ -166,12 +166,10 @@ XFoil::TangentialVelocityResult XFoil::qiset() const {
   const int total_nodes_with_wake = point_count + foil.wake_shape.n;
 
   TangentialVelocityResult result;
-  result.qinv = VectorXd::Zero(total_nodes_with_wake);
-  result.qinv_a = VectorXd::Zero(total_nodes_with_wake);
+  result.qinv_matrix = Matrix2Xd::Zero(2, total_nodes_with_wake);
 
   for (int i = 0; i < total_nodes_with_wake; i++) {
-    result.qinv[i] = rotateMatrix.row(0).dot(aerodynamicCache.qinvu.col(i));
-    result.qinv_a[i] = rotateMatrix.row(1).dot(aerodynamicCache.qinvu.col(i));
+    result.qinv_matrix.col(i) = rotateMatrix * aerodynamicCache.qinvu.col(i);
   }
 
   return result;
@@ -417,8 +415,7 @@ bool XFoil::viscal() {
   //	---- set velocities on airfoil and wake for initial alpha
   {
     auto qiset_result = qiset();
-    qinv = std::move(qiset_result.qinv);
-    qinv_a = std::move(qiset_result.qinv_a);
+    qinv_matrix = std::move(qiset_result.qinv_matrix);
   }
 
   if (!lipan) {
@@ -439,7 +436,7 @@ bool XFoil::viscal() {
     boundaryLayerWorkflow.iblsys(*this);
   }
 
-  //	---- set inviscid bl edge velocity inviscidEdgeVelocity from qinv
+  //	---- set inviscid bl edge velocity inviscidEdgeVelocity from qinv_matrix
   boundaryLayerWorkflow.uicalc(*this);
 
   if (!lblini) {
@@ -459,10 +456,12 @@ bool XFoil::viscal() {
     if (analysis_state_.viscous) {
       cpv = cpcalc(total_nodes_with_wake, qvis, analysis_state_.qinf,
                    analysis_state_.currentMach);
-      cpi = cpcalc(total_nodes_with_wake, qinv, analysis_state_.qinf,
+      cpi = cpcalc(total_nodes_with_wake, qinv_matrix.row(0).transpose(),
+                   analysis_state_.qinf,
                    analysis_state_.currentMach);
     } else {
-      cpi = cpcalc(point_count, qinv, analysis_state_.qinf,
+      cpi = cpcalc(point_count, qinv_matrix.row(0).transpose(),
+                   analysis_state_.qinf,
                    analysis_state_.currentMach);
     }
 
@@ -482,7 +481,8 @@ bool XFoil::viscal() {
 XFoil::ViscalEndResult XFoil::ViscalEnd() {
   ViscalEndResult result;
   const int total_nodes_with_wake = foil.foil_shape.n + foil.wake_shape.n;
-  result.inviscidCp = cpcalc(total_nodes_with_wake, qinv, analysis_state_.qinf,
+  result.inviscidCp = cpcalc(total_nodes_with_wake, qinv_matrix.row(0).transpose(),
+                             analysis_state_.qinf,
                              analysis_state_.currentMach);
   result.viscousCp = cpcalc(total_nodes_with_wake, qvis, analysis_state_.qinf,
                              analysis_state_.currentMach);
@@ -522,10 +522,9 @@ bool XFoil::ViscousIter() {
     const auto params = buildCompressibilityParams();
     tklam = params.karmanTsienFactor;
     tkl_msq = params.karmanTsienFactor_msq;
-  } else { //	------- set new inviscid speeds qinv and inviscidEdgeVelocity for new alpha
+  } else { //	------- set new inviscid speeds qinv_matrix and inviscidEdgeVelocity for new alpha
     auto qiset_result = qiset();
-    qinv = std::move(qiset_result.qinv);
-    qinv_a = std::move(qiset_result.qinv_a);
+    qinv_matrix = std::move(qiset_result.qinv_matrix);
     boundaryLayerWorkflow.uicalc(*this);
   }
 
