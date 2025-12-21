@@ -122,9 +122,9 @@ BoundaryLayerWorkflow::computeNewUeDistribution(const XFoil& xfoil) const {
       const double inviscidDerivative =
           xfoil.analysis_state_.controlByAlpha
               ? 0.0
-              : lattice.get(side).inviscidEdgeVelocityDerivative[station];
+              : lattice.get(side).inviscidEdgeVelocityMatrix(1, station);
       distribution.unew.get(side)[station] =
-          lattice.get(side).inviscidEdgeVelocity[station] + dui;
+          lattice.get(side).inviscidEdgeVelocityMatrix(0, station) + dui;
       distribution.u_ac.get(side)[station] =
           inviscidDerivative + dui_ac;
     }

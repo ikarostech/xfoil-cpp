@@ -431,16 +431,18 @@ bool XFoil::viscal() {
     boundaryLayerWorkflow.iblsys(*this);
   }
 
-  //	---- set inviscid bl edge velocity inviscidEdgeVelocity from qinv_matrix
+  //	---- set inviscid bl edge velocity inviscidEdgeVelocityMatrix from qinv_matrix
   boundaryLayerWorkflow.uicalc(*this);
 
   if (!lblini) {
     //	----- set initial ue from inviscid ue
     for (int ibl = 0; ibl < boundaryLayerWorkflow.lattice.top.stationCount - 1; ibl++) {
-      boundaryLayerWorkflow.lattice.top.profiles.edgeVelocity[ibl] = boundaryLayerWorkflow.lattice.top.inviscidEdgeVelocity[ibl];
+      boundaryLayerWorkflow.lattice.top.profiles.edgeVelocity[ibl] =
+          boundaryLayerWorkflow.lattice.top.inviscidEdgeVelocityMatrix(0, ibl);
     }
     for (int ibl = 0; ibl < boundaryLayerWorkflow.lattice.bottom.stationCount - 1; ibl++) {
-      boundaryLayerWorkflow.lattice.bottom.profiles.edgeVelocity[ibl] = boundaryLayerWorkflow.lattice.bottom.inviscidEdgeVelocity[ibl];
+      boundaryLayerWorkflow.lattice.bottom.profiles.edgeVelocity[ibl] =
+          boundaryLayerWorkflow.lattice.bottom.inviscidEdgeVelocityMatrix(0, ibl);
     }
   }
 
@@ -517,7 +519,7 @@ bool XFoil::ViscousIter() {
     const auto params = buildCompressibilityParams();
     tklam = params.karmanTsienFactor;
     tkl_msq = params.karmanTsienFactor_msq;
-  } else { //	------- set new inviscid speeds qinv_matrix and inviscidEdgeVelocity for new alpha
+  } else { //	------- set new inviscid speeds qinv_matrix and inviscidEdgeVelocityMatrix for new alpha
     qinv_matrix = qiset();
     boundaryLayerWorkflow.uicalc(*this);
   }

@@ -309,8 +309,8 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
   ute1_m = le_te_sensitivities.ute1_m;
   ute2_m = le_te_sensitivities.ute2_m;
 
-  ule1_a = boundaryLayerWorkflow.lattice.get(1).inviscidEdgeVelocityDerivative[0];
-  ule2_a = boundaryLayerWorkflow.lattice.get(2).inviscidEdgeVelocityDerivative[0];
+  ule1_a = boundaryLayerWorkflow.lattice.get(1).inviscidEdgeVelocityMatrix(1, 0);
+  ule2_a = boundaryLayerWorkflow.lattice.get(2).inviscidEdgeVelocityMatrix(1, 0);
 
   writeString(" \n");
 
@@ -375,11 +375,11 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
       }
       d2_m[iv] = d2_m[iv] + d2_m2;
 
-      u2_a = boundaryLayerWorkflow.lattice.get(is).inviscidEdgeVelocityDerivative[ibl];
+      u2_a = boundaryLayerWorkflow.lattice.get(is).inviscidEdgeVelocityMatrix(1, ibl);
       d2_a = d2_u2 * u2_a;
 
   //---- "forced" changes due to mismatch between edge velocities and
-  // usav=inviscidEdgeVelocity+dij*output.massFlux
+  // usav=inviscidEdgeVelocityMatrix+dij*output.massFlux
       due2 = output.edgeVelocity.get(is)[ibl] - usav.get(is)[ibl];
       dds2 = d2_u2 * due2;
 
@@ -448,7 +448,7 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
         d1_m[jvte1] = d1_m[jvte1] + dte_mte1;
         d1_m[jvte2] = d1_m[jvte2] + dte_mte2;
 
-        //----- "forced" changes from  output.edgeVelocity --- usav=inviscidEdgeVelocity+dij*output.massFlux	mismatch
+        //----- "forced" changes from  output.edgeVelocity --- usav=inviscidEdgeVelocityMatrix+dij*output.massFlux mismatch
         due1 = 0.0;
         dds1 =
             dte_ute1 *
@@ -631,7 +631,7 @@ bool XFoil::ueset() {
         }
       }
       boundaryLayerWorkflow.lattice.get(is).profiles.edgeVelocity[ibl] =
-          boundaryLayerWorkflow.lattice.get(is).inviscidEdgeVelocity[ibl] + dui;
+          boundaryLayerWorkflow.lattice.get(is).inviscidEdgeVelocityMatrix(0, ibl) + dui;
     }
   }
   return true;

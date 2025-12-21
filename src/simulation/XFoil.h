@@ -690,7 +690,7 @@ class XFoil {
   c
   c   arcLengthCoordinates[..]    bl arc length coordinate array on each surface
   c   edgeVelocity[..]    bl edge velocity array
-  c   inviscidEdgeVelocity[..]    bl edge velocity array without mass defect influence
+  c   inviscidEdgeVelocityMatrix[.,.] bl edge velocity array without mass defect influence
   c   mass[..]    bl mass defect array  [ = edgeVelocity*displacementThickness ]
   c   momentumThickness[..]    bl momentum thickness array
   c   displacementThickness[..]    bl displacement thickness array
@@ -699,7 +699,7 @@ class XFoil {
   c
   c   skinFrictionCoeffHistory[..]     sqrt[equilibrium max shear coefficient] array [  "  ]
   c   panelInfluenceFactor[..]     +/-1 conversion factor between panel and bl variables
-  c   inviscidEdgeVelocityDerivative[..]  dinviscidEdgeVelocity/dalfa array
+  c   inviscidEdgeVelocityMatrix row(1) dinviscidEdgeVelocity/dalfa array
   c
   c   reinf1      reynolds number  vinf c / ve  for cl=1
   c   reinf       reynolds number for current cl

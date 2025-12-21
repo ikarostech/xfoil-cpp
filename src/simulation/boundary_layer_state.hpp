@@ -92,8 +92,7 @@ struct BoundaryLayerLattice {
 
   Eigen::VectorXd skinFrictionCoeffHistory;
   Eigen::VectorXd arcLengthCoordinates;
-  Eigen::VectorXd inviscidEdgeVelocity;
-  Eigen::VectorXd inviscidEdgeVelocityDerivative;
+  Eigen::Matrix2Xd inviscidEdgeVelocityMatrix;
   Eigen::VectorXd panelInfluenceFactor;
 
   int transitionIndex = 0;
@@ -109,8 +108,7 @@ struct BoundaryLayerLattice {
     profiles.clear();
     skinFrictionCoeffHistory.resize(0);
     arcLengthCoordinates.resize(0);
-    inviscidEdgeVelocity.resize(0);
-    inviscidEdgeVelocityDerivative.resize(0);
+    inviscidEdgeVelocityMatrix.resize(0, 0);
     panelInfluenceFactor.resize(0);
   }
 
@@ -120,8 +118,7 @@ struct BoundaryLayerLattice {
     profiles.resize(size);
     skinFrictionCoeffHistory.resize(size);
     arcLengthCoordinates.resize(size);
-    inviscidEdgeVelocity.resize(size);
-    inviscidEdgeVelocityDerivative.resize(size);
+    inviscidEdgeVelocityMatrix.resize(2, size);
     panelInfluenceFactor.resize(size);
   }
   BoundaryLayerLattice() = default;
