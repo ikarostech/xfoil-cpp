@@ -418,7 +418,15 @@ bool XFoil::viscal() {
       surface_vortex = gamqv();
 
     //	----- locate stagnation point arc length position and panel index
-    boundaryLayerWorkflow.stfind(*this);
+    const auto stagnation = boundaryLayerWorkflow.stfind(
+        surface_vortex, foil.foil_shape.spline_length);
+    if (!stagnation.found) {
+      writeString("stfind: Stagnation point not found. Continuing ...\n");
+    }
+    boundaryLayerWorkflow.stagnationIndex = stagnation.stagnationIndex;
+    sst = stagnation.sst;
+    sst_go = stagnation.sst_go;
+    sst_gp = stagnation.sst_gp;
 
     //	----- set  bl position -> panel position  pointers
     boundaryLayerWorkflow.iblpan(*this);

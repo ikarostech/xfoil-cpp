@@ -38,6 +38,13 @@ class BoundaryLayerWorkflow {
     double cl_ms = 0.0;
     double cl_ac = 0.0;
   };
+  struct StagnationResult {
+    int stagnationIndex = 0;
+    double sst = 0.0;
+    double sst_go = 0.0;
+    double sst_gp = 0.0;
+    bool found = true;
+  };
   struct BoundaryLayerDelta {
     Eigen::VectorXd dskinFrictionCoeff;
     Eigen::VectorXd dmomentumThickness;
@@ -168,7 +175,8 @@ class BoundaryLayerWorkflow {
 
   bool iblpan(XFoil& xfoil);
   bool iblsys(XFoil& xfoil);
-  bool stfind(XFoil& xfoil);
+  StagnationResult stfind(const Eigen::Matrix2Xd& surface_vortex,
+                          const Eigen::VectorXd& spline_length) const;
   bool stmove(XFoil& xfoil);
   SidePair<Eigen::Matrix2Xd> uicalc(const Eigen::Matrix2Xd& qinv_matrix) const;
   bool blkin(XFoil& xfoil, BoundaryLayerState& state);

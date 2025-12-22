@@ -1002,13 +1002,15 @@ bool BoundaryLayerWorkflow::iblsys(XFoil& xfoil) {
   return true;
 }
 
-bool BoundaryLayerWorkflow::stfind(XFoil& xfoil) {
+BoundaryLayerWorkflow::StagnationResult BoundaryLayerWorkflow::stfind(
+    const Eigen::Matrix2Xd& surface_vortex,
+    const Eigen::VectorXd& spline_length) const {
   int stagnation_index = 0;
   bool found = false;
-  const int point_count = xfoil.foil.foil_shape.n;
+  const int point_count = static_cast<int>(surface_vortex.cols());
   for (int i = 0; i < point_count - 1; ++i) {
-    if (xfoil.surface_vortex(0, i) >= 0.0 &&
-        xfoil.surface_vortex(0, i + 1) < 0.0) {
+    if (surface_vortex(0, i) >= 0.0 &&
+        surface_vortex(0, i + 1) < 0.0) {
       stagnation_index = i;
       found = true;
       break;
@@ -1016,46 +1018,51 @@ bool BoundaryLayerWorkflow::stfind(XFoil& xfoil) {
   }
 
   if (!found) {
-    xfoil.writeString("stfind: Stagnation point not found. Continuing ...\n");
     stagnation_index = point_count / 2;
   }
 
-  stagnationIndex = stagnation_index;
-  const double dgam = xfoil.surface_vortex(0, stagnation_index + 1) -
-                      xfoil.surface_vortex(0, stagnation_index);
-  const double ds = xfoil.foil.foil_shape.spline_length[stagnation_index + 1] -
-                    xfoil.foil.foil_shape.spline_length[stagnation_index];
+  StagnationResult result;
+  result.stagnationIndex = stagnation_index;
+  result.found = found;
+  const double dgam = surface_vortex(0, stagnation_index + 1) -
+                      surface_vortex(0, stagnation_index);
+  const double ds = spline_length[stagnation_index + 1] -
+                    spline_length[stagnation_index];
 
-  if (xfoil.surface_vortex(0, stagnation_index) <
-      -xfoil.surface_vortex(0, stagnation_index + 1)) {
-    xfoil.sst = xfoil.foil.foil_shape.spline_length[stagnation_index] -
-                ds * (xfoil.surface_vortex(0, stagnation_index) / dgam);
+  if (surface_vortex(0, stagnation_index) <
+      -surface_vortex(0, stagnation_index + 1)) {
+    result.sst = spline_length[stagnation_index] -
+                 ds * (surface_vortex(0, stagnation_index) / dgam);
   } else {
-    xfoil.sst =
-        xfoil.foil.foil_shape.spline_length[stagnation_index + 1] -
-        ds * (xfoil.surface_vortex(0, stagnation_index + 1) / dgam);
+    result.sst =
+        spline_length[stagnation_index + 1] -
+        ds * (surface_vortex(0, stagnation_index + 1) / dgam);
   }
 
-  if (xfoil.sst <= xfoil.foil.foil_shape.spline_length[stagnation_index])
-    xfoil.sst =
-        xfoil.foil.foil_shape.spline_length[stagnation_index] + 0.0000001;
-  if (xfoil.sst >= xfoil.foil.foil_shape.spline_length[stagnation_index + 1])
-    xfoil.sst = xfoil.foil.foil_shape.spline_length[stagnation_index + 1] -
-                0.0000001;
+  if (result.sst <= spline_length[stagnation_index])
+    result.sst = spline_length[stagnation_index] + 0.0000001;
+  if (result.sst >= spline_length[stagnation_index + 1])
+    result.sst = spline_length[stagnation_index + 1] - 0.0000001;
 
-  xfoil.sst_go =
-      (xfoil.sst - xfoil.foil.foil_shape.spline_length[stagnation_index + 1]) /
-      dgam;
-  xfoil.sst_gp =
-      (xfoil.foil.foil_shape.spline_length[stagnation_index] - xfoil.sst) /
-      dgam;
+  result.sst_go =
+      (result.sst - spline_length[stagnation_index + 1]) / dgam;
+  result.sst_gp =
+      (spline_length[stagnation_index] - result.sst) / dgam;
 
-  return true;
+  return result;
 }
 
 bool BoundaryLayerWorkflow::stmove(XFoil& xfoil) {
   const int previous = stagnationIndex;
-  stfind(xfoil);
+  const auto stagnation = stfind(xfoil.surface_vortex,
+                                 xfoil.foil.foil_shape.spline_length);
+  if (!stagnation.found) {
+    xfoil.writeString("stfind: Stagnation point not found. Continuing ...\n");
+  }
+  stagnationIndex = stagnation.stagnationIndex;
+  xfoil.sst = stagnation.sst;
+  xfoil.sst_go = stagnation.sst_go;
+  xfoil.sst_gp = stagnation.sst_gp;
 
   if (previous == stagnationIndex) {
     xfoil.xicalc();
