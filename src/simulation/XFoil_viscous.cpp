@@ -432,7 +432,11 @@ bool XFoil::viscal() {
   }
 
   //	---- set inviscid bl edge velocity inviscidEdgeVelocityMatrix from qinv_matrix
-  boundaryLayerWorkflow.uicalc(*this);
+  {
+    const auto inviscid_edge_velocity = boundaryLayerWorkflow.uicalc(qinv_matrix);
+    boundaryLayerWorkflow.lattice.top.inviscidEdgeVelocityMatrix = inviscid_edge_velocity.top;
+    boundaryLayerWorkflow.lattice.bottom.inviscidEdgeVelocityMatrix = inviscid_edge_velocity.bottom;
+  }
 
   if (!lblini) {
     //	----- set initial ue from inviscid ue
@@ -521,7 +525,9 @@ bool XFoil::ViscousIter() {
     tkl_msq = params.karmanTsienFactor_msq;
   } else { //	------- set new inviscid speeds qinv_matrix and inviscidEdgeVelocityMatrix for new alpha
     qinv_matrix = qiset();
-    boundaryLayerWorkflow.uicalc(*this);
+    const auto inviscid_edge_velocity = boundaryLayerWorkflow.uicalc(qinv_matrix);
+    boundaryLayerWorkflow.lattice.top.inviscidEdgeVelocityMatrix = inviscid_edge_velocity.top;
+    boundaryLayerWorkflow.lattice.bottom.inviscidEdgeVelocityMatrix = inviscid_edge_velocity.bottom;
   }
 
   qvis = qvfue();  //	------ calculate edge velocities qvis(.) from edgeVelocity(..)

@@ -170,7 +170,7 @@ class BoundaryLayerWorkflow {
   bool iblsys(XFoil& xfoil);
   bool stfind(XFoil& xfoil);
   bool stmove(XFoil& xfoil);
-  bool uicalc(XFoil& xfoil);
+  SidePair<Eigen::Matrix2Xd> uicalc(const Eigen::Matrix2Xd& qinv_matrix) const;
   bool blkin(XFoil& xfoil, BoundaryLayerState& state);
   bool tesys(XFoil& xfoil, double cte, double tte, double dte);
   double calcHtarg(int ibl, int is, bool wake);

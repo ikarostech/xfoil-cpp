@@ -1061,7 +1061,9 @@ bool BoundaryLayerWorkflow::stmove(XFoil& xfoil) {
     xfoil.xicalc();
   } else {
     iblpan(xfoil);
-    uicalc(xfoil);
+    const auto inviscid_edge_velocity = uicalc(xfoil.qinv_matrix);
+    lattice.top.inviscidEdgeVelocityMatrix = inviscid_edge_velocity.top;
+    lattice.bottom.inviscidEdgeVelocityMatrix = inviscid_edge_velocity.bottom;
     xfoil.xicalc();
     iblsys(xfoil);
 
@@ -1118,23 +1120,25 @@ bool BoundaryLayerWorkflow::stmove(XFoil& xfoil) {
   return true;
 }
 
-bool BoundaryLayerWorkflow::uicalc(XFoil& xfoil) {
+SidePair<Eigen::Matrix2Xd> BoundaryLayerWorkflow::uicalc(
+    const Eigen::Matrix2Xd& qinv_matrix) const {
   //--------------------------------------------------------------
   //     sets inviscid ue from panel inviscid tangential velocity
   //--------------------------------------------------------------
+  SidePair<Matrix2Xd> inviscid_matrix;
   for (int side = 1; side <= 2; ++side) {
-    lattice.get(side).inviscidEdgeVelocityMatrix(0, 0) = 0.0;
-    lattice.get(side).inviscidEdgeVelocityMatrix(1, 0) = 0.0;
+    inviscid_matrix.get(side) =
+        Matrix2Xd::Zero(2, lattice.get(side).stationCount);
     for (int stationIndex = 0; stationIndex < lattice.get(side).stationCount - 1; ++stationIndex) {
       const int panelIndex = lattice.get(side).stationToPanel[stationIndex];
-      lattice.get(side).inviscidEdgeVelocityMatrix(0, stationIndex) =
-          lattice.get(side).panelInfluenceFactor[stationIndex] * xfoil.qinv_matrix(0, panelIndex);
-      lattice.get(side).inviscidEdgeVelocityMatrix(1, stationIndex) =
-          lattice.get(side).panelInfluenceFactor[stationIndex] * xfoil.qinv_matrix(1, panelIndex);
+      inviscid_matrix.get(side)(0, stationIndex) =
+          lattice.get(side).panelInfluenceFactor[stationIndex] * qinv_matrix(0, panelIndex);
+      inviscid_matrix.get(side)(1, stationIndex) =
+          lattice.get(side).panelInfluenceFactor[stationIndex] * qinv_matrix(1, panelIndex);
     }
   }
 
-  return true;
+  return inviscid_matrix;
 }
 
 bool BoundaryLayerWorkflow::tesys(XFoil& xfoil, double cte, double tte, double dte) {
