@@ -1286,7 +1286,7 @@ void XFoil::checkTransitionIfNeeded(int side, int ibl, bool skipCheck,
     return;
   }
 
-  trchek();
+  boundaryLayerWorkflow.trchek(*this);
   ami = boundaryLayerWorkflow.state.station2.param.amplz;
   if (flowRegime == FlowRegimeEnum::Transition) {
     boundaryLayerWorkflow.lattice.get(side).transitionIndex = ibl;
@@ -1500,8 +1500,6 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
   ule1_a = boundaryLayerWorkflow.lattice.get(1).inviscidEdgeVelocityMatrix(1, 0);
   ule2_a = boundaryLayerWorkflow.lattice.get(2).inviscidEdgeVelocityMatrix(1, 0);
 
-  writeString(" \n");
-
   //*** process each boundary layer side
   for (int is = 1; is <= 2; is++) {
     //---- there is no station "1" at similarity, so zero everything out
@@ -1587,7 +1585,7 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
 
       //---- check for transition and set xt, etc. if found
       if (stationIsTransitionCandidate) {
-        trchek();
+        boundaryLayerWorkflow.trchek(*this);
         ami = boundaryLayerWorkflow.state.station2.param.amplz;
       }
 
@@ -1799,15 +1797,6 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
   }
 
   return output;
-}
-
-bool XFoil::trchek() {
-  return boundaryLayerWorkflow.trchek(*this);
-}
-
-
-bool XFoil::trdif() {
-  return boundaryLayerWorkflow.trdif(*this);
 }
 
 bool XFoil::ueset() {

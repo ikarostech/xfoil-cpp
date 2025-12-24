@@ -583,7 +583,7 @@ bool BoundaryLayerWorkflow::performMrchueNewtonLoop(
     blkin(xfoil, state);
 
     if ((!ctx.simi) && (!(xfoil.flowRegime == FlowRegimeEnum::Turbulent || xfoil.flowRegime == FlowRegimeEnum::Wake))) {
-      xfoil.trchek();
+      trchek(xfoil);
       ctx.ami = state.station2.param.amplz;
 
       if (xfoil.flowRegime == FlowRegimeEnum::Transition) {

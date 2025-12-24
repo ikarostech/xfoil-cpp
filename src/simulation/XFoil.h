@@ -271,8 +271,6 @@ class XFoil {
   };
   LeTeSensitivities computeLeTeSensitivities(int ile1, int ile2, int ite1,
                                              int ite2) const;
-  bool trchek();
-  bool trdif();
   bool ueset();
   bool update();
   using QtanResult = BoundaryLayerWorkflow::QtanResult;
