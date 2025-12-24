@@ -271,12 +271,6 @@ class XFoil {
   };
   LeTeSensitivities computeLeTeSensitivities(int ile1, int ile2, int ite1,
                                              int ite2) const;
-  struct DerivativeVectors {
-    VectorXd u;
-    VectorXd d;
-  };
-  DerivativeVectors clearDerivativeVectors(const VectorXd& u_m,
-                                            const VectorXd& d_m) const;
   bool trchek();
   bool trdif();
   bool ueset();

@@ -256,20 +256,6 @@ XFoil::LeTeSensitivities XFoil::computeLeTeSensitivities(int ile1, int ile2,
 }
 
 
-XFoil::DerivativeVectors XFoil::clearDerivativeVectors(const VectorXd &u_m,
-                                                        const VectorXd &d_m) const {
-  DerivativeVectors result{u_m, d_m};
-  for (int js = 1; js <= 2; ++js) {
-    for (int jbl = 0; jbl < boundaryLayerWorkflow.lattice.get(js).stationCount - 1; ++jbl) {
-      const int jv = boundaryLayerWorkflow.lattice.get(js).stationToSystem[jbl];
-      result.u[jv] = 0.0;
-      result.d[jv] = 0.0;
-    }
-  }
-  return result;
-}
-
-
 double XFoil::computeAcChange(double clnew, double cl_current,
                               double cl_target, double cl_ac, double cl_a,
                               double cl_ms) const {
@@ -341,7 +327,6 @@ bool XFoil::update() {
 
   SidePair<BoundaryLayerDelta> deltas;
   SidePair<BoundaryLayerMetrics> metrics;
-  SidePair<BoundaryLayerSideProfiles> updated_boundary_layer;
   for (int side = 1; side <= 2; ++side) {
     deltas.get(side) =
         boundaryLayerWorkflow.buildBoundaryLayerDelta(
@@ -352,7 +337,7 @@ bool XFoil::update() {
             side, deltas.get(side), dhi, dlo, rlx);
     rmsbl += metrics.get(side).rmsContribution;
     rmxbl = std::max(rmxbl, metrics.get(side).maxChange);
-    updated_boundary_layer.get(side) =
+    boundaryLayerWorkflow.lattice.get(side).profiles =
         boundaryLayerWorkflow.applyBoundaryLayerDelta(
             side, deltas.get(side), rlx, *this);
   }
@@ -364,19 +349,6 @@ bool XFoil::update() {
   else
     analysis_state_.alpha =
         analysis_state_.alpha + rlx * dac;
-
-  for (int side = 1; side <= 2; ++side) {
-    boundaryLayerWorkflow.lattice.get(side).profiles.skinFrictionCoeff =
-        updated_boundary_layer.get(side).skinFrictionCoeff;
-    boundaryLayerWorkflow.lattice.get(side).profiles.momentumThickness =
-        updated_boundary_layer.get(side).momentumThickness;
-    boundaryLayerWorkflow.lattice.get(side).profiles.displacementThickness =
-        updated_boundary_layer.get(side).displacementThickness;
-    boundaryLayerWorkflow.lattice.get(side).profiles.edgeVelocity =
-        updated_boundary_layer.get(side).edgeVelocity;
-    boundaryLayerWorkflow.lattice.get(side).profiles.massFlux =
-        updated_boundary_layer.get(side).massFlux;
-  }
 
   //--- equate upper wake arrays to lower wake arrays
   for (int kbl = 1; kbl <= boundaryLayerWorkflow.lattice.bottom.stationCount - (boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex + 1); kbl++) {

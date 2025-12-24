@@ -1505,9 +1505,14 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
   //*** process each boundary layer side
   for (int is = 1; is <= 2; is++) {
     //---- there is no station "1" at similarity, so zero everything out
-    const auto cleared_derivatives = clearDerivativeVectors(u1_m, d1_m);
-    u1_m = cleared_derivatives.u;
-    d1_m = cleared_derivatives.d;
+    for (int js = 1; js <= 2; ++js) {
+      for (int jbl = 0;
+           jbl < boundaryLayerWorkflow.lattice.get(js).stationCount - 1; ++jbl) {
+        const int jv = boundaryLayerWorkflow.lattice.get(js).stationToSystem[jbl];
+        u1_m[jv] = 0.0;
+        d1_m[jv] = 0.0;
+      }
+    }
     double u1_a = 0.0;
     double d1_a = 0.0;
 
