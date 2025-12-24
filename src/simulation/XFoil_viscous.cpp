@@ -424,9 +424,7 @@ bool XFoil::viscal() {
       writeString("stfind: Stagnation point not found. Continuing ...\n");
     }
     boundaryLayerWorkflow.stagnationIndex = stagnation.stagnationIndex;
-    sst = stagnation.sst;
-    sst_go = stagnation.sst_go;
-    sst_gp = stagnation.sst_gp;
+    this->stagnation = stagnation;
 
     //	----- set  bl position -> panel position  pointers
     boundaryLayerWorkflow.iblpan(*this);

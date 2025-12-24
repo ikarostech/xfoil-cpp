@@ -93,6 +93,7 @@ class XFoil {
   using EdgeVelocityDistribution = BoundaryLayerWorkflow::EdgeVelocityDistribution;
   using BoundaryLayerDelta = BoundaryLayerWorkflow::BoundaryLayerDelta;
   using BoundaryLayerMetrics = BoundaryLayerWorkflow::BoundaryLayerMetrics;
+  using StagnationResult = BoundaryLayerWorkflow::StagnationResult;
 
  public:
 
@@ -340,7 +341,8 @@ class XFoil {
 
   Matrix2Xd surface_vortex;
   FoilAerodynamicCache aerodynamicCache;
-  double sst, sst_go, sst_gp, gamte, sigte;
+  StagnationResult stagnation;
+  double gamte, sigte;
   Matrix2Xd qinv_matrix;
   VectorXd qvis;
 
@@ -422,9 +424,9 @@ class XFoil {
   c   nx[.],ny[.] normal unit vector components at airfoil and wake coordinates
   c   apanel[.]   surface and wake panel angle array [+ counterclockwise]
   c
-  c   sst         s value at stagnation point
-  c   sst_go      dsst/dgam[ist]
-  c   sst_gp      dsst/dgam[ist+1]
+  c   stagnation.sst    s value at stagnation point
+  c   stagnation.sst_go dsst/dgam[ist]
+  c   stagnation.sst_gp dsst/dgam[ist+1]
   c
   c   gamte       vortex panel strength across finite-thickness te
   c   sigte       source panel strength across finite-thickness te

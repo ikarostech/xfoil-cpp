@@ -133,7 +133,7 @@ void XFoil::resetVariables() {
   minf_cl = reinf_cl = 0.0;
   cl_alf = cl_msq = 0.0;
   tklam = tkl_msq = 0.0;
-  sst = sst_go = sst_gp = 0.0;
+  stagnation = StagnationResult{};
 }
 
 void XFoil::writeString(std::string str) {

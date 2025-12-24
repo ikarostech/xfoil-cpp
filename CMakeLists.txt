@@ -48,7 +48,6 @@ add_library(xfoil_simulation
     src/simulation/Blsolve.cpp
     src/simulation/XFoil_geometry.cpp
     src/simulation/XFoil_init.cpp
-    src/simulation/XFoil_march.cpp
     src/simulation/XFoil_viscous.cpp
     src/simulation/BoundaryLayer.cpp
     src/simulation/BoundaryLayerStore.cpp
