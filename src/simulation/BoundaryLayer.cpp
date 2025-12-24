@@ -107,7 +107,7 @@ void BoundaryLayerWorkflow::updateSystemMatricesForStation(
          lattice.get(2).profiles.skinFrictionCoeff[lattice.bottom.trailingEdgeIndex] *
              lattice.get(2).profiles.momentumThickness[lattice.bottom.trailingEdgeIndex]) /
         ctx.tte;
-    tesys(xfoil, ctx.cte, ctx.tte, ctx.dte);
+    tesys(lattice.top.profiles, lattice.bottom.profiles, xfoil.foil.edge);
   } else {
     blsys(xfoil);
   }
@@ -1061,7 +1061,7 @@ bool BoundaryLayerWorkflow::stmove(XFoil& xfoil) {
   const auto stagnation = stfind(xfoil.surface_vortex,
                                  xfoil.foil.foil_shape.spline_length);
   if (!stagnation.found) {
-    xfoil.writeString("stfind: Stagnation point not found. Continuing ...\n");
+    std::cout << "stfind: Stagnation point not found. Continuing ..." << std::endl;
   }
   stagnationIndex = stagnation.stagnationIndex;
   xfoil.stagnation = stagnation;
@@ -1150,10 +1150,27 @@ SidePair<Eigen::Matrix2Xd> BoundaryLayerWorkflow::uicalc(
   return inviscid_matrix;
 }
 
-bool BoundaryLayerWorkflow::tesys(XFoil& xfoil, double cte, double tte, double dte) {
+bool BoundaryLayerWorkflow::tesys(const BoundaryLayerSideProfiles& top_profiles,
+                                  const BoundaryLayerSideProfiles& bottom_profiles,
+                                  const Edge& edge) {
   blc.clear();
 
   state.station2 = this->blvar(state.station2, FlowRegimeEnum::Wake);
+
+  const int top_te = lattice.top.trailingEdgeIndex;
+  const int bottom_te = lattice.bottom.trailingEdgeIndex;
+  const double tte =
+      top_profiles.momentumThickness[top_te] +
+      bottom_profiles.momentumThickness[bottom_te];
+  const double dte =
+      top_profiles.displacementThickness[top_te] +
+      bottom_profiles.displacementThickness[bottom_te] + edge.ante;
+  const double cte =
+      (top_profiles.skinFrictionCoeff[top_te] *
+           top_profiles.momentumThickness[top_te] +
+       bottom_profiles.skinFrictionCoeff[bottom_te] *
+           bottom_profiles.momentumThickness[bottom_te]) /
+      tte;
 
   blc.a1(0, 0) = -1.0;
   blc.a2(0, 0) = 1.0;
@@ -1593,7 +1610,9 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
                output.skinFrictionCoeff.get(2)[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex] *
                    output.momentumThickness.get(2)[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex]) /
                tte;
-        boundaryLayerWorkflow.tesys(*this, cte, tte, dte);
+        boundaryLayerWorkflow.tesys(boundaryLayerWorkflow.lattice.top.profiles,
+                                    boundaryLayerWorkflow.lattice.bottom.profiles,
+                                    foil.edge);
 
         tte_tte1 = 1.0;
         tte_tte2 = 1.0;

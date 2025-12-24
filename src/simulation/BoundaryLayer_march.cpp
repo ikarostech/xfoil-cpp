@@ -610,7 +610,7 @@ bool BoundaryLayerWorkflow::performMrchueNewtonLoop(
            lattice.get(2).profiles.skinFrictionCoeff[lattice.bottom.trailingEdgeIndex] *
                lattice.get(2).profiles.momentumThickness[lattice.bottom.trailingEdgeIndex]) /
           ctx.tte;
-      tesys(xfoil, ctx.cte, ctx.tte, ctx.dte);
+      tesys(lattice.top.profiles, lattice.bottom.profiles, xfoil.foil.edge);
     } else {
       blsys(xfoil);
     }

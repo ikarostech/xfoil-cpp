@@ -76,6 +76,7 @@ struct BoundaryLayerSideProfiles {
   }
 };
 
+
 /**
  * @brief Aggregates per-side arrays and indices that describe the boundary-layer
  *        lattice along the airfoil and wake.

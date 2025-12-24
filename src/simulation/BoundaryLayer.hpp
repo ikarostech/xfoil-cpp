@@ -12,6 +12,7 @@
 #include "simulation/BoundaryLayerStore.hpp"
 
 class XFoil;
+class Edge;
 enum class FlowRegimeEnum;
 
 class BoundaryLayerWorkflow {
@@ -180,7 +181,9 @@ class BoundaryLayerWorkflow {
   bool stmove(XFoil& xfoil);
   SidePair<Eigen::Matrix2Xd> uicalc(const Eigen::Matrix2Xd& qinv_matrix) const;
   bool blkin(XFoil& xfoil, BoundaryLayerState& state);
-  bool tesys(XFoil& xfoil, double cte, double tte, double dte);
+  bool tesys(const BoundaryLayerSideProfiles& top_profiles,
+             const BoundaryLayerSideProfiles& bottom_profiles,
+             const Edge& edge);
   double calcHtarg(int ibl, int is, bool wake);
   bool trchek(XFoil& xfoil);
 
