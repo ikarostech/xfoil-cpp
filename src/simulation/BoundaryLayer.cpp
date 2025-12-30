@@ -1267,7 +1267,7 @@ XFoil::MixedModeStationContext XFoil::prepareMixedModeStation(int side, int ibl,
 
   if (ctx.wake) {
     int iw = ibl - boundaryLayerWorkflow.lattice.get(side).trailingEdgeIndex;
-    ctx.dswaki = wgap[iw - 1];
+    ctx.dswaki = boundaryLayerWorkflow.wgap[iw - 1];
   } else {
     ctx.dswaki = 0.0;
   }
@@ -1548,7 +1548,7 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
 
       if (stationIsWake) {
         int iw = ibl - boundaryLayerWorkflow.lattice.get(is).trailingEdgeIndex;
-        dswaki = wgap[iw - 1];
+        dswaki = boundaryLayerWorkflow.wgap[iw - 1];
       } else
         dswaki = 0.0;
 
@@ -1868,7 +1868,7 @@ bool XFoil::xicalc() {
 
   if (foil.edge.sharp) {
     for (int iw0 = 0; iw0 < foil.wake_shape.n; iw0++)
-      wgap[iw0] = 0.0;
+      boundaryLayerWorkflow.wgap[iw0] = 0.0;
   }
 
   else {
@@ -1878,9 +1878,10 @@ bool XFoil::xicalc() {
       const double zn = 1.0 - (boundaryLayerWorkflow.lattice.bottom.arcLengthCoordinates[te_bot_0b + (iw0 + 1)] -
                                boundaryLayerWorkflow.lattice.bottom.arcLengthCoordinates[te_bot_0b]) /
                                 (telrat * foil.edge.ante);
-      wgap[iw0] = 0.0;
+      boundaryLayerWorkflow.wgap[iw0] = 0.0;
       if (zn >= 0.0)
-        wgap[iw0] = foil.edge.ante * (aa + bb * zn) * zn * zn;
+        boundaryLayerWorkflow.wgap[iw0] =
+            foil.edge.ante * (aa + bb * zn) * zn * zn;
     }
   }
   return true;
@@ -1892,12 +1893,8 @@ bool XFoil::xicalc() {
  * ----------------------------------------------------- */
 double XFoil::xifset(int is) {
   std::stringstream ss;
-  VectorXd w1 = VectorXd::Zero(6 * IQX);
-  VectorXd w2 = VectorXd::Zero(6 * IQX);
-  VectorXd w3 = VectorXd::Zero(6 * IQX);
-  VectorXd w4 = VectorXd::Zero(6 * IQX);
+  VectorXd w1 = VectorXd::Zero(foil.foil_shape.n);
   double str;
-  const int point_count = foil.foil_shape.n;
 
   if (boundaryLayerWorkflow.lattice.get(is).transitionLocation >= 1.0) {
     return boundaryLayerWorkflow.lattice.get(is).arcLengthCoordinates[boundaryLayerWorkflow.lattice.get(is).trailingEdgeIndex];
@@ -1906,27 +1903,22 @@ double XFoil::xifset(int is) {
   Vector2d point_chord = foil.edge.point_te - foil.edge.point_le;
 
   //---- calculate chord-based x/c, y/c
-  for (int i = 0; i < point_count; i++) {
+  for (int i = 0; i < foil.foil_shape.n; i++) {
     w1[i] = (foil.foil_shape.points.col(i) - foil.edge.point_le).dot(point_chord.normalized());
-    w2[i] = MathUtil::cross2(foil.foil_shape.points.col(i) - foil.edge.point_le, point_chord.normalized());
   }
 
-  w3 = spline::splind(w1, foil.foil_shape.spline_length.head(point_count));
-  w4 = spline::splind(w2, foil.foil_shape.spline_length.head(point_count));
-
+  VectorXd w3 = spline::splind(w1, foil.foil_shape.spline_length);
   if (is == 1) {
     str = foil.edge.sle + (foil.foil_shape.spline_length[0] - foil.edge.sle) * boundaryLayerWorkflow.lattice.top.transitionLocation;
   } else {
     str = foil.edge.sle + (foil.foil_shape.spline_length[foil.foil_shape.n - 1] - foil.edge.sle) * boundaryLayerWorkflow.lattice.bottom.transitionLocation;
   }
-  str = spline::sinvrt(str, boundaryLayerWorkflow.lattice.get(is).transitionLocation, w1, w3, foil.foil_shape.spline_length.head(point_count), point_count);
-  xiforc = std::min((str - stagnation.sst),
+  str = spline::sinvrt(str, boundaryLayerWorkflow.lattice.get(is).transitionLocation, w1, w3, foil.foil_shape.spline_length, foil.foil_shape.n);
+  double xiforc = std::min((str - stagnation.sst),
                     boundaryLayerWorkflow.lattice.get(is).arcLengthCoordinates[boundaryLayerWorkflow.lattice.get(is).trailingEdgeIndex]);
   if (xiforc < 0.0) {
-    ss << " ***  stagnation point is past trip on side " << is << "\n";
-    writeString(ss.str());
-
-    xiforc = boundaryLayerWorkflow.lattice.get(is).arcLengthCoordinates[boundaryLayerWorkflow.lattice.get(is).trailingEdgeIndex];
+    std::cout << " ***  stagnation point is past trip on side " << is << std::endl;
+    return boundaryLayerWorkflow.lattice.get(is).arcLengthCoordinates[boundaryLayerWorkflow.lattice.get(is).trailingEdgeIndex];
   }
 
   return xiforc;

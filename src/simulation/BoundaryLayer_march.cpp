@@ -331,7 +331,7 @@ BoundaryLayerSideProfiles BoundaryLayerWorkflow::applyBoundaryLayerDelta(
     if (ibl > lattice.get(side).trailingEdgeIndex) {
       const int wake_index =
           ibl - (lattice.get(side).trailingEdgeIndex + 1);
-      dswaki = xfoil.wgap[wake_index];
+      dswaki = wgap[wake_index];
     }
 
     const double hklim =
@@ -552,7 +552,7 @@ void BoundaryLayerWorkflow::prepareMrchueStationContext(
   ctx.htarg = 0.0;
   if (ctx.wake) {
     const int iw = stationIndex - lattice.get(side).trailingEdgeIndex;
-    ctx.dswaki = xfoil.wgap[iw - 1];
+    ctx.dswaki = wgap[iw - 1];
   } else {
     ctx.dswaki = 0.0;
   }

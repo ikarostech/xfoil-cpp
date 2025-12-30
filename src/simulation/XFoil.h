@@ -324,9 +324,6 @@ class XFoil {
 
   int nsys;
 
-  double wgap[IWX];
-
-
   double cl_alf, cl_msq;
   double gamma, gamm1;
 
@@ -405,7 +402,6 @@ class XFoil {
   c   sle         value of s at leading edge
   c   xle,yle     leading  edge coordinates
   c   xte,yte     trailing edge coordinates
-  c   wgap[.]     thickness of "dead air" region inside wake just behind te
   c   waklen      wake length to chord ratio
   c
   c   gam[.]      surface vortex panel strength array

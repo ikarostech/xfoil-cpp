@@ -73,7 +73,7 @@ void XFoil::initializeDataStructures() {
   aerodynamicCache.qinvu = Matrix2Xd::Zero(2, total_nodes_with_wake);
   qvis = VectorXd::Zero(total_nodes_with_wake);
 
-  memset(wgap, 0, sizeof(wgap));
+  boundaryLayerWorkflow.wgap = VectorXd::Zero(IWX);
   va.resize(IVX, Matrix3x2d::Zero());
   vb.resize(IVX, Matrix3x2d::Zero());
   vdel.resize(IVX, Matrix3x2d::Zero());

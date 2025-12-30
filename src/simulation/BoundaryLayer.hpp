@@ -195,6 +195,7 @@ private:
   void copyStationState(int side, int destination, int source);
 
 public:
+  Eigen::VectorXd wgap;
   SidePair<BoundaryLayerLattice> lattice;
   BlSystemCoeffs blc;
   BoundaryLayerState state;
