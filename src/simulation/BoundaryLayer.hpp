@@ -186,6 +186,7 @@ class BoundaryLayerWorkflow {
              const Edge& edge);
   double calcHtarg(int ibl, int is, bool wake);
   bool trchek(XFoil& xfoil);
+  double xifset(const XFoil& xfoil, int is) const;
 
 private:
   static double adjustDisplacementForHkLimit(double displacementThickness,

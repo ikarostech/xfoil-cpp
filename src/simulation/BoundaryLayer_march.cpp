@@ -11,7 +11,7 @@ using BoundaryContext = BoundaryLayerWorkflow::MixedModeStationContext;
 
 int BoundaryLayerWorkflow::resetSideState(int side, XFoil& xfoil) {
   const int previousTransition = lattice.get(side).transitionIndex;
-  xfoil.xiforc = xfoil.xifset(side);
+  xfoil.xiforc = xifset(xfoil, side);
   xfoil.flowRegime = FlowRegimeEnum::Laminar;
   lattice.get(side).transitionIndex = lattice.get(side).trailingEdgeIndex;
   return previousTransition;
