@@ -4,6 +4,7 @@
 #include <cmath>
 #include <iomanip>
 #include <sstream>
+#include <string>
 
 #include "XFoil.h"
 #include "domain/boundary_layer/boundary_layer_builder.hpp"
@@ -941,9 +942,12 @@ bool BoundaryLayerWorkflow::trchek(XFoil& xfoil) {
   return true;
 }
 
-bool BoundaryLayerWorkflow::iblpan(XFoil& xfoil) {
+bool BoundaryLayerWorkflow::iblpan(int point_count, int wake_point_count,
+                                   std::string* error_message) {
   std::stringstream ss;
-  const int point_count = xfoil.foil.foil_shape.n;
+  if (error_message) {
+    error_message->clear();
+  }
 
   for (int i = 0; i <= stagnationIndex; i++) {
     lattice.top.stationToPanel[i] = stagnationIndex - i;
@@ -960,31 +964,32 @@ bool BoundaryLayerWorkflow::iblpan(XFoil& xfoil) {
 
   lattice.bottom.trailingEdgeIndex = point_count - stagnationIndex - 2;
 
-  for (int iw = 0; iw < xfoil.foil.wake_shape.n; iw++) {
+  for (int iw = 0; iw < wake_point_count; iw++) {
     const int panel = point_count + iw;
     const int index = lattice.bottom.trailingEdgeIndex + iw + 2;
     lattice.bottom.stationToPanel[index - 1] = panel;
     lattice.bottom.panelInfluenceFactor[index - 1] = -1.0;
   }
 
-  lattice.bottom.stationCount = lattice.bottom.trailingEdgeIndex + xfoil.foil.wake_shape.n + 2;
+  lattice.bottom.stationCount = lattice.bottom.trailingEdgeIndex + wake_point_count + 2;
 
-  for (int iw = 0; iw < xfoil.foil.wake_shape.n; iw++) {
+  for (int iw = 0; iw < wake_point_count; iw++) {
     lattice.top.stationToPanel[lattice.top.trailingEdgeIndex + iw + 1] =
         lattice.bottom.stationToPanel[lattice.bottom.trailingEdgeIndex + iw + 1];
     lattice.top.panelInfluenceFactor[lattice.top.trailingEdgeIndex + iw + 1] = 1.0;
   }
 
   const int iblmax = std::max(lattice.top.trailingEdgeIndex, lattice.bottom.trailingEdgeIndex) +
-                     xfoil.foil.wake_shape.n + 2;
+                     wake_point_count + 2;
   if (iblmax > IVX) {
     ss << "iblpan :  ***  bl array overflow\n";
     ss << "Increase IVX to at least " << iblmax << "\n";
-    xfoil.writeString(ss.str());
+    if (error_message) {
+      *error_message = ss.str();
+    }
     return false;
   }
 
-  xfoil.lipan = true;
   return true;
 }
 
@@ -1069,7 +1074,12 @@ bool BoundaryLayerWorkflow::stmove(XFoil& xfoil) {
   if (previous == stagnationIndex) {
     xfoil.xicalc();
   } else {
-    iblpan(xfoil);
+    std::string iblpan_error;
+    if (iblpan(xfoil.foil.foil_shape.n, xfoil.foil.wake_shape.n, &iblpan_error)) {
+      xfoil.lipan = true;
+    } else if (!iblpan_error.empty()) {
+      xfoil.writeString(iblpan_error);
+    }
     const auto inviscid_edge_velocity = uicalc(xfoil.qinv_matrix);
     lattice.top.inviscidEdgeVelocityMatrix = inviscid_edge_velocity.top;
     lattice.bottom.inviscidEdgeVelocityMatrix = inviscid_edge_velocity.bottom;

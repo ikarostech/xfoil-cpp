@@ -3,6 +3,7 @@
 #include <array>
 #include <cmath>
 #include <sstream>
+#include <string>
 
 #include "simulation/boundary_layer_state.hpp"
 #include "domain/coefficient/bl_newton.hpp"
@@ -174,7 +175,8 @@ class BoundaryLayerWorkflow {
                                            bool similarity,
                                            bool wake) const;
 
-  bool iblpan(XFoil& xfoil);
+  bool iblpan(int point_count, int wake_point_count,
+              std::string* error_message);
   bool iblsys(XFoil& xfoil);
   StagnationResult stfind(const Eigen::Matrix2Xd& surface_vortex,
                           const Eigen::VectorXd& spline_length) const;
