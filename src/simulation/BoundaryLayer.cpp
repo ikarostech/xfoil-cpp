@@ -1070,9 +1070,10 @@ bool BoundaryLayerWorkflow::stmove(XFoil& xfoil) {
   }
   stagnationIndex = stagnation.stagnationIndex;
   xfoil.stagnation = stagnation;
+  stagnationSst = stagnation.sst;
 
   if (previous == stagnationIndex) {
-    xfoil.xicalc();
+    xicalc(xfoil.foil);
   } else {
     std::string iblpan_error;
     if (iblpan(xfoil.foil.foil_shape.n, xfoil.foil.wake_shape.n, &iblpan_error)) {
@@ -1083,7 +1084,7 @@ bool BoundaryLayerWorkflow::stmove(XFoil& xfoil) {
     const auto inviscid_edge_velocity = uicalc(xfoil.qinv_matrix);
     lattice.top.inviscidEdgeVelocityMatrix = inviscid_edge_velocity.top;
     lattice.bottom.inviscidEdgeVelocityMatrix = inviscid_edge_velocity.bottom;
-    xfoil.xicalc();
+    xicalc(xfoil.foil);
     iblsys(xfoil);
 
     if (stagnationIndex > previous) {
@@ -1832,33 +1833,52 @@ bool XFoil::ueset() {
 }
 
 
-bool XFoil::xicalc() {
+bool BoundaryLayerWorkflow::xicalc(const Foil& foil) {
   //-------------------------------------------------------------
   //     sets bl arc length array on each airfoil side and wake
   //-------------------------------------------------------------
 
-  
-    for (int ibl = 0; ibl <= boundaryLayerWorkflow.lattice.top.trailingEdgeIndex; ++ibl) {
-      boundaryLayerWorkflow.lattice.top.arcLengthCoordinates[ibl] =
-          stagnation.sst - foil.foil_shape.spline_length[boundaryLayerWorkflow.lattice.get(1).stationToPanel[ibl]];
-    }
-  
-    for (int ibl = 0; ibl <= boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex; ++ibl) {
-      boundaryLayerWorkflow.lattice.bottom.arcLengthCoordinates[ibl] =
-          foil.foil_shape.spline_length[boundaryLayerWorkflow.lattice.get(2).stationToPanel[ibl]] -
-          stagnation.sst;
-    }
+  const auto arc_lengths =
+      computeArcLengthCoordinates(foil, stagnationSst, lattice);
+  lattice.top.arcLengthCoordinates = arc_lengths.top;
+  lattice.bottom.arcLengthCoordinates = arc_lengths.bottom;
+  wgap = computeWakeGap(foil, lattice.bottom, arc_lengths.bottom);
+  return true;
+}
 
-    // Wake: start from TE, duplicate TE value at first wake station
-    boundaryLayerWorkflow.lattice.bottom.arcLengthCoordinates[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex + 1] = boundaryLayerWorkflow.lattice.bottom.arcLengthCoordinates[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex];
-    for (int ibl = boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex + 2; ibl < boundaryLayerWorkflow.lattice.bottom.stationCount; ++ibl) {
-      boundaryLayerWorkflow.lattice.bottom.arcLengthCoordinates[ibl] = boundaryLayerWorkflow.lattice.bottom.arcLengthCoordinates[ibl - 1] +
-                          (foil.wake_shape.points.col(boundaryLayerWorkflow.lattice.get(2).stationToPanel[ibl]) -
-                           foil.wake_shape.points.col(boundaryLayerWorkflow.lattice.get(2).stationToPanel[ibl - 1]))
-                              .norm();
-    }
-  
+SidePair<VectorXd> BoundaryLayerWorkflow::computeArcLengthCoordinates(
+    const Foil& foil, double stagnationSst,
+    const SidePair<BoundaryLayerLattice>& lattice) {
+  SidePair<VectorXd> arc_lengths;
+  arc_lengths.top = lattice.top.arcLengthCoordinates;
+  arc_lengths.bottom = lattice.bottom.arcLengthCoordinates;
 
+  for (int ibl = 0; ibl <= lattice.top.trailingEdgeIndex; ++ibl) {
+    arc_lengths.top[ibl] =
+        stagnationSst - foil.foil_shape.spline_length[lattice.get(1).stationToPanel[ibl]];
+  }
+
+  for (int ibl = 0; ibl <= lattice.bottom.trailingEdgeIndex; ++ibl) {
+    arc_lengths.bottom[ibl] =
+        foil.foil_shape.spline_length[lattice.get(2).stationToPanel[ibl]] -
+        stagnationSst;
+  }
+
+  // Wake: start from TE, duplicate TE value at first wake station
+  arc_lengths.bottom[lattice.bottom.trailingEdgeIndex + 1] =
+      arc_lengths.bottom[lattice.bottom.trailingEdgeIndex];
+  for (int ibl = lattice.bottom.trailingEdgeIndex + 2; ibl < lattice.bottom.stationCount; ++ibl) {
+    arc_lengths.bottom[ibl] = arc_lengths.bottom[ibl - 1] +
+                        (foil.wake_shape.points.col(lattice.get(2).stationToPanel[ibl]) -
+                         foil.wake_shape.points.col(lattice.get(2).stationToPanel[ibl - 1]))
+                            .norm();
+  }
+  return arc_lengths;
+}
+
+VectorXd BoundaryLayerWorkflow::computeWakeGap(
+    const Foil& foil, const BoundaryLayerLattice& bottom,
+    const VectorXd& bottomArcLengths) {
   //---- trailing edge flap length to te gap ratio
   const double telrat = 2.50;
 
@@ -1876,25 +1896,25 @@ bool XFoil::xicalc() {
   const double aa = 3.0 + telrat * dwdxte;
   const double bb = -2.0 - telrat * dwdxte;
 
+  VectorXd wgap_result = VectorXd::Zero(foil.wake_shape.n);
   if (foil.edge.sharp) {
-    for (int iw0 = 0; iw0 < foil.wake_shape.n; iw0++)
-      boundaryLayerWorkflow.wgap[iw0] = 0.0;
+    return wgap_result;
   }
 
   else {
     //----- set te flap (wake gap) array (0-based: iw0=0..foil.wake_shape.n-1)
     for (int iw0 = 0; iw0 < foil.wake_shape.n; iw0++) {
-      const int te_bot_0b = boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex; // 0-based TE for array indexing
-      const double zn = 1.0 - (boundaryLayerWorkflow.lattice.bottom.arcLengthCoordinates[te_bot_0b + (iw0 + 1)] -
-                               boundaryLayerWorkflow.lattice.bottom.arcLengthCoordinates[te_bot_0b]) /
-                                (telrat * foil.edge.ante);
-      boundaryLayerWorkflow.wgap[iw0] = 0.0;
+      const int te_bot_0b = bottom.trailingEdgeIndex; // 0-based TE for array indexing
+      const double zn =
+          1.0 - (bottomArcLengths[te_bot_0b + (iw0 + 1)] -
+                 bottomArcLengths[te_bot_0b]) /
+                    (telrat * foil.edge.ante);
       if (zn >= 0.0)
-        boundaryLayerWorkflow.wgap[iw0] =
+        wgap_result[iw0] =
             foil.edge.ante * (aa + bb * zn) * zn * zn;
     }
   }
-  return true;
+  return wgap_result;
 }
 
 

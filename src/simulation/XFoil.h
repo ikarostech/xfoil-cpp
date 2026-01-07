@@ -279,7 +279,6 @@ class XFoil {
                          double cl_ac, double cl_a, double cl_ms) const;
   double clampRelaxationForGlobalChange(double relaxation, double dac,
                                         double lower, double upper) const;
-  bool xicalc();
   bool xyWake();
   // Helper routines used during initialization
   void initializeDataStructures();

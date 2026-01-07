@@ -397,6 +397,7 @@ bool XFoil::viscal() {
     }
     boundaryLayerWorkflow.stagnationIndex = stagnation.stagnationIndex;
     this->stagnation = stagnation;
+    boundaryLayerWorkflow.stagnationSst = stagnation.sst;
 
     //	----- set  bl position -> panel position  pointers
     std::string iblpan_error;
@@ -408,7 +409,7 @@ bool XFoil::viscal() {
 
     //	----- calculate surface arc length array for current stagnation point
     // location
-    xicalc();
+    boundaryLayerWorkflow.xicalc(foil);
 
     //	----- set  bl position -> system line  pointers
     boundaryLayerWorkflow.iblsys(*this);

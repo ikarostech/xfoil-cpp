@@ -113,6 +113,7 @@ void XFoil::resetVariables() {
   resetFlags();
   cmref = Vector2d{0.25, 0.0};
   boundaryLayerWorkflow.stagnationIndex = 0;
+  boundaryLayerWorkflow.stagnationSst = 0.0;
   qinfbl = tkbl = tkbl_ms = 0.0;
   rstbl = rstbl_ms = 0.0;
   hstinv = hstinv_ms = 0.0;

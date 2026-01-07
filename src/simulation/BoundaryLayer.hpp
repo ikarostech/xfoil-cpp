@@ -13,6 +13,7 @@
 #include "simulation/BoundaryLayerStore.hpp"
 
 class XFoil;
+class Foil;
 class Edge;
 enum class FlowRegimeEnum;
 
@@ -181,6 +182,13 @@ class BoundaryLayerWorkflow {
   StagnationResult stfind(const Eigen::Matrix2Xd& surface_vortex,
                           const Eigen::VectorXd& spline_length) const;
   bool stmove(XFoil& xfoil);
+  bool xicalc(const Foil& foil);
+  static SidePair<Eigen::VectorXd> computeArcLengthCoordinates(
+      const Foil& foil, double stagnationSst,
+      const SidePair<BoundaryLayerLattice>& lattice);
+  static Eigen::VectorXd computeWakeGap(
+      const Foil& foil, const BoundaryLayerLattice& bottom,
+      const Eigen::VectorXd& bottomArcLengths);
   SidePair<Eigen::Matrix2Xd> uicalc(const Eigen::Matrix2Xd& qinv_matrix) const;
   bool blkin(XFoil& xfoil, BoundaryLayerState& state);
   bool tesys(const BoundaryLayerSideProfiles& top_profiles,
@@ -204,6 +212,7 @@ public:
   BoundaryLayerState state;
   blDiff xt;
   int stagnationIndex = 0;
+  double stagnationSst = 0.0;
 };
 
 template <typename StationContext>
