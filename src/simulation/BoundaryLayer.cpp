@@ -249,12 +249,12 @@ blData BoundaryLayerWorkflow::blvar(blData data, FlowRegimeEnum flowRegimeType) 
 }
 
 SkinFrictionCoefficients BoundaryLayerWorkflow::blmid(
-    XFoil& xfoil, FlowRegimeEnum flowRegimeType) {
+    FlowRegimeEnum flowRegimeType) {
   BoundaryLayerState& state = this->state;
   blData& previous = state.previous();
   blData& current = state.current();
 
-  if (xfoil.flowRegime == FlowRegimeEnum::Similarity) {
+  if (flowRegimeType == FlowRegimeEnum::Similarity) {
     previous.hkz = current.hkz;
     previous.rtz = current.rtz;
     previous.param.mz = current.param.mz;
@@ -329,7 +329,7 @@ bool BoundaryLayerWorkflow::blsys(XFoil& xfoil) {
   blData& previous = state.previous();
   blData& current = state.current();
 
-  SkinFrictionCoefficients skinFriction = blmid(xfoil, xfoil.flowRegime);
+  SkinFrictionCoefficients skinFriction = blmid(xfoil.flowRegime);
   current = blvar(current, xfoil.flowRegime);
 
   if (xfoil.flowRegime == FlowRegimeEnum::Similarity) {
@@ -424,7 +424,7 @@ bool BoundaryLayerWorkflow::trdif(XFoil& xfoil) {
 
   //---- calculate x1-xt midpoint cfm value
   SkinFrictionCoefficients laminarSkinFriction =
-      blmid(xfoil, FlowRegimeEnum::Laminar);
+      blmid(FlowRegimeEnum::Laminar);
 
   //=    at this point, all "2" variables are really "t" variables at xt
 
@@ -497,7 +497,7 @@ bool BoundaryLayerWorkflow::trdif(XFoil& xfoil) {
 
   //---- calculate xt-x2 midpoint cfm value
   SkinFrictionCoefficients turbulentSkinFriction =
-      blmid(xfoil, FlowRegimeEnum::Turbulent);
+      blmid(FlowRegimeEnum::Turbulent);
 
   //---- set up newton system for dct, dth, dds, due, dxi  at  xt and x2
   blc = blDiffSolver.solve(FlowRegimeEnum::Turbulent, state, turbulentSkinFriction, xfoil.amcrit);
@@ -1797,7 +1797,7 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
             boundaryLayerWorkflow.blvar(
                 boundaryLayerWorkflow.state.station2,
                 FlowRegimeEnum::Wake);
-        boundaryLayerWorkflow.blmid(*this, FlowRegimeEnum::Wake);
+        boundaryLayerWorkflow.blmid(FlowRegimeEnum::Wake);
       }
       u1_m = u2_m;
       d1_m = d2_m;

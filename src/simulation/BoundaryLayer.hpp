@@ -114,8 +114,7 @@ class BoundaryLayerWorkflow {
                                 double deps, double& ami,
                                 MixedModeStationContext& ctx);
   blData blvar(blData data, FlowRegimeEnum flowRegimeType);
-  SkinFrictionCoefficients blmid(XFoil& xfoil,
-                                 FlowRegimeEnum flowRegimeType);
+  SkinFrictionCoefficients blmid(FlowRegimeEnum flowRegimeType);
   blData blprv(XFoil& xfoil, blData data, double xsi, double ami, double cti,
                double thi, double dsi, double dswaki, double uei) const;
   bool blsys(XFoil& xfoil);

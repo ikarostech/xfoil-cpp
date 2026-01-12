@@ -358,15 +358,15 @@ void BoundaryLayerWorkflow::syncStationRegimeStates(int side,
                                                     XFoil& xfoil) {
   if (stationIndex < lattice.get(side).transitionIndex) {
     state.station2 = blvar(state.station2, FlowRegimeEnum::Laminar);
-    blmid(xfoil, FlowRegimeEnum::Laminar);
+    blmid(FlowRegimeEnum::Laminar);
   }
   if (stationIndex >= lattice.get(side).transitionIndex) {
     state.station2 = blvar(state.station2, FlowRegimeEnum::Turbulent);
-    blmid(xfoil, FlowRegimeEnum::Turbulent);
+    blmid(FlowRegimeEnum::Turbulent);
   }
   if (wake) {
     state.station2 = blvar(state.station2, FlowRegimeEnum::Wake);
-    blmid(xfoil, FlowRegimeEnum::Wake);
+    blmid(FlowRegimeEnum::Wake);
   }
   const bool similarity = (stationIndex == 0);
   xfoil.flowRegime = determineRegimeForStation(side, stationIndex,
