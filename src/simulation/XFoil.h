@@ -339,8 +339,6 @@ class XFoil {
 
   double qinfbl, tkbl, tkbl_ms, rstbl, rstbl_ms, hstinv, hstinv_ms;
   double reybl, reybl_ms, reybl_re, gm1bl, xiforc, amcrit;
-  //---- sutherland's const./to	(assumes stagnation conditions are at stp)
-  const double hvrat = 0.35;
 
   Matrix3x2dVector va, vb, vdel;
   double vm[3][IZX][IZX], vz[3][2];

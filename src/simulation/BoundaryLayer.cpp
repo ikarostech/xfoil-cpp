@@ -62,7 +62,7 @@ bool BoundaryLayerWorkflow::blkin(XFoil& xfoil, BoundaryLayerState& state) {
   double he_u2 = -current.param.uz * xfoil.hstinv;
   double he_ms = -0.5 * current.param.uz * current.param.uz * xfoil.hstinv_ms;
   //---- set molecular viscosity
-  double v2_he = (1.5 / herat - 1.0 / (herat + xfoil.hvrat));
+  double v2_he = (1.5 / herat - 1.0 / (herat + kHvrat));
 
   //---- set kinematic shape parameter
   boundary_layer::KineticShapeParameterResult hkin_result =
@@ -77,7 +77,7 @@ bool BoundaryLayerWorkflow::blkin(XFoil& xfoil, BoundaryLayerState& state) {
   //---- set momentum thickness reynolds number
   current.rtz.scalar =
       current.param.rz * current.param.uz * current.param.tz /
-      (sqrt(herat * herat * herat) * (1.0 + xfoil.hvrat) / (herat + xfoil.hvrat) / xfoil.reybl);
+      (sqrt(herat * herat * herat) * (1.0 + kHvrat) / (herat + kHvrat) / xfoil.reybl);
   current.rtz.u() = current.rtz.scalar *
                     (1.0 / current.param.uz +
                      current.param.rz_uz / current.param.rz - v2_he * he_u2);
@@ -1466,9 +1466,15 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
   herat_ms = -0.5 * output.qinfbl * output.qinfbl * output.hstinv_ms;
 
   output.reybl = analysis_state_.currentRe * sqrt(herat * herat * herat) *
-                 (1.0 + hvrat) / (herat + hvrat);
-  output.reybl_re = sqrt(herat * herat * herat) * (1.0 + hvrat) / (herat + hvrat);
-  output.reybl_ms = output.reybl * (1.5 / herat - 1.0 / (herat + hvrat)) * herat_ms;
+                 (1.0 + BoundaryLayerWorkflow::kHvrat) /
+                 (herat + BoundaryLayerWorkflow::kHvrat);
+  output.reybl_re = sqrt(herat * herat * herat) *
+                    (1.0 + BoundaryLayerWorkflow::kHvrat) /
+                    (herat + BoundaryLayerWorkflow::kHvrat);
+  output.reybl_ms =
+      output.reybl * (1.5 / herat -
+                      1.0 / (herat + BoundaryLayerWorkflow::kHvrat)) *
+      herat_ms;
 
   output.amcrit = acrit;
 

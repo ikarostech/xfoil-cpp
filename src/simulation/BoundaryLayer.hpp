@@ -23,6 +23,9 @@ class BoundaryLayerWorkflow {
   BoundaryLayerStore boundaryLayerStore;
   BlDiffSolver blDiffSolver;
 
+  // Sutherland's const./T0 (assumes stagnation conditions are at STP).
+  static constexpr double kHvrat = 0.35;
+
   enum class EdgeVelocityFallbackMode {
     UsePreviousStation,
     AverageNeighbors
