@@ -55,7 +55,6 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 #include "core/spline.hpp"
 #include "core/side_pair.hpp"
 #include "domain/boundary_layer.hpp"
-#include "domain/boundary_layer/boundary_layer_builder.hpp"
 #include "domain/boundary_layer/boundary_layer_diff_solver.hpp"
 #include "domain/boundary_layer/boundary_layer_variables_solver.hpp"
 #include "domain/foil/foil.hpp"
@@ -66,6 +65,9 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 #include "infrastructure/xfoil_params.h"
 #include "core/boundary_layer_util.hpp"
 #include "BoundaryLayer.hpp"
+
+struct SetblInputView;
+struct SetblOutputView;
 
 //------ derived dimensioning limit parameters
 

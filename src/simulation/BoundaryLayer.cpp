@@ -1252,18 +1252,9 @@ SetblOutputView SetblOutputView::fromXFoil(XFoil& xfoil) {
   auto& lattice = xfoil.boundaryLayerWorkflow.lattice;
   return SetblOutputView{
       xfoil.lblini,
-      xfoil.blCompressibility.gm1bl,
-      xfoil.blCompressibility.qinfbl,
-      xfoil.blCompressibility.tkbl,
-      xfoil.blCompressibility.tkbl_ms,
-      xfoil.blCompressibility.rstbl,
-      xfoil.blCompressibility.rstbl_ms,
-      xfoil.blCompressibility.hstinv,
-      xfoil.blCompressibility.hstinv_ms,
-      xfoil.blReynolds.reybl,
-      xfoil.blReynolds.reybl_re,
-      xfoil.blReynolds.reybl_ms,
-      xfoil.blTransition.amcrit,
+      xfoil.blCompressibility,
+      xfoil.blReynolds,
+      xfoil.blTransition,
       {lattice.top.profiles.edgeVelocity, lattice.bottom.profiles.edgeVelocity},
       {lattice.top.profiles.skinFrictionCoeff, lattice.bottom.profiles.skinFrictionCoeff},
       {lattice.top.profiles.momentumThickness, lattice.bottom.profiles.momentumThickness},
@@ -1277,7 +1268,7 @@ SetblOutputView SetblOutputView::fromXFoil(XFoil& xfoil) {
       xfoil.vm,
       xfoil.vz,
       xfoil.flowRegime,
-      xfoil.blTransition.xiforc};
+      };
 }
 
 XFoil::MixedModeStationContext XFoil::prepareMixedModeStation(int side, int ibl,
@@ -1465,45 +1456,54 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
   tkl_msq = compressibility.karmanTsienFactor_msq;
 
   //---- set gas constant (= cp/cv)
-  output.gm1bl = gamm1;
+  output.blCompressibility.gm1bl = gamm1;
 
   //---- set parameters for compressibility correction
-  output.qinfbl = analysis_state_.qinf;
-  output.tkbl = tklam;
-  output.tkbl_ms = tkl_msq;
+  output.blCompressibility.qinfbl = analysis_state_.qinf;
+  output.blCompressibility.tkbl = tklam;
+  output.blCompressibility.tkbl_ms = tkl_msq;
 
   //---- stagnation density and 1/enthalpy
-  output.rstbl =
-      pow((1.0 + 0.5 * output.gm1bl * analysis_state_.currentMach * analysis_state_.currentMach),
-          (1.0 / output.gm1bl));
-  output.rstbl_ms =
-      0.5 * output.rstbl /
-      (1.0 + 0.5 * output.gm1bl * analysis_state_.currentMach * analysis_state_.currentMach);
-  output.hstinv = output.gm1bl *
-                  MathUtil::pow(analysis_state_.currentMach / output.qinfbl, 2) /
-                  (1.0 + 0.5 * output.gm1bl * analysis_state_.currentMach * analysis_state_.currentMach);
-  output.hstinv_ms =
-      output.gm1bl * MathUtil::pow(1.0 / output.qinfbl, 2) /
-          (1.0 + 0.5 * output.gm1bl * analysis_state_.currentMach * analysis_state_.currentMach) -
-      0.5 * output.gm1bl * output.hstinv /
-          (1.0 + 0.5 * output.gm1bl * analysis_state_.currentMach * analysis_state_.currentMach);
+  output.blCompressibility.rstbl =
+      pow((1.0 + 0.5 * output.blCompressibility.gm1bl * analysis_state_.currentMach *
+                        analysis_state_.currentMach),
+          (1.0 / output.blCompressibility.gm1bl));
+  output.blCompressibility.rstbl_ms =
+      0.5 * output.blCompressibility.rstbl /
+      (1.0 + 0.5 * output.blCompressibility.gm1bl * analysis_state_.currentMach *
+                 analysis_state_.currentMach);
+  output.blCompressibility.hstinv =
+      output.blCompressibility.gm1bl *
+      MathUtil::pow(analysis_state_.currentMach / output.blCompressibility.qinfbl, 2) /
+      (1.0 + 0.5 * output.blCompressibility.gm1bl * analysis_state_.currentMach *
+                 analysis_state_.currentMach);
+  output.blCompressibility.hstinv_ms =
+      output.blCompressibility.gm1bl *
+          MathUtil::pow(1.0 / output.blCompressibility.qinfbl, 2) /
+          (1.0 + 0.5 * output.blCompressibility.gm1bl * analysis_state_.currentMach *
+                     analysis_state_.currentMach) -
+      0.5 * output.blCompressibility.gm1bl * output.blCompressibility.hstinv /
+          (1.0 + 0.5 * output.blCompressibility.gm1bl * analysis_state_.currentMach *
+                     analysis_state_.currentMach);
 
   //---- set reynolds number based on freestream density, velocity, viscosity
-  herat = 1.0 - 0.5 * output.qinfbl * output.qinfbl * output.hstinv;
-  herat_ms = -0.5 * output.qinfbl * output.qinfbl * output.hstinv_ms;
+  herat = 1.0 - 0.5 * output.blCompressibility.qinfbl *
+                     output.blCompressibility.qinfbl *
+                     output.blCompressibility.hstinv;
+  herat_ms = -0.5 * output.blCompressibility.qinfbl *
+             output.blCompressibility.qinfbl * output.blCompressibility.hstinv_ms;
 
-  output.reybl = analysis_state_.currentRe * sqrt(herat * herat * herat) *
-                 (1.0 + BoundaryLayerWorkflow::kHvrat) /
-                 (herat + BoundaryLayerWorkflow::kHvrat);
-  output.reybl_re = sqrt(herat * herat * herat) *
-                    (1.0 + BoundaryLayerWorkflow::kHvrat) /
-                    (herat + BoundaryLayerWorkflow::kHvrat);
-  output.reybl_ms =
-      output.reybl * (1.5 / herat -
-                      1.0 / (herat + BoundaryLayerWorkflow::kHvrat)) *
-      herat_ms;
+  output.blReynolds.reybl = analysis_state_.currentRe * sqrt(herat * herat * herat) *
+                            (1.0 + BoundaryLayerWorkflow::kHvrat) /
+                            (herat + BoundaryLayerWorkflow::kHvrat);
+  output.blReynolds.reybl_re = sqrt(herat * herat * herat) *
+                               (1.0 + BoundaryLayerWorkflow::kHvrat) /
+                               (herat + BoundaryLayerWorkflow::kHvrat);
+  output.blReynolds.reybl_ms =
+      output.blReynolds.reybl *
+      (1.5 / herat - 1.0 / (herat + BoundaryLayerWorkflow::kHvrat)) * herat_ms;
 
-  output.amcrit = acrit;
+  output.blTransition.amcrit = acrit;
 
   if (!input.lblini) {
     //----- initialize bl by marching with ue (fudge at separation)
@@ -1562,7 +1562,7 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
     double dds1 = 0.0;
 
     //---- set forced transition arc length position
-    output.xiforc = boundaryLayerWorkflow.xifset(*this, is);
+    output.blTransition.xiforc = boundaryLayerWorkflow.xifset(*this, is);
 
     //**** sweep downstream setting up bl equation linearizations
     for (int ibl = 0; ibl < boundaryLayerWorkflow.lattice.get(is).stationCount - 1; ++ibl) {

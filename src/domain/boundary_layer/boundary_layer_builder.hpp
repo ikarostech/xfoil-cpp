@@ -3,10 +3,7 @@
 #include "Eigen/Core"
 #include "infrastructure/xfoil_params.h"
 #include "domain/flow_regime.hpp"
-
-struct XFoil;
-
-struct XFoil;
+#include "XFoil.h"
 
 struct SetblInputView {
   const bool& lblini;
@@ -23,18 +20,9 @@ struct SetblInputView {
 
 struct SetblOutputView {
   bool& lblini;
-  double& gm1bl;
-  double& qinfbl;
-  double& tkbl;
-  double& tkbl_ms;
-  double& rstbl;
-  double& rstbl_ms;
-  double& hstinv;
-  double& hstinv_ms;
-  double& reybl;
-  double& reybl_re;
-  double& reybl_ms;
-  double& amcrit;
+  XFoil::BlCompressibilityParams& blCompressibility;
+  XFoil::BlReynoldsParams& blReynolds;
+  XFoil::BlTransitionParams& blTransition;
   SidePairRef<Eigen::VectorXd> edgeVelocity;
   SidePairRef<Eigen::VectorXd> skinFrictionCoeff;
   SidePairRef<Eigen::VectorXd> momentumThickness;
@@ -48,7 +36,6 @@ struct SetblOutputView {
   double (&vm)[3][IZX][IZX];
   double (&vz)[3][2];
   FlowRegimeEnum& flowRegime;
-  double& xiforc;
 
   static SetblOutputView fromXFoil(XFoil& xfoil);
 };

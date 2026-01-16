@@ -1,5 +1,6 @@
 #include "XFoil.h"
 #include "simulation/Blsolve.hpp"
+#include "domain/boundary_layer/boundary_layer_builder.hpp"
 #include <algorithm>
 #include <cstring>
 #include <cmath>
