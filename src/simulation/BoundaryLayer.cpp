@@ -1404,6 +1404,283 @@ void XFoil::handleMixedModeNonConvergence(int side, int ibl,
   ctx.ami = ami;
 }
 
+void XFoil::setupBlReferenceParams(SetblOutputView& output, double& re_clmr,
+                                   double& msq_clmr) {
+  double clmr = 0.0;
+  double ma_clmr = 0.0;
+  double herat = 0.0;
+  double herat_ms = 0.0;
+  //---- set the cl used to define mach, reynolds numbers
+  if (analysis_state_.controlByAlpha)
+    clmr = cl;
+  else
+    clmr = analysis_state_.clspec;
+
+  //---- set current minf(cl)
+  ma_clmr = getActualMach(clmr, analysis_state_.machType);
+  re_clmr = getActualReynolds(clmr, analysis_state_.reynoldsType);
+  msq_clmr = 2.0 * analysis_state_.currentMach * ma_clmr;
+
+  //---- set compressibility parameter tklam and derivative tk_msq
+  const auto compressibility = buildCompressibilityParams();
+  tklam = compressibility.karmanTsienFactor;
+  tkl_msq = compressibility.karmanTsienFactor_msq;
+
+  //---- set gas constant (= cp/cv)
+  output.blCompressibility.gm1bl = gamm1;
+
+  //---- set parameters for compressibility correction
+  output.blCompressibility.qinfbl = analysis_state_.qinf;
+  output.blCompressibility.tkbl = tklam;
+  output.blCompressibility.tkbl_ms = tkl_msq;
+
+  //---- stagnation density and 1/enthalpy
+  output.blCompressibility.rstbl =
+      pow((1.0 + 0.5 * output.blCompressibility.gm1bl *
+                       analysis_state_.currentMach *
+                       analysis_state_.currentMach),
+          (1.0 / output.blCompressibility.gm1bl));
+  output.blCompressibility.rstbl_ms =
+      0.5 * output.blCompressibility.rstbl /
+      (1.0 + 0.5 * output.blCompressibility.gm1bl *
+                 analysis_state_.currentMach *
+                 analysis_state_.currentMach);
+  output.blCompressibility.hstinv =
+      output.blCompressibility.gm1bl *
+      MathUtil::pow(analysis_state_.currentMach /
+                        output.blCompressibility.qinfbl,
+                    2) /
+      (1.0 + 0.5 * output.blCompressibility.gm1bl *
+                 analysis_state_.currentMach *
+                 analysis_state_.currentMach);
+  output.blCompressibility.hstinv_ms =
+      output.blCompressibility.gm1bl *
+          MathUtil::pow(1.0 / output.blCompressibility.qinfbl, 2) /
+          (1.0 + 0.5 * output.blCompressibility.gm1bl *
+                     analysis_state_.currentMach *
+                     analysis_state_.currentMach) -
+      0.5 * output.blCompressibility.gm1bl *
+          output.blCompressibility.hstinv /
+          (1.0 + 0.5 * output.blCompressibility.gm1bl *
+                     analysis_state_.currentMach *
+                     analysis_state_.currentMach);
+
+  //---- set reynolds number based on freestream density, velocity, viscosity
+  herat = 1.0 - 0.5 * output.blCompressibility.qinfbl *
+                     output.blCompressibility.qinfbl *
+                     output.blCompressibility.hstinv;
+  herat_ms = -0.5 * output.blCompressibility.qinfbl *
+             output.blCompressibility.qinfbl *
+             output.blCompressibility.hstinv_ms;
+
+  output.blReynolds.reybl =
+      analysis_state_.currentRe * sqrt(herat * herat * herat) *
+      (1.0 + BoundaryLayerWorkflow::kHvrat) /
+      (herat + BoundaryLayerWorkflow::kHvrat);
+  output.blReynolds.reybl_re = sqrt(herat * herat * herat) *
+                               (1.0 + BoundaryLayerWorkflow::kHvrat) /
+                               (herat + BoundaryLayerWorkflow::kHvrat);
+  output.blReynolds.reybl_ms =
+      output.blReynolds.reybl *
+      (1.5 / herat - 1.0 / (herat + BoundaryLayerWorkflow::kHvrat)) *
+      herat_ms;
+
+  output.blTransition.amcrit = acrit;
+}
+
+void XFoil::initializeAndMarchBl(const SetblInputView& input,
+                                 SetblOutputView& output) {
+  if (!input.lblini) {
+    //----- initialize bl by marching with ue (fudge at separation)
+    // TRACE(" initializing bl ...\n");
+    writeString("   Initializing bl ...\n");
+
+    boundaryLayerWorkflow.mrchue(*this);
+    output.lblini = true;
+  }
+
+  //---- march bl with current ue and ds to establish transition
+  boundaryLayerWorkflow.mrchdu(*this);
+}
+
+void XFoil::prepareEdgeVelocityAndSensitivities(
+    const SetblInputView& input, SetblOutputView& output,
+    SidePair<VectorXd>& usav, int& jvte1, int& jvte2, double& dule1,
+    double& dule2, VectorXd& ule1_m, VectorXd& ule2_m, VectorXd& ute1_m,
+    VectorXd& ute2_m, double& ule1_a, double& ule2_a) {
+  usav.top = input.edgeVelocity.top;
+  usav.bottom = input.edgeVelocity.bottom;
+
+  ueset();
+  const auto swapped_edge_velocities = swapEdgeVelocities(usav);
+  usav = swapped_edge_velocities.swappedUsav;
+  output.edgeVelocity.top = swapped_edge_velocities.restoredUedg.top;
+  output.edgeVelocity.bottom = swapped_edge_velocities.restoredUedg.bottom;
+  jvte1 = boundaryLayerWorkflow.lattice.top
+              .stationToSystem
+                  [boundaryLayerWorkflow.lattice.top.trailingEdgeIndex];
+  jvte2 = boundaryLayerWorkflow.lattice.bottom
+              .stationToSystem
+                  [boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex];
+
+  dule1 = output.edgeVelocity.top[0] - usav.top[0];
+  dule2 = output.edgeVelocity.bottom[0] - usav.bottom[0];
+
+  //---- set le and te ue sensitivities wrt all m values
+  const auto le_te_sensitivities = computeLeTeSensitivities(
+      boundaryLayerWorkflow.lattice.get(1).stationToPanel[0],
+      boundaryLayerWorkflow.lattice.get(2).stationToPanel[0],
+      boundaryLayerWorkflow.lattice.get(1).stationToPanel
+          [boundaryLayerWorkflow.lattice.top.trailingEdgeIndex],
+      boundaryLayerWorkflow.lattice.get(2).stationToPanel
+          [boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex]);
+  ule1_m = le_te_sensitivities.ule1_m;
+  ule2_m = le_te_sensitivities.ule2_m;
+  ute1_m = le_te_sensitivities.ute1_m;
+  ute2_m = le_te_sensitivities.ute2_m;
+
+  ule1_a = boundaryLayerWorkflow.lattice.get(1).inviscidEdgeVelocityMatrix(1, 0);
+  ule2_a = boundaryLayerWorkflow.lattice.get(2).inviscidEdgeVelocityMatrix(1, 0);
+}
+
+void XFoil::assembleBlJacobianForStation(
+    int is, int iv, int nsys, const VectorXd& d1_m, const VectorXd& u1_m,
+    const VectorXd& d2_m, const VectorXd& u2_m, double xi_ule1,
+    double xi_ule2, const VectorXd& ule1_m, const VectorXd& ule2_m,
+    double ule1_a, double ule2_a, double u1_a, double d1_a, double u2_a,
+    double d2_a, double due1, double dds1, double due2, double dds2,
+    double dule1, double dule2, double re_clmr, double msq_clmr,
+    SetblOutputView& output) {
+  for (int jv = 1; jv <= nsys; jv++) {
+    output.vm[0][jv][iv] =
+        boundaryLayerWorkflow.blc.a1(0, 2) * d1_m[jv] +
+        boundaryLayerWorkflow.blc.a1(0, 3) * u1_m[jv] +
+        boundaryLayerWorkflow.blc.a2(0, 2) * d2_m[jv] +
+        boundaryLayerWorkflow.blc.a2(0, 3) * u2_m[jv] +
+        (boundaryLayerWorkflow.blc.a1(0, 4) +
+         boundaryLayerWorkflow.blc.a2(0, 4) +
+         boundaryLayerWorkflow.blc.d_xi[0]) *
+            (xi_ule1 * ule1_m[jv] + xi_ule2 * ule2_m[jv]);
+  }
+
+  output.vb[iv](0, 0) = boundaryLayerWorkflow.blc.a1(0, 0);
+  output.vb[iv](0, 1) = boundaryLayerWorkflow.blc.a1(0, 1);
+
+  output.va[iv](0, 0) = boundaryLayerWorkflow.blc.a2(0, 0);
+  output.va[iv](0, 1) = boundaryLayerWorkflow.blc.a2(0, 1);
+
+  if (analysis_state_.controlByAlpha)
+    output.vdel[iv](0, 1) = boundaryLayerWorkflow.blc.d_re[0] * re_clmr +
+                            boundaryLayerWorkflow.blc.d_msq[0] * msq_clmr;
+  else
+    output.vdel[iv](0, 1) =
+        (boundaryLayerWorkflow.blc.a1(0, 3) * u1_a +
+         boundaryLayerWorkflow.blc.a1(0, 2) * d1_a) +
+        (boundaryLayerWorkflow.blc.a2(0, 3) * u2_a +
+         boundaryLayerWorkflow.blc.a2(0, 2) * d2_a) +
+        (boundaryLayerWorkflow.blc.a1(0, 4) +
+         boundaryLayerWorkflow.blc.a2(0, 4) +
+         boundaryLayerWorkflow.blc.d_xi[0]) *
+            (xi_ule1 * ule1_a + xi_ule2 * ule2_a);
+
+  output.vdel[iv](0, 0) =
+      boundaryLayerWorkflow.blc.rhs[0] +
+      (boundaryLayerWorkflow.blc.a1(0, 3) * due1 +
+       boundaryLayerWorkflow.blc.a1(0, 2) * dds1) +
+      (boundaryLayerWorkflow.blc.a2(0, 3) * due2 +
+       boundaryLayerWorkflow.blc.a2(0, 2) * dds2) +
+      (boundaryLayerWorkflow.blc.a1(0, 4) +
+       boundaryLayerWorkflow.blc.a2(0, 4) +
+       boundaryLayerWorkflow.blc.d_xi[0]) *
+          (xi_ule1 * dule1 + xi_ule2 * dule2);
+
+  for (int jv = 1; jv <= nsys; jv++) {
+    output.vm[1][jv][iv] =
+        boundaryLayerWorkflow.blc.a1(1, 2) * d1_m[jv] +
+        boundaryLayerWorkflow.blc.a1(1, 3) * u1_m[jv] +
+        boundaryLayerWorkflow.blc.a2(1, 2) * d2_m[jv] +
+        boundaryLayerWorkflow.blc.a2(1, 3) * u2_m[jv] +
+        (boundaryLayerWorkflow.blc.a1(1, 4) +
+         boundaryLayerWorkflow.blc.a2(1, 4) +
+         boundaryLayerWorkflow.blc.d_xi[1]) *
+            (xi_ule1 * ule1_m[jv] + xi_ule2 * ule2_m[jv]);
+  }
+  output.vb[iv](1, 0) = boundaryLayerWorkflow.blc.a1(1, 0);
+  output.vb[iv](1, 1) = boundaryLayerWorkflow.blc.a1(1, 1);
+
+  output.va[iv](1, 0) = boundaryLayerWorkflow.blc.a2(1, 0);
+  output.va[iv](1, 1) = boundaryLayerWorkflow.blc.a2(1, 1);
+
+  if (analysis_state_.controlByAlpha)
+    output.vdel[iv](1, 1) = boundaryLayerWorkflow.blc.d_re[1] * re_clmr +
+                            boundaryLayerWorkflow.blc.d_msq[1] * msq_clmr;
+  else
+    output.vdel[iv](1, 1) =
+        (boundaryLayerWorkflow.blc.a1(1, 3) * u1_a +
+         boundaryLayerWorkflow.blc.a1(1, 2) * d1_a) +
+        (boundaryLayerWorkflow.blc.a2(1, 3) * u2_a +
+         boundaryLayerWorkflow.blc.a2(1, 2) * d2_a) +
+        (boundaryLayerWorkflow.blc.a1(1, 4) +
+         boundaryLayerWorkflow.blc.a2(1, 4) +
+         boundaryLayerWorkflow.blc.d_xi[1]) *
+            (xi_ule1 * ule1_a + xi_ule2 * ule2_a);
+
+  output.vdel[iv](1, 0) =
+      boundaryLayerWorkflow.blc.rhs[1] +
+      (boundaryLayerWorkflow.blc.a1(1, 3) * due1 +
+       boundaryLayerWorkflow.blc.a1(1, 2) * dds1) +
+      (boundaryLayerWorkflow.blc.a2(1, 3) * due2 +
+       boundaryLayerWorkflow.blc.a2(1, 2) * dds2) +
+      (boundaryLayerWorkflow.blc.a1(1, 4) +
+       boundaryLayerWorkflow.blc.a2(1, 4) +
+       boundaryLayerWorkflow.blc.d_xi[1]) *
+          (xi_ule1 * dule1 + xi_ule2 * dule2);
+
+  // memory overlap problem
+  for (int jv = 1; jv <= nsys; jv++) {
+    output.vm[2][jv][iv] =
+        boundaryLayerWorkflow.blc.a1(2, 2) * d1_m[jv] +
+        boundaryLayerWorkflow.blc.a1(2, 3) * u1_m[jv] +
+        boundaryLayerWorkflow.blc.a2(2, 2) * d2_m[jv] +
+        boundaryLayerWorkflow.blc.a2(2, 3) * u2_m[jv] +
+        (boundaryLayerWorkflow.blc.a1(2, 4) +
+         boundaryLayerWorkflow.blc.a2(2, 4) +
+         boundaryLayerWorkflow.blc.d_xi[2]) *
+            (xi_ule1 * ule1_m[jv] + xi_ule2 * ule2_m[jv]);
+  }
+
+  output.vb[iv](2, 0) = boundaryLayerWorkflow.blc.a1(2, 0);
+  output.vb[iv](2, 1) = boundaryLayerWorkflow.blc.a1(2, 1);
+
+  output.va[iv](2, 0) = boundaryLayerWorkflow.blc.a2(2, 0);
+  output.va[iv](2, 1) = boundaryLayerWorkflow.blc.a2(2, 1);
+
+  if (analysis_state_.controlByAlpha)
+    output.vdel[iv](2, 1) = boundaryLayerWorkflow.blc.d_re[2] * re_clmr +
+                            boundaryLayerWorkflow.blc.d_msq[2] * msq_clmr;
+  else
+    output.vdel[iv](2, 1) =
+        (boundaryLayerWorkflow.blc.a1(2, 3) * u1_a +
+         boundaryLayerWorkflow.blc.a1(2, 2) * d1_a) +
+        (boundaryLayerWorkflow.blc.a2(2, 3) * u2_a +
+         boundaryLayerWorkflow.blc.a2(2, 2) * d2_a) +
+        (boundaryLayerWorkflow.blc.a1(2, 4) +
+         boundaryLayerWorkflow.blc.a2(2, 4) +
+         boundaryLayerWorkflow.blc.d_xi[2]) *
+            (xi_ule1 * ule1_a + xi_ule2 * ule2_a);
+
+  output.vdel[iv](2, 0) =
+      boundaryLayerWorkflow.blc.rhs[2] +
+      (boundaryLayerWorkflow.blc.a1(2, 3) * due1 +
+       boundaryLayerWorkflow.blc.a1(2, 2) * dds1) +
+      (boundaryLayerWorkflow.blc.a2(2, 3) * due2 +
+       boundaryLayerWorkflow.blc.a2(2, 2) * dds2) +
+      (boundaryLayerWorkflow.blc.a1(2, 4) +
+       boundaryLayerWorkflow.blc.a2(2, 4) +
+       boundaryLayerWorkflow.blc.d_xi[2]) *
+          (xi_ule1 * dule1 + xi_ule2 * dule2);
+}
+
 SetblOutputView XFoil::setbl(const SetblInputView& input,
                                     SetblOutputView output) {
   //-------------------------------------------------
@@ -1425,9 +1702,7 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
   VectorXd ute2_m = VectorXd::Zero(2 * IVX + 1);
 
   double msq_clmr = 0.0, mdi;
-  double herat = 0.0, herat_ms = 0.0;
-
-  double clmr = 0.0, ma_clmr = 0.0, re_clmr = 0.0;
+  double re_clmr = 0.0;
   double ule1_a = 0.0, ule2_a = 0.0, u2_a, due2, dds2;
   double xsi, cti = 0.0, uei, thi, dsi, dswaki;
   double d2_a, d2_m2, d2_u2, dte_mte1, dte_ute1, dte_mte2, dte_ute2;
@@ -1436,113 +1711,16 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
   double ami = 0.0, tte_tte1 = 0.0, tte_tte2 = 0.0, cte_tte1 = 0.0,
          cte_tte2 = 0.0, cte_cte1 = 0.0, cte_cte2 = 0.0;
 
-  //---- set the cl used to define mach, reynolds numbers
-  if (analysis_state_.controlByAlpha)
-    clmr = cl;
-  else
-    clmr = analysis_state_.clspec;
-
   cti = 0.0; // techwinder added, otherwise variable is not initialized
 
-  //---- set current minf(cl)
-  ma_clmr = getActualMach(clmr, analysis_state_.machType);
-  re_clmr = getActualReynolds(clmr, analysis_state_.reynoldsType);
+  setupBlReferenceParams(output, re_clmr, msq_clmr);
 
-  msq_clmr = 2.0 * analysis_state_.currentMach * ma_clmr;
-
-  //---- set compressibility parameter tklam and derivative tk_msq
-  const auto compressibility = buildCompressibilityParams();
-  tklam = compressibility.karmanTsienFactor;
-  tkl_msq = compressibility.karmanTsienFactor_msq;
-
-  //---- set gas constant (= cp/cv)
-  output.blCompressibility.gm1bl = gamm1;
-
-  //---- set parameters for compressibility correction
-  output.blCompressibility.qinfbl = analysis_state_.qinf;
-  output.blCompressibility.tkbl = tklam;
-  output.blCompressibility.tkbl_ms = tkl_msq;
-
-  //---- stagnation density and 1/enthalpy
-  output.blCompressibility.rstbl =
-      pow((1.0 + 0.5 * output.blCompressibility.gm1bl * analysis_state_.currentMach *
-                        analysis_state_.currentMach),
-          (1.0 / output.blCompressibility.gm1bl));
-  output.blCompressibility.rstbl_ms =
-      0.5 * output.blCompressibility.rstbl /
-      (1.0 + 0.5 * output.blCompressibility.gm1bl * analysis_state_.currentMach *
-                 analysis_state_.currentMach);
-  output.blCompressibility.hstinv =
-      output.blCompressibility.gm1bl *
-      MathUtil::pow(analysis_state_.currentMach / output.blCompressibility.qinfbl, 2) /
-      (1.0 + 0.5 * output.blCompressibility.gm1bl * analysis_state_.currentMach *
-                 analysis_state_.currentMach);
-  output.blCompressibility.hstinv_ms =
-      output.blCompressibility.gm1bl *
-          MathUtil::pow(1.0 / output.blCompressibility.qinfbl, 2) /
-          (1.0 + 0.5 * output.blCompressibility.gm1bl * analysis_state_.currentMach *
-                     analysis_state_.currentMach) -
-      0.5 * output.blCompressibility.gm1bl * output.blCompressibility.hstinv /
-          (1.0 + 0.5 * output.blCompressibility.gm1bl * analysis_state_.currentMach *
-                     analysis_state_.currentMach);
-
-  //---- set reynolds number based on freestream density, velocity, viscosity
-  herat = 1.0 - 0.5 * output.blCompressibility.qinfbl *
-                     output.blCompressibility.qinfbl *
-                     output.blCompressibility.hstinv;
-  herat_ms = -0.5 * output.blCompressibility.qinfbl *
-             output.blCompressibility.qinfbl * output.blCompressibility.hstinv_ms;
-
-  output.blReynolds.reybl = analysis_state_.currentRe * sqrt(herat * herat * herat) *
-                            (1.0 + BoundaryLayerWorkflow::kHvrat) /
-                            (herat + BoundaryLayerWorkflow::kHvrat);
-  output.blReynolds.reybl_re = sqrt(herat * herat * herat) *
-                               (1.0 + BoundaryLayerWorkflow::kHvrat) /
-                               (herat + BoundaryLayerWorkflow::kHvrat);
-  output.blReynolds.reybl_ms =
-      output.blReynolds.reybl *
-      (1.5 / herat - 1.0 / (herat + BoundaryLayerWorkflow::kHvrat)) * herat_ms;
-
-  output.blTransition.amcrit = acrit;
-
-  if (!input.lblini) {
-    //----- initialize bl by marching with ue (fudge at separation)
-    // TRACE(" initializing bl ...\n");
-    writeString("   Initializing bl ...\n");
-
-    boundaryLayerWorkflow.mrchue(*this);
-    output.lblini = true;
-  }
-
-  //---- march bl with current ue and ds to establish transition
-  boundaryLayerWorkflow.mrchdu(*this);
+  initializeAndMarchBl(input, output);
 
   SidePair<VectorXd> usav;
-  usav.top = input.edgeVelocity.top;
-  usav.bottom = input.edgeVelocity.bottom;
-
-  ueset();
-  const auto swapped_edge_velocities = swapEdgeVelocities(usav);
-  usav = swapped_edge_velocities.swappedUsav;
-  output.edgeVelocity.top = swapped_edge_velocities.restoredUedg.top;
-  output.edgeVelocity.bottom = swapped_edge_velocities.restoredUedg.bottom;
-  jvte1 = boundaryLayerWorkflow.lattice.top.stationToSystem[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex];
-  jvte2 = boundaryLayerWorkflow.lattice.bottom.stationToSystem[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex];
-
-  dule1 = output.edgeVelocity.top[0] - usav.top[0];
-  dule2 = output.edgeVelocity.bottom[0] - usav.bottom[0];
-
-  //---- set le and te ue sensitivities wrt all m values
-  const auto le_te_sensitivities = computeLeTeSensitivities(
-      boundaryLayerWorkflow.lattice.get(1).stationToPanel[0], boundaryLayerWorkflow.lattice.get(2).stationToPanel[0], boundaryLayerWorkflow.lattice.get(1).stationToPanel[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex],
-      boundaryLayerWorkflow.lattice.get(2).stationToPanel[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex]);
-  ule1_m = le_te_sensitivities.ule1_m;
-  ule2_m = le_te_sensitivities.ule2_m;
-  ute1_m = le_te_sensitivities.ute1_m;
-  ute2_m = le_te_sensitivities.ute2_m;
-
-  ule1_a = boundaryLayerWorkflow.lattice.get(1).inviscidEdgeVelocityMatrix(1, 0);
-  ule2_a = boundaryLayerWorkflow.lattice.get(2).inviscidEdgeVelocityMatrix(1, 0);
+  prepareEdgeVelocityAndSensitivities(
+      input, output, usav, jvte1, jvte2, dule1, dule2, ule1_m, ule2_m, ute1_m,
+      ute2_m, ule1_a, ule2_a);
 
   //*** process each boundary layer side
   for (int is = 1; is <= 2; is++) {
@@ -1712,84 +1890,10 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
       }
 
       //---- stuff bl system coefficients into main jacobian matrix
-
-      for (int jv = 1; jv <= nsys; jv++) {
-        output.vm[0][jv][iv] = boundaryLayerWorkflow.blc.a1(0, 2) * d1_m[jv] + boundaryLayerWorkflow.blc.a1(0, 3) * u1_m[jv] +
-                        boundaryLayerWorkflow.blc.a2(0, 2) * d2_m[jv] + boundaryLayerWorkflow.blc.a2(0, 3) * u2_m[jv] +
-                        (boundaryLayerWorkflow.blc.a1(0, 4) + boundaryLayerWorkflow.blc.a2(0, 4) + boundaryLayerWorkflow.blc.d_xi[0]) *
-                            (xi_ule1 * ule1_m[jv] + xi_ule2 * ule2_m[jv]);
-      }
-
-      output.vb[iv](0, 0) = boundaryLayerWorkflow.blc.a1(0, 0);
-      output.vb[iv](0, 1) = boundaryLayerWorkflow.blc.a1(0, 1);
-
-      output.va[iv](0, 0) = boundaryLayerWorkflow.blc.a2(0, 0);
-      output.va[iv](0, 1) = boundaryLayerWorkflow.blc.a2(0, 1);
-
-      if (analysis_state_.controlByAlpha)
-        output.vdel[iv](0, 1) = boundaryLayerWorkflow.blc.d_re[0] * re_clmr + boundaryLayerWorkflow.blc.d_msq[0] * msq_clmr;
-      else
-        output.vdel[iv](0, 1) = (boundaryLayerWorkflow.blc.a1(0, 3) * u1_a + boundaryLayerWorkflow.blc.a1(0, 2) * d1_a) +
-                         (boundaryLayerWorkflow.blc.a2(0, 3) * u2_a + boundaryLayerWorkflow.blc.a2(0, 2) * d2_a) +
-                         (boundaryLayerWorkflow.blc.a1(0, 4) + boundaryLayerWorkflow.blc.a2(0, 4) + boundaryLayerWorkflow.blc.d_xi[0]) *
-                             (xi_ule1 * ule1_a + xi_ule2 * ule2_a);
-
-      output.vdel[iv](0, 0) = boundaryLayerWorkflow.blc.rhs[0] + (boundaryLayerWorkflow.blc.a1(0, 3) * due1 + boundaryLayerWorkflow.blc.a1(0, 2) * dds1) +
-                       (boundaryLayerWorkflow.blc.a2(0, 3) * due2 + boundaryLayerWorkflow.blc.a2(0, 2) * dds2) +
-                       (boundaryLayerWorkflow.blc.a1(0, 4) + boundaryLayerWorkflow.blc.a2(0, 4) + boundaryLayerWorkflow.blc.d_xi[0]) *
-                           (xi_ule1 * dule1 + xi_ule2 * dule2);
-
-      for (int jv = 1; jv <= nsys; jv++) {
-        output.vm[1][jv][iv] = boundaryLayerWorkflow.blc.a1(1, 2) * d1_m[jv] + boundaryLayerWorkflow.blc.a1(1, 3) * u1_m[jv] +
-                        boundaryLayerWorkflow.blc.a2(1, 2) * d2_m[jv] + boundaryLayerWorkflow.blc.a2(1, 3) * u2_m[jv] +
-                        (boundaryLayerWorkflow.blc.a1(1, 4) + boundaryLayerWorkflow.blc.a2(1, 4) + boundaryLayerWorkflow.blc.d_xi[1]) *
-                            (xi_ule1 * ule1_m[jv] + xi_ule2 * ule2_m[jv]);
-      }
-      output.vb[iv](1, 0) = boundaryLayerWorkflow.blc.a1(1, 0);
-      output.vb[iv](1, 1) = boundaryLayerWorkflow.blc.a1(1, 1);
-
-      output.va[iv](1, 0) = boundaryLayerWorkflow.blc.a2(1, 0);
-      output.va[iv](1, 1) = boundaryLayerWorkflow.blc.a2(1, 1);
-
-      if (analysis_state_.controlByAlpha)
-        output.vdel[iv](1, 1) = boundaryLayerWorkflow.blc.d_re[1] * re_clmr + boundaryLayerWorkflow.blc.d_msq[1] * msq_clmr;
-      else
-        output.vdel[iv](1, 1) = (boundaryLayerWorkflow.blc.a1(1, 3) * u1_a + boundaryLayerWorkflow.blc.a1(1, 2) * d1_a) +
-                         (boundaryLayerWorkflow.blc.a2(1, 3) * u2_a + boundaryLayerWorkflow.blc.a2(1, 2) * d2_a) +
-                         (boundaryLayerWorkflow.blc.a1(1, 4) + boundaryLayerWorkflow.blc.a2(1, 4) + boundaryLayerWorkflow.blc.d_xi[1]) *
-                             (xi_ule1 * ule1_a + xi_ule2 * ule2_a);
-
-      output.vdel[iv](1, 0) = boundaryLayerWorkflow.blc.rhs[1] + (boundaryLayerWorkflow.blc.a1(1, 3) * due1 + boundaryLayerWorkflow.blc.a1(1, 2) * dds1) +
-                       (boundaryLayerWorkflow.blc.a2(1, 3) * due2 + boundaryLayerWorkflow.blc.a2(1, 2) * dds2) +
-                       (boundaryLayerWorkflow.blc.a1(1, 4) + boundaryLayerWorkflow.blc.a2(1, 4) + boundaryLayerWorkflow.blc.d_xi[1]) *
-                           (xi_ule1 * dule1 + xi_ule2 * dule2);
-
-      // memory overlap problem
-      for (int jv = 1; jv <= nsys; jv++) {
-        output.vm[2][jv][iv] = boundaryLayerWorkflow.blc.a1(2, 2) * d1_m[jv] + boundaryLayerWorkflow.blc.a1(2, 3) * u1_m[jv] +
-                        boundaryLayerWorkflow.blc.a2(2, 2) * d2_m[jv] + boundaryLayerWorkflow.blc.a2(2, 3) * u2_m[jv] +
-                        (boundaryLayerWorkflow.blc.a1(2, 4) + boundaryLayerWorkflow.blc.a2(2, 4) + boundaryLayerWorkflow.blc.d_xi[2]) *
-                            (xi_ule1 * ule1_m[jv] + xi_ule2 * ule2_m[jv]);
-      }
-
-      output.vb[iv](2, 0) = boundaryLayerWorkflow.blc.a1(2, 0);
-      output.vb[iv](2, 1) = boundaryLayerWorkflow.blc.a1(2, 1);
-
-      output.va[iv](2, 0) = boundaryLayerWorkflow.blc.a2(2, 0);
-      output.va[iv](2, 1) = boundaryLayerWorkflow.blc.a2(2, 1);
-
-      if (analysis_state_.controlByAlpha)
-        output.vdel[iv](2, 1) = boundaryLayerWorkflow.blc.d_re[2] * re_clmr + boundaryLayerWorkflow.blc.d_msq[2] * msq_clmr;
-      else
-        output.vdel[iv](2, 1) = (boundaryLayerWorkflow.blc.a1(2, 3) * u1_a + boundaryLayerWorkflow.blc.a1(2, 2) * d1_a) +
-                         (boundaryLayerWorkflow.blc.a2(2, 3) * u2_a + boundaryLayerWorkflow.blc.a2(2, 2) * d2_a) +
-                         (boundaryLayerWorkflow.blc.a1(2, 4) + boundaryLayerWorkflow.blc.a2(2, 4) + boundaryLayerWorkflow.blc.d_xi[2]) *
-                             (xi_ule1 * ule1_a + xi_ule2 * ule2_a);
-
-      output.vdel[iv](2, 0) = boundaryLayerWorkflow.blc.rhs[2] + (boundaryLayerWorkflow.blc.a1(2, 3) * due1 + boundaryLayerWorkflow.blc.a1(2, 2) * dds1) +
-                       (boundaryLayerWorkflow.blc.a2(2, 3) * due2 + boundaryLayerWorkflow.blc.a2(2, 2) * dds2) +
-                       (boundaryLayerWorkflow.blc.a1(2, 4) + boundaryLayerWorkflow.blc.a2(2, 4) + boundaryLayerWorkflow.blc.d_xi[2]) *
-                           (xi_ule1 * dule1 + xi_ule2 * dule2);
+      assembleBlJacobianForStation(
+          is, iv, nsys, d1_m, u1_m, d2_m, u2_m, xi_ule1, xi_ule2, ule1_m,
+          ule2_m, ule1_a, ule2_a, u1_a, d1_a, u2_a, d2_a, due1, dds1, due2,
+          dds2, dule1, dule2, re_clmr, msq_clmr, output);
 
       if (ibl == boundaryLayerWorkflow.lattice.get(is).trailingEdgeIndex + 1) {
         //----- redefine coefficients for tte, dte, etc
