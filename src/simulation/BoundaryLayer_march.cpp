@@ -11,7 +11,7 @@ using BoundaryContext = BoundaryLayerWorkflow::MixedModeStationContext;
 
 int BoundaryLayerWorkflow::resetSideState(int side, XFoil& xfoil) {
   const int previousTransition = lattice.get(side).transitionIndex;
-  xfoil.xiforc = xifset(xfoil, side);
+  xfoil.blTransition.xiforc = xifset(xfoil, side);
   xfoil.flowRegime = FlowRegimeEnum::Laminar;
   lattice.get(side).transitionIndex = lattice.get(side).trailingEdgeIndex;
   return previousTransition;
@@ -338,9 +338,9 @@ BoundaryLayerSideProfiles BoundaryLayerWorkflow::applyBoundaryLayerDelta(
         (ibl <= lattice.get(side).trailingEdgeIndex) ? 1.02 : 1.00005;
     const double edgeVelocity_val = state.edgeVelocity[ibl];
     const double edgeVelocity_sq = edgeVelocity_val * edgeVelocity_val;
-    const double denom = 1.0 - 0.5 * edgeVelocity_sq * xfoil.hstinv;
+    const double denom = 1.0 - 0.5 * edgeVelocity_sq * xfoil.blCompressibility.hstinv;
     const double msq =
-        edgeVelocity_sq * xfoil.hstinv / (xfoil.gamm1 * denom);
+        edgeVelocity_sq * xfoil.blCompressibility.hstinv / (xfoil.gamm1 * denom);
     double dsw = state.displacementThickness[ibl] - dswaki;
     dsw = adjustDisplacementForHkLimit(
         dsw, state.momentumThickness[ibl], msq, hklim);
@@ -528,7 +528,7 @@ void BoundaryLayerWorkflow::initializeMrchueSide(int side, double& thi,
   const double xsi = lattice.get(side).arcLengthCoordinates[0];
   const double uei = lattice.get(side).profiles.edgeVelocity[0];
   const double ucon = uei / xsi;
-  const double tsq = 0.45 / (ucon * 6.0 * xfoil.reybl);
+  const double tsq = 0.45 / (ucon * 6.0 * xfoil.blReynolds.reybl);
   thi = std::sqrt(tsq);
   dsi = 2.2 * thi;
   ami = 0.0;
@@ -643,9 +643,9 @@ bool BoundaryLayerWorkflow::performMrchueNewtonLoop(
 
       if (stationIndex != lattice.get(side).trailingEdgeIndex + 1) {
         const double msq =
-            ctx.uei * ctx.uei * xfoil.hstinv /
-            (xfoil.gm1bl *
-             (1.0 - 0.5 * ctx.uei * ctx.uei * xfoil.hstinv));
+            ctx.uei * ctx.uei * xfoil.blCompressibility.hstinv /
+            (xfoil.blCompressibility.gm1bl *
+             (1.0 - 0.5 * ctx.uei * ctx.uei * xfoil.blCompressibility.hstinv));
         const double htest =
             (ctx.dsi + rlx * blc.rhs[2]) /
             (ctx.thi + rlx * blc.rhs[1]);
@@ -718,9 +718,9 @@ bool BoundaryLayerWorkflow::performMrchueNewtonLoop(
         (stationIndex <= lattice.get(side).trailingEdgeIndex) ? 1.02
                                                               : 1.00005;
     const double msq =
-        ctx.uei * ctx.uei * xfoil.hstinv /
-        (xfoil.gm1bl *
-         (1.0 - 0.5 * ctx.uei * ctx.uei * xfoil.hstinv));
+        ctx.uei * ctx.uei * xfoil.blCompressibility.hstinv /
+        (xfoil.blCompressibility.gm1bl *
+         (1.0 - 0.5 * ctx.uei * ctx.uei * xfoil.blCompressibility.hstinv));
     double dsw = ctx.dsi - ctx.dswaki;
     dsw = adjustDisplacementForHkLimit(dsw, ctx.thi, msq, hklim);
     ctx.dsi = dsw + ctx.dswaki;

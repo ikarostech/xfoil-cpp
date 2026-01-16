@@ -286,9 +286,28 @@ class XFoil {
   void resetVariables();
   double atanc(double y, double x, double thold);
 
-  double sign(double a, double b);
+ double sign(double a, double b);
 
  public:
+  struct BlCompressibilityParams {
+    double gm1bl;
+    double qinfbl;
+    double tkbl;
+    double tkbl_ms;
+    double rstbl;
+    double rstbl_ms;
+    double hstinv;
+    double hstinv_ms;
+  };
+  struct BlReynoldsParams {
+    double reybl;
+    double reybl_re;
+    double reybl_ms;
+  };
+  struct BlTransitionParams {
+    double xiforc;
+    double amcrit;
+  };
 
   AnalysisState analysis_state_;
   AnalysisState& analysisState() { return analysis_state_; }
@@ -337,8 +356,9 @@ class XFoil {
   bool trforc, trfree;
   FlowRegimeEnum flowRegime = FlowRegimeEnum::Laminar;
 
-  double qinfbl, tkbl, tkbl_ms, rstbl, rstbl_ms, hstinv, hstinv_ms;
-  double reybl, reybl_ms, reybl_re, gm1bl, xiforc, amcrit;
+  BlCompressibilityParams blCompressibility;
+  BlReynoldsParams blReynolds;
+  BlTransitionParams blTransition;
 
   Matrix3x2dVector va, vb, vdel;
   double vm[3][IZX][IZX], vz[3][2];

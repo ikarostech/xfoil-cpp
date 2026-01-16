@@ -299,8 +299,9 @@ bool XFoil::update() {
   double dclmin = -0.5;
   if (analysis_state_.machType != MachType::CONSTANT)
     dclmin = std::max(-0.5, -0.9 * cl);
-  hstinv = gamm1 * MathUtil::pow(analysis_state_.currentMach / analysis_state_.qinf, 2) /
-           (1.0 + 0.5 * gamm1 * analysis_state_.currentMach * analysis_state_.currentMach);
+  blCompressibility.hstinv =
+      gamm1 * MathUtil::pow(analysis_state_.currentMach / analysis_state_.qinf, 2) /
+      (1.0 + 0.5 * gamm1 * analysis_state_.currentMach * analysis_state_.currentMach);
 
   //--- calculate new ue distribution and tangential velocities
   const auto ue_distribution = boundaryLayerWorkflow.computeNewUeDistribution(*this);
