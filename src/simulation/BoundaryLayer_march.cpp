@@ -392,12 +392,10 @@ FlowRegimeEnum BoundaryLayerWorkflow::determineRegimeForStation(
 }
 
 bool BoundaryLayerWorkflow::mrchdu(XFoil& xfoil) {
-  return mrchdu(state, lattice, xfoil);
+  return mrchdu(state, xfoil);
 }
 
-bool BoundaryLayerWorkflow::mrchdu(BoundaryLayerState& state,
-                                   [[maybe_unused]] SidePair<BoundaryLayerLattice>& lattice,
-                                   XFoil& xfoil) {
+bool BoundaryLayerWorkflow::mrchdu(BoundaryLayerState& state, XFoil& xfoil) {
   const double deps = 0.000005;
   const double senswt = 1000.0;
 
@@ -462,9 +460,7 @@ bool BoundaryLayerWorkflow::mrchue(XFoil& xfoil) {
   return mrchue(state, lattice, xfoil);
 }
 
-bool BoundaryLayerWorkflow::mrchue(BoundaryLayerState& state,
-                                   [[maybe_unused]] SidePair<BoundaryLayerLattice>& lattice,
-                                   XFoil& xfoil) {
+bool BoundaryLayerWorkflow::mrchue(BoundaryLayerState& state, XFoil& xfoil) {
   std::stringstream ss;
   for (int side = 1; side <= 2; ++side) {
     if (!marchMrchueSide(state, side, xfoil, ss)) {

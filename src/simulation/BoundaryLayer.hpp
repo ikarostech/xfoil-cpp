@@ -120,8 +120,7 @@ class BoundaryLayerWorkflow {
   bool blsys(XFoil& xfoil);
   bool trdif(XFoil& xfoil);
   bool mrchdu(XFoil& xfoil);
-  bool mrchdu(BoundaryLayerState& state, SidePair<BoundaryLayerLattice>& lattice,
-              XFoil& xfoil);
+  bool mrchdu(BoundaryLayerState& state, XFoil& xfoil);
   int resetSideState(int side, XFoil& xfoil);
   bool marchBoundaryLayerSide(BoundaryLayerState& state, int side,
                               double deps, double senswt, double& sens,
@@ -131,8 +130,7 @@ class BoundaryLayerWorkflow {
                                    double deps, double senswt, double& sens,
                                    double& sennew, double& ami, XFoil& xfoil);
   bool mrchue(XFoil& xfoil);
-  bool mrchue(BoundaryLayerState& state, SidePair<BoundaryLayerLattice>& lattice,
-              XFoil& xfoil);
+  bool mrchue(BoundaryLayerState& state, XFoil& xfoil);
   bool marchMrchueSide(BoundaryLayerState& state, int side,
                        XFoil& xfoil, std::stringstream& ss);
   void initializeMrchueSide(int side, double& thi, double& dsi,
