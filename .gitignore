@@ -8,3 +8,4 @@ out/*
 build/*
 .vscode/*
 .sonarlint/*
+.codex/*
