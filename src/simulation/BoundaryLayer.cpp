@@ -1740,7 +1740,8 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
     double dds1 = 0.0;
 
     //---- set forced transition arc length position
-    output.blTransition.xiforc = boundaryLayerWorkflow.xifset(*this, is);
+    output.blTransition.xiforc =
+        boundaryLayerWorkflow.xifset(foil, stagnation, is);
 
     //**** sweep downstream setting up bl equation linearizations
     for (int ibl = 0; ibl < boundaryLayerWorkflow.lattice.get(is).stationCount - 1; ++ibl) {
@@ -2058,37 +2059,41 @@ VectorXd BoundaryLayerWorkflow::computeWakeGap(
 /** -----------------------------------------------------
  * 	   sets forced-transition bl coordinate locations.
  * ----------------------------------------------------- */
-double BoundaryLayerWorkflow::xifset(const XFoil& xfoil, int is) const {
+double BoundaryLayerWorkflow::xifset(const Foil& foil,
+                                     const StagnationResult& stagnation,
+                                     int is) const {
   std::stringstream ss;
-  VectorXd w1 = VectorXd::Zero(xfoil.foil.foil_shape.n);
+  VectorXd w1 = VectorXd::Zero(foil.foil_shape.n);
   double str;
 
   if (lattice.get(is).transitionLocation >= 1.0) {
     return lattice.get(is).arcLengthCoordinates[lattice.get(is).trailingEdgeIndex];
   }
 
-  Vector2d point_chord = xfoil.foil.edge.point_te - xfoil.foil.edge.point_le;
+  Vector2d point_chord = foil.edge.point_te - foil.edge.point_le;
 
   //---- calculate chord-based x/c, y/c
-  for (int i = 0; i < xfoil.foil.foil_shape.n; i++) {
-    w1[i] = (xfoil.foil.foil_shape.points.col(i) - xfoil.foil.edge.point_le).dot(point_chord.normalized());
+  for (int i = 0; i < foil.foil_shape.n; i++) {
+    w1[i] =
+        (foil.foil_shape.points.col(i) - foil.edge.point_le)
+            .dot(point_chord.normalized());
   }
 
-  VectorXd w3 = spline::splind(w1, xfoil.foil.foil_shape.spline_length);
+  VectorXd w3 = spline::splind(w1, foil.foil_shape.spline_length);
   if (is == 1) {
-    str = xfoil.foil.edge.sle +
-          (xfoil.foil.foil_shape.spline_length[0] - xfoil.foil.edge.sle) *
+    str = foil.edge.sle +
+          (foil.foil_shape.spline_length[0] - foil.edge.sle) *
               lattice.top.transitionLocation;
   } else {
-    str = xfoil.foil.edge.sle +
-          (xfoil.foil.foil_shape.spline_length[xfoil.foil.foil_shape.n - 1] -
-           xfoil.foil.edge.sle) *
+    str = foil.edge.sle +
+          (foil.foil_shape.spline_length[foil.foil_shape.n - 1] -
+           foil.edge.sle) *
               lattice.bottom.transitionLocation;
   }
   str = spline::sinvrt(str, lattice.get(is).transitionLocation, w1, w3,
-                       xfoil.foil.foil_shape.spline_length,
-                       xfoil.foil.foil_shape.n);
-  double xiforc = std::min((str - xfoil.stagnation.sst),
+                       foil.foil_shape.spline_length,
+                       foil.foil_shape.n);
+  double xiforc = std::min((str - stagnation.sst),
                            lattice.get(is).arcLengthCoordinates[lattice.get(is).trailingEdgeIndex]);
   if (xiforc < 0.0) {
     std::cout << " ***  stagnation point is past trip on side " << is << std::endl;
