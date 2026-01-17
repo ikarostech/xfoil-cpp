@@ -273,7 +273,6 @@ class XFoil {
   };
   LeTeSensitivities computeLeTeSensitivities(int ile1, int ile2, int ite1,
                                              int ite2) const;
-  bool ueset();
 
  private:
   void setupBlReferenceParams(SetblOutputView& output, double& re_clmr,

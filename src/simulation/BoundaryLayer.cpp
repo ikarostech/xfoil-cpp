@@ -1511,7 +1511,9 @@ void XFoil::prepareEdgeVelocityAndSensitivities(
   usav.top = input.edgeVelocity.top;
   usav.bottom = input.edgeVelocity.bottom;
 
-  ueset();
+  const auto edge_velocity = boundaryLayerWorkflow.ueset(aerodynamicCache.dij);
+  boundaryLayerWorkflow.lattice.top.profiles.edgeVelocity = edge_velocity.top;
+  boundaryLayerWorkflow.lattice.bottom.profiles.edgeVelocity = edge_velocity.bottom;
   const auto swapped_edge_velocities = swapEdgeVelocities(usav);
   usav = swapped_edge_velocities.swappedUsav;
   output.edgeVelocity.top = swapped_edge_velocities.restoredUedg.top;
@@ -1948,26 +1950,30 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
   return output;
 }
 
-bool XFoil::ueset() {
+SidePair<Eigen::VectorXd> BoundaryLayerWorkflow::ueset(
+    const Eigen::MatrixXd& dij) const {
   //---------------------------------------------------------
   //     sets ue from inviscid ue plus all source influence
   //---------------------------------------------------------
+  SidePair<Eigen::VectorXd> edge_velocity;
+  edge_velocity.top = lattice.top.profiles.edgeVelocity;
+  edge_velocity.bottom = lattice.bottom.profiles.edgeVelocity;
   for (int is = 1; is <= 2; is++) {
-    for (int ibl = 0; ibl < boundaryLayerWorkflow.lattice.get(is).stationCount - 1; ++ibl) {
+    for (int ibl = 0; ibl < lattice.get(is).stationCount - 1; ++ibl) {
       double dui = 0.0;
       for (int js = 1; js <= 2; js++) {
-        for (int jbl = 0; jbl < boundaryLayerWorkflow.lattice.get(js).stationCount - 1; ++jbl) {
-          double ue_m = -boundaryLayerWorkflow.lattice.get(is).panelInfluenceFactor[ibl] * boundaryLayerWorkflow.lattice.get(js).panelInfluenceFactor[jbl] *
-                        aerodynamicCache.dij(boundaryLayerWorkflow.lattice.get(is).stationToPanel[ibl],
-                            boundaryLayerWorkflow.lattice.get(js).stationToPanel[jbl]);
-          dui += ue_m * boundaryLayerWorkflow.lattice.get(js).profiles.massFlux[jbl];
+        for (int jbl = 0; jbl < lattice.get(js).stationCount - 1; ++jbl) {
+          double ue_m = -lattice.get(is).panelInfluenceFactor[ibl] * lattice.get(js).panelInfluenceFactor[jbl] *
+                        dij(lattice.get(is).stationToPanel[ibl],
+                            lattice.get(js).stationToPanel[jbl]);
+          dui += ue_m * lattice.get(js).profiles.massFlux[jbl];
         }
       }
-      boundaryLayerWorkflow.lattice.get(is).profiles.edgeVelocity[ibl] =
-          boundaryLayerWorkflow.lattice.get(is).inviscidEdgeVelocityMatrix(0, ibl) + dui;
+      edge_velocity.get(is)[ibl] =
+          lattice.get(is).inviscidEdgeVelocityMatrix(0, ibl) + dui;
     }
   }
-  return true;
+  return edge_velocity;
 }
 
 
