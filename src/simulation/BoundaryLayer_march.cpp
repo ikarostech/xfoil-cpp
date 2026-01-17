@@ -457,7 +457,7 @@ bool BoundaryLayerWorkflow::processBoundaryLayerStation(
 }
 
 bool BoundaryLayerWorkflow::mrchue(XFoil& xfoil) {
-  return mrchue(state, lattice, xfoil);
+  return mrchue(state, xfoil);
 }
 
 bool BoundaryLayerWorkflow::mrchue(BoundaryLayerState& state, XFoil& xfoil) {
