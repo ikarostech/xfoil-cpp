@@ -1,6 +1,5 @@
 #include <iostream>
 #include <fstream>
-#include <sstream>
 #include <string>
 #include <chrono>
 
@@ -93,7 +92,6 @@ int main() {
   double x[604], y[604];
   int n = 0;
 
-  std::stringstream ss;
   auto start = std::chrono::steady_clock::now();
 
   // auto naca = new XFoil();
@@ -113,7 +111,7 @@ int main() {
     std::cout << "Initialization error!" << std::endl;
     return 1;
   }
-  foil->initXFoilAnalysis(100000, 0, 0.0, 9.0, 1.0, 1.0, XFoil::ReynoldsType::CONSTANT, XFoil::MachType::CONSTANT, true, ss);
+  foil->initXFoilAnalysis(100000, 0, 0.0, 9.0, 1.0, 1.0, XFoil::ReynoldsType::CONSTANT, XFoil::MachType::CONSTANT, true);
 
   IterationContext iterationContext{};
 
@@ -139,7 +137,6 @@ int main() {
     while (!iterate(foil, iterationContext))
       ;
 
-    // std::cout << ss.str() << std::endl;
 
     if (foil->lvconv) {
       std::cout << "  converged after " << iterationContext.iterationCount << " iterations"

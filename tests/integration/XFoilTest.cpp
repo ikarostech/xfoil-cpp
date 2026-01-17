@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
 #include <iostream>
 #include <fstream>
-#include <sstream>
 #include <string>
 
 #include "XFoil.h"
@@ -40,7 +39,6 @@ protected:
   int n;
   vector<Vector2d> plots;
 
-  std::stringstream ss;
   XFoil *foil;
   virtual void SetUp() {
     n = loadDatFile("sample/CLARK_Y.dat", x, y);
@@ -50,7 +48,7 @@ protected:
     if (!foil->initXFoilGeometry(n, x, y, nx, ny)) {
       std::cout << "Initialization error!" << std::endl;
     }
-    if (!foil->initXFoilAnalysis(100000, 0, 0.0, 9.0, 1.0, 1.0, XFoil::ReynoldsType::CONSTANT, XFoil::MachType::CONSTANT, true, ss)) {
+    if (!foil->initXFoilAnalysis(100000, 0, 0.0, 9.0, 1.0, 1.0, XFoil::ReynoldsType::CONSTANT, XFoil::MachType::CONSTANT, true)) {
       std::cout << "Initialization error!" << std::endl;
     }
 

@@ -138,10 +138,10 @@ void XFoil::resetVariables() {
 }
 
 void XFoil::writeString(std::string str) {
-  if (!m_pOutStream) {
+  if (!logger_) {
     return;
   }
-  *m_pOutStream << str;
+  logger_->write(str);
 }
 
 double XFoil::getActualMach(double cls, MachType mach_control) {

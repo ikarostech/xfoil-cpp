@@ -73,8 +73,6 @@ XFoil::PressureCoefficientResult XFoil::computePressureCoefficient(
 
 XFoil::XFoil() : analysis_state_() {
 
-  m_pOutStream = nullptr;
-
   // fortran seems to initializes variables to 0
   mvisc = 0.0;
 

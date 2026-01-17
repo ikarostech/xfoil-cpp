@@ -36,7 +36,6 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 
 #include <complex>
 #include <iostream>
-#include <sstream>
 #include <string>
 #include <iomanip>
 #include <vector>
@@ -64,6 +63,7 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 #include "simulation/boundary_layer_state.hpp"
 #include "infrastructure/xfoil_params.h"
 #include "core/boundary_layer_util.hpp"
+#include "infrastructure/logger.hpp"
 #include "BoundaryLayer.hpp"
 
 struct SetblInputView;
@@ -132,7 +132,9 @@ class XFoil {
 
   bool initXFoilAnalysis(double Re, double alpha, double Mach, double NCrit,
                          double XtrTop, double XtrBot, ReynoldsType reType, MachType maType,
-                         bool bViscous, std::stringstream &outStream);
+                         bool bViscous);
+
+  void setLogger(Logger* logger) { logger_ = logger; }
 
 
   struct ClComputation {
@@ -336,7 +338,7 @@ class XFoil {
   const AnalysisState& analysisState() const { return analysis_state_; }
   // transitional parameters stored inside analysis_state_
 
-  std::stringstream *m_pOutStream;
+  Logger* logger_ = nullptr;
 
   double cl, cm, cd, acrit;
   VectorXd cpi, cpv;

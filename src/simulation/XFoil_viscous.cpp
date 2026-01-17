@@ -44,7 +44,7 @@ bool XFoil::initXFoilGeometry(int fn, const double *fx, const double *fy) {
 bool XFoil::initXFoilAnalysis(double Re, double alpha, double Mach,
                               double NCrit, double XtrTop, double XtrBot,
                               ReynoldsType reType, MachType maType,
-                              bool bViscous, std::stringstream &outStream) {
+                              bool bViscous) {
 
   lblini = false;
   lipan = false;
