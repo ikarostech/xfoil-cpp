@@ -50,6 +50,7 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 
 #include "domain/flow_regime.hpp"
 #include "domain/coefficient/bl_newton.hpp"
+#include "domain/coefficient/aero_coefficients.hpp"
 #include "core/math_util.hpp"
 #include "core/spline.hpp"
 #include "core/side_pair.hpp"
@@ -340,7 +341,8 @@ class XFoil {
 
   Logger* logger_ = nullptr;
 
-  double cl, cm, cd, acrit;
+  AeroCoefficients aero_coeffs_;
+  double acrit;
   VectorXd cpi, cpv;
   double avisc, mvisc, rmsbl;
   bool lvconv, lwake;
@@ -365,7 +367,6 @@ class XFoil {
 
   int nsys;
 
-  double cl_alf, cl_msq;
   double gamma, gamm1;
 
 

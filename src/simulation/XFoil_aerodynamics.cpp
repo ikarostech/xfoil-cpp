@@ -1,32 +1,12 @@
 #include "XFoil.h"
 #include <algorithm>
 #include <cmath>
-#include <unordered_map>
-#include <utility>
 using Eigen::FullPivLU;
 using Eigen::Matrix2d;
 using Eigen::Matrix2Xd;
 using Eigen::MatrixXd;
 using Eigen::Vector2d;
 using Eigen::VectorXd;
-
-namespace {
-struct AerodynamicsState {
-  double xcp = 0.0;
-};
-
-using AerodynamicsStateRegistry =
-    std::unordered_map<const XFoil*, AerodynamicsState>;
-
-AerodynamicsStateRegistry& aerodynamicsStateRegistry() {
-  static AerodynamicsStateRegistry state;
-  return state;
-}
-
-AerodynamicsState& ensureAerodynamicsState(const XFoil* xfoil) {
-  return aerodynamicsStateRegistry()[xfoil];
-}
-}  // namespace
 
 double XFoil::cdcalc() const {
   if (!(analysis_state_.viscous && lblini)) {
@@ -55,16 +35,7 @@ double XFoil::cdcalc() const {
 }
 
 double XFoil::getXcp() const {
-  const auto& state = aerodynamicsStateRegistry();
-  auto it = state.find(this);
-  if (it == state.end()) {
-    return 0.0;
-  }
-  return it->second.xcp;
-}
-
-void ClearAerodynamicsState(const XFoil& xfoil) {
-  aerodynamicsStateRegistry().erase(&xfoil);
+  return aero_coeffs_.xcp;
 }
 
 XFoil::ClComputation XFoil::clcalc(Vector2d ref) const {
@@ -135,13 +106,11 @@ XFoil::ClComputation XFoil::clcalc(Vector2d ref) const {
 }
 
 void XFoil::applyClComputation(const ClComputation &result) {
-  cl = result.cl;
-  cm = result.cm;
-  cl_alf = result.cl_alf;
-  cl_msq = result.cl_msq;
-
-  auto &aero = ensureAerodynamicsState(this);
-  aero.xcp = result.xcp;
+  aero_coeffs_.cl = result.cl;
+  aero_coeffs_.cm = result.cm;
+  aero_coeffs_.cl_alf = result.cl_alf;
+  aero_coeffs_.cl_msq = result.cl_msq;
+  aero_coeffs_.xcp = result.xcp;
 }
 
 /** ---------------------------------------------
@@ -335,7 +304,8 @@ bool specConverge(XFoil &xfoil, SpecTarget target) {
 
     for (int itcl = 1; itcl <= 20; itcl++) {
       const double msq_clm = 2.0 * xfoil.analysis_state_.currentMach * minf_clm;
-      const double dclm = (xfoil.cl - clm) / (1.0 - xfoil.cl_msq * msq_clm);
+      const double dclm = (xfoil.aero_coeffs_.cl - clm) /
+                          (1.0 - xfoil.aero_coeffs_.cl_msq * msq_clm);
 
       const double clm1 = clm;
       xfoil.rlx = 1.0;
@@ -402,7 +372,8 @@ bool specConverge(XFoil &xfoil, SpecTarget target) {
 
   for (int ital = 1; ital <= 20; ital++) {
     const double dalfa =
-        (xfoil.analysis_state_.clspec - xfoil.cl) / xfoil.cl_alf;
+        (xfoil.analysis_state_.clspec - xfoil.aero_coeffs_.cl) /
+        xfoil.aero_coeffs_.cl_alf;
     xfoil.rlx = 1.0;
 
     xfoil.analysis_state_.alpha =

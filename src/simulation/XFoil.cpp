@@ -26,7 +26,6 @@
 #include <cmath>
 using namespace Eigen;
 
-void ClearAerodynamicsState(const XFoil& xfoil);
 void ClearInitState(const XFoil& xfoil);
 
 XFoil::CompressibilityParams XFoil::buildCompressibilityParams() const {
@@ -94,7 +93,6 @@ XFoil::XFoil() : analysis_state_() {
 }
 
 XFoil::~XFoil() {
-  ClearAerodynamicsState(*this);
   ClearInitState(*this);
 }
 

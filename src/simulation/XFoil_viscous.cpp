@@ -299,7 +299,7 @@ bool XFoil::update() {
   double dclmax = 0.5;
   double dclmin = -0.5;
   if (analysis_state_.machType != MachType::CONSTANT)
-    dclmin = std::max(-0.5, -0.9 * cl);
+    dclmin = std::max(-0.5, -0.9 * aero_coeffs_.cl);
   blCompressibility.hstinv =
       gamm1 * MathUtil::pow(analysis_state_.currentMach / analysis_state_.qinf, 2) /
       (1.0 + 0.5 * gamm1 * analysis_state_.currentMach * analysis_state_.currentMach);
@@ -312,8 +312,8 @@ bool XFoil::update() {
   //--- initialize under-relaxation factor
   rlx = 1.0;
   const double cl_target =
-      analysis_state_.controlByAlpha ? cl : analysis_state_.clspec;
-  double dac = computeAcChange(cl_contributions.cl, cl, cl_target,
+      analysis_state_.controlByAlpha ? aero_coeffs_.cl : analysis_state_.clspec;
+  double dac = computeAcChange(cl_contributions.cl, aero_coeffs_.cl, cl_target,
                                cl_contributions.cl_ac, cl_contributions.cl_a,
                                cl_contributions.cl_ms);
 
@@ -347,7 +347,7 @@ bool XFoil::update() {
   rmsbl = sqrt(rmsbl / (4.0 * double(boundaryLayerWorkflow.lattice.top.stationCount + boundaryLayerWorkflow.lattice.bottom.stationCount)));
 
   if (analysis_state_.controlByAlpha)
-    cl = cl + rlx * dac;
+    aero_coeffs_.cl = aero_coeffs_.cl + rlx * dac;
   else
     analysis_state_.alpha =
         analysis_state_.alpha + rlx * dac;
@@ -454,7 +454,7 @@ bool XFoil::viscal() {
 
     const auto cl_result = clcalc(cmref);
     applyClComputation(cl_result);
-    cd = cdcalc();
+    aero_coeffs_.cd = cdcalc();
   }
 
   //	---- set up source influence matrix if it doesn't exist
@@ -504,8 +504,8 @@ bool XFoil::ViscousIter() {
   update(); //	------ update bl variables
 
   if (analysis_state_.controlByAlpha) { //	------- set new freestream mach, re from new cl
-    minf_cl = getActualMach(cl, analysis_state_.machType);
-    reinf_cl = getActualReynolds(cl, analysis_state_.reynoldsType);
+    minf_cl = getActualMach(aero_coeffs_.cl, analysis_state_.machType);
+    reinf_cl = getActualReynolds(aero_coeffs_.cl, analysis_state_.reynoldsType);
     const auto params = buildCompressibilityParams();
     tklam = params.karmanTsienFactor;
     tkl_msq = params.karmanTsienFactor_msq;
@@ -523,7 +523,7 @@ bool XFoil::ViscousIter() {
   //	------ set updated cl,cd
   const auto cl_result = clcalc(cmref);
   applyClComputation(cl_result);
-  cd = cdcalc();
+  aero_coeffs_.cd = cdcalc();
 
   if (rmsbl < eps1) {
     lvconv = true;

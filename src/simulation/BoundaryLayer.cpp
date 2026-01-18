@@ -1412,7 +1412,7 @@ void XFoil::setupBlReferenceParams(SetblOutputView& output, double& re_clmr,
   double herat_ms = 0.0;
   //---- set the cl used to define mach, reynolds numbers
   if (analysis_state_.controlByAlpha)
-    clmr = cl;
+    clmr = aero_coeffs_.cl;
   else
     clmr = analysis_state_.clspec;
 

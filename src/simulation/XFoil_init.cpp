@@ -107,7 +107,10 @@ void XFoil::resetVariables() {
   gamma = 1.4;
   gamm1 = gamma - 1.0;
   analysis_state_.qinf = 1.0;
-  cl = cm = cd = 0.0;
+  aero_coeffs_.cl = 0.0;
+  aero_coeffs_.cm = 0.0;
+  aero_coeffs_.cd = 0.0;
+  aero_coeffs_.xcp = 0.0;
   sigte = gamte = 0.0;
   avisc = 0.0;
   resetFlags();
@@ -132,7 +135,8 @@ void XFoil::resetVariables() {
   analysis_state_.currentMach = 0.0;
   analysis_state_.currentRe = 0.0;
   minf_cl = reinf_cl = 0.0;
-  cl_alf = cl_msq = 0.0;
+  aero_coeffs_.cl_alf = 0.0;
+  aero_coeffs_.cl_msq = 0.0;
   tklam = tkl_msq = 0.0;
   stagnation = StagnationResult{};
 }
@@ -200,7 +204,7 @@ bool XFoil::setMach() {
   }
   const auto cl_result = clcalc(cmref);
   applyClComputation(cl_result);
-  cd = cdcalc();
+  aero_coeffs_.cd = cdcalc();
   lvconv = false;
   return true;
 }
