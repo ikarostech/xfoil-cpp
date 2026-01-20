@@ -45,6 +45,7 @@ target_link_libraries(xfoil_domain
 add_library(xfoil_simulation
     src/simulation/XFoil.cpp
     src/simulation/XFoil_aerodynamics.cpp
+    src/simulation/InviscidSolver.cpp
     src/simulation/Blsolve.cpp
     src/simulation/XFoil_geometry.cpp
     src/simulation/XFoil_init.cpp

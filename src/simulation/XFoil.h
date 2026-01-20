@@ -49,6 +49,7 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 #include "Eigen/StdVector"
 
 #include "domain/flow_regime.hpp"
+#include "domain/flow_state.hpp"
 #include "domain/coefficient/bl_newton.hpp"
 #include "domain/coefficient/aero_coefficients.hpp"
 #include "core/math_util.hpp"
@@ -69,6 +70,7 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 
 struct SetblInputView;
 struct SetblOutputView;
+class InviscidSolver;
 
 //------ derived dimensioning limit parameters
 
@@ -81,6 +83,7 @@ class XFoil {
   XFoil(XFoil&&) = delete;
   XFoil& operator=(XFoil&&) = delete;
 
+  friend class InviscidSolver;
   friend class BoundaryLayerWorkflow;
 
   using VectorXd = Eigen::VectorXd;
@@ -106,30 +109,8 @@ class XFoil {
   bool initialize();
   bool initXFoilGeometry(int fn, const double *fx, const double *fy);
 
-  enum class ReynoldsType {
-    CONSTANT,
-    FIXED_LIFT,
-    FIXED_LIFT_AND_DYNAMIC_PRESSURE
-  };
-  enum class MachType {
-    CONSTANT,
-    FIXED_LIFT,
-    FIXED_LIFT_AND_DYNAMIC_PRESSURE
-  };
-
-  struct AnalysisState {
-    double alpha = 0.0;
-    double qinf = 1.0;
-    double referenceRe = 0.0;
-    double referenceMach = 0.0;
-    double currentRe = 0.0;
-    double currentMach = 0.0;
-    double clspec = 0.0;
-    bool controlByAlpha = true;
-    bool viscous = false;
-    ReynoldsType reynoldsType = ReynoldsType::CONSTANT;
-    MachType machType = MachType::CONSTANT;
-  };
+  using ReynoldsType = FlowState::ReynoldsType;
+  using MachType = FlowState::MachType;
 
   bool initXFoilAnalysis(double Re, double alpha, double Mach, double NCrit,
                          double XtrTop, double XtrBot, ReynoldsType reType, MachType maType,
@@ -169,6 +150,10 @@ class XFoil {
 
   double alpha() const { return analysis_state_.alpha; }
   void setAlpha(double aoa) { analysis_state_.alpha = aoa; }
+
+  double Cl() const { return aero_coeffs_.cl; }
+  double Cd() const { return aero_coeffs_.cd; }
+  double Cm() const { return aero_coeffs_.cm; }
 
   double ClSpec() const { return analysis_state_.clspec; }
   void setClSpec(double cl) { analysis_state_.clspec = cl; }
@@ -334,9 +319,9 @@ class XFoil {
     double amcrit;
   };
 
-  AnalysisState analysis_state_;
-  AnalysisState& analysisState() { return analysis_state_; }
-  const AnalysisState& analysisState() const { return analysis_state_; }
+  FlowState analysis_state_;
+  FlowState& analysisState() { return analysis_state_; }
+  const FlowState& analysisState() const { return analysis_state_; }
   // transitional parameters stored inside analysis_state_
 
   Logger* logger_ = nullptr;

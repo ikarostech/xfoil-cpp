@@ -149,7 +149,7 @@ void XFoil::writeString(std::string str) {
 }
 
 double XFoil::getActualMach(double cls, MachType mach_control) {
-  AnalysisState& state = analysis_state_;
+  FlowState& state = analysis_state_;
   const double cla = std::max(cls, 0.000001);
   switch (mach_control) {
   case MachType::CONSTANT: {
@@ -170,7 +170,7 @@ double XFoil::getActualMach(double cls, MachType mach_control) {
 }
 
 double XFoil::getActualReynolds(double cls, ReynoldsType reynolds_control) {
-  AnalysisState& state = analysis_state_;
+  FlowState& state = analysis_state_;
   const double cla = std::max(cls, 0.000001);
   switch (reynolds_control) {
   case ReynoldsType::CONSTANT: {

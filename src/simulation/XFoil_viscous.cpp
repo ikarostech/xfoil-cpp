@@ -1,4 +1,5 @@
 #include "XFoil.h"
+#include "simulation/InviscidSolver.hpp"
 #include "simulation/Blsolve.hpp"
 #include "domain/boundary_layer/boundary_layer_builder.hpp"
 #include <algorithm>
@@ -49,7 +50,7 @@ bool XFoil::initXFoilAnalysis(double Re, double alpha, double Mach,
   lblini = false;
   lipan = false;
 
-  AnalysisState& state = analysis_state_;
+  FlowState& state = analysis_state_;
   state.referenceRe = Re;
   state.alpha = alpha * std::numbers::pi / 180.0;
   state.referenceMach = Mach;
@@ -160,17 +161,7 @@ bool XFoil::qdcalc() {
  *      current alpha.
  * -------------------------------------------------------- */
 XFoil::Matrix2Xd XFoil::qiset() const {
-  const int point_count = foil.foil_shape.n;
-  const int total_nodes_with_wake = point_count + foil.wake_shape.n;
-
-  Matrix2Xd result = Matrix2Xd::Zero(2, total_nodes_with_wake);
-
-  for (int i = 0; i < total_nodes_with_wake; i++) {
-    result.col(i) = MathUtil::getRotateMatrix(analysis_state_.alpha) * aerodynamicCache.qinvu.col(i);
-  }
-  result = MathUtil::getRotateMatrix(analysis_state_.alpha) * aerodynamicCache.qinvu;
-
-  return result;
+  return InviscidSolver::qiset(*this);
 }
 
 

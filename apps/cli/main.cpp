@@ -141,8 +141,8 @@ int main() {
     if (foil->lvconv) {
       std::cout << "  converged after " << iterationContext.iterationCount << " iterations"
                 << std::endl;
-      std::cout << "  cl : " << foil->cl << ", cd : " << foil->cd
-                << ", cm : " << foil->cm << ", xcp : " << foil->getXcp()
+      std::cout << "  cl : " << foil->Cl() << ", cd : " << foil->Cd()
+                << ", cm : " << foil->Cm() << ", xcp : " << foil->getXcp()
                 << std::endl;
     } else {
       std::cout << "  unconverged" << std::endl;

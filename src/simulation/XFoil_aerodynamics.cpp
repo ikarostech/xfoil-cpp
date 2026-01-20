@@ -1,4 +1,5 @@
 #include "XFoil.h"
+#include "simulation/InviscidSolver.hpp"
 #include <algorithm>
 #include <cmath>
 using Eigen::FullPivLU;
@@ -117,26 +118,7 @@ void XFoil::applyClComputation(const ClComputation &result) {
  *      sets compressible cp from speed.
  * ---------------------------------------------- */
 VectorXd XFoil::cpcalc(int n, VectorXd q, double qinf, double minf) {
-  VectorXd cp = VectorXd::Zero(n);
-  bool denneg = false;
-  const double beta = sqrt(1.0 - MathUtil::pow(minf, 2));
-  const double prandtlGlauertFactor =
-      0.5 * MathUtil::pow(minf, 2) / (1.0 + beta);
-
-  for (int i = 0; i < n; i++) {
-    const double cpinc = 1.0 - (q[i] / qinf) * (q[i] / qinf);
-    const double den = beta + prandtlGlauertFactor * cpinc;
-    cp[i] = cpinc / den;
-    if (den <= 0.0)
-      denneg = true;
-  }
-
-  if (denneg) {
-    writeString("CpCalc: local speed too larger\n Compressibility corrections "
-                "invalid\n");
-  }
-
-  return cp;
+  return InviscidSolver::cpcalc(*this, n, q, qinf, minf);
 }
 
 Matrix2Xd XFoil::gamqv() const {
@@ -272,154 +254,10 @@ bool XFoil::ggcalc() {
   return true;
 }
 
-/**
- *      Converges to specified alpha.
- */
-namespace {
-enum class SpecTarget { AngleOfAttack, LiftCoefficient };
-
-bool specConverge(XFoil &xfoil, SpecTarget target) {
-  xfoil.surface_vortex = MathUtil::getRotateMatrix(xfoil.analysis_state_.alpha) * xfoil.aerodynamicCache.gamu;
-
-  if (target == SpecTarget::AngleOfAttack) {
-    xfoil.updateTrailingEdgeState();
-    xfoil.qinv_matrix = xfoil.qiset();
-  } else {
-    xfoil.minf_cl = xfoil.getActualMach(xfoil.analysis_state_.clspec,
-                                        xfoil.analysis_state_.machType);
-    xfoil.reinf_cl = xfoil.getActualReynolds(xfoil.analysis_state_.clspec,
-                                             xfoil.analysis_state_.reynoldsType);
-    const auto params = xfoil.buildCompressibilityParams();
-    xfoil.tklam = params.karmanTsienFactor;
-    xfoil.tkl_msq = params.karmanTsienFactor_msq;
-  }
-
-  xfoil.applyClComputation(xfoil.clcalc(xfoil.cmref));
-
-  bool bConv = false;
-
-  if (target == SpecTarget::AngleOfAttack) {
-    double clm = 1.0;
-    double minf_clm = xfoil.getActualMach(clm, xfoil.analysis_state_.machType);
-
-    for (int itcl = 1; itcl <= 20; itcl++) {
-      const double msq_clm = 2.0 * xfoil.analysis_state_.currentMach * minf_clm;
-      const double dclm = (xfoil.aero_coeffs_.cl - clm) /
-                          (1.0 - xfoil.aero_coeffs_.cl_msq * msq_clm);
-
-      const double clm1 = clm;
-      xfoil.rlx = 1.0;
-
-      //------ under-relaxation loop to avoid driving m(cl) above 1
-      for (int irlx = 1; irlx <= 12; irlx++) {
-        clm = clm1 + xfoil.rlx * dclm;
-
-        //-------- set new freestream mach m(clm)
-        minf_clm = xfoil.getActualMach(clm, xfoil.analysis_state_.machType);
-
-        //-------- if mach is ok, go do next newton iteration
-        // FIXME double型の==比較
-        if (xfoil.analysis_state_.machType == XFoil::MachType::CONSTANT ||
-            xfoil.analysis_state_.currentMach == 0.0 ||
-            minf_clm != 0.0)
-          break;
-
-        xfoil.rlx = 0.5 * xfoil.rlx;
-      }
-
-      //------ set new cl(m)
-      xfoil.applyClComputation(xfoil.clcalc(xfoil.cmref));
-
-      if (fabs(dclm) <= 1.0e-6) {
-        bConv = true;
-        break;
-      }
-    }
-
-    if (!bConv) {
-      xfoil.writeString("Specal:  MInf convergence failed\n");
-      return false;
-    }
-
-    //---- set final mach, cl, cp distributions, and hinge moment
-    xfoil.qinv_matrix = xfoil.qiset();
-    xfoil.applyClComputation(xfoil.clcalc(xfoil.cmref));
-
-    xfoil.cpi = xfoil.cpcalc(xfoil.foil.foil_shape.n,
-                             xfoil.qinv_matrix.row(0).transpose(),
-                             xfoil.analysis_state_.qinf,
-                             xfoil.analysis_state_.currentMach);
-    if (xfoil.analysis_state_.viscous) {
-      xfoil.cpv = xfoil.cpcalc(xfoil.foil.foil_shape.n + xfoil.foil.wake_shape.n, xfoil.qvis,
-                               xfoil.analysis_state_.qinf,
-                               xfoil.analysis_state_.currentMach);
-      xfoil.cpi = xfoil.cpcalc(xfoil.foil.foil_shape.n + xfoil.foil.wake_shape.n,
-                               xfoil.qinv_matrix.row(0).transpose(),
-                               xfoil.analysis_state_.qinf,
-                               xfoil.analysis_state_.currentMach);
-    } else
-      xfoil.cpi = xfoil.cpcalc(xfoil.foil.foil_shape.n,
-                               xfoil.qinv_matrix.row(0).transpose(),
-                               xfoil.analysis_state_.qinf,
-                               xfoil.analysis_state_.currentMach);
-
-    for (int i = 0; i < xfoil.foil.foil_shape.n; i++) {
-      xfoil.qgamm[i] = xfoil.surface_vortex(0, i);
-    }
-
-    return true;
-  }
-
-  for (int ital = 1; ital <= 20; ital++) {
-    const double dalfa =
-        (xfoil.analysis_state_.clspec - xfoil.aero_coeffs_.cl) /
-        xfoil.aero_coeffs_.cl_alf;
-    xfoil.rlx = 1.0;
-
-    xfoil.analysis_state_.alpha =
-        xfoil.analysis_state_.alpha + xfoil.rlx * dalfa;
-
-    //------ set new cl(alpha)
-    xfoil.applyClComputation(xfoil.clcalc(xfoil.cmref));
-
-    if (fabs(dalfa) <= 1.0e-6) {
-      bConv = true;
-      break;
-    }
-  }
-  if (!bConv) {
-    xfoil.writeString("Speccl:  cl convergence failed");
-    return false;
-  }
-
-  //---- set final surface speed and cp distributions
-  xfoil.updateTrailingEdgeState();
-  xfoil.qinv_matrix = xfoil.qiset();
-
-  if (xfoil.analysis_state_.viscous) {
-    xfoil.cpv = xfoil.cpcalc(xfoil.foil.foil_shape.n + xfoil.foil.wake_shape.n, xfoil.qvis,
-                             xfoil.analysis_state_.qinf,
-                             xfoil.analysis_state_.currentMach);
-    xfoil.cpi = xfoil.cpcalc(xfoil.foil.foil_shape.n + xfoil.foil.wake_shape.n,
-                             xfoil.qinv_matrix.row(0).transpose(),
-                             xfoil.analysis_state_.qinf,
-                             xfoil.analysis_state_.currentMach);
-
-  } else {
-    xfoil.cpi = xfoil.cpcalc(xfoil.foil.foil_shape.n,
-                             xfoil.qinv_matrix.row(0).transpose(),
-                             xfoil.analysis_state_.qinf,
-                             xfoil.analysis_state_.currentMach);
-  }
-
-  return true;
-}
-}  // namespace
-
 bool XFoil::specal() {
-  return specConverge(*this, SpecTarget::AngleOfAttack);
+  return InviscidSolver::specal(*this);
 }
 
 bool XFoil::speccl() {
-  return specConverge(*this, SpecTarget::LiftCoefficient);
+  return InviscidSolver::speccl(*this);
 }
