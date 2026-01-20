@@ -168,14 +168,15 @@ XFoil::Matrix2Xd XFoil::qiset() const {
 /** -------------------------------------------------------------
  *     sets panel viscous tangential velocity from viscous ue
  * -------------------------------------------------------------- */
-VectorXd XFoil::qvfue() const {
-  VectorXd updated_qvis = qvis;
+VectorXd XFoil::qvfue(const VectorXd& base_qvis,
+                      const SidePair<BoundaryLayerLattice>& lattice) const {
+  VectorXd updated_qvis = base_qvis;
   for (int is = 1; is <= 2; is++) {
-    const auto& panelInfluenceFactor_side = boundaryLayerWorkflow.lattice.get(is).panelInfluenceFactor;
-    const auto& edgeVelocity_side = boundaryLayerWorkflow.lattice.get(is).profiles.edgeVelocity;
-    const int limit = boundaryLayerWorkflow.lattice.get(is).stationCount - 1;
+    const auto& panelInfluenceFactor_side = lattice.get(is).panelInfluenceFactor;
+    const auto& edgeVelocity_side = lattice.get(is).profiles.edgeVelocity;
+    const int limit = lattice.get(is).stationCount - 1;
     for (int ibl = 0; ibl < limit; ++ibl) {
-      int i = boundaryLayerWorkflow.lattice.get(is).stationToPanel[ibl];
+      int i = lattice.get(is).stationToPanel[ibl];
       updated_qvis[i] = panelInfluenceFactor_side[ibl] * edgeVelocity_side[ibl];
     }
   }
@@ -462,7 +463,7 @@ bool XFoil::viscal() {
 
   if (lvconv) {
     //	----- set correct cl if converged point exists
-    qvis = qvfue();
+    qvis = qvfue(qvis, boundaryLayerWorkflow.lattice);
 
     if (analysis_state_.viscous) {
       cpv = cpcalc(total_nodes_with_wake, qvis, analysis_state_.qinf,
@@ -540,7 +541,7 @@ bool XFoil::ViscousIter() {
     boundaryLayerWorkflow.lattice.bottom.inviscidEdgeVelocityMatrix = inviscid_edge_velocity.bottom;
   }
 
-  qvis = qvfue();  //	------ calculate edge velocities qvis(.) from edgeVelocity(..)
+  qvis = qvfue(qvis, boundaryLayerWorkflow.lattice);  //	------ calculate edge velocities qvis(.) from edgeVelocity(..)
   surface_vortex = gamqv();  //	------ set gam distribution from qvis
   boundaryLayerWorkflow.stmove(*this); //	------ relocate stagnation point
 

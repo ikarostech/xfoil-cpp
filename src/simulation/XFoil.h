@@ -244,7 +244,8 @@ class XFoil {
   };
 
   Matrix2Xd qiset() const;
-  VectorXd qvfue() const;
+  VectorXd qvfue(const VectorXd& base_qvis,
+                 const SidePair<BoundaryLayerLattice>& lattice) const;
   Matrix2Xd qwcalc();
 
   SetblOutputView setbl(const SetblInputView& input, SetblOutputView output);
