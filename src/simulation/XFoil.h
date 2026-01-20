@@ -246,7 +246,10 @@ class XFoil {
   Matrix2Xd qiset() const;
   VectorXd qvfue(const VectorXd& base_qvis,
                  const SidePair<BoundaryLayerLattice>& lattice) const;
-  Matrix2Xd qwcalc();
+  Matrix2Xd qwcalc(const Foil& foil, const Matrix2Xd& base_qinvu,
+                   const Matrix2Xd& gamu,
+                   const Matrix2Xd& surface_vortex, double alpha,
+                   double qinf) const;
 
   SetblOutputView setbl(const SetblInputView& input, SetblOutputView output);
   struct EdgeVelocitySwapResult {

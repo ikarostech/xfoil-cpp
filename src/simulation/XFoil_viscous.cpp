@@ -189,9 +189,12 @@ VectorXd XFoil::qvfue(const VectorXd& base_qvis,
  *      sets inviscid tangential velocity for alpha = 0, 90
  *      on wake due to freestream and airfoil surface vorticity.
  * --------------------------------------------------------------- */
-Matrix2Xd XFoil::qwcalc() {
+Matrix2Xd XFoil::qwcalc(const Foil& foil, const Matrix2Xd& base_qinvu,
+                        const Matrix2Xd& gamu,
+                        const Matrix2Xd& surface_vortex, double alpha,
+                        double qinf) const {
   const int point_count = foil.foil_shape.n;
-  Matrix2Xd updated_qinvu = aerodynamicCache.qinvu;
+  Matrix2Xd updated_qinvu = base_qinvu;
 
   if (point_count >= 1 && point_count < updated_qinvu.cols()) {
     updated_qinvu.col(point_count) = updated_qinvu.col(point_count - 1);
@@ -200,8 +203,8 @@ Matrix2Xd XFoil::qwcalc() {
   for (int i = point_count + 1; i < point_count + foil.wake_shape.n; i++) {
     updated_qinvu.col(i) =
         psilin(foil, i, foil.wake_shape.points.col(i),
-               foil.wake_shape.normal_vector.col(i), false, point_count, aerodynamicCache.gamu,
-               surface_vortex, analysis_state_.alpha, analysis_state_.qinf,
+               foil.wake_shape.normal_vector.col(i), false, point_count, gamu,
+               surface_vortex, alpha, qinf,
                foil.wake_shape.angle_panel, foil.edge.sharp,
                foil.edge.ante, foil.edge.dste, foil.edge.aste)
             .qtan;
@@ -406,7 +409,9 @@ bool XFoil::viscal() {
     xyWake();
 
   //	---- set velocities on wake from airfoil vorticity for alpha=0, 90
-  aerodynamicCache.qinvu = qwcalc();
+  aerodynamicCache.qinvu =
+      qwcalc(foil, aerodynamicCache.qinvu, aerodynamicCache.gamu,
+             surface_vortex, analysis_state_.alpha, analysis_state_.qinf);
 
   //	---- set velocities on airfoil and wake for initial alpha
   qinv_matrix = qiset();
