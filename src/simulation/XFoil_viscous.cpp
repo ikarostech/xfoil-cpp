@@ -273,7 +273,7 @@ double XFoil::clampRelaxationForGlobalChange(double relaxation, double dac,
 }
 
 
-bool XFoil::update() {
+XFoil::UpdateResult XFoil::update() const {
   //------------------------------------------------------------------
   //      adds on newton deltas to boundary layer variables.
   //      checks for excessive changes and underrelaxes if necessary.
@@ -283,6 +283,14 @@ bool XFoil::update() {
   //        if controlByAlpha=false, "ac" is alpha
   //------------------------------------------------------------------
 
+  UpdateResult result;
+  result.analysis_state = analysis_state_;
+  result.aero_coeffs = aero_coeffs_;
+  result.skinFrictionCoeffHistory.top =
+      boundaryLayerWorkflow.lattice.top.skinFrictionCoeffHistory;
+  result.skinFrictionCoeffHistory.bottom =
+      boundaryLayerWorkflow.lattice.bottom.skinFrictionCoeffHistory;
+
   //---- max allowable alpha changes per iteration
   const double dalmax = 0.5 * dtor;
   const double dalmin = -0.5 * dtor;
@@ -291,7 +299,7 @@ bool XFoil::update() {
   double dclmin = -0.5;
   if (analysis_state_.machType != MachType::CONSTANT)
     dclmin = std::max(-0.5, -0.9 * aero_coeffs_.cl);
-  blCompressibility.hstinv =
+  result.hstinv =
       gamm1 * MathUtil::pow(analysis_state_.currentMach / analysis_state_.qinf, 2) /
       (1.0 + 0.5 * gamm1 * analysis_state_.currentMach * analysis_state_.currentMach);
 
@@ -301,7 +309,7 @@ bool XFoil::update() {
       boundaryLayerWorkflow.computeClFromEdgeVelocityDistribution(*this, ue_distribution);
 
   //--- initialize under-relaxation factor
-  rlx = 1.0;
+  double rlx = 1.0;
   const double cl_target =
       analysis_state_.controlByAlpha ? aero_coeffs_.cl : analysis_state_.clspec;
   double dac = computeAcChange(cl_contributions.cl, aero_coeffs_.cl, cl_target,
@@ -313,8 +321,8 @@ bool XFoil::update() {
   else
     rlx = clampRelaxationForGlobalChange(rlx, dac, dalmin, dalmax);
 
-  rmsbl = 0.0;
-  rmxbl = 0.0;
+  double rmsbl = 0.0;
+  double rmxbl = 0.0;
   const double dhi = 1.5;
   const double dlo = -0.5;
 
@@ -330,33 +338,58 @@ bool XFoil::update() {
             side, deltas.get(side), dhi, dlo, rlx);
     rmsbl += metrics.get(side).rmsContribution;
     rmxbl = std::max(rmxbl, metrics.get(side).maxChange);
-    boundaryLayerWorkflow.lattice.get(side).profiles =
+    result.profiles.get(side) =
         boundaryLayerWorkflow.applyBoundaryLayerDelta(
-            side, deltas.get(side), rlx, *this);
+            side, deltas.get(side), rlx, result.hstinv, gamm1);
   }
 
   rmsbl = sqrt(rmsbl / (4.0 * double(boundaryLayerWorkflow.lattice.top.stationCount + boundaryLayerWorkflow.lattice.bottom.stationCount)));
 
   if (analysis_state_.controlByAlpha)
-    aero_coeffs_.cl = aero_coeffs_.cl + rlx * dac;
+    result.aero_coeffs.cl = aero_coeffs_.cl + rlx * dac;
   else
-    analysis_state_.alpha =
+    result.analysis_state.alpha =
         analysis_state_.alpha + rlx * dac;
 
   //--- equate upper wake arrays to lower wake arrays
   for (int kbl = 1; kbl <= boundaryLayerWorkflow.lattice.bottom.stationCount - (boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex + 1); kbl++) {
-    boundaryLayerWorkflow.lattice.top.profiles.skinFrictionCoeff[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex + kbl] =
-        boundaryLayerWorkflow.lattice.bottom.profiles.skinFrictionCoeff[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex + kbl];
-    boundaryLayerWorkflow.lattice.top.profiles.momentumThickness[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex + kbl] =
-        boundaryLayerWorkflow.lattice.bottom.profiles.momentumThickness[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex + kbl];
-    boundaryLayerWorkflow.lattice.top.profiles.displacementThickness[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex + kbl] =
-        boundaryLayerWorkflow.lattice.bottom.profiles.displacementThickness[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex + kbl];
-    boundaryLayerWorkflow.lattice.top.profiles.edgeVelocity[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex + kbl] =
-        boundaryLayerWorkflow.lattice.bottom.profiles.edgeVelocity[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex + kbl];
-    boundaryLayerWorkflow.lattice.top.skinFrictionCoeffHistory[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex + kbl] = boundaryLayerWorkflow.lattice.bottom.skinFrictionCoeffHistory[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex + kbl];
+    const int top_index = boundaryLayerWorkflow.lattice.top.trailingEdgeIndex + kbl;
+    const int bottom_index =
+        boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex + kbl;
+    result.profiles.top.skinFrictionCoeff[top_index] =
+        result.profiles.bottom.skinFrictionCoeff[bottom_index];
+    result.profiles.top.momentumThickness[top_index] =
+        result.profiles.bottom.momentumThickness[bottom_index];
+    result.profiles.top.displacementThickness[top_index] =
+        result.profiles.bottom.displacementThickness[bottom_index];
+    result.profiles.top.edgeVelocity[top_index] =
+        result.profiles.bottom.edgeVelocity[bottom_index];
+    result.skinFrictionCoeffHistory.top[top_index] =
+        result.skinFrictionCoeffHistory.bottom[bottom_index];
   }
 
-  return true;
+  result.rlx = rlx;
+  result.rmsbl = rmsbl;
+  result.rmxbl = rmxbl;
+  result.dac = dac;
+  return result;
+}
+
+void XFoil::applyUpdateResult(UpdateResult result) {
+  rlx = result.rlx;
+  rmsbl = result.rmsbl;
+  rmxbl = result.rmxbl;
+  blCompressibility.hstinv = result.hstinv;
+  analysis_state_ = std::move(result.analysis_state);
+  aero_coeffs_ = std::move(result.aero_coeffs);
+  boundaryLayerWorkflow.lattice.top.profiles =
+      std::move(result.profiles.top);
+  boundaryLayerWorkflow.lattice.bottom.profiles =
+      std::move(result.profiles.bottom);
+  boundaryLayerWorkflow.lattice.top.skinFrictionCoeffHistory =
+      std::move(result.skinFrictionCoeffHistory.top);
+  boundaryLayerWorkflow.lattice.bottom.skinFrictionCoeffHistory =
+      std::move(result.skinFrictionCoeffHistory.bottom);
 }
 
 
@@ -492,7 +525,7 @@ bool XFoil::ViscousIter() {
   }
   vdel = std::move(result.vdel);
 
-  update(); //	------ update bl variables
+  applyUpdateResult(update()); //	------ update bl variables
 
   if (analysis_state_.controlByAlpha) { //	------- set new freestream mach, re from new cl
     minf_cl = getActualMach(aero_coeffs_.cl, analysis_state_.machType);

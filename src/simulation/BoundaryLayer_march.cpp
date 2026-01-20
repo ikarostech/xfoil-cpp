@@ -298,7 +298,7 @@ BoundaryLayerWorkflow::evaluateSegmentRelaxation(
 
 BoundaryLayerSideProfiles BoundaryLayerWorkflow::applyBoundaryLayerDelta(
     int side, const BoundaryLayerDelta& delta, double relaxation,
-    XFoil& xfoil) const {
+    double hstinv, double gamm1) const {
   BoundaryLayerSideProfiles state;
   state.skinFrictionCoeff =
       lattice.get(side).profiles.skinFrictionCoeff;
@@ -338,9 +338,8 @@ BoundaryLayerSideProfiles BoundaryLayerWorkflow::applyBoundaryLayerDelta(
         (ibl <= lattice.get(side).trailingEdgeIndex) ? 1.02 : 1.00005;
     const double edgeVelocity_val = state.edgeVelocity[ibl];
     const double edgeVelocity_sq = edgeVelocity_val * edgeVelocity_val;
-    const double denom = 1.0 - 0.5 * edgeVelocity_sq * xfoil.blCompressibility.hstinv;
-    const double msq =
-        edgeVelocity_sq * xfoil.blCompressibility.hstinv / (xfoil.gamm1 * denom);
+    const double denom = 1.0 - 0.5 * edgeVelocity_sq * hstinv;
+    const double msq = edgeVelocity_sq * hstinv / (gamm1 * denom);
     double dsw = state.displacementThickness[ibl] - dswaki;
     dsw = adjustDisplacementForHkLimit(
         dsw, state.momentumThickness[ibl], msq, hklim);

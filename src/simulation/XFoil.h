@@ -282,7 +282,19 @@ class XFoil {
       SetblOutputView& output);
 
  public:
-  bool update();
+  struct UpdateResult {
+    double rlx = 0.0;
+    double rmsbl = 0.0;
+    double rmxbl = 0.0;
+    double dac = 0.0;
+    double hstinv = 0.0;
+    FlowState analysis_state;
+    AeroCoefficients aero_coeffs;
+    SidePair<BoundaryLayerSideProfiles> profiles;
+    SidePair<Eigen::VectorXd> skinFrictionCoeffHistory;
+  };
+  UpdateResult update() const;
+  void applyUpdateResult(UpdateResult result);
   using QtanResult = BoundaryLayerWorkflow::QtanResult;
   using ClContributions = BoundaryLayerWorkflow::ClContributions;
   double computeAcChange(double clnew, double cl_current, double cl_target,

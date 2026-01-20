@@ -169,7 +169,7 @@ class BoundaryLayerWorkflow {
       double& relaxation) const;
   BoundaryLayerSideProfiles applyBoundaryLayerDelta(
       int side, const BoundaryLayerDelta& delta, double relaxation,
-      XFoil& xfoil) const;
+      double hstinv, double gamm1) const;
   SidePair<Eigen::VectorXd> ueset(const Eigen::MatrixXd& dij) const;
   void syncStationRegimeStates(int side, int stationIndex, bool wake,
                                XFoil& xfoil);
