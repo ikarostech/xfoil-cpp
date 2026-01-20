@@ -1505,9 +1505,9 @@ void XFoil::initializeAndMarchBl(const SetblInputView& input,
 
 void XFoil::prepareEdgeVelocityAndSensitivities(
     const SetblInputView& input, SetblOutputView& output,
-    SidePair<VectorXd>& usav, int& jvte1, int& jvte2, double& dule1,
-    double& dule2, VectorXd& ule1_m, VectorXd& ule2_m, VectorXd& ute1_m,
-    VectorXd& ute2_m, double& ule1_a, double& ule2_a) {
+    SidePair<VectorXd>& usav, SidePair<int>& jvte, SidePair<double>& dule,
+    SidePair<VectorXd>& ule_m, SidePair<VectorXd>& ute_m,
+    SidePair<double>& ule_a) {
   usav.top = input.edgeVelocity.top;
   usav.bottom = input.edgeVelocity.bottom;
 
@@ -1518,15 +1518,15 @@ void XFoil::prepareEdgeVelocityAndSensitivities(
   usav = swapped_edge_velocities.swappedUsav;
   output.edgeVelocity.top = swapped_edge_velocities.restoredUedg.top;
   output.edgeVelocity.bottom = swapped_edge_velocities.restoredUedg.bottom;
-  jvte1 = boundaryLayerWorkflow.lattice.top
-              .stationToSystem
-                  [boundaryLayerWorkflow.lattice.top.trailingEdgeIndex];
-  jvte2 = boundaryLayerWorkflow.lattice.bottom
-              .stationToSystem
-                  [boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex];
+  jvte.top = boundaryLayerWorkflow.lattice.top
+                 .stationToSystem
+                     [boundaryLayerWorkflow.lattice.top.trailingEdgeIndex];
+  jvte.bottom = boundaryLayerWorkflow.lattice.bottom
+                    .stationToSystem
+                        [boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex];
 
-  dule1 = output.edgeVelocity.top[0] - usav.top[0];
-  dule2 = output.edgeVelocity.bottom[0] - usav.bottom[0];
+  dule.top = output.edgeVelocity.top[0] - usav.top[0];
+  dule.bottom = output.edgeVelocity.bottom[0] - usav.bottom[0];
 
   //---- set le and te ue sensitivities wrt all m values
   const auto le_te_sensitivities = computeLeTeSensitivities(
@@ -1536,33 +1536,34 @@ void XFoil::prepareEdgeVelocityAndSensitivities(
           [boundaryLayerWorkflow.lattice.top.trailingEdgeIndex],
       boundaryLayerWorkflow.lattice.get(2).stationToPanel
           [boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex]);
-  ule1_m = le_te_sensitivities.ule1_m;
-  ule2_m = le_te_sensitivities.ule2_m;
-  ute1_m = le_te_sensitivities.ute1_m;
-  ute2_m = le_te_sensitivities.ute2_m;
+  ule_m.top = le_te_sensitivities.ule1_m;
+  ule_m.bottom = le_te_sensitivities.ule2_m;
+  ute_m.top = le_te_sensitivities.ute1_m;
+  ute_m.bottom = le_te_sensitivities.ute2_m;
 
-  ule1_a = boundaryLayerWorkflow.lattice.get(1).inviscidEdgeVelocityMatrix(1, 0);
-  ule2_a = boundaryLayerWorkflow.lattice.get(2).inviscidEdgeVelocityMatrix(1, 0);
+  ule_a.top = boundaryLayerWorkflow.lattice.get(1).inviscidEdgeVelocityMatrix(1, 0);
+  ule_a.bottom = boundaryLayerWorkflow.lattice.get(2).inviscidEdgeVelocityMatrix(1, 0);
 }
 
 void XFoil::assembleBlJacobianForStation(
-    int is, int iv, int nsys, const VectorXd& d1_m, const VectorXd& u1_m,
-    const VectorXd& d2_m, const VectorXd& u2_m, double xi_ule1,
-    double xi_ule2, const VectorXd& ule1_m, const VectorXd& ule2_m,
-    double ule1_a, double ule2_a, double u1_a, double d1_a, double u2_a,
-    double d2_a, double due1, double dds1, double due2, double dds2,
-    double dule1, double dule2, double re_clmr, double msq_clmr,
+    int is, int iv, int nsys, const SidePair<VectorXd>& d_m,
+    const SidePair<VectorXd>& u_m, const SidePair<double>& xi_ule,
+    const SidePair<VectorXd>& ule_m, const SidePair<double>& ule_a,
+    const SidePair<double>& u_a, const SidePair<double>& d_a,
+    const SidePair<double>& due, const SidePair<double>& dds,
+    const SidePair<double>& dule, double re_clmr, double msq_clmr,
     SetblOutputView& output) {
   for (int jv = 1; jv <= nsys; jv++) {
     output.vm[0][jv][iv] =
-        boundaryLayerWorkflow.blc.a1(0, 2) * d1_m[jv] +
-        boundaryLayerWorkflow.blc.a1(0, 3) * u1_m[jv] +
-        boundaryLayerWorkflow.blc.a2(0, 2) * d2_m[jv] +
-        boundaryLayerWorkflow.blc.a2(0, 3) * u2_m[jv] +
+        boundaryLayerWorkflow.blc.a1(0, 2) * d_m.get(1)[jv] +
+        boundaryLayerWorkflow.blc.a1(0, 3) * u_m.get(1)[jv] +
+        boundaryLayerWorkflow.blc.a2(0, 2) * d_m.get(2)[jv] +
+        boundaryLayerWorkflow.blc.a2(0, 3) * u_m.get(2)[jv] +
         (boundaryLayerWorkflow.blc.a1(0, 4) +
          boundaryLayerWorkflow.blc.a2(0, 4) +
          boundaryLayerWorkflow.blc.d_xi[0]) *
-            (xi_ule1 * ule1_m[jv] + xi_ule2 * ule2_m[jv]);
+            (xi_ule.get(1) * ule_m.get(1)[jv] +
+             xi_ule.get(2) * ule_m.get(2)[jv]);
   }
 
   output.vb[iv](0, 0) = boundaryLayerWorkflow.blc.a1(0, 0);
@@ -1576,36 +1577,39 @@ void XFoil::assembleBlJacobianForStation(
                             boundaryLayerWorkflow.blc.d_msq[0] * msq_clmr;
   else
     output.vdel[iv](0, 1) =
-        (boundaryLayerWorkflow.blc.a1(0, 3) * u1_a +
-         boundaryLayerWorkflow.blc.a1(0, 2) * d1_a) +
-        (boundaryLayerWorkflow.blc.a2(0, 3) * u2_a +
-         boundaryLayerWorkflow.blc.a2(0, 2) * d2_a) +
+        (boundaryLayerWorkflow.blc.a1(0, 3) * u_a.get(1) +
+         boundaryLayerWorkflow.blc.a1(0, 2) * d_a.get(1)) +
+        (boundaryLayerWorkflow.blc.a2(0, 3) * u_a.get(2) +
+         boundaryLayerWorkflow.blc.a2(0, 2) * d_a.get(2)) +
         (boundaryLayerWorkflow.blc.a1(0, 4) +
          boundaryLayerWorkflow.blc.a2(0, 4) +
          boundaryLayerWorkflow.blc.d_xi[0]) *
-            (xi_ule1 * ule1_a + xi_ule2 * ule2_a);
+            (xi_ule.get(1) * ule_a.get(1) +
+             xi_ule.get(2) * ule_a.get(2));
 
   output.vdel[iv](0, 0) =
       boundaryLayerWorkflow.blc.rhs[0] +
-      (boundaryLayerWorkflow.blc.a1(0, 3) * due1 +
-       boundaryLayerWorkflow.blc.a1(0, 2) * dds1) +
-      (boundaryLayerWorkflow.blc.a2(0, 3) * due2 +
-       boundaryLayerWorkflow.blc.a2(0, 2) * dds2) +
+      (boundaryLayerWorkflow.blc.a1(0, 3) * due.get(1) +
+       boundaryLayerWorkflow.blc.a1(0, 2) * dds.get(1)) +
+      (boundaryLayerWorkflow.blc.a2(0, 3) * due.get(2) +
+       boundaryLayerWorkflow.blc.a2(0, 2) * dds.get(2)) +
       (boundaryLayerWorkflow.blc.a1(0, 4) +
        boundaryLayerWorkflow.blc.a2(0, 4) +
        boundaryLayerWorkflow.blc.d_xi[0]) *
-          (xi_ule1 * dule1 + xi_ule2 * dule2);
+          (xi_ule.get(1) * dule.get(1) +
+           xi_ule.get(2) * dule.get(2));
 
   for (int jv = 1; jv <= nsys; jv++) {
     output.vm[1][jv][iv] =
-        boundaryLayerWorkflow.blc.a1(1, 2) * d1_m[jv] +
-        boundaryLayerWorkflow.blc.a1(1, 3) * u1_m[jv] +
-        boundaryLayerWorkflow.blc.a2(1, 2) * d2_m[jv] +
-        boundaryLayerWorkflow.blc.a2(1, 3) * u2_m[jv] +
+        boundaryLayerWorkflow.blc.a1(1, 2) * d_m.get(1)[jv] +
+        boundaryLayerWorkflow.blc.a1(1, 3) * u_m.get(1)[jv] +
+        boundaryLayerWorkflow.blc.a2(1, 2) * d_m.get(2)[jv] +
+        boundaryLayerWorkflow.blc.a2(1, 3) * u_m.get(2)[jv] +
         (boundaryLayerWorkflow.blc.a1(1, 4) +
          boundaryLayerWorkflow.blc.a2(1, 4) +
          boundaryLayerWorkflow.blc.d_xi[1]) *
-            (xi_ule1 * ule1_m[jv] + xi_ule2 * ule2_m[jv]);
+            (xi_ule.get(1) * ule_m.get(1)[jv] +
+             xi_ule.get(2) * ule_m.get(2)[jv]);
   }
   output.vb[iv](1, 0) = boundaryLayerWorkflow.blc.a1(1, 0);
   output.vb[iv](1, 1) = boundaryLayerWorkflow.blc.a1(1, 1);
@@ -1618,37 +1622,40 @@ void XFoil::assembleBlJacobianForStation(
                             boundaryLayerWorkflow.blc.d_msq[1] * msq_clmr;
   else
     output.vdel[iv](1, 1) =
-        (boundaryLayerWorkflow.blc.a1(1, 3) * u1_a +
-         boundaryLayerWorkflow.blc.a1(1, 2) * d1_a) +
-        (boundaryLayerWorkflow.blc.a2(1, 3) * u2_a +
-         boundaryLayerWorkflow.blc.a2(1, 2) * d2_a) +
+        (boundaryLayerWorkflow.blc.a1(1, 3) * u_a.get(1) +
+         boundaryLayerWorkflow.blc.a1(1, 2) * d_a.get(1)) +
+        (boundaryLayerWorkflow.blc.a2(1, 3) * u_a.get(2) +
+         boundaryLayerWorkflow.blc.a2(1, 2) * d_a.get(2)) +
         (boundaryLayerWorkflow.blc.a1(1, 4) +
          boundaryLayerWorkflow.blc.a2(1, 4) +
          boundaryLayerWorkflow.blc.d_xi[1]) *
-            (xi_ule1 * ule1_a + xi_ule2 * ule2_a);
+            (xi_ule.get(1) * ule_a.get(1) +
+             xi_ule.get(2) * ule_a.get(2));
 
   output.vdel[iv](1, 0) =
       boundaryLayerWorkflow.blc.rhs[1] +
-      (boundaryLayerWorkflow.blc.a1(1, 3) * due1 +
-       boundaryLayerWorkflow.blc.a1(1, 2) * dds1) +
-      (boundaryLayerWorkflow.blc.a2(1, 3) * due2 +
-       boundaryLayerWorkflow.blc.a2(1, 2) * dds2) +
+      (boundaryLayerWorkflow.blc.a1(1, 3) * due.get(1) +
+       boundaryLayerWorkflow.blc.a1(1, 2) * dds.get(1)) +
+      (boundaryLayerWorkflow.blc.a2(1, 3) * due.get(2) +
+       boundaryLayerWorkflow.blc.a2(1, 2) * dds.get(2)) +
       (boundaryLayerWorkflow.blc.a1(1, 4) +
        boundaryLayerWorkflow.blc.a2(1, 4) +
        boundaryLayerWorkflow.blc.d_xi[1]) *
-          (xi_ule1 * dule1 + xi_ule2 * dule2);
+          (xi_ule.get(1) * dule.get(1) +
+           xi_ule.get(2) * dule.get(2));
 
   // memory overlap problem
   for (int jv = 1; jv <= nsys; jv++) {
     output.vm[2][jv][iv] =
-        boundaryLayerWorkflow.blc.a1(2, 2) * d1_m[jv] +
-        boundaryLayerWorkflow.blc.a1(2, 3) * u1_m[jv] +
-        boundaryLayerWorkflow.blc.a2(2, 2) * d2_m[jv] +
-        boundaryLayerWorkflow.blc.a2(2, 3) * u2_m[jv] +
+        boundaryLayerWorkflow.blc.a1(2, 2) * d_m.get(1)[jv] +
+        boundaryLayerWorkflow.blc.a1(2, 3) * u_m.get(1)[jv] +
+        boundaryLayerWorkflow.blc.a2(2, 2) * d_m.get(2)[jv] +
+        boundaryLayerWorkflow.blc.a2(2, 3) * u_m.get(2)[jv] +
         (boundaryLayerWorkflow.blc.a1(2, 4) +
          boundaryLayerWorkflow.blc.a2(2, 4) +
          boundaryLayerWorkflow.blc.d_xi[2]) *
-            (xi_ule1 * ule1_m[jv] + xi_ule2 * ule2_m[jv]);
+            (xi_ule.get(1) * ule_m.get(1)[jv] +
+             xi_ule.get(2) * ule_m.get(2)[jv]);
   }
 
   output.vb[iv](2, 0) = boundaryLayerWorkflow.blc.a1(2, 0);
@@ -1662,25 +1669,27 @@ void XFoil::assembleBlJacobianForStation(
                             boundaryLayerWorkflow.blc.d_msq[2] * msq_clmr;
   else
     output.vdel[iv](2, 1) =
-        (boundaryLayerWorkflow.blc.a1(2, 3) * u1_a +
-         boundaryLayerWorkflow.blc.a1(2, 2) * d1_a) +
-        (boundaryLayerWorkflow.blc.a2(2, 3) * u2_a +
-         boundaryLayerWorkflow.blc.a2(2, 2) * d2_a) +
+        (boundaryLayerWorkflow.blc.a1(2, 3) * u_a.get(1) +
+         boundaryLayerWorkflow.blc.a1(2, 2) * d_a.get(1)) +
+        (boundaryLayerWorkflow.blc.a2(2, 3) * u_a.get(2) +
+         boundaryLayerWorkflow.blc.a2(2, 2) * d_a.get(2)) +
         (boundaryLayerWorkflow.blc.a1(2, 4) +
          boundaryLayerWorkflow.blc.a2(2, 4) +
          boundaryLayerWorkflow.blc.d_xi[2]) *
-            (xi_ule1 * ule1_a + xi_ule2 * ule2_a);
+            (xi_ule.get(1) * ule_a.get(1) +
+             xi_ule.get(2) * ule_a.get(2));
 
   output.vdel[iv](2, 0) =
       boundaryLayerWorkflow.blc.rhs[2] +
-      (boundaryLayerWorkflow.blc.a1(2, 3) * due1 +
-       boundaryLayerWorkflow.blc.a1(2, 2) * dds1) +
-      (boundaryLayerWorkflow.blc.a2(2, 3) * due2 +
-       boundaryLayerWorkflow.blc.a2(2, 2) * dds2) +
+      (boundaryLayerWorkflow.blc.a1(2, 3) * due.get(1) +
+       boundaryLayerWorkflow.blc.a1(2, 2) * dds.get(1)) +
+      (boundaryLayerWorkflow.blc.a2(2, 3) * due.get(2) +
+       boundaryLayerWorkflow.blc.a2(2, 2) * dds.get(2)) +
       (boundaryLayerWorkflow.blc.a1(2, 4) +
        boundaryLayerWorkflow.blc.a2(2, 4) +
        boundaryLayerWorkflow.blc.d_xi[2]) *
-          (xi_ule1 * dule1 + xi_ule2 * dule2);
+          (xi_ule.get(1) * dule.get(1) +
+           xi_ule.get(2) * dule.get(2));
 }
 
 SetblOutputView XFoil::setbl(const SetblInputView& input,
@@ -1693,23 +1702,32 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
   //-------------------------------------------------
 
   std::stringstream ss;
-  int jvte1 = 0, jvte2 = 0;
-  VectorXd u1_m = VectorXd::Zero(2 * IVX + 1);
-  VectorXd u2_m = VectorXd::Zero(2 * IVX + 1);
-  VectorXd d1_m = VectorXd::Zero(2 * IVX + 1);
-  VectorXd d2_m = VectorXd::Zero(2 * IVX + 1);
-  VectorXd ule1_m = VectorXd::Zero(2 * IVX + 1);
-  VectorXd ule2_m = VectorXd::Zero(2 * IVX + 1);
-  VectorXd ute1_m = VectorXd::Zero(2 * IVX + 1);
-  VectorXd ute2_m = VectorXd::Zero(2 * IVX + 1);
+  SidePair<int> jvte{0, 0};
+  SidePair<VectorXd> u_m;
+  SidePair<VectorXd> d_m;
+  SidePair<VectorXd> ule_m;
+  SidePair<VectorXd> ute_m;
+  u_m.top = VectorXd::Zero(2 * IVX + 1);
+  u_m.bottom = VectorXd::Zero(2 * IVX + 1);
+  d_m.top = VectorXd::Zero(2 * IVX + 1);
+  d_m.bottom = VectorXd::Zero(2 * IVX + 1);
+  ule_m.top = VectorXd::Zero(2 * IVX + 1);
+  ule_m.bottom = VectorXd::Zero(2 * IVX + 1);
+  ute_m.top = VectorXd::Zero(2 * IVX + 1);
+  ute_m.bottom = VectorXd::Zero(2 * IVX + 1);
 
   double msq_clmr = 0.0, mdi;
   double re_clmr = 0.0;
-  double ule1_a = 0.0, ule2_a = 0.0, u2_a, due2, dds2;
+  SidePair<double> ule_a{0.0, 0.0};
+  SidePair<double> u_a{0.0, 0.0};
+  SidePair<double> d_a{0.0, 0.0};
+  SidePair<double> due{0.0, 0.0};
+  SidePair<double> dds{0.0, 0.0};
   double xsi, cti = 0.0, uei, thi, dsi, dswaki;
-  double d2_a, d2_m2, d2_u2, dte_mte1, dte_ute1, dte_mte2, dte_ute2;
-  double tte, cte, dte, dule1 = 0.0, dule2 = 0.0;
-  double xi_ule1, xi_ule2;
+  double d2_m2, d2_u2, dte_mte1, dte_ute1, dte_mte2, dte_ute2;
+  double tte, cte, dte;
+  SidePair<double> dule{0.0, 0.0};
+  SidePair<double> xi_ule{0.0, 0.0};
   double ami = 0.0, tte_tte1 = 0.0, tte_tte2 = 0.0, cte_tte1 = 0.0,
          cte_tte2 = 0.0, cte_cte1 = 0.0, cte_cte2 = 0.0;
 
@@ -1721,8 +1739,7 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
 
   SidePair<VectorXd> usav;
   prepareEdgeVelocityAndSensitivities(
-      input, output, usav, jvte1, jvte2, dule1, dule2, ule1_m, ule2_m, ute1_m,
-      ute2_m, ule1_a, ule2_a);
+      input, output, usav, jvte, dule, ule_m, ute_m, ule_a);
 
   //*** process each boundary layer side
   for (int is = 1; is <= 2; is++) {
@@ -1731,15 +1748,14 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
       for (int jbl = 0;
            jbl < boundaryLayerWorkflow.lattice.get(js).stationCount - 1; ++jbl) {
         const int jv = boundaryLayerWorkflow.lattice.get(js).stationToSystem[jbl];
-        u1_m[jv] = 0.0;
-        d1_m[jv] = 0.0;
+        u_m.get(1)[jv] = 0.0;
+        d_m.get(1)[jv] = 0.0;
       }
     }
-    double u1_a = 0.0;
-    double d1_a = 0.0;
-
-    double due1 = 0.0;
-    double dds1 = 0.0;
+    u_a.get(1) = 0.0;
+    d_a.get(1) = 0.0;
+    due.get(1) = 0.0;
+    dds.get(1) = 0.0;
 
     //---- set forced transition arc length position
     output.blTransition.xiforc =
@@ -1753,7 +1769,7 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
       const bool stationIsSimilarity = (ibl == 0);
       const bool stationIsWake = (ibl > boundaryLayerWorkflow.lattice.get(is).trailingEdgeIndex);
       const bool stationIsTransitionCandidate = (ibl == output.itran.get(is));
-      const bool stationIsDownstreamOfTransition = (ibl > output.itran.get(is));
+      
       output.flowRegime =
           boundaryLayerWorkflow.determineRegimeForStation(is, ibl,
                                                           stationIsSimilarity,
@@ -1784,20 +1800,20 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
       for (int js = 1; js <= 2; js++) {
         for (int jbl = 0; jbl < boundaryLayerWorkflow.lattice.get(js).stationCount - 1; ++jbl) {
           int jv = boundaryLayerWorkflow.lattice.get(js).stationToSystem[jbl];
-          u2_m[jv] = -boundaryLayerWorkflow.lattice.get(is).panelInfluenceFactor[ibl] * boundaryLayerWorkflow.lattice.get(js).panelInfluenceFactor[jbl] *
+          u_m.get(2)[jv] = -boundaryLayerWorkflow.lattice.get(is).panelInfluenceFactor[ibl] * boundaryLayerWorkflow.lattice.get(js).panelInfluenceFactor[jbl] *
                      aerodynamicCache.dij(boundaryLayerWorkflow.lattice.get(is).stationToPanel[ibl], boundaryLayerWorkflow.lattice.get(js).stationToPanel[jbl]);
-          d2_m[jv] = d2_u2 * u2_m[jv];
+          d_m.get(2)[jv] = d2_u2 * u_m.get(2)[jv];
         }
       }
-      d2_m[iv] = d2_m[iv] + d2_m2;
+      d_m.get(2)[iv] = d_m.get(2)[iv] + d2_m2;
 
-      u2_a = boundaryLayerWorkflow.lattice.get(is).inviscidEdgeVelocityMatrix(1, ibl);
-      d2_a = d2_u2 * u2_a;
+      u_a.get(2) = boundaryLayerWorkflow.lattice.get(is).inviscidEdgeVelocityMatrix(1, ibl);
+      d_a.get(2) = d2_u2 * u_a.get(2);
 
   //---- "forced" changes due to mismatch between edge velocities and
   // usav=inviscidEdgeVelocityMatrix+dij*output.massFlux
-      due2 = output.edgeVelocity.get(is)[ibl] - usav.get(is)[ibl];
-      dds2 = d2_u2 * due2;
+      due.get(2) = output.edgeVelocity.get(is)[ibl] - usav.get(is)[ibl];
+      dds.get(2) = d2_u2 * due.get(2);
 
   {
     blData updatedCurrent =
@@ -1860,15 +1876,16 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
       for (int js = 1; js <= 2; js++) {
         for (int jbl = 0; jbl < boundaryLayerWorkflow.lattice.get(js).stationCount - 1; ++jbl) {
             int jv = boundaryLayerWorkflow.lattice.get(js).stationToSystem[jbl];
-            d1_m[jv] = dte_ute1 * ute1_m[jv] + dte_ute2 * ute2_m[jv];
+            d_m.get(1)[jv] = dte_ute1 * ute_m.get(1)[jv] +
+                             dte_ute2 * ute_m.get(2)[jv];
           }
         }
-        d1_m[jvte1] = d1_m[jvte1] + dte_mte1;
-        d1_m[jvte2] = d1_m[jvte2] + dte_mte2;
+        d_m.get(1)[jvte.get(1)] = d_m.get(1)[jvte.get(1)] + dte_mte1;
+        d_m.get(1)[jvte.get(2)] = d_m.get(1)[jvte.get(2)] + dte_mte2;
 
         //----- "forced" changes from  output.edgeVelocity --- usav=inviscidEdgeVelocityMatrix+dij*output.massFlux mismatch
-        due1 = 0.0;
-        dds1 =
+        due.get(1) = 0.0;
+        dds.get(1) =
             dte_ute1 *
                 (output.edgeVelocity.top[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex] -
                  usav.top[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex]) +
@@ -1885,18 +1902,17 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
 
       //---- set xi sensitivities wrt le ue changes
       if (is == 1) {
-        xi_ule1 = stagnation.sst_go;
-        xi_ule2 = -stagnation.sst_gp;
+        xi_ule.get(1) = stagnation.sst_go;
+        xi_ule.get(2) = -stagnation.sst_gp;
       } else {
-        xi_ule1 = -stagnation.sst_go;
-        xi_ule2 = stagnation.sst_gp;
+        xi_ule.get(1) = -stagnation.sst_go;
+        xi_ule.get(2) = stagnation.sst_gp;
       }
 
       //---- stuff bl system coefficients into main jacobian matrix
       assembleBlJacobianForStation(
-          is, iv, nsys, d1_m, u1_m, d2_m, u2_m, xi_ule1, xi_ule2, ule1_m,
-          ule2_m, ule1_a, ule2_a, u1_a, d1_a, u2_a, d2_a, due1, dds1, due2,
-          dds2, dule1, dule2, re_clmr, msq_clmr, output);
+          is, iv, nsys, d_m, u_m, xi_ule, ule_m, ule_a, u_a, d_a, due, dds,
+          dule, re_clmr, msq_clmr, output);
 
       if (ibl == boundaryLayerWorkflow.lattice.get(is).trailingEdgeIndex + 1) {
         //----- redefine coefficients for tte, dte, etc
@@ -1933,14 +1949,14 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
                 FlowRegimeEnum::Wake);
         boundaryLayerWorkflow.blmid(FlowRegimeEnum::Wake);
       }
-      u1_m = u2_m;
-      d1_m = d2_m;
+      u_m.get(1) = u_m.get(2);
+      d_m.get(1) = d_m.get(2);
 
-      u1_a = u2_a;
-      d1_a = d2_a;
+      u_a.get(1) = u_a.get(2);
+      d_a.get(1) = d_a.get(2);
 
-      due1 = due2;
-      dds1 = dds2;
+      due.get(1) = due.get(2);
+      dds.get(1) = dds.get(2);
 
       //---- set bl variables for next station
       boundaryLayerWorkflow.state.stepbl();

@@ -273,16 +273,16 @@ class XFoil {
                             SetblOutputView& output);
   void prepareEdgeVelocityAndSensitivities(
       const SetblInputView& input, SetblOutputView& output,
-      SidePair<VectorXd>& usav, int& jvte1, int& jvte2, double& dule1,
-      double& dule2, VectorXd& ule1_m, VectorXd& ule2_m, VectorXd& ute1_m,
-      VectorXd& ute2_m, double& ule1_a, double& ule2_a);
+      SidePair<VectorXd>& usav, SidePair<int>& jvte,
+      SidePair<double>& dule, SidePair<VectorXd>& ule_m,
+      SidePair<VectorXd>& ute_m, SidePair<double>& ule_a);
   void assembleBlJacobianForStation(
-      int is, int iv, int nsys, const VectorXd& d1_m, const VectorXd& u1_m,
-      const VectorXd& d2_m, const VectorXd& u2_m, double xi_ule1,
-      double xi_ule2, const VectorXd& ule1_m, const VectorXd& ule2_m,
-      double ule1_a, double ule2_a, double u1_a, double d1_a, double u2_a,
-      double d2_a, double due1, double dds1, double due2, double dds2,
-      double dule1, double dule2, double re_clmr, double msq_clmr,
+      int is, int iv, int nsys, const SidePair<VectorXd>& d_m,
+      const SidePair<VectorXd>& u_m, const SidePair<double>& xi_ule,
+      const SidePair<VectorXd>& ule_m, const SidePair<double>& ule_a,
+      const SidePair<double>& u_a, const SidePair<double>& d_a,
+      const SidePair<double>& due, const SidePair<double>& dds,
+      const SidePair<double>& dule, double re_clmr, double msq_clmr,
       SetblOutputView& output);
 
  public:
