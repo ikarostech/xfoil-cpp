@@ -263,19 +263,33 @@ double XFoil::computeAcChange(double clnew, double cl_current,
   return (clnew - cl_target) / (0.0 - cl_ac - cl_a);
 }
 
+double XFoil::rlxCalc(double dac) const {
+  //---- max allowable alpha changes per iteration
+  double dalmax = 0.5 * dtor;
+  double dalmin = -0.5 * dtor;
+  //---- max allowable cl change per iteration
+  double dclmax = 0.5;
+  double dclmin = -0.5;
 
-double XFoil::clampRelaxationForGlobalChange(double relaxation, double dac,
-                                             double lower,
-                                             double upper) const {
-  if (dac == 0.0)
+  if (analysis_state_.machType != MachType::CONSTANT)
+    dclmin = std::max(-0.5, -0.9 * aero_coeffs_.cl);
+
+  auto clampRelaxationForGlobalChange = [&](double relaxation, double dac,
+                                         double lower, double upper) {
+    if (dac == 0.0)
+      return relaxation;
+    if (relaxation * dac > upper)
+      relaxation = upper / dac;
+    if (relaxation * dac < lower)
+      relaxation = lower / dac;
     return relaxation;
-  if (relaxation * dac > upper)
-    relaxation = upper / dac;
-  if (relaxation * dac < lower)
-    relaxation = lower / dac;
-  return relaxation;
-}
+  };
 
+  if (analysis_state_.controlByAlpha)
+    return clampRelaxationForGlobalChange(1.0, dac, dclmin, dclmax);
+
+  return clampRelaxationForGlobalChange(1.0, dac, dalmin, dalmax);
+}
 
 XFoil::UpdateResult XFoil::update() const {
   //------------------------------------------------------------------
@@ -295,14 +309,6 @@ XFoil::UpdateResult XFoil::update() const {
   result.skinFrictionCoeffHistory.bottom =
       boundaryLayerWorkflow.lattice.bottom.skinFrictionCoeffHistory;
 
-  //---- max allowable alpha changes per iteration
-  const double dalmax = 0.5 * dtor;
-  const double dalmin = -0.5 * dtor;
-  //---- max allowable cl change per iteration
-  double dclmax = 0.5;
-  double dclmin = -0.5;
-  if (analysis_state_.machType != MachType::CONSTANT)
-    dclmin = std::max(-0.5, -0.9 * aero_coeffs_.cl);
   result.hstinv =
       gamm1 * MathUtil::pow(analysis_state_.currentMach / analysis_state_.qinf, 2) /
       (1.0 + 0.5 * gamm1 * analysis_state_.currentMach * analysis_state_.currentMach);
@@ -312,18 +318,13 @@ XFoil::UpdateResult XFoil::update() const {
   const auto cl_contributions =
       boundaryLayerWorkflow.computeClFromEdgeVelocityDistribution(*this, ue_distribution);
 
-  //--- initialize under-relaxation factor
-  double rlx = 1.0;
   const double cl_target =
       analysis_state_.controlByAlpha ? aero_coeffs_.cl : analysis_state_.clspec;
   double dac = computeAcChange(cl_contributions.cl, aero_coeffs_.cl, cl_target,
                                cl_contributions.cl_ac, cl_contributions.cl_a,
                                cl_contributions.cl_ms);
 
-  if (analysis_state_.controlByAlpha)
-    rlx = clampRelaxationForGlobalChange(rlx, dac, dclmin, dclmax);
-  else
-    rlx = clampRelaxationForGlobalChange(rlx, dac, dalmin, dalmax);
+  double rlx = rlxCalc(dac);
 
   double rmsbl = 0.0;
   double rmxbl = 0.0;
