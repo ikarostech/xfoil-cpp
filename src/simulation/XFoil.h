@@ -266,16 +266,28 @@ class XFoil {
   LeTeSensitivities computeLeTeSensitivities(int ile1, int ile2, int ite1,
                                              int ite2) const;
 
+  struct BlReferenceParams;
+
  private:
-  void setupBlReferenceParams(SetblOutputView& output, double& re_clmr,
-                              double& msq_clmr);
-  void initializeAndMarchBl(const SetblInputView& input,
-                            SetblOutputView& output);
- void prepareEdgeVelocityAndSensitivities(
-      const SetblInputView& input, SetblOutputView& output,
-      SidePair<VectorXd>& usav, SidePair<int>& jvte,
-      SidePair<double>& dule, SidePair<VectorXd>& ule_m,
-      SidePair<VectorXd>& ute_m, SidePair<double>& ule_a);
+  BlReferenceParams computeBlReferenceParams() const;
+  struct BlInitializationPlan {
+    bool needsInitialization = false;
+    std::string message;
+  };
+  BlInitializationPlan computeBlInitializationPlan(
+      const SetblInputView& input) const;
+  struct EdgeVelocitySensitivityResult {
+    SidePair<VectorXd> usav;
+    SidePair<VectorXd> edgeVelocity;
+    SidePair<VectorXd> outputEdgeVelocity;
+    SidePair<int> jvte;
+    SidePair<double> dule;
+    SidePair<VectorXd> ule_m;
+    SidePair<VectorXd> ute_m;
+    SidePair<double> ule_a;
+  };
+  EdgeVelocitySensitivityResult prepareEdgeVelocityAndSensitivities(
+      const SetblInputView& input) const;
   struct StationPrimaryVars {
     double xsi = 0.0;
     double uei = 0.0;
@@ -423,6 +435,17 @@ class XFoil {
   struct BlTransitionParams {
     double xiforc;
     double amcrit;
+  };
+  struct BlReferenceParams {
+    double currentMach = 0.0;
+    double currentRe = 0.0;
+    double re_clmr = 0.0;
+    double msq_clmr = 0.0;
+    double tklam = 0.0;
+    double tkl_msq = 0.0;
+    BlCompressibilityParams blCompressibility;
+    BlReynoldsParams blReynolds;
+    double amcrit = 0.0;
   };
 
   FlowState analysis_state_;

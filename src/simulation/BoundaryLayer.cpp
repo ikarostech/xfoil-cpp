@@ -1404,8 +1404,8 @@ void XFoil::handleMixedModeNonConvergence(int side, int ibl,
   ctx.ami = ami;
 }
 
-void XFoil::setupBlReferenceParams(SetblOutputView& output, double& re_clmr,
-                                   double& msq_clmr) {
+XFoil::BlReferenceParams XFoil::computeBlReferenceParams() const {
+  BlReferenceParams params;
   double clmr = 0.0;
   double ma_clmr = 0.0;
   double herat = 0.0;
@@ -1417,116 +1417,151 @@ void XFoil::setupBlReferenceParams(SetblOutputView& output, double& re_clmr,
     clmr = analysis_state_.clspec;
 
   //---- set current minf(cl)
-  ma_clmr = getActualMach(clmr, analysis_state_.machType);
-  re_clmr = getActualReynolds(clmr, analysis_state_.reynoldsType);
-  msq_clmr = 2.0 * analysis_state_.currentMach * ma_clmr;
+  const double cla = std::max(clmr, 0.000001);
+  switch (analysis_state_.machType) {
+  case MachType::CONSTANT:
+    params.currentMach = analysis_state_.referenceMach;
+    ma_clmr = 0.0;
+    break;
+  case MachType::FIXED_LIFT:
+    params.currentMach = analysis_state_.referenceMach / std::sqrt(cla);
+    ma_clmr = -0.5 * params.currentMach / cla;
+    break;
+  case MachType::FIXED_LIFT_AND_DYNAMIC_PRESSURE:
+    params.currentMach = analysis_state_.referenceMach;
+    ma_clmr = 0.0;
+    break;
+  default:
+    params.currentMach = analysis_state_.currentMach;
+    ma_clmr = 0.0;
+    break;
+  }
+
+  switch (analysis_state_.reynoldsType) {
+  case ReynoldsType::CONSTANT:
+    params.currentRe = analysis_state_.referenceRe;
+    params.re_clmr = 0.0;
+    break;
+  case ReynoldsType::FIXED_LIFT:
+    params.currentRe = analysis_state_.referenceRe / std::sqrt(cla);
+    params.re_clmr = -0.5 * params.currentRe / cla;
+    break;
+  case ReynoldsType::FIXED_LIFT_AND_DYNAMIC_PRESSURE:
+    params.currentRe = analysis_state_.referenceRe / cla;
+    params.re_clmr = -params.currentRe / cla;
+    break;
+  default:
+    params.currentRe = analysis_state_.currentRe;
+    params.re_clmr = 0.0;
+    break;
+  }
+
+  params.msq_clmr = 2.0 * params.currentMach * ma_clmr;
 
   //---- set compressibility parameter tklam and derivative tk_msq
-  const auto compressibility = buildCompressibilityParams();
-  tklam = compressibility.karmanTsienFactor;
-  tkl_msq = compressibility.karmanTsienFactor_msq;
+  const double beta = std::sqrt(1.0 - params.currentMach * params.currentMach);
+  const double beta_msq = -0.5 / beta;
+  const double karmanTsienFactor =
+      (params.currentMach / (1.0 + beta)) * (params.currentMach / (1.0 + beta));
+  const double karmanTsienFactor_msq =
+      1.0 / ((1.0 + beta) * (1.0 + beta)) -
+      2.0 * karmanTsienFactor / (1.0 + beta) * beta_msq;
+  params.tklam = karmanTsienFactor;
+  params.tkl_msq = karmanTsienFactor_msq;
 
   //---- set gas constant (= cp/cv)
-  output.blCompressibility.gm1bl = gamm1;
+  params.blCompressibility.gm1bl = gamm1;
 
   //---- set parameters for compressibility correction
-  output.blCompressibility.qinfbl = analysis_state_.qinf;
-  output.blCompressibility.tkbl = tklam;
-  output.blCompressibility.tkbl_ms = tkl_msq;
+  params.blCompressibility.qinfbl = analysis_state_.qinf;
+  params.blCompressibility.tkbl = params.tklam;
+  params.blCompressibility.tkbl_ms = params.tkl_msq;
 
   //---- stagnation density and 1/enthalpy
-  output.blCompressibility.rstbl =
-      pow((1.0 + 0.5 * output.blCompressibility.gm1bl *
-                       analysis_state_.currentMach *
-                       analysis_state_.currentMach),
-          (1.0 / output.blCompressibility.gm1bl));
-  output.blCompressibility.rstbl_ms =
-      0.5 * output.blCompressibility.rstbl /
-      (1.0 + 0.5 * output.blCompressibility.gm1bl *
-                 analysis_state_.currentMach *
-                 analysis_state_.currentMach);
-  output.blCompressibility.hstinv =
-      output.blCompressibility.gm1bl *
-      MathUtil::pow(analysis_state_.currentMach /
-                        output.blCompressibility.qinfbl,
+  params.blCompressibility.rstbl =
+      pow((1.0 + 0.5 * params.blCompressibility.gm1bl *
+                       params.currentMach * params.currentMach),
+          (1.0 / params.blCompressibility.gm1bl));
+  params.blCompressibility.rstbl_ms =
+      0.5 * params.blCompressibility.rstbl /
+      (1.0 + 0.5 * params.blCompressibility.gm1bl *
+                 params.currentMach * params.currentMach);
+  params.blCompressibility.hstinv =
+      params.blCompressibility.gm1bl *
+      MathUtil::pow(params.currentMach / params.blCompressibility.qinfbl,
                     2) /
-      (1.0 + 0.5 * output.blCompressibility.gm1bl *
-                 analysis_state_.currentMach *
-                 analysis_state_.currentMach);
-  output.blCompressibility.hstinv_ms =
-      output.blCompressibility.gm1bl *
-          MathUtil::pow(1.0 / output.blCompressibility.qinfbl, 2) /
-          (1.0 + 0.5 * output.blCompressibility.gm1bl *
-                     analysis_state_.currentMach *
-                     analysis_state_.currentMach) -
-      0.5 * output.blCompressibility.gm1bl *
-          output.blCompressibility.hstinv /
-          (1.0 + 0.5 * output.blCompressibility.gm1bl *
-                     analysis_state_.currentMach *
-                     analysis_state_.currentMach);
+      (1.0 + 0.5 * params.blCompressibility.gm1bl *
+                 params.currentMach * params.currentMach);
+  params.blCompressibility.hstinv_ms =
+      params.blCompressibility.gm1bl *
+          MathUtil::pow(1.0 / params.blCompressibility.qinfbl, 2) /
+          (1.0 + 0.5 * params.blCompressibility.gm1bl *
+                     params.currentMach * params.currentMach) -
+      0.5 * params.blCompressibility.gm1bl *
+          params.blCompressibility.hstinv /
+          (1.0 + 0.5 * params.blCompressibility.gm1bl *
+                     params.currentMach * params.currentMach);
 
   //---- set reynolds number based on freestream density, velocity, viscosity
-  herat = 1.0 - 0.5 * output.blCompressibility.qinfbl *
-                     output.blCompressibility.qinfbl *
-                     output.blCompressibility.hstinv;
-  herat_ms = -0.5 * output.blCompressibility.qinfbl *
-             output.blCompressibility.qinfbl *
-             output.blCompressibility.hstinv_ms;
+  herat = 1.0 - 0.5 * params.blCompressibility.qinfbl *
+                     params.blCompressibility.qinfbl *
+                     params.blCompressibility.hstinv;
+  herat_ms = -0.5 * params.blCompressibility.qinfbl *
+             params.blCompressibility.qinfbl *
+             params.blCompressibility.hstinv_ms;
 
-  output.blReynolds.reybl =
-      analysis_state_.currentRe * sqrt(herat * herat * herat) *
+  params.blReynolds.reybl =
+      params.currentRe * sqrt(herat * herat * herat) *
       (1.0 + BoundaryLayerWorkflow::kHvrat) /
       (herat + BoundaryLayerWorkflow::kHvrat);
-  output.blReynolds.reybl_re = sqrt(herat * herat * herat) *
+  params.blReynolds.reybl_re = sqrt(herat * herat * herat) *
                                (1.0 + BoundaryLayerWorkflow::kHvrat) /
                                (herat + BoundaryLayerWorkflow::kHvrat);
-  output.blReynolds.reybl_ms =
-      output.blReynolds.reybl *
+  params.blReynolds.reybl_ms =
+      params.blReynolds.reybl *
       (1.5 / herat - 1.0 / (herat + BoundaryLayerWorkflow::kHvrat)) *
       herat_ms;
 
-  output.blTransition.amcrit = acrit;
+  params.amcrit = acrit;
+  return params;
 }
 
-void XFoil::initializeAndMarchBl(const SetblInputView& input,
-                                 SetblOutputView& output) {
+XFoil::BlInitializationPlan XFoil::computeBlInitializationPlan(
+    const SetblInputView& input) const {
+  BlInitializationPlan plan;
   if (!input.lblini) {
     //----- initialize bl by marching with ue (fudge at separation)
-    // TRACE(" initializing bl ...\n");
-    writeString("   Initializing bl ...\n");
-
-    boundaryLayerWorkflow.mrchue(*this);
-    output.lblini = true;
+    plan.needsInitialization = true;
+    plan.message = "   Initializing bl ...\n";
   }
-
-  //---- march bl with current ue and ds to establish transition
-  boundaryLayerWorkflow.mrchdu(*this);
+  return plan;
 }
 
-void XFoil::prepareEdgeVelocityAndSensitivities(
-    const SetblInputView& input, SetblOutputView& output,
-    SidePair<VectorXd>& usav, SidePair<int>& jvte, SidePair<double>& dule,
-    SidePair<VectorXd>& ule_m, SidePair<VectorXd>& ute_m,
-    SidePair<double>& ule_a) {
-  usav.top = input.edgeVelocity.top;
-  usav.bottom = input.edgeVelocity.bottom;
+XFoil::EdgeVelocitySensitivityResult XFoil::prepareEdgeVelocityAndSensitivities(
+    const SetblInputView& input) const {
+  EdgeVelocitySensitivityResult result;
+  result.usav.top = input.edgeVelocity.top;
+  result.usav.bottom = input.edgeVelocity.bottom;
 
-  const auto edge_velocity = boundaryLayerWorkflow.ueset(aerodynamicCache.dij);
-  boundaryLayerWorkflow.lattice.top.profiles.edgeVelocity = edge_velocity.top;
-  boundaryLayerWorkflow.lattice.bottom.profiles.edgeVelocity = edge_velocity.bottom;
-  const auto swapped_edge_velocities = swapEdgeVelocities(usav);
-  usav = swapped_edge_velocities.swappedUsav;
-  output.edgeVelocity.top = swapped_edge_velocities.restoredUedg.top;
-  output.edgeVelocity.bottom = swapped_edge_velocities.restoredUedg.bottom;
-  jvte.top = boundaryLayerWorkflow.lattice.top
-                 .stationToSystem
-                     [boundaryLayerWorkflow.lattice.top.trailingEdgeIndex];
-  jvte.bottom = boundaryLayerWorkflow.lattice.bottom
-                    .stationToSystem
-                        [boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex];
+  result.edgeVelocity = boundaryLayerWorkflow.ueset(aerodynamicCache.dij);
+  result.outputEdgeVelocity = result.edgeVelocity;
+  for (int is = 1; is <= 2; ++is) {
+    for (int ibl = 0;
+         ibl < boundaryLayerWorkflow.lattice.get(is).stationCount - 1; ++ibl) {
+      result.usav.get(is)[ibl] = result.edgeVelocity.get(is)[ibl];
+      result.outputEdgeVelocity.get(is)[ibl] = input.edgeVelocity.get(is)[ibl];
+    }
+  }
+  result.jvte.top = boundaryLayerWorkflow.lattice.top
+                        .stationToSystem
+                            [boundaryLayerWorkflow.lattice.top.trailingEdgeIndex];
+  result.jvte.bottom = boundaryLayerWorkflow.lattice.bottom
+                           .stationToSystem
+                               [boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex];
 
-  dule.top = output.edgeVelocity.top[0] - usav.top[0];
-  dule.bottom = output.edgeVelocity.bottom[0] - usav.bottom[0];
+  result.dule.top = result.outputEdgeVelocity.top[0] - result.usav.top[0];
+  result.dule.bottom =
+      result.outputEdgeVelocity.bottom[0] - result.usav.bottom[0];
 
   //---- set le and te ue sensitivities wrt all m values
   const auto le_te_sensitivities = computeLeTeSensitivities(
@@ -1536,13 +1571,16 @@ void XFoil::prepareEdgeVelocityAndSensitivities(
           [boundaryLayerWorkflow.lattice.top.trailingEdgeIndex],
       boundaryLayerWorkflow.lattice.get(2).stationToPanel
           [boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex]);
-  ule_m.top = le_te_sensitivities.ule1_m;
-  ule_m.bottom = le_te_sensitivities.ule2_m;
-  ute_m.top = le_te_sensitivities.ute1_m;
-  ute_m.bottom = le_te_sensitivities.ute2_m;
+  result.ule_m.top = le_te_sensitivities.ule1_m;
+  result.ule_m.bottom = le_te_sensitivities.ule2_m;
+  result.ute_m.top = le_te_sensitivities.ute1_m;
+  result.ute_m.bottom = le_te_sensitivities.ute2_m;
 
-  ule_a.top = boundaryLayerWorkflow.lattice.get(1).inviscidEdgeVelocityMatrix(1, 0);
-  ule_a.bottom = boundaryLayerWorkflow.lattice.get(2).inviscidEdgeVelocityMatrix(1, 0);
+  result.ule_a.top =
+      boundaryLayerWorkflow.lattice.get(1).inviscidEdgeVelocityMatrix(1, 0);
+  result.ule_a.bottom =
+      boundaryLayerWorkflow.lattice.get(2).inviscidEdgeVelocityMatrix(1, 0);
+  return result;
 }
 
 void XFoil::assembleBlJacobianForStation(
@@ -1981,13 +2019,43 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
 
   cti = 0.0; // techwinder added, otherwise variable is not initialized
 
-  setupBlReferenceParams(output, re_clmr, msq_clmr);
+  BlReferenceParams reference_params = computeBlReferenceParams();
+  analysis_state_.currentMach = reference_params.currentMach;
+  analysis_state_.currentRe = reference_params.currentRe;
+  re_clmr = reference_params.re_clmr;
+  msq_clmr = reference_params.msq_clmr;
+  tklam = reference_params.tklam;
+  tkl_msq = reference_params.tkl_msq;
+  output.blCompressibility = reference_params.blCompressibility;
+  output.blReynolds = reference_params.blReynolds;
+  output.blTransition.amcrit = reference_params.amcrit;
 
-  initializeAndMarchBl(input, output);
+  BlInitializationPlan bl_init = computeBlInitializationPlan(input);
+  if (bl_init.needsInitialization) {
+    //----- initialize bl by marching with ue (fudge at separation)
+    writeString(bl_init.message);
+    boundaryLayerWorkflow.mrchue(*this);
+    output.lblini = true;
+  }
+
+  //---- march bl with current ue and ds to establish transition
+  boundaryLayerWorkflow.mrchdu(*this);
 
   SidePair<VectorXd> usav;
-  prepareEdgeVelocityAndSensitivities(
-      input, output, usav, jvte, dule, ule_m, ute_m, ule_a);
+  EdgeVelocitySensitivityResult edge_result =
+      prepareEdgeVelocityAndSensitivities(input);
+  usav = edge_result.usav;
+  jvte = edge_result.jvte;
+  dule = edge_result.dule;
+  ule_m = edge_result.ule_m;
+  ute_m = edge_result.ute_m;
+  ule_a = edge_result.ule_a;
+  boundaryLayerWorkflow.lattice.top.profiles.edgeVelocity =
+      edge_result.edgeVelocity.top;
+  boundaryLayerWorkflow.lattice.bottom.profiles.edgeVelocity =
+      edge_result.edgeVelocity.bottom;
+  output.edgeVelocity.top = edge_result.outputEdgeVelocity.top;
+  output.edgeVelocity.bottom = edge_result.outputEdgeVelocity.bottom;
 
   //*** process each boundary layer side
   for (int is = 1; is <= 2; is++) {
