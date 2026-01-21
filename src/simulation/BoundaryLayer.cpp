@@ -1692,6 +1692,258 @@ void XFoil::assembleBlJacobianForStation(
            xi_ule.get(2) * dule.get(2));
 }
 
+XFoil::SimilarityStationCoefficients
+XFoil::resetSimilarityStationCoefficients(const VectorXd& u_m1,
+                                          const VectorXd& d_m1) const {
+  SimilarityStationCoefficients result;
+  result.u_m1 = u_m1;
+  result.d_m1 = d_m1;
+  for (int js = 1; js <= 2; ++js) {
+    for (int jbl = 0; jbl < boundaryLayerWorkflow.lattice.get(js).stationCount - 1;
+         ++jbl) {
+      const int jv = boundaryLayerWorkflow.lattice.get(js).stationToSystem[jbl];
+      result.u_m1[jv] = 0.0;
+      result.d_m1[jv] = 0.0;
+    }
+  }
+  return result;
+}
+
+XFoil::SideSweepInitResult XFoil::initializeSideSweepState(int is) const {
+  SideSweepInitResult result;
+  result.u_a1 = 0.0;
+  result.d_a1 = 0.0;
+  result.due1 = 0.0;
+  result.dds1 = 0.0;
+  result.xiforc = boundaryLayerWorkflow.xifset(foil, stagnation, is);
+  return result;
+}
+
+XFoil::StationPrimaryVars XFoil::loadStationPrimaryVars(
+    int is, int ibl, bool stationIsWake, const SetblOutputView& output,
+    double ami, double cti) const {
+  StationPrimaryVars vars;
+  vars.xsi = boundaryLayerWorkflow.lattice.get(is).arcLengthCoordinates[ibl];
+
+  if (ibl < output.itran.get(is))
+    vars.ami = output.skinFrictionCoeff.get(is)[ibl];
+  else
+    vars.cti = output.skinFrictionCoeff.get(is)[ibl];
+  if (ibl < output.itran.get(is)) {
+    vars.cti = cti;
+  } else {
+    vars.ami = ami;
+  }
+
+  vars.uei = output.edgeVelocity.get(is)[ibl];
+  vars.thi = output.momentumThickness.get(is)[ibl];
+  vars.mdi = output.massFlux.get(is)[ibl];
+  vars.dsi = vars.mdi / vars.uei;
+
+  if (stationIsWake) {
+    int iw = ibl - boundaryLayerWorkflow.lattice.get(is).trailingEdgeIndex;
+    vars.dswaki = boundaryLayerWorkflow.wgap[iw - 1];
+  } else {
+    vars.dswaki = 0.0;
+  }
+
+  return vars;
+}
+
+XFoil::StationUpdateResult XFoil::updateStationMatricesAndState(
+    int is, int ibl, int iv, const StationPrimaryVars& vars,
+    const SidePair<VectorXd>& usav, const SetblOutputView& output,
+    const BoundaryLayerState& base_state, int system_size) {
+  StationUpdateResult result;
+  const double d2_m2 = 1.0 / vars.uei;
+  const double d2_u2 = -vars.dsi / vars.uei;
+
+  result.u_m2 = VectorXd::Zero(system_size);
+  result.d_m2 = VectorXd::Zero(system_size);
+  for (int js = 1; js <= 2; js++) {
+    for (int jbl = 0;
+         jbl < boundaryLayerWorkflow.lattice.get(js).stationCount - 1; ++jbl) {
+      int jv = boundaryLayerWorkflow.lattice.get(js).stationToSystem[jbl];
+      result.u_m2[jv] =
+          -boundaryLayerWorkflow.lattice.get(is).panelInfluenceFactor[ibl] *
+          boundaryLayerWorkflow.lattice.get(js).panelInfluenceFactor[jbl] *
+          aerodynamicCache.dij(
+              boundaryLayerWorkflow.lattice.get(is).stationToPanel[ibl],
+              boundaryLayerWorkflow.lattice.get(js).stationToPanel[jbl]);
+      result.d_m2[jv] = d2_u2 * result.u_m2[jv];
+    }
+  }
+  result.d_m2[iv] = result.d_m2[iv] + d2_m2;
+
+  result.u_a2 =
+      boundaryLayerWorkflow.lattice.get(is).inviscidEdgeVelocityMatrix(
+      1, ibl);
+  result.d_a2 = d2_u2 * result.u_a2;
+
+  // "forced" changes from mismatch between edge velocities and usav
+  result.due2 = output.edgeVelocity.get(is)[ibl] - usav.get(is)[ibl];
+  result.dds2 = d2_u2 * result.due2;
+
+  result.state = base_state;
+  result.state.current() =
+      boundaryLayerWorkflow.blprv(*this, result.state.current(), vars.xsi,
+                                  vars.ami, vars.cti, vars.thi, vars.dsi,
+                                  vars.dswaki, vars.uei);
+  boundaryLayerWorkflow.blkin(*this, result.state);
+  return result;
+}
+
+XFoil::TransitionLogResult XFoil::buildTransitionLog(
+    bool stationIsTransitionCandidate, FlowRegimeEnum flowRegime) const {
+  TransitionLogResult result;
+  if (stationIsTransitionCandidate &&
+      flowRegime != FlowRegimeEnum::Transition) {
+    std::stringstream ss;
+    ss << "setbl: xtr???  n1="
+       << boundaryLayerWorkflow.state.station1.param.amplz
+       << " n2=" << boundaryLayerWorkflow.state.station2.param.amplz << ":\n";
+    result.message = ss.str();
+  }
+  return result;
+}
+
+XFoil::TeWakeUpdateResult XFoil::computeTeWakeCoefficients(
+    int is, int ibl, const SidePair<VectorXd>& usav,
+    const SidePair<VectorXd>& ute_m, const SidePair<int>& jvte,
+    const VectorXd& d_m1_template, const SetblOutputView& output) const {
+  TeWakeUpdateResult result;
+  if (ibl != boundaryLayerWorkflow.lattice.get(is).trailingEdgeIndex + 1) {
+    return result;
+  }
+  result.isStartOfWake = true;
+
+  result.coeffs.tte =
+      output.momentumThickness.get(1)[
+          boundaryLayerWorkflow.lattice.top.trailingEdgeIndex] +
+      output.momentumThickness.get(2)[
+          boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex];
+  result.coeffs.dte =
+      output.displacementThickness.get(1)[
+          boundaryLayerWorkflow.lattice.top.trailingEdgeIndex] +
+      output.displacementThickness.get(2)[
+          boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex] +
+      foil.edge.ante;
+  result.coeffs.cte =
+      (output.skinFrictionCoeff.get(1)[
+           boundaryLayerWorkflow.lattice.top.trailingEdgeIndex] *
+           output.momentumThickness.get(1)[
+               boundaryLayerWorkflow.lattice.top.trailingEdgeIndex] +
+       output.skinFrictionCoeff.get(2)[
+           boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex] *
+           output.momentumThickness.get(2)[
+               boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex]) /
+      result.coeffs.tte;
+
+  result.coeffs.tte_tte1 = 1.0;
+  result.coeffs.tte_tte2 = 1.0;
+  result.coeffs.dte_mte1 =
+      1.0 /
+      output.edgeVelocity.top[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex];
+  result.coeffs.dte_ute1 =
+      -output.displacementThickness.get(1)[
+           boundaryLayerWorkflow.lattice.top.trailingEdgeIndex] /
+      output.edgeVelocity.top[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex];
+  result.coeffs.dte_mte2 =
+      1.0 /
+      output.edgeVelocity.bottom[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex];
+  result.coeffs.dte_ute2 =
+      -output.displacementThickness.get(2)[
+           boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex] /
+      output.edgeVelocity.bottom[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex];
+  result.coeffs.cte_cte1 =
+      output.momentumThickness.get(1)[
+          boundaryLayerWorkflow.lattice.top.trailingEdgeIndex] /
+      result.coeffs.tte;
+  result.coeffs.cte_cte2 =
+      output.momentumThickness.get(2)[
+          boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex] /
+      result.coeffs.tte;
+  result.coeffs.cte_tte1 =
+      (output.skinFrictionCoeff.get(1)[
+           boundaryLayerWorkflow.lattice.top.trailingEdgeIndex] -
+       result.coeffs.cte) /
+      result.coeffs.tte;
+  result.coeffs.cte_tte2 =
+      (output.skinFrictionCoeff.get(2)[
+           boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex] -
+       result.coeffs.cte) /
+      result.coeffs.tte;
+
+  // Re-define d1 sensitivities wrt m since d1 depends on both te ds values.
+  result.d_m1 = d_m1_template;
+  for (int js = 1; js <= 2; js++) {
+    for (int jbl = 0;
+         jbl < boundaryLayerWorkflow.lattice.get(js).stationCount - 1; ++jbl) {
+      int jv = boundaryLayerWorkflow.lattice.get(js).stationToSystem[jbl];
+      result.d_m1[jv] =
+          result.coeffs.dte_ute1 * ute_m.get(1)[jv] +
+          result.coeffs.dte_ute2 * ute_m.get(2)[jv];
+    }
+  }
+  result.d_m1[jvte.get(1)] =
+      result.d_m1[jvte.get(1)] + result.coeffs.dte_mte1;
+  result.d_m1[jvte.get(2)] =
+      result.d_m1[jvte.get(2)] + result.coeffs.dte_mte2;
+
+  // "forced" changes from edge velocity mismatch
+  result.due1 = 0.0;
+  result.dds1 =
+      result.coeffs.dte_ute1 *
+          (output.edgeVelocity.top[
+               boundaryLayerWorkflow.lattice.top.trailingEdgeIndex] -
+           usav.top[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex]) +
+      result.coeffs.dte_ute2 *
+          (output.edgeVelocity.bottom[
+               boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex] -
+           usav.bottom[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex]);
+
+  return result;
+}
+
+XFoil::TeWakeJacobianAdjustments XFoil::computeTeWakeJacobianAdjustments(
+    const TeWakeCoefficients& coeffs) const {
+  TeWakeJacobianAdjustments result;
+  result.vz[0][0] = boundaryLayerWorkflow.blc.a1(0, 0) * coeffs.cte_cte1;
+  result.vz[0][1] = boundaryLayerWorkflow.blc.a1(0, 0) * coeffs.cte_tte1 +
+                    boundaryLayerWorkflow.blc.a1(0, 1) * coeffs.tte_tte1;
+  result.vb(0, 0) = boundaryLayerWorkflow.blc.a1(0, 0) * coeffs.cte_cte2;
+  result.vb(0, 1) = boundaryLayerWorkflow.blc.a1(0, 0) * coeffs.cte_tte2 +
+                    boundaryLayerWorkflow.blc.a1(0, 1) * coeffs.tte_tte2;
+
+  result.vz[1][0] = boundaryLayerWorkflow.blc.a1(1, 0) * coeffs.cte_cte1;
+  result.vz[1][1] = boundaryLayerWorkflow.blc.a1(1, 0) * coeffs.cte_tte1 +
+                    boundaryLayerWorkflow.blc.a1(1, 1) * coeffs.tte_tte1;
+  result.vb(1, 0) = boundaryLayerWorkflow.blc.a1(1, 0) * coeffs.cte_cte2;
+  result.vb(1, 1) = boundaryLayerWorkflow.blc.a1(1, 0) * coeffs.cte_tte2 +
+                    boundaryLayerWorkflow.blc.a1(1, 1) * coeffs.tte_tte2;
+
+  result.vz[2][0] = boundaryLayerWorkflow.blc.a1(2, 0) * coeffs.cte_cte1;
+  result.vz[2][1] = boundaryLayerWorkflow.blc.a1(2, 0) * coeffs.cte_tte1 +
+                    boundaryLayerWorkflow.blc.a1(2, 1) * coeffs.tte_tte1;
+  result.vb(2, 0) = boundaryLayerWorkflow.blc.a1(2, 0) * coeffs.cte_cte2;
+  result.vb(2, 1) = boundaryLayerWorkflow.blc.a1(2, 0) * coeffs.cte_tte2 +
+                    boundaryLayerWorkflow.blc.a1(2, 1) * coeffs.tte_tte2;
+  return result;
+}
+
+XFoil::StationArraysAdvanceResult XFoil::advanceStationArrays(
+    const VectorXd& u_m2, const VectorXd& d_m2, double u_a2, double d_a2,
+    double due2, double dds2) const {
+  StationArraysAdvanceResult result;
+  result.u_m1 = u_m2;
+  result.d_m1 = d_m2;
+  result.u_a1 = u_a2;
+  result.d_a1 = d_a2;
+  result.due1 = due2;
+  result.dds1 = dds2;
+  return result;
+}
+
 SetblOutputView XFoil::setbl(const SetblInputView& input,
                                     SetblOutputView output) {
   //-------------------------------------------------
@@ -1701,7 +1953,6 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
   //     coefficients are then incorporated into the global newton system.
   //-------------------------------------------------
 
-  std::stringstream ss;
   SidePair<int> jvte{0, 0};
   SidePair<VectorXd> u_m;
   SidePair<VectorXd> d_m;
@@ -1716,20 +1967,17 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
   ute_m.top = VectorXd::Zero(2 * IVX + 1);
   ute_m.bottom = VectorXd::Zero(2 * IVX + 1);
 
-  double msq_clmr = 0.0, mdi;
+  double msq_clmr = 0.0;
   double re_clmr = 0.0;
   SidePair<double> ule_a{0.0, 0.0};
   SidePair<double> u_a{0.0, 0.0};
   SidePair<double> d_a{0.0, 0.0};
   SidePair<double> due{0.0, 0.0};
   SidePair<double> dds{0.0, 0.0};
-  double xsi, cti = 0.0, uei, thi, dsi, dswaki;
-  double d2_m2, d2_u2, dte_mte1, dte_ute1, dte_mte2, dte_ute2;
-  double tte, cte, dte;
+  double cti = 0.0;
   SidePair<double> dule{0.0, 0.0};
   SidePair<double> xi_ule{0.0, 0.0};
-  double ami = 0.0, tte_tte1 = 0.0, tte_tte2 = 0.0, cte_tte1 = 0.0,
-         cte_tte2 = 0.0, cte_cte1 = 0.0, cte_cte2 = 0.0;
+  double ami = 0.0;
 
   cti = 0.0; // techwinder added, otherwise variable is not initialized
 
@@ -1744,22 +1992,17 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
   //*** process each boundary layer side
   for (int is = 1; is <= 2; is++) {
     //---- there is no station "1" at similarity, so zero everything out
-    for (int js = 1; js <= 2; ++js) {
-      for (int jbl = 0;
-           jbl < boundaryLayerWorkflow.lattice.get(js).stationCount - 1; ++jbl) {
-        const int jv = boundaryLayerWorkflow.lattice.get(js).stationToSystem[jbl];
-        u_m.get(1)[jv] = 0.0;
-        d_m.get(1)[jv] = 0.0;
-      }
-    }
-    u_a.get(1) = 0.0;
-    d_a.get(1) = 0.0;
-    due.get(1) = 0.0;
-    dds.get(1) = 0.0;
+    SimilarityStationCoefficients similarity_coeffs =
+        resetSimilarityStationCoefficients(u_m.get(1), d_m.get(1));
+    u_m.get(1) = similarity_coeffs.u_m1;
+    d_m.get(1) = similarity_coeffs.d_m1;
 
-    //---- set forced transition arc length position
-    output.blTransition.xiforc =
-        boundaryLayerWorkflow.xifset(foil, stagnation, is);
+    SideSweepInitResult sweep_init = initializeSideSweepState(is);
+    u_a.get(1) = sweep_init.u_a1;
+    d_a.get(1) = sweep_init.d_a1;
+    due.get(1) = sweep_init.due1;
+    dds.get(1) = sweep_init.dds1;
+    output.blTransition.xiforc = sweep_init.xiforc;
 
     //**** sweep downstream setting up bl equation linearizations
     for (int ibl = 0; ibl < boundaryLayerWorkflow.lattice.get(is).stationCount - 1; ++ibl) {
@@ -1776,122 +2019,45 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
                                                           stationIsWake);
 
       //---- set primary variables for current station
-      xsi = boundaryLayerWorkflow.lattice.get(is).arcLengthCoordinates[ibl];
-      if (ibl < output.itran.get(is))
-        ami = output.skinFrictionCoeff.get(is)[ibl];
-      else
-        cti = output.skinFrictionCoeff.get(is)[ibl];
-      uei = output.edgeVelocity.get(is)[ibl];
-      thi = output.momentumThickness.get(is)[ibl];
-      mdi = output.massFlux.get(is)[ibl];
+      StationPrimaryVars vars = loadStationPrimaryVars(
+          is, ibl, stationIsWake, output, ami, cti);
+      ami = vars.ami;
+      cti = vars.cti;
 
-      dsi = mdi / uei;
-
-      if (stationIsWake) {
-        int iw = ibl - boundaryLayerWorkflow.lattice.get(is).trailingEdgeIndex;
-        dswaki = boundaryLayerWorkflow.wgap[iw - 1];
-      } else
-        dswaki = 0.0;
-
-      //---- set derivatives of dsi (= d2)
-      d2_m2 = 1.0 / uei;
-      d2_u2 = -dsi / uei;
-
-      for (int js = 1; js <= 2; js++) {
-        for (int jbl = 0; jbl < boundaryLayerWorkflow.lattice.get(js).stationCount - 1; ++jbl) {
-          int jv = boundaryLayerWorkflow.lattice.get(js).stationToSystem[jbl];
-          u_m.get(2)[jv] = -boundaryLayerWorkflow.lattice.get(is).panelInfluenceFactor[ibl] * boundaryLayerWorkflow.lattice.get(js).panelInfluenceFactor[jbl] *
-                     aerodynamicCache.dij(boundaryLayerWorkflow.lattice.get(is).stationToPanel[ibl], boundaryLayerWorkflow.lattice.get(js).stationToPanel[jbl]);
-          d_m.get(2)[jv] = d2_u2 * u_m.get(2)[jv];
-        }
-      }
-      d_m.get(2)[iv] = d_m.get(2)[iv] + d2_m2;
-
-      u_a.get(2) = boundaryLayerWorkflow.lattice.get(is).inviscidEdgeVelocityMatrix(1, ibl);
-      d_a.get(2) = d2_u2 * u_a.get(2);
-
-  //---- "forced" changes due to mismatch between edge velocities and
-  // usav=inviscidEdgeVelocityMatrix+dij*output.massFlux
-      due.get(2) = output.edgeVelocity.get(is)[ibl] - usav.get(is)[ibl];
-      dds.get(2) = d2_u2 * due.get(2);
-
-  {
-    blData updatedCurrent =
-        boundaryLayerWorkflow.blprv(*this,
-                                    boundaryLayerWorkflow.state.current(), xsi,
-                                    ami, cti, thi, dsi, dswaki, uei);
-    boundaryLayerWorkflow.state.current() = updatedCurrent;
-  } // cti
-      boundaryLayerWorkflow.blkin(*this, boundaryLayerWorkflow.state);
+      StationUpdateResult station_update = updateStationMatricesAndState(
+          is, ibl, iv, vars, usav, output, boundaryLayerWorkflow.state,
+          u_m.get(2).size());
+      u_m.get(2) = station_update.u_m2;
+      d_m.get(2) = station_update.d_m2;
+      u_a.get(2) = station_update.u_a2;
+      d_a.get(2) = station_update.d_a2;
+      due.get(2) = station_update.due2;
+      dds.get(2) = station_update.dds2;
+      boundaryLayerWorkflow.state = station_update.state;
 
       //---- check for transition and set xt, etc. if found
       if (stationIsTransitionCandidate) {
         boundaryLayerWorkflow.trchek(*this);
         ami = boundaryLayerWorkflow.state.station2.param.amplz;
       }
-
-      if (stationIsTransitionCandidate && flowRegime != FlowRegimeEnum::Transition) {
-        // TRACE("setbl: xtr???  n1=%d n2=%d: \n", ampl1, ampl2);
-
-        ss << "setbl: xtr???  n1=" << boundaryLayerWorkflow.state.station1.param.amplz
-           << " n2=" << boundaryLayerWorkflow.state.station2.param.amplz << ":\n";
-        writeString(ss.str());
-        ss.str("");
+      TransitionLogResult transition_log =
+          buildTransitionLog(stationIsTransitionCandidate, flowRegime);
+      if (!transition_log.message.empty()) {
+        writeString(transition_log.message);
       }
 
       //---- assemble 10x4 linearized system for dskinFrictionCoeff, dth, dds, due, dxi
       //	   at the previous "1" station and the current "2" station
 
-      if (ibl == boundaryLayerWorkflow.lattice.get(is).trailingEdgeIndex + 1) {
-        //----- define quantities at start of output.wake, adding te base thickness to
-        // dstar
-        tte = output.momentumThickness.get(1)[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex] +
-              output.momentumThickness.get(2)[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex];
-        dte = output.displacementThickness.get(1)[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex] +
-              output.displacementThickness.get(2)[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex] + foil.edge.ante;
-        cte = (output.skinFrictionCoeff.get(1)[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex] *
-                   output.momentumThickness.get(1)[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex] +
-               output.skinFrictionCoeff.get(2)[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex] *
-                   output.momentumThickness.get(2)[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex]) /
-               tte;
+      TeWakeUpdateResult te_update = computeTeWakeCoefficients(
+          is, ibl, usav, ute_m, jvte, d_m.get(1), output);
+      if (te_update.isStartOfWake) {
         boundaryLayerWorkflow.tesys(boundaryLayerWorkflow.lattice.top.profiles,
                                     boundaryLayerWorkflow.lattice.bottom.profiles,
                                     foil.edge);
-
-        tte_tte1 = 1.0;
-        tte_tte2 = 1.0;
-        dte_mte1 = 1.0 / output.edgeVelocity.top[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex];
-        dte_ute1 = -output.displacementThickness.get(1)[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex] /
-                    output.edgeVelocity.top[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex];
-        dte_mte2 = 1.0 / output.edgeVelocity.bottom[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex];
-        dte_ute2 = -output.displacementThickness.get(2)[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex] /
-                    output.edgeVelocity.bottom[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex];
-        cte_cte1 = output.momentumThickness.get(1)[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex] / tte;
-        cte_cte2 = output.momentumThickness.get(2)[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex] / tte;
-        cte_tte1 = (output.skinFrictionCoeff.get(1)[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex] - cte) / tte;
-        cte_tte2 = (output.skinFrictionCoeff.get(2)[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex] - cte) / tte;
-
-        //----- re-define d1 sensitivities wrt m since d1 depends on both te ds
-        // values
-      for (int js = 1; js <= 2; js++) {
-        for (int jbl = 0; jbl < boundaryLayerWorkflow.lattice.get(js).stationCount - 1; ++jbl) {
-            int jv = boundaryLayerWorkflow.lattice.get(js).stationToSystem[jbl];
-            d_m.get(1)[jv] = dte_ute1 * ute_m.get(1)[jv] +
-                             dte_ute2 * ute_m.get(2)[jv];
-          }
-        }
-        d_m.get(1)[jvte.get(1)] = d_m.get(1)[jvte.get(1)] + dte_mte1;
-        d_m.get(1)[jvte.get(2)] = d_m.get(1)[jvte.get(2)] + dte_mte2;
-
-        //----- "forced" changes from  output.edgeVelocity --- usav=inviscidEdgeVelocityMatrix+dij*output.massFlux mismatch
-        due.get(1) = 0.0;
-        dds.get(1) =
-            dte_ute1 *
-                (output.edgeVelocity.top[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex] -
-                 usav.top[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex]) +
-            dte_ute2 *
-                (output.edgeVelocity.bottom[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex] -
-                 usav.bottom[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex]);
+        d_m.get(1) = te_update.d_m1;
+        due.get(1) = te_update.due1;
+        dds.get(1) = te_update.dds1;
       } else {
         boundaryLayerWorkflow.blsys(*this);
       }
@@ -1914,22 +2080,15 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
           is, iv, nsys, d_m, u_m, xi_ule, ule_m, ule_a, u_a, d_a, due, dds,
           dule, re_clmr, msq_clmr, output);
 
-      if (ibl == boundaryLayerWorkflow.lattice.get(is).trailingEdgeIndex + 1) {
+      if (te_update.isStartOfWake) {
         //----- redefine coefficients for tte, dte, etc
-        output.vz[0][0] = boundaryLayerWorkflow.blc.a1(0, 0) * cte_cte1;
-        output.vz[0][1] = boundaryLayerWorkflow.blc.a1(0, 0) * cte_tte1 + boundaryLayerWorkflow.blc.a1(0, 1) * tte_tte1;
-        output.vb[iv](0, 0) = boundaryLayerWorkflow.blc.a1(0, 0) * cte_cte2;
-        output.vb[iv](0, 1) = boundaryLayerWorkflow.blc.a1(0, 0) * cte_tte2 + boundaryLayerWorkflow.blc.a1(0, 1) * tte_tte2;
-
-        output.vz[1][0] = boundaryLayerWorkflow.blc.a1(1, 0) * cte_cte1;
-        output.vz[1][1] = boundaryLayerWorkflow.blc.a1(1, 0) * cte_tte1 + boundaryLayerWorkflow.blc.a1(1, 1) * tte_tte1;
-        output.vb[iv](1, 0) = boundaryLayerWorkflow.blc.a1(1, 0) * cte_cte2;
-        output.vb[iv](1, 1) = boundaryLayerWorkflow.blc.a1(1, 0) * cte_tte2 + boundaryLayerWorkflow.blc.a1(1, 1) * tte_tte2;
-
-        output.vz[2][0] = boundaryLayerWorkflow.blc.a1(2, 0) * cte_cte1;
-        output.vz[2][1] = boundaryLayerWorkflow.blc.a1(2, 0) * cte_tte1 + boundaryLayerWorkflow.blc.a1(2, 1) * tte_tte1;
-        output.vb[iv](2, 0) = boundaryLayerWorkflow.blc.a1(2, 0) * cte_cte2;
-        output.vb[iv](2, 1) = boundaryLayerWorkflow.blc.a1(2, 0) * cte_tte2 + boundaryLayerWorkflow.blc.a1(2, 1) * tte_tte2;
+        TeWakeJacobianAdjustments te_jacobian =
+            computeTeWakeJacobianAdjustments(te_update.coeffs);
+        for (int row = 0; row < 3; ++row) {
+          output.vz[row][0] = te_jacobian.vz[row][0];
+          output.vz[row][1] = te_jacobian.vz[row][1];
+        }
+        output.vb[iv] = te_jacobian.vb;
       }
 
       //---- turbulent intervals will follow if currently at transition interval
@@ -1941,7 +2100,6 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
 
       if (ibl == boundaryLayerWorkflow.lattice.get(is).trailingEdgeIndex) {
         //----- set "2" variables at te to output.wake correlations for next station
-
         output.flowRegime = FlowRegimeEnum::Wake;
         boundaryLayerWorkflow.state.station2 =
             boundaryLayerWorkflow.blvar(
@@ -1949,14 +2107,16 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
                 FlowRegimeEnum::Wake);
         boundaryLayerWorkflow.blmid(FlowRegimeEnum::Wake);
       }
-      u_m.get(1) = u_m.get(2);
-      d_m.get(1) = d_m.get(2);
 
-      u_a.get(1) = u_a.get(2);
-      d_a.get(1) = d_a.get(2);
-
-      due.get(1) = due.get(2);
-      dds.get(1) = dds.get(2);
+      StationArraysAdvanceResult advance = advanceStationArrays(
+          u_m.get(2), d_m.get(2), u_a.get(2), d_a.get(2), due.get(2),
+          dds.get(2));
+      u_m.get(1) = advance.u_m1;
+      d_m.get(1) = advance.d_m1;
+      u_a.get(1) = advance.u_a1;
+      d_a.get(1) = advance.d_a1;
+      due.get(1) = advance.due1;
+      dds.get(1) = advance.dds1;
 
       //---- set bl variables for next station
       boundaryLayerWorkflow.state.stepbl();
