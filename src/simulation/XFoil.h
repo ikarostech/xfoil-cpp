@@ -379,12 +379,16 @@ class XFoil {
       const VectorXd& u_m2, const VectorXd& d_m2, double u_a2, double d_a2,
       double due2, double dds2) const;
   void assembleBlJacobianForStation(
-      int is, int iv, int nsys, const SidePair<VectorXd>& d_m,
-      const SidePair<VectorXd>& u_m, const SidePair<double>& xi_ule,
-      const SidePair<VectorXd>& ule_m, const SidePair<double>& ule_a,
-      const SidePair<double>& u_a, const SidePair<double>& d_a,
-      const SidePair<double>& due, const SidePair<double>& dds,
-      const SidePair<double>& dule, double re_clmr, double msq_clmr,
+      int is, int iv, int nsys, const SidePairRef<const VectorXd>& d_m,
+      const SidePairRef<const VectorXd>& u_m,
+      const SidePairRef<const double>& xi_ule,
+      const SidePairRef<const VectorXd>& ule_m,
+      const SidePairRef<const double>& ule_a,
+      const SidePairRef<const double>& u_a,
+      const SidePairRef<const double>& d_a,
+      const SidePairRef<const double>& due,
+      const SidePairRef<const double>& dds,
+      const SidePairRef<const double>& dule, double re_clmr, double msq_clmr,
       SetblOutputView& output);
 
  public:

@@ -1,6 +1,7 @@
 #include "BoundaryLayer.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <iomanip>
 #include <sstream>
@@ -1584,12 +1585,16 @@ XFoil::EdgeVelocitySensitivityResult XFoil::prepareEdgeVelocityAndSensitivities(
 }
 
 void XFoil::assembleBlJacobianForStation(
-    int is, int iv, int nsys, const SidePair<VectorXd>& d_m,
-    const SidePair<VectorXd>& u_m, const SidePair<double>& xi_ule,
-    const SidePair<VectorXd>& ule_m, const SidePair<double>& ule_a,
-    const SidePair<double>& u_a, const SidePair<double>& d_a,
-    const SidePair<double>& due, const SidePair<double>& dds,
-    const SidePair<double>& dule, double re_clmr, double msq_clmr,
+    int is, int iv, int nsys, const SidePairRef<const VectorXd>& d_m,
+    const SidePairRef<const VectorXd>& u_m,
+    const SidePairRef<const double>& xi_ule,
+    const SidePairRef<const VectorXd>& ule_m,
+    const SidePairRef<const double>& ule_a,
+    const SidePairRef<const double>& u_a,
+    const SidePairRef<const double>& d_a,
+    const SidePairRef<const double>& due,
+    const SidePairRef<const double>& dds,
+    const SidePairRef<const double>& dule, double re_clmr, double msq_clmr,
     SetblOutputView& output) {
   for (int jv = 1; jv <= nsys; jv++) {
     output.vm[0][jv][iv] =
@@ -1981,6 +1986,21 @@ XFoil::StationArraysAdvanceResult XFoil::advanceStationArrays(
   result.dds1 = dds2;
   return result;
 }
+namespace {
+struct SetblStation {
+  VectorXd u_m;
+  VectorXd d_m;
+  double u_a = 0.0;
+  double d_a = 0.0;
+  double due = 0.0;
+  double dds = 0.0;
+
+  void resizeSystem(int system_size) {
+    u_m = VectorXd::Zero(system_size);
+    d_m = VectorXd::Zero(system_size);
+  }
+};
+}  // namespace
 
 SetblOutputView XFoil::setbl(const SetblInputView& input,
                                     SetblOutputView output) {
@@ -1991,15 +2011,13 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
   //     coefficients are then incorporated into the global newton system.
   //-------------------------------------------------
 
+  std::array<SetblStation, 2> setblStations{};
+  setblStations[0].resizeSystem(2 * IVX + 1);
+  setblStations[1].resizeSystem(2 * IVX + 1);
+
   SidePair<int> jvte{0, 0};
-  SidePair<VectorXd> u_m;
-  SidePair<VectorXd> d_m;
   SidePair<VectorXd> ule_m;
   SidePair<VectorXd> ute_m;
-  u_m.top = VectorXd::Zero(2 * IVX + 1);
-  u_m.bottom = VectorXd::Zero(2 * IVX + 1);
-  d_m.top = VectorXd::Zero(2 * IVX + 1);
-  d_m.bottom = VectorXd::Zero(2 * IVX + 1);
   ule_m.top = VectorXd::Zero(2 * IVX + 1);
   ule_m.bottom = VectorXd::Zero(2 * IVX + 1);
   ute_m.top = VectorXd::Zero(2 * IVX + 1);
@@ -2008,10 +2026,6 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
   double msq_clmr = 0.0;
   double re_clmr = 0.0;
   SidePair<double> ule_a{0.0, 0.0};
-  SidePair<double> u_a{0.0, 0.0};
-  SidePair<double> d_a{0.0, 0.0};
-  SidePair<double> due{0.0, 0.0};
-  SidePair<double> dds{0.0, 0.0};
   double cti = 0.0;
   SidePair<double> dule{0.0, 0.0};
   SidePair<double> xi_ule{0.0, 0.0};
@@ -2061,15 +2075,16 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
   for (int is = 1; is <= 2; is++) {
     //---- there is no station "1" at similarity, so zero everything out
     SimilarityStationCoefficients similarity_coeffs =
-        resetSimilarityStationCoefficients(u_m.get(1), d_m.get(1));
-    u_m.get(1) = similarity_coeffs.u_m1;
-    d_m.get(1) = similarity_coeffs.d_m1;
+        resetSimilarityStationCoefficients(setblStations[0].u_m,
+                                            setblStations[0].d_m);
+    setblStations[0].u_m = similarity_coeffs.u_m1;
+    setblStations[0].d_m = similarity_coeffs.d_m1;
 
     SideSweepInitResult sweep_init = initializeSideSweepState(is);
-    u_a.get(1) = sweep_init.u_a1;
-    d_a.get(1) = sweep_init.d_a1;
-    due.get(1) = sweep_init.due1;
-    dds.get(1) = sweep_init.dds1;
+    setblStations[0].u_a = sweep_init.u_a1;
+    setblStations[0].d_a = sweep_init.d_a1;
+    setblStations[0].due = sweep_init.due1;
+    setblStations[0].dds = sweep_init.dds1;
     output.blTransition.xiforc = sweep_init.xiforc;
 
     //**** sweep downstream setting up bl equation linearizations
@@ -2094,13 +2109,13 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
 
       StationUpdateResult station_update = updateStationMatricesAndState(
           is, ibl, iv, vars, usav, output, boundaryLayerWorkflow.state,
-          u_m.get(2).size());
-      u_m.get(2) = station_update.u_m2;
-      d_m.get(2) = station_update.d_m2;
-      u_a.get(2) = station_update.u_a2;
-      d_a.get(2) = station_update.d_a2;
-      due.get(2) = station_update.due2;
-      dds.get(2) = station_update.dds2;
+          setblStations[1].u_m.size());
+      setblStations[1].u_m = station_update.u_m2;
+      setblStations[1].d_m = station_update.d_m2;
+      setblStations[1].u_a = station_update.u_a2;
+      setblStations[1].d_a = station_update.d_a2;
+      setblStations[1].due = station_update.due2;
+      setblStations[1].dds = station_update.dds2;
       boundaryLayerWorkflow.state = station_update.state;
 
       //---- check for transition and set xt, etc. if found
@@ -2118,14 +2133,14 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
       //	   at the previous "1" station and the current "2" station
 
       TeWakeUpdateResult te_update = computeTeWakeCoefficients(
-          is, ibl, usav, ute_m, jvte, d_m.get(1), output);
+          is, ibl, usav, ute_m, jvte, setblStations[0].d_m, output);
       if (te_update.isStartOfWake) {
         boundaryLayerWorkflow.tesys(boundaryLayerWorkflow.lattice.top.profiles,
                                     boundaryLayerWorkflow.lattice.bottom.profiles,
                                     foil.edge);
-        d_m.get(1) = te_update.d_m1;
-        due.get(1) = te_update.due1;
-        dds.get(1) = te_update.dds1;
+        setblStations[0].d_m = te_update.d_m1;
+        setblStations[0].due = te_update.due1;
+        setblStations[0].dds = te_update.dds1;
       } else {
         boundaryLayerWorkflow.blsys(*this);
       }
@@ -2145,8 +2160,18 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
 
       //---- stuff bl system coefficients into main jacobian matrix
       assembleBlJacobianForStation(
-          is, iv, nsys, d_m, u_m, xi_ule, ule_m, ule_a, u_a, d_a, due, dds,
-          dule, re_clmr, msq_clmr, output);
+          is, iv, nsys,
+          SidePairRef<const VectorXd>{setblStations[0].d_m, setblStations[1].d_m},
+          SidePairRef<const VectorXd>{setblStations[0].u_m, setblStations[1].u_m},
+          SidePairRef<const double>{xi_ule.get(1), xi_ule.get(2)},
+          SidePairRef<const VectorXd>{ule_m.get(1), ule_m.get(2)},
+          SidePairRef<const double>{ule_a.get(1), ule_a.get(2)},
+          SidePairRef<const double>{setblStations[0].u_a, setblStations[1].u_a},
+          SidePairRef<const double>{setblStations[0].d_a, setblStations[1].d_a},
+          SidePairRef<const double>{setblStations[0].due, setblStations[1].due},
+          SidePairRef<const double>{setblStations[0].dds, setblStations[1].dds},
+          SidePairRef<const double>{dule.get(1), dule.get(2)},
+          re_clmr, msq_clmr, output);
 
       if (te_update.isStartOfWake) {
         //----- redefine coefficients for tte, dte, etc
@@ -2177,14 +2202,15 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
       }
 
       StationArraysAdvanceResult advance = advanceStationArrays(
-          u_m.get(2), d_m.get(2), u_a.get(2), d_a.get(2), due.get(2),
-          dds.get(2));
-      u_m.get(1) = advance.u_m1;
-      d_m.get(1) = advance.d_m1;
-      u_a.get(1) = advance.u_a1;
-      d_a.get(1) = advance.d_a1;
-      due.get(1) = advance.due1;
-      dds.get(1) = advance.dds1;
+          setblStations[1].u_m, setblStations[1].d_m,
+          setblStations[1].u_a, setblStations[1].d_a,
+          setblStations[1].due, setblStations[1].dds);
+      setblStations[0].u_m = advance.u_m1;
+      setblStations[0].d_m = advance.d_m1;
+      setblStations[0].u_a = advance.u_a1;
+      setblStations[0].d_a = advance.d_a1;
+      setblStations[0].due = advance.due1;
+      setblStations[0].dds = advance.dds1;
 
       //---- set bl variables for next station
       boundaryLayerWorkflow.state.stepbl();
