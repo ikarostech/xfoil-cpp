@@ -1994,10 +1994,29 @@ struct SetblStation {
   double d_a = 0.0;
   double due = 0.0;
   double dds = 0.0;
+  double xi_ule = 0.0;
 
   void resizeSystem(int system_size) {
     u_m = VectorXd::Zero(system_size);
     d_m = VectorXd::Zero(system_size);
+  }
+};
+
+struct SetblSideData {
+  SidePair<int> jvte{0, 0};
+  SidePair<VectorXd> usav;
+  SidePair<VectorXd> ule_m;
+  SidePair<VectorXd> ute_m;
+  SidePair<double> ule_a{0.0, 0.0};
+  SidePair<double> dule{0.0, 0.0};
+
+  void resizeSystem(int system_size) {
+    usav.top = VectorXd::Zero(system_size);
+    usav.bottom = VectorXd::Zero(system_size);
+    ule_m.top = VectorXd::Zero(system_size);
+    ule_m.bottom = VectorXd::Zero(system_size);
+    ute_m.top = VectorXd::Zero(system_size);
+    ute_m.bottom = VectorXd::Zero(system_size);
   }
 };
 }  // namespace
@@ -2015,20 +2034,12 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
   setblStations[0].resizeSystem(2 * IVX + 1);
   setblStations[1].resizeSystem(2 * IVX + 1);
 
-  SidePair<int> jvte{0, 0};
-  SidePair<VectorXd> ule_m;
-  SidePair<VectorXd> ute_m;
-  ule_m.top = VectorXd::Zero(2 * IVX + 1);
-  ule_m.bottom = VectorXd::Zero(2 * IVX + 1);
-  ute_m.top = VectorXd::Zero(2 * IVX + 1);
-  ute_m.bottom = VectorXd::Zero(2 * IVX + 1);
+  SetblSideData setblSides;
+  setblSides.resizeSystem(2 * IVX + 1);
 
   double msq_clmr = 0.0;
   double re_clmr = 0.0;
-  SidePair<double> ule_a{0.0, 0.0};
   double cti = 0.0;
-  SidePair<double> dule{0.0, 0.0};
-  SidePair<double> xi_ule{0.0, 0.0};
   double ami = 0.0;
 
   cti = 0.0; // techwinder added, otherwise variable is not initialized
@@ -2055,15 +2066,14 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
   //---- march bl with current ue and ds to establish transition
   boundaryLayerWorkflow.mrchdu(*this);
 
-  SidePair<VectorXd> usav;
   EdgeVelocitySensitivityResult edge_result =
       prepareEdgeVelocityAndSensitivities(input);
-  usav = edge_result.usav;
-  jvte = edge_result.jvte;
-  dule = edge_result.dule;
-  ule_m = edge_result.ule_m;
-  ute_m = edge_result.ute_m;
-  ule_a = edge_result.ule_a;
+  setblSides.usav = edge_result.usav;
+  setblSides.jvte = edge_result.jvte;
+  setblSides.dule = edge_result.dule;
+  setblSides.ule_m = edge_result.ule_m;
+  setblSides.ute_m = edge_result.ute_m;
+  setblSides.ule_a = edge_result.ule_a;
   boundaryLayerWorkflow.lattice.top.profiles.edgeVelocity =
       edge_result.edgeVelocity.top;
   boundaryLayerWorkflow.lattice.bottom.profiles.edgeVelocity =
@@ -2108,7 +2118,8 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
       cti = vars.cti;
 
       StationUpdateResult station_update = updateStationMatricesAndState(
-          is, ibl, iv, vars, usav, output, boundaryLayerWorkflow.state,
+          is, ibl, iv, vars, setblSides.usav, output,
+          boundaryLayerWorkflow.state,
           setblStations[1].u_m.size());
       setblStations[1].u_m = station_update.u_m2;
       setblStations[1].d_m = station_update.d_m2;
@@ -2133,7 +2144,8 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
       //	   at the previous "1" station and the current "2" station
 
       TeWakeUpdateResult te_update = computeTeWakeCoefficients(
-          is, ibl, usav, ute_m, jvte, setblStations[0].d_m, output);
+          is, ibl, setblSides.usav, setblSides.ute_m, setblSides.jvte,
+          setblStations[0].d_m, output);
       if (te_update.isStartOfWake) {
         boundaryLayerWorkflow.tesys(boundaryLayerWorkflow.lattice.top.profiles,
                                     boundaryLayerWorkflow.lattice.bottom.profiles,
@@ -2151,11 +2163,11 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
 
       //---- set xi sensitivities wrt le ue changes
       if (is == 1) {
-        xi_ule.get(1) = stagnation.sst_go;
-        xi_ule.get(2) = -stagnation.sst_gp;
+        setblStations[0].xi_ule = stagnation.sst_go;
+        setblStations[1].xi_ule = -stagnation.sst_gp;
       } else {
-        xi_ule.get(1) = -stagnation.sst_go;
-        xi_ule.get(2) = stagnation.sst_gp;
+        setblStations[0].xi_ule = -stagnation.sst_go;
+        setblStations[1].xi_ule = stagnation.sst_gp;
       }
 
       //---- stuff bl system coefficients into main jacobian matrix
@@ -2163,14 +2175,14 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
           is, iv, nsys,
           SidePairRef<const VectorXd>{setblStations[0].d_m, setblStations[1].d_m},
           SidePairRef<const VectorXd>{setblStations[0].u_m, setblStations[1].u_m},
-          SidePairRef<const double>{xi_ule.get(1), xi_ule.get(2)},
-          SidePairRef<const VectorXd>{ule_m.get(1), ule_m.get(2)},
-          SidePairRef<const double>{ule_a.get(1), ule_a.get(2)},
+          SidePairRef<const double>{setblStations[0].xi_ule, setblStations[1].xi_ule},
+          SidePairRef<const VectorXd>{setblSides.ule_m.get(1), setblSides.ule_m.get(2)},
+          SidePairRef<const double>{setblSides.ule_a.get(1), setblSides.ule_a.get(2)},
           SidePairRef<const double>{setblStations[0].u_a, setblStations[1].u_a},
           SidePairRef<const double>{setblStations[0].d_a, setblStations[1].d_a},
           SidePairRef<const double>{setblStations[0].due, setblStations[1].due},
           SidePairRef<const double>{setblStations[0].dds, setblStations[1].dds},
-          SidePairRef<const double>{dule.get(1), dule.get(2)},
+          SidePairRef<const double>{setblSides.dule.get(1), setblSides.dule.get(2)},
           re_clmr, msq_clmr, output);
 
       if (te_update.isStartOfWake) {
