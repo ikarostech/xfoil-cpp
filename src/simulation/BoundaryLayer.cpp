@@ -132,7 +132,7 @@ void BoundaryLayerWorkflow::initializeFirstIterationState(
   hkref = state.station2.hkz.scalar;
 
   const bool inLaminarWindow =
-      stationIndex < lattice.get(side).transitionIndex && stationIndex >= previousTransition;
+      stationIndex < lattice.get(side).profiles.transitionIndex && stationIndex >= previousTransition;
   if (inLaminarWindow) {
     double uem;
     double dsm;
@@ -219,7 +219,7 @@ bool BoundaryLayerWorkflow::applyMixedModeNewtonStep(
 
   ctx.dmax = std::max(std::fabs(blc.rhs[1] / ctx.thi),
                       std::fabs(blc.rhs[2] / ctx.dsi));
-  if (stationIndex >= lattice.get(side).transitionIndex) {
+  if (stationIndex >= lattice.get(side).profiles.transitionIndex) {
     ctx.dmax = std::max(ctx.dmax,
                         std::fabs(blc.rhs[0] / (10.0 * ctx.cti)));
   }
@@ -229,18 +229,18 @@ bool BoundaryLayerWorkflow::applyMixedModeNewtonStep(
     xfoil.rlx = 0.3 / ctx.dmax;
   }
 
-  if (stationIndex < lattice.get(side).transitionIndex) {
+  if (stationIndex < lattice.get(side).profiles.transitionIndex) {
     ami += xfoil.rlx * blc.rhs[0];
     ctx.ami = ami;
   }
-  if (stationIndex >= lattice.get(side).transitionIndex) {
+  if (stationIndex >= lattice.get(side).profiles.transitionIndex) {
     ctx.cti += xfoil.rlx * blc.rhs[0];
   }
   ctx.thi += xfoil.rlx * blc.rhs[1];
   ctx.dsi += xfoil.rlx * blc.rhs[2];
   ctx.uei += xfoil.rlx * blc.rhs[3];
 
-  if (stationIndex >= lattice.get(side).transitionIndex) {
+  if (stationIndex >= lattice.get(side).profiles.transitionIndex) {
     ctx.cti = std::clamp(ctx.cti, 0.0000001, 0.30);
   }
 
@@ -602,12 +602,12 @@ double BoundaryLayerWorkflow::computeTransitionLocation(double weightingFactor) 
 }
 
 double BoundaryLayerWorkflow::calcHtarg(int ibl, int is, bool wake) {
-  if (ibl < lattice.get(is).transitionIndex) {
+  if (ibl < lattice.get(is).profiles.transitionIndex) {
     return state.station1.hkz.scalar +
            0.03 * (state.station2.param.xz - state.station1.param.xz) / state.station1.param.tz;
   }
 
-  if (ibl == lattice.get(is).transitionIndex) {
+  if (ibl == lattice.get(is).profiles.transitionIndex) {
     return state.station1.hkz.scalar +
            (0.03 * (xt.scalar - state.station1.param.xz) -
             0.15 * (state.station2.param.xz - xt.scalar)) /
@@ -1118,8 +1118,8 @@ bool BoundaryLayerWorkflow::stmove(XFoil& xfoil) {
     if (stagnationIndex > previous) {
       const int delta = stagnationIndex - previous;
 
-      lattice.top.transitionIndex += delta;
-      lattice.bottom.transitionIndex -= delta;
+      lattice.top.profiles.transitionIndex += delta;
+      lattice.bottom.profiles.transitionIndex -= delta;
 
       for (int ibl = lattice.top.stationCount - 2; ibl >= delta; --ibl) {
         copyStationState(1, ibl, ibl - delta);
@@ -1138,8 +1138,8 @@ bool BoundaryLayerWorkflow::stmove(XFoil& xfoil) {
     } else {
       const int delta = previous - stagnationIndex;
 
-      lattice.top.transitionIndex -= delta;
-      lattice.bottom.transitionIndex += delta;
+      lattice.top.profiles.transitionIndex -= delta;
+      lattice.bottom.profiles.transitionIndex += delta;
 
       for (int ibl = lattice.bottom.stationCount - 1; ibl >= delta + 1; --ibl) {
         copyStationState(2, ibl - 1, (ibl - delta) - 1);
@@ -1245,8 +1245,9 @@ SetblInputView SetblInputView::fromXFoil(const XFoil& xfoil) {
       {lattice.top.profiles.momentumThickness, lattice.bottom.profiles.momentumThickness},
       {lattice.top.profiles.displacementThickness, lattice.bottom.profiles.displacementThickness},
       {lattice.top.profiles.massFlux, lattice.bottom.profiles.massFlux},
-      {lattice.top.skinFrictionCoeffHistory, lattice.bottom.skinFrictionCoeffHistory},
-      {lattice.top.transitionIndex, lattice.bottom.transitionIndex}};
+      {lattice.top.profiles.skinFrictionCoeffHistory,
+       lattice.bottom.profiles.skinFrictionCoeffHistory},
+      {lattice.top.profiles.transitionIndex, lattice.bottom.profiles.transitionIndex}};
 }
 
 SetblOutputView SetblOutputView::fromXFoil(XFoil& xfoil) {
@@ -1261,8 +1262,9 @@ SetblOutputView SetblOutputView::fromXFoil(XFoil& xfoil) {
       {lattice.top.profiles.momentumThickness, lattice.bottom.profiles.momentumThickness},
       {lattice.top.profiles.displacementThickness, lattice.bottom.profiles.displacementThickness},
       {lattice.top.profiles.massFlux, lattice.bottom.profiles.massFlux},
-      {lattice.top.skinFrictionCoeffHistory, lattice.bottom.skinFrictionCoeffHistory},
-      {lattice.top.transitionIndex, lattice.bottom.transitionIndex},
+      {lattice.top.profiles.skinFrictionCoeffHistory,
+       lattice.bottom.profiles.skinFrictionCoeffHistory},
+      {lattice.top.profiles.transitionIndex, lattice.bottom.profiles.transitionIndex},
       xfoil.va,
       xfoil.vb,
       xfoil.vdel,
@@ -1319,9 +1321,9 @@ void XFoil::checkTransitionIfNeeded(int side, int ibl, bool skipCheck,
   boundaryLayerWorkflow.trchek(*this);
   ami = boundaryLayerWorkflow.state.station2.param.amplz;
   if (flowRegime == FlowRegimeEnum::Transition) {
-    boundaryLayerWorkflow.lattice.get(side).transitionIndex = ibl;
+    boundaryLayerWorkflow.lattice.get(side).profiles.transitionIndex = ibl;
   } else {
-    boundaryLayerWorkflow.lattice.get(side).transitionIndex = ibl + laminarAdvance;
+    boundaryLayerWorkflow.lattice.get(side).profiles.transitionIndex = ibl + laminarAdvance;
   }
 }
 

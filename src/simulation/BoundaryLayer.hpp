@@ -251,10 +251,10 @@ inline void BoundaryLayerWorkflow::resetStationKinematicsAfterFailure(
 
   ctx.uei = fallbackEdgeVelocity(side, stationIndex, edgeMode);
 
-  if (stationIndex == lattice.get(side).transitionIndex) {
+  if (stationIndex == lattice.get(side).profiles.transitionIndex) {
     ctx.cti = 0.05;
   }
-  if (stationIndex > lattice.get(side).transitionIndex) {
+  if (stationIndex > lattice.get(side).profiles.transitionIndex) {
     ctx.cti = lattice.get(side).profiles.skinFrictionCoeff[stationIndex - 1];
   }
 }

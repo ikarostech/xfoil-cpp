@@ -10,17 +10,17 @@
 using BoundaryContext = BoundaryLayerWorkflow::MixedModeStationContext;
 
 int BoundaryLayerWorkflow::resetSideState(int side, XFoil& xfoil) {
-  const int previousTransition = lattice.get(side).transitionIndex;
+  const int previousTransition = lattice.get(side).profiles.transitionIndex;
   xfoil.blTransition.xiforc = xifset(xfoil.foil, xfoil.stagnation, side);
   xfoil.flowRegime = FlowRegimeEnum::Laminar;
-  lattice.get(side).transitionIndex = lattice.get(side).trailingEdgeIndex;
+  lattice.get(side).profiles.transitionIndex = lattice.get(side).trailingEdgeIndex;
   return previousTransition;
 }
 
 void BoundaryLayerWorkflow::storeStationStateCommon(
     int side, int stationIndex, double ami, double cti, double thi,
     double dsi, double uei, double xsi, double dswaki, XFoil& xfoil) {
-  if (stationIndex < lattice.get(side).transitionIndex) {
+  if (stationIndex < lattice.get(side).profiles.transitionIndex) {
     lattice.get(side).profiles.skinFrictionCoeff[stationIndex] = ami;
   } else {
     lattice.get(side).profiles.skinFrictionCoeff[stationIndex] = cti;
@@ -29,7 +29,7 @@ void BoundaryLayerWorkflow::storeStationStateCommon(
   lattice.get(side).profiles.displacementThickness[stationIndex] = dsi;
   lattice.get(side).profiles.edgeVelocity[stationIndex] = uei;
   lattice.get(side).profiles.massFlux[stationIndex] = dsi * uei;
-  lattice.get(side).skinFrictionCoeffHistory[stationIndex] = state.station2.cqz.scalar;
+  lattice.get(side).profiles.skinFrictionCoeffHistory[stationIndex] = state.station2.cqz.scalar;
 
   {
     blData updatedCurrent =
@@ -264,7 +264,7 @@ BoundaryLayerWorkflow::evaluateSegmentRelaxation(
       lattice.get(side).profiles.displacementThickness.head(len);
 
   Eigen::VectorXd dn1(len);
-  const int transition_index = lattice.get(side).transitionIndex;
+  const int transition_index = lattice.get(side).profiles.transitionIndex;
   for (int idx = 0; idx < len; ++idx) {
     dn1[idx] = (idx < transition_index)
                    ? delta.dskinFrictionCoeff[idx] / 10.0
@@ -308,6 +308,9 @@ BoundaryLayerSideProfiles BoundaryLayerWorkflow::applyBoundaryLayerDelta(
       lattice.get(side).profiles.displacementThickness;
   state.edgeVelocity = lattice.get(side).profiles.edgeVelocity;
   state.massFlux = lattice.get(side).profiles.massFlux;
+  state.skinFrictionCoeffHistory =
+      lattice.get(side).profiles.skinFrictionCoeffHistory;
+  state.transitionIndex = lattice.get(side).profiles.transitionIndex;
 
   const int len = delta.dskinFrictionCoeff.size();
   if (len <= 0) {
@@ -320,7 +323,7 @@ BoundaryLayerSideProfiles BoundaryLayerWorkflow::applyBoundaryLayerDelta(
       relaxation * delta.ddisplacementThickness;
   state.edgeVelocity.head(len) += relaxation * delta.dedgeVelocity;
 
-  const int transition_index = std::max(0, lattice.get(side).transitionIndex);
+  const int transition_index = std::max(0, lattice.get(side).profiles.transitionIndex);
   for (int idx = transition_index; idx < len; ++idx) {
     state.skinFrictionCoeff[idx] =
         std::min(state.skinFrictionCoeff[idx], 0.25);
@@ -355,11 +358,11 @@ void BoundaryLayerWorkflow::syncStationRegimeStates(int side,
                                                     int stationIndex,
                                                     bool wake,
                                                     XFoil& xfoil) {
-  if (stationIndex < lattice.get(side).transitionIndex) {
+  if (stationIndex < lattice.get(side).profiles.transitionIndex) {
     state.station2 = blvar(state.station2, FlowRegimeEnum::Laminar);
     blmid(FlowRegimeEnum::Laminar);
   }
-  if (stationIndex >= lattice.get(side).transitionIndex) {
+  if (stationIndex >= lattice.get(side).profiles.transitionIndex) {
     state.station2 = blvar(state.station2, FlowRegimeEnum::Turbulent);
     blmid(FlowRegimeEnum::Turbulent);
   }
@@ -377,7 +380,7 @@ FlowRegimeEnum BoundaryLayerWorkflow::determineRegimeForStation(
   if (wake) {
     return FlowRegimeEnum::Wake;
   }
-  const int transitionIndex = lattice.get(side).transitionIndex;
+  const int transitionIndex = lattice.get(side).profiles.transitionIndex;
   if (stationIndex == transitionIndex) {
     return FlowRegimeEnum::Transition;
   }
@@ -582,13 +585,13 @@ bool BoundaryLayerWorkflow::performMrchueNewtonLoop(
       ctx.ami = state.station2.param.amplz;
 
       if (xfoil.flowRegime == FlowRegimeEnum::Transition) {
-        lattice.get(side).transitionIndex = stationIndex;
+        lattice.get(side).profiles.transitionIndex = stationIndex;
         if (ctx.cti <= 0.0) {
           ctx.cti = 0.03;
           state.station2.param.sz = ctx.cti;
         }
       } else {
-        lattice.get(side).transitionIndex = stationIndex + 2;
+        lattice.get(side).profiles.transitionIndex = stationIndex + 2;
       }
     }
 
@@ -622,11 +625,11 @@ bool BoundaryLayerWorkflow::performMrchueNewtonLoop(
       dmax_local =
           std::max(std::fabs(blc.rhs[1] / ctx.thi),
                    std::fabs(blc.rhs[2] / ctx.dsi));
-      if (stationIndex < lattice.get(side).transitionIndex) {
+      if (stationIndex < lattice.get(side).profiles.transitionIndex) {
         dmax_local =
             std::max(dmax_local, std::fabs(blc.rhs[0] / 10.0));
       }
-      if (stationIndex >= lattice.get(side).transitionIndex) {
+      if (stationIndex >= lattice.get(side).profiles.transitionIndex) {
         dmax_local =
             std::max(dmax_local, std::fabs(blc.rhs[0] / ctx.cti));
       }
@@ -648,7 +651,7 @@ bool BoundaryLayerWorkflow::performMrchueNewtonLoop(
         const double hktest = hkin_result.hk;
 
         const double hmax =
-            (stationIndex < lattice.get(side).transitionIndex)
+            (stationIndex < lattice.get(side).profiles.transitionIndex)
                 ? kHlmax
                 : kHtmax;
         direct = (hktest < hmax);
@@ -669,7 +672,7 @@ bool BoundaryLayerWorkflow::performMrchueNewtonLoop(
         }
       }
 
-      if (stationIndex >= lattice.get(side).transitionIndex) {
+      if (stationIndex >= lattice.get(side).profiles.transitionIndex) {
         ctx.cti += rlx * blc.rhs[0];
       }
       ctx.thi += rlx * blc.rhs[1];
@@ -687,7 +690,7 @@ bool BoundaryLayerWorkflow::performMrchueNewtonLoop(
       dmax_local =
           std::max(std::fabs(blc.rhs[1] / ctx.thi),
                    std::fabs(blc.rhs[2] / ctx.dsi));
-      if (stationIndex >= lattice.get(side).transitionIndex) {
+      if (stationIndex >= lattice.get(side).profiles.transitionIndex) {
         dmax_local =
             std::max(dmax_local, std::fabs(blc.rhs[0] / ctx.cti));
       }
@@ -697,7 +700,7 @@ bool BoundaryLayerWorkflow::performMrchueNewtonLoop(
         rlx = 0.3 / dmax_local;
       }
 
-      if (stationIndex >= lattice.get(side).transitionIndex) {
+      if (stationIndex >= lattice.get(side).profiles.transitionIndex) {
         ctx.cti += rlx * blc.rhs[0];
       }
       ctx.thi += rlx * blc.rhs[1];
@@ -705,7 +708,7 @@ bool BoundaryLayerWorkflow::performMrchueNewtonLoop(
       ctx.uei += rlx * blc.rhs[3];
     }
 
-    if (stationIndex >= lattice.get(side).transitionIndex) {
+    if (stationIndex >= lattice.get(side).profiles.transitionIndex) {
       ctx.cti = std::clamp(ctx.cti, 0.0000001, 0.30);
     }
 

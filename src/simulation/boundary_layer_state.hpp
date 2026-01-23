@@ -53,11 +53,13 @@ struct BoundaryLayerState {
  *        boundary layer.
  */
 struct BoundaryLayerSideProfiles {
+  Eigen::VectorXd edgeVelocity;
   Eigen::VectorXd skinFrictionCoeff;
   Eigen::VectorXd momentumThickness;
   Eigen::VectorXd displacementThickness;
-  Eigen::VectorXd edgeVelocity;
   Eigen::VectorXd massFlux;
+  Eigen::VectorXd skinFrictionCoeffHistory;
+  int transitionIndex = 0;
 
   void clear() {
     skinFrictionCoeff.resize(0);
@@ -65,6 +67,8 @@ struct BoundaryLayerSideProfiles {
     displacementThickness.resize(0);
     edgeVelocity.resize(0);
     massFlux.resize(0);
+    skinFrictionCoeffHistory.resize(0);
+    transitionIndex = 0;
   }
 
   void resize(int size) {
@@ -73,6 +77,7 @@ struct BoundaryLayerSideProfiles {
     displacementThickness.resize(size);
     edgeVelocity.resize(size);
     massFlux.resize(size);
+    skinFrictionCoeffHistory.resize(size);
   }
 };
 
@@ -90,13 +95,9 @@ struct BoundaryLayerLattice {
   double transitionLocation = 0.0;
 
   BoundaryLayerSideProfiles profiles;
-
-  Eigen::VectorXd skinFrictionCoeffHistory;
   Eigen::VectorXd arcLengthCoordinates;
   Eigen::Matrix2Xd inviscidEdgeVelocityMatrix;
   Eigen::VectorXd panelInfluenceFactor;
-
-  int transitionIndex = 0;
 
   void clear() {
     stationToPanel.resize(0);
@@ -104,10 +105,8 @@ struct BoundaryLayerLattice {
     trailingEdgeIndex = 0;
     stationCount = 0;
     transitionLocation = 0.0;
-    transitionIndex = 0;
 
     profiles.clear();
-    skinFrictionCoeffHistory.resize(0);
     arcLengthCoordinates.resize(0);
     inviscidEdgeVelocityMatrix.resize(0, 0);
     panelInfluenceFactor.resize(0);
@@ -117,7 +116,6 @@ struct BoundaryLayerLattice {
     stationToPanel.resize(size);
     stationToSystem.resize(size);
     profiles.resize(size);
-    skinFrictionCoeffHistory.resize(size);
     arcLengthCoordinates.resize(size);
     inviscidEdgeVelocityMatrix.resize(2, size);
     panelInfluenceFactor.resize(size);

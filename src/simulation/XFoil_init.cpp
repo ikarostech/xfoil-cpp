@@ -97,8 +97,8 @@ void XFoil::resetFlags() {
 void XFoil::resetVariables() {
   boundaryLayerWorkflow.state.station1 = blData{};
   boundaryLayerWorkflow.state.station2 = blData{};
-  boundaryLayerWorkflow.lattice.top.transitionIndex = 0;
-  boundaryLayerWorkflow.lattice.bottom.transitionIndex = 0;
+  boundaryLayerWorkflow.lattice.top.profiles.transitionIndex = 0;
+  boundaryLayerWorkflow.lattice.bottom.profiles.transitionIndex = 0;
   boundaryLayerWorkflow.lattice.top.stationCount = 0;
   boundaryLayerWorkflow.lattice.bottom.stationCount = 0;
   boundaryLayerWorkflow.lattice.top.trailingEdgeIndex = 0;

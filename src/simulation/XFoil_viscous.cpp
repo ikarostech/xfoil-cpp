@@ -304,10 +304,10 @@ XFoil::UpdateResult XFoil::update() const {
   UpdateResult result;
   result.analysis_state = analysis_state_;
   result.aero_coeffs = aero_coeffs_;
-  result.skinFrictionCoeffHistory.top =
-      boundaryLayerWorkflow.lattice.top.skinFrictionCoeffHistory;
-  result.skinFrictionCoeffHistory.bottom =
-      boundaryLayerWorkflow.lattice.bottom.skinFrictionCoeffHistory;
+  result.profiles.top.skinFrictionCoeffHistory =
+      boundaryLayerWorkflow.lattice.top.profiles.skinFrictionCoeffHistory;
+  result.profiles.bottom.skinFrictionCoeffHistory =
+      boundaryLayerWorkflow.lattice.bottom.profiles.skinFrictionCoeffHistory;
 
   result.hstinv =
       gamm1 * MathUtil::pow(analysis_state_.currentMach / analysis_state_.qinf, 2) /
@@ -369,8 +369,8 @@ XFoil::UpdateResult XFoil::update() const {
         result.profiles.bottom.displacementThickness[bottom_index];
     result.profiles.top.edgeVelocity[top_index] =
         result.profiles.bottom.edgeVelocity[bottom_index];
-    result.skinFrictionCoeffHistory.top[top_index] =
-        result.skinFrictionCoeffHistory.bottom[bottom_index];
+    result.profiles.top.skinFrictionCoeffHistory[top_index] =
+        result.profiles.bottom.skinFrictionCoeffHistory[bottom_index];
   }
 
   result.rlx = rlx;
@@ -391,10 +391,6 @@ void XFoil::applyUpdateResult(UpdateResult result) {
       std::move(result.profiles.top);
   boundaryLayerWorkflow.lattice.bottom.profiles =
       std::move(result.profiles.bottom);
-  boundaryLayerWorkflow.lattice.top.skinFrictionCoeffHistory =
-      std::move(result.skinFrictionCoeffHistory.top);
-  boundaryLayerWorkflow.lattice.bottom.skinFrictionCoeffHistory =
-      std::move(result.skinFrictionCoeffHistory.bottom);
 }
 
 
