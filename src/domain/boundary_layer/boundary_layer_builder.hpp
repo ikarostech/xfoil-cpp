@@ -7,13 +7,7 @@
 
 struct SetblInputView {
   const bool& lblini;
-  SidePairRef<const Eigen::VectorXd> edgeVelocity;
-  SidePairRef<const Eigen::VectorXd> skinFrictionCoeff;
-  SidePairRef<const Eigen::VectorXd> momentumThickness;
-  SidePairRef<const Eigen::VectorXd> displacementThickness;
-  SidePairRef<const Eigen::VectorXd> massFlux;
-  SidePairRef<const Eigen::VectorXd> skinFrictionCoeffHistory;
-  SidePairRef<const int> itran;
+  SidePairRef<const BoundaryLayerSideProfiles> profiles;
 
   static SetblInputView fromXFoil(const XFoil& xfoil);
 };
@@ -23,13 +17,7 @@ struct SetblOutputView {
   XFoil::BlCompressibilityParams& blCompressibility;
   XFoil::BlReynoldsParams& blReynolds;
   XFoil::BlTransitionParams& blTransition;
-  SidePairRef<Eigen::VectorXd> edgeVelocity;
-  SidePairRef<Eigen::VectorXd> skinFrictionCoeff;
-  SidePairRef<Eigen::VectorXd> momentumThickness;
-  SidePairRef<Eigen::VectorXd> displacementThickness;
-  SidePairRef<Eigen::VectorXd> massFlux;
-  SidePairRef<Eigen::VectorXd> skinFrictionCoeffHistory;
-  SidePairRef<int> itran;
+  SidePairRef<BoundaryLayerSideProfiles> profiles;
   std::vector<Eigen::Matrix<double, 3, 2>>& va;
   std::vector<Eigen::Matrix<double, 3, 2>>& vb;
   std::vector<Eigen::Matrix<double, 3, 2>>& vdel;

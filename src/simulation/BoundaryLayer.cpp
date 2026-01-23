@@ -1240,14 +1240,7 @@ SetblInputView SetblInputView::fromXFoil(const XFoil& xfoil) {
   const auto& lattice = xfoil.boundaryLayerWorkflow.lattice;
   return SetblInputView{
       xfoil.lblini,
-      {lattice.top.profiles.edgeVelocity, lattice.bottom.profiles.edgeVelocity},
-      {lattice.top.profiles.skinFrictionCoeff, lattice.bottom.profiles.skinFrictionCoeff},
-      {lattice.top.profiles.momentumThickness, lattice.bottom.profiles.momentumThickness},
-      {lattice.top.profiles.displacementThickness, lattice.bottom.profiles.displacementThickness},
-      {lattice.top.profiles.massFlux, lattice.bottom.profiles.massFlux},
-      {lattice.top.profiles.skinFrictionCoeffHistory,
-       lattice.bottom.profiles.skinFrictionCoeffHistory},
-      {lattice.top.profiles.transitionIndex, lattice.bottom.profiles.transitionIndex}};
+      {lattice.top.profiles, lattice.bottom.profiles}};
 }
 
 SetblOutputView SetblOutputView::fromXFoil(XFoil& xfoil) {
@@ -1257,14 +1250,7 @@ SetblOutputView SetblOutputView::fromXFoil(XFoil& xfoil) {
       xfoil.blCompressibility,
       xfoil.blReynolds,
       xfoil.blTransition,
-      {lattice.top.profiles.edgeVelocity, lattice.bottom.profiles.edgeVelocity},
-      {lattice.top.profiles.skinFrictionCoeff, lattice.bottom.profiles.skinFrictionCoeff},
-      {lattice.top.profiles.momentumThickness, lattice.bottom.profiles.momentumThickness},
-      {lattice.top.profiles.displacementThickness, lattice.bottom.profiles.displacementThickness},
-      {lattice.top.profiles.massFlux, lattice.bottom.profiles.massFlux},
-      {lattice.top.profiles.skinFrictionCoeffHistory,
-       lattice.bottom.profiles.skinFrictionCoeffHistory},
-      {lattice.top.profiles.transitionIndex, lattice.bottom.profiles.transitionIndex},
+      {lattice.top.profiles, lattice.bottom.profiles},
       xfoil.va,
       xfoil.vb,
       xfoil.vdel,
@@ -1543,8 +1529,8 @@ XFoil::BlInitializationPlan XFoil::computeBlInitializationPlan(
 XFoil::EdgeVelocitySensitivityResult XFoil::prepareEdgeVelocityAndSensitivities(
     const SetblInputView& input) const {
   EdgeVelocitySensitivityResult result;
-  result.usav.top = input.edgeVelocity.top;
-  result.usav.bottom = input.edgeVelocity.bottom;
+  result.usav.top = input.profiles.top.edgeVelocity;
+  result.usav.bottom = input.profiles.bottom.edgeVelocity;
 
   result.edgeVelocity = boundaryLayerWorkflow.ueset(aerodynamicCache.dij);
   result.outputEdgeVelocity = result.edgeVelocity;
@@ -1552,7 +1538,7 @@ XFoil::EdgeVelocitySensitivityResult XFoil::prepareEdgeVelocityAndSensitivities(
     for (int ibl = 0;
          ibl < boundaryLayerWorkflow.lattice.get(is).stationCount - 1; ++ibl) {
       result.usav.get(is)[ibl] = result.edgeVelocity.get(is)[ibl];
-      result.outputEdgeVelocity.get(is)[ibl] = input.edgeVelocity.get(is)[ibl];
+      result.outputEdgeVelocity.get(is)[ibl] = input.profiles.get(is).edgeVelocity[ibl];
     }
   }
   result.jvte.top = boundaryLayerWorkflow.lattice.top
@@ -1770,19 +1756,19 @@ XFoil::StationPrimaryVars XFoil::loadStationPrimaryVars(
   StationPrimaryVars vars;
   vars.xsi = boundaryLayerWorkflow.lattice.get(is).arcLengthCoordinates[ibl];
 
-  if (ibl < output.itran.get(is))
-    vars.ami = output.skinFrictionCoeff.get(is)[ibl];
+  if (ibl < output.profiles.get(is).transitionIndex)
+    vars.ami = output.profiles.get(is).skinFrictionCoeff[ibl];
   else
-    vars.cti = output.skinFrictionCoeff.get(is)[ibl];
-  if (ibl < output.itran.get(is)) {
+    vars.cti = output.profiles.get(is).skinFrictionCoeff[ibl];
+  if (ibl < output.profiles.get(is).transitionIndex) {
     vars.cti = cti;
   } else {
     vars.ami = ami;
   }
 
-  vars.uei = output.edgeVelocity.get(is)[ibl];
-  vars.thi = output.momentumThickness.get(is)[ibl];
-  vars.mdi = output.massFlux.get(is)[ibl];
+  vars.uei = output.profiles.get(is).edgeVelocity[ibl];
+  vars.thi = output.profiles.get(is).momentumThickness[ibl];
+  vars.mdi = output.profiles.get(is).massFlux[ibl];
   vars.dsi = vars.mdi / vars.uei;
 
   if (stationIsWake) {
@@ -1826,7 +1812,7 @@ XFoil::StationUpdateResult XFoil::updateStationMatricesAndState(
   result.d_a2 = d2_u2 * result.u_a2;
 
   // "forced" changes from mismatch between edge velocities and usav
-  result.due2 = output.edgeVelocity.get(is)[ibl] - usav.get(is)[ibl];
+  result.due2 = output.profiles.get(is).edgeVelocity[ibl] - usav.get(is)[ibl];
   result.dds2 = d2_u2 * result.due2;
 
   result.state = base_state;
@@ -1863,24 +1849,24 @@ XFoil::TeWakeUpdateResult XFoil::computeTeWakeCoefficients(
   result.isStartOfWake = true;
 
   result.coeffs.tte =
-      output.momentumThickness.get(1)[
+      output.profiles.get(1).momentumThickness[
           boundaryLayerWorkflow.lattice.top.trailingEdgeIndex] +
-      output.momentumThickness.get(2)[
+      output.profiles.get(2).momentumThickness[
           boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex];
   result.coeffs.dte =
-      output.displacementThickness.get(1)[
+      output.profiles.get(1).displacementThickness[
           boundaryLayerWorkflow.lattice.top.trailingEdgeIndex] +
-      output.displacementThickness.get(2)[
+      output.profiles.get(2).displacementThickness[
           boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex] +
       foil.edge.ante;
   result.coeffs.cte =
-      (output.skinFrictionCoeff.get(1)[
+      (output.profiles.get(1).skinFrictionCoeff[
            boundaryLayerWorkflow.lattice.top.trailingEdgeIndex] *
-           output.momentumThickness.get(1)[
+           output.profiles.get(1).momentumThickness[
                boundaryLayerWorkflow.lattice.top.trailingEdgeIndex] +
-       output.skinFrictionCoeff.get(2)[
+       output.profiles.get(2).skinFrictionCoeff[
            boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex] *
-           output.momentumThickness.get(2)[
+           output.profiles.get(2).momentumThickness[
                boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex]) /
       result.coeffs.tte;
 
@@ -1888,33 +1874,33 @@ XFoil::TeWakeUpdateResult XFoil::computeTeWakeCoefficients(
   result.coeffs.tte_tte2 = 1.0;
   result.coeffs.dte_mte1 =
       1.0 /
-      output.edgeVelocity.top[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex];
+      output.profiles.top.edgeVelocity[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex];
   result.coeffs.dte_ute1 =
-      -output.displacementThickness.get(1)[
+      -output.profiles.get(1).displacementThickness[
            boundaryLayerWorkflow.lattice.top.trailingEdgeIndex] /
-      output.edgeVelocity.top[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex];
+      output.profiles.top.edgeVelocity[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex];
   result.coeffs.dte_mte2 =
       1.0 /
-      output.edgeVelocity.bottom[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex];
+      output.profiles.bottom.edgeVelocity[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex];
   result.coeffs.dte_ute2 =
-      -output.displacementThickness.get(2)[
+      -output.profiles.get(2).displacementThickness[
            boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex] /
-      output.edgeVelocity.bottom[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex];
+      output.profiles.bottom.edgeVelocity[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex];
   result.coeffs.cte_cte1 =
-      output.momentumThickness.get(1)[
+      output.profiles.get(1).momentumThickness[
           boundaryLayerWorkflow.lattice.top.trailingEdgeIndex] /
       result.coeffs.tte;
   result.coeffs.cte_cte2 =
-      output.momentumThickness.get(2)[
+      output.profiles.get(2).momentumThickness[
           boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex] /
       result.coeffs.tte;
   result.coeffs.cte_tte1 =
-      (output.skinFrictionCoeff.get(1)[
+      (output.profiles.get(1).skinFrictionCoeff[
            boundaryLayerWorkflow.lattice.top.trailingEdgeIndex] -
        result.coeffs.cte) /
       result.coeffs.tte;
   result.coeffs.cte_tte2 =
-      (output.skinFrictionCoeff.get(2)[
+      (output.profiles.get(2).skinFrictionCoeff[
            boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex] -
        result.coeffs.cte) /
       result.coeffs.tte;
@@ -1939,11 +1925,11 @@ XFoil::TeWakeUpdateResult XFoil::computeTeWakeCoefficients(
   result.due1 = 0.0;
   result.dds1 =
       result.coeffs.dte_ute1 *
-          (output.edgeVelocity.top[
+          (output.profiles.top.edgeVelocity[
                boundaryLayerWorkflow.lattice.top.trailingEdgeIndex] -
            usav.top[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex]) +
       result.coeffs.dte_ute2 *
-          (output.edgeVelocity.bottom[
+          (output.profiles.bottom.edgeVelocity[
                boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex] -
            usav.bottom[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex]);
 
@@ -2080,8 +2066,8 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
       edge_result.edgeVelocity.top;
   boundaryLayerWorkflow.lattice.bottom.profiles.edgeVelocity =
       edge_result.edgeVelocity.bottom;
-  output.edgeVelocity.top = edge_result.outputEdgeVelocity.top;
-  output.edgeVelocity.bottom = edge_result.outputEdgeVelocity.bottom;
+  output.profiles.top.edgeVelocity = edge_result.outputEdgeVelocity.top;
+  output.profiles.bottom.edgeVelocity = edge_result.outputEdgeVelocity.bottom;
 
   //*** process each boundary layer side
   for (int is = 1; is <= 2; is++) {
@@ -2106,7 +2092,7 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
 
       const bool stationIsSimilarity = (ibl == 0);
       const bool stationIsWake = (ibl > boundaryLayerWorkflow.lattice.get(is).trailingEdgeIndex);
-      const bool stationIsTransitionCandidate = (ibl == output.itran.get(is));
+      const bool stationIsTransitionCandidate = (ibl == output.profiles.get(is).transitionIndex);
       
       output.flowRegime =
           boundaryLayerWorkflow.determineRegimeForStation(is, ibl,
@@ -2161,7 +2147,7 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
 
       //---- save wall shear and equil. max shear coefficient for plotting
       // output
-      output.skinFrictionCoeffHistory.get(is)[ibl] = boundaryLayerWorkflow.state.station2.cqz.scalar;
+      output.profiles.get(is).skinFrictionCoeffHistory[ibl] = boundaryLayerWorkflow.state.station2.cqz.scalar;
 
       //---- set xi sensitivities wrt le ue changes
       if (is == 1) {
@@ -2201,7 +2187,7 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
       //---- turbulent intervals will follow if currently at transition interval
       if (flowRegime == FlowRegimeEnum::Transition) {
         //------ save transition location
-        output.itran.get(is) = ibl;
+        output.profiles.get(is).transitionIndex = ibl;
         output.flowRegime = FlowRegimeEnum::Turbulent;
       }
 
