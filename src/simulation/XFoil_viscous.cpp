@@ -156,15 +156,6 @@ bool XFoil::qdcalc() {
 }
 
 
-/** -------------------------------------------------------
- *     sets inviscid panel tangential velocity for
- *      current alpha.
- * -------------------------------------------------------- */
-XFoil::Matrix2Xd XFoil::qiset() const {
-  return InviscidSolver::qiset(*this);
-}
-
-
 /** -------------------------------------------------------------
  *     sets panel viscous tangential velocity from viscous ue
  * -------------------------------------------------------------- */
@@ -412,7 +403,8 @@ bool XFoil::viscal() {
              surface_vortex, analysis_state_.alpha, analysis_state_.qinf);
 
   //	---- set velocities on airfoil and wake for initial alpha
-  qinv_matrix = qiset();
+  qinv_matrix =
+      InviscidSolver::qiset(analysis_state_.alpha, aerodynamicCache.qinvu);
   
 
   if (!lipan) {
@@ -534,7 +526,8 @@ bool XFoil::ViscousIter() {
     tklam = params.karmanTsienFactor;
     tkl_msq = params.karmanTsienFactor_msq;
   } else { //	------- set new inviscid speeds qinv_matrix and inviscidEdgeVelocityMatrix for new alpha
-    qinv_matrix = qiset();
+    qinv_matrix =
+        InviscidSolver::qiset(analysis_state_.alpha, aerodynamicCache.qinvu);
     const auto inviscid_edge_velocity = boundaryLayerWorkflow.uicalc(qinv_matrix);
     boundaryLayerWorkflow.lattice.top.inviscidEdgeVelocityMatrix = inviscid_edge_velocity.top;
     boundaryLayerWorkflow.lattice.bottom.inviscidEdgeVelocityMatrix = inviscid_edge_velocity.bottom;

@@ -13,7 +13,8 @@ bool InviscidSolver::specConverge(XFoil &xfoil, SpecTarget target) {
 
   if (target == SpecTarget::AngleOfAttack) {
     xfoil.updateTrailingEdgeState();
-    xfoil.qinv_matrix = xfoil.qiset();
+    xfoil.qinv_matrix =
+        qiset(xfoil.analysis_state_.alpha, xfoil.aerodynamicCache.qinvu);
   } else {
     xfoil.minf_cl = xfoil.getActualMach(xfoil.analysis_state_.clspec,
                                         xfoil.analysis_state_.machType);
@@ -72,7 +73,8 @@ bool InviscidSolver::specConverge(XFoil &xfoil, SpecTarget target) {
     }
 
     //---- set final mach, cl, cp distributions, and hinge moment
-    xfoil.qinv_matrix = xfoil.qiset();
+    xfoil.qinv_matrix =
+        qiset(xfoil.analysis_state_.alpha, xfoil.aerodynamicCache.qinvu);
     xfoil.applyClComputation(xfoil.clcalc(xfoil.cmref));
 
     xfoil.cpi = cpcalc(xfoil.foil.foil_shape.n,
@@ -126,7 +128,8 @@ bool InviscidSolver::specConverge(XFoil &xfoil, SpecTarget target) {
 
   //---- set final surface speed and cp distributions
   xfoil.updateTrailingEdgeState();
-  xfoil.qinv_matrix = xfoil.qiset();
+  xfoil.qinv_matrix =
+      qiset(xfoil.analysis_state_.alpha, xfoil.aerodynamicCache.qinvu);
 
   if (xfoil.analysis_state_.viscous) {
     xfoil.cpv =
@@ -157,20 +160,8 @@ bool InviscidSolver::speccl(XFoil& xfoil) {
   return specConverge(xfoil, SpecTarget::LiftCoefficient);
 }
 
-Matrix2Xd InviscidSolver::qiset(const XFoil& xfoil) {
-  const int point_count = xfoil.foil.foil_shape.n;
-  const int total_nodes_with_wake = point_count + xfoil.foil.wake_shape.n;
-
-  Matrix2Xd result = Matrix2Xd::Zero(2, total_nodes_with_wake);
-
-  for (int i = 0; i < total_nodes_with_wake; i++) {
-    result.col(i) = MathUtil::getRotateMatrix(xfoil.analysis_state_.alpha) *
-                    xfoil.aerodynamicCache.qinvu.col(i);
-  }
-  result = MathUtil::getRotateMatrix(xfoil.analysis_state_.alpha) *
-           xfoil.aerodynamicCache.qinvu;
-
-  return result;
+Matrix2Xd InviscidSolver::qiset(double alpha, const Matrix2Xd& qinvu) {
+  return MathUtil::getRotateMatrix(alpha) * qinvu;
 }
 
 VectorXd InviscidSolver::cpcalc(int n, VectorXd q, double qinf, double minf) {
