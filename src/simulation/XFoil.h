@@ -238,9 +238,6 @@ class XFoil {
 
   using MixedModeStationContext =
       BoundaryLayerWorkflow::MixedModeStationContext;
-  
-  VectorXd cpcalc(int n, VectorXd q, double qinf, double minf);
-
   Matrix2Xd gamqv() const;
   bool ggcalc();
 

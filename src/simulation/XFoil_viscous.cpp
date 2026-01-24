@@ -469,13 +469,13 @@ bool XFoil::viscal() {
     qvis = qvfue(qvis, boundaryLayerWorkflow.lattice);
 
     if (analysis_state_.viscous) {
-      cpv = cpcalc(total_nodes_with_wake, qvis, analysis_state_.qinf,
+      cpv = InviscidSolver::cpcalc(total_nodes_with_wake, qvis, analysis_state_.qinf,
                    analysis_state_.currentMach);
-      cpi = cpcalc(total_nodes_with_wake, qinv_matrix.row(0).transpose(),
+      cpi = InviscidSolver::cpcalc(total_nodes_with_wake, qinv_matrix.row(0).transpose(),
                    analysis_state_.qinf,
                    analysis_state_.currentMach);
     } else {
-      cpi = cpcalc(point_count, qinv_matrix.row(0).transpose(),
+      cpi = InviscidSolver::cpcalc(point_count, qinv_matrix.row(0).transpose(),
                    analysis_state_.qinf,
                    analysis_state_.currentMach);
     }
@@ -496,10 +496,10 @@ bool XFoil::viscal() {
 XFoil::ViscalEndResult XFoil::ViscalEnd() {
   ViscalEndResult result;
   const int total_nodes_with_wake = foil.foil_shape.n + foil.wake_shape.n;
-  result.inviscidCp = cpcalc(total_nodes_with_wake, qinv_matrix.row(0).transpose(),
+  result.inviscidCp = InviscidSolver::cpcalc(total_nodes_with_wake, qinv_matrix.row(0).transpose(),
                              analysis_state_.qinf,
                              analysis_state_.currentMach);
-  result.viscousCp = cpcalc(total_nodes_with_wake, qvis, analysis_state_.qinf,
+  result.viscousCp = InviscidSolver::cpcalc(total_nodes_with_wake, qvis, analysis_state_.qinf,
                              analysis_state_.currentMach);
   return result;
 }

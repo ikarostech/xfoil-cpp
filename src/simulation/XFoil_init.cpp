@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <numbers>
 #include <unordered_map>
+#include "simulation/InviscidSolver.hpp"
 
 // Initialization and global state related member functions split from XFoil.cpp
 
@@ -202,10 +203,10 @@ bool XFoil::setMach() {
   tklam = params.karmanTsienFactor;
   tkl_msq = params.karmanTsienFactor_msq;
   const int point_count = foil.foil_shape.n;
-  cpi = cpcalc(point_count, qinv_matrix.row(0).transpose(),
+  cpi = InviscidSolver::cpcalc(point_count, qinv_matrix.row(0).transpose(),
                analysis_state_.qinf, analysis_state_.currentMach);
   if (analysis_state_.viscous) {
-    cpv = cpcalc(point_count + foil.wake_shape.n, qvis, analysis_state_.qinf, analysis_state_.currentMach);
+    cpv = InviscidSolver::cpcalc(point_count + foil.wake_shape.n, qvis, analysis_state_.qinf, analysis_state_.currentMach);
   }
   const auto cl_result = clcalc(cmref);
   applyClComputation(cl_result);

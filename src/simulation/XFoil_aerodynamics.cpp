@@ -114,13 +114,6 @@ void XFoil::applyClComputation(const ClComputation &result) {
   aero_coeffs_.xcp = result.xcp;
 }
 
-/** ---------------------------------------------
- *      sets compressible cp from speed.
- * ---------------------------------------------- */
-VectorXd XFoil::cpcalc(int n, VectorXd q, double qinf, double minf) {
-  return InviscidSolver::cpcalc(*this, n, q, qinf, minf);
-}
-
 Matrix2Xd XFoil::gamqv() const {
   const int point_count = foil.foil_shape.n;
   Matrix2Xd updated_surface_vortex(2, point_count);

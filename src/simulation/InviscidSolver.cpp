@@ -7,10 +7,7 @@
 using Eigen::Matrix2Xd;
 using Eigen::VectorXd;
 
-namespace {
-enum class SpecTarget { AngleOfAttack, LiftCoefficient };
-
-bool specConverge(XFoil &xfoil, SpecTarget target) {
+bool InviscidSolver::specConverge(XFoil &xfoil, SpecTarget target) {
   xfoil.surface_vortex = MathUtil::getRotateMatrix(xfoil.analysis_state_.alpha) *
                          xfoil.aerodynamicCache.gamu;
 
@@ -78,22 +75,22 @@ bool specConverge(XFoil &xfoil, SpecTarget target) {
     xfoil.qinv_matrix = xfoil.qiset();
     xfoil.applyClComputation(xfoil.clcalc(xfoil.cmref));
 
-    xfoil.cpi = xfoil.cpcalc(xfoil.foil.foil_shape.n,
+    xfoil.cpi = cpcalc(xfoil.foil.foil_shape.n,
                              xfoil.qinv_matrix.row(0).transpose(),
                              xfoil.analysis_state_.qinf,
                              xfoil.analysis_state_.currentMach);
     if (xfoil.analysis_state_.viscous) {
       xfoil.cpv =
-          xfoil.cpcalc(xfoil.foil.foil_shape.n + xfoil.foil.wake_shape.n,
+          cpcalc(xfoil.foil.foil_shape.n + xfoil.foil.wake_shape.n,
                        xfoil.qvis, xfoil.analysis_state_.qinf,
                        xfoil.analysis_state_.currentMach);
       xfoil.cpi =
-          xfoil.cpcalc(xfoil.foil.foil_shape.n + xfoil.foil.wake_shape.n,
+          cpcalc(xfoil.foil.foil_shape.n + xfoil.foil.wake_shape.n,
                        xfoil.qinv_matrix.row(0).transpose(),
                        xfoil.analysis_state_.qinf,
                        xfoil.analysis_state_.currentMach);
     } else
-      xfoil.cpi = xfoil.cpcalc(xfoil.foil.foil_shape.n,
+      xfoil.cpi = cpcalc(xfoil.foil.foil_shape.n,
                                xfoil.qinv_matrix.row(0).transpose(),
                                xfoil.analysis_state_.qinf,
                                xfoil.analysis_state_.currentMach);
@@ -133,17 +130,17 @@ bool specConverge(XFoil &xfoil, SpecTarget target) {
 
   if (xfoil.analysis_state_.viscous) {
     xfoil.cpv =
-        xfoil.cpcalc(xfoil.foil.foil_shape.n + xfoil.foil.wake_shape.n,
+        cpcalc(xfoil.foil.foil_shape.n + xfoil.foil.wake_shape.n,
                      xfoil.qvis, xfoil.analysis_state_.qinf,
                      xfoil.analysis_state_.currentMach);
     xfoil.cpi =
-        xfoil.cpcalc(xfoil.foil.foil_shape.n + xfoil.foil.wake_shape.n,
+        cpcalc(xfoil.foil.foil_shape.n + xfoil.foil.wake_shape.n,
                      xfoil.qinv_matrix.row(0).transpose(),
                      xfoil.analysis_state_.qinf,
                      xfoil.analysis_state_.currentMach);
 
   } else {
-    xfoil.cpi = xfoil.cpcalc(xfoil.foil.foil_shape.n,
+    xfoil.cpi = cpcalc(xfoil.foil.foil_shape.n,
                              xfoil.qinv_matrix.row(0).transpose(),
                              xfoil.analysis_state_.qinf,
                              xfoil.analysis_state_.currentMach);
@@ -151,7 +148,6 @@ bool specConverge(XFoil &xfoil, SpecTarget target) {
 
   return true;
 }
-}  // namespace
 
 bool InviscidSolver::specal(XFoil& xfoil) {
   return specConverge(xfoil, SpecTarget::AngleOfAttack);
@@ -177,8 +173,7 @@ Matrix2Xd InviscidSolver::qiset(const XFoil& xfoil) {
   return result;
 }
 
-VectorXd InviscidSolver::cpcalc(XFoil& xfoil, int n, VectorXd q,
-                                double qinf, double minf) {
+VectorXd InviscidSolver::cpcalc(int n, VectorXd q, double qinf, double minf) {
   VectorXd cp = VectorXd::Zero(n);
   bool denneg = false;
   const double beta = sqrt(1.0 - MathUtil::pow(minf, 2));
@@ -194,8 +189,9 @@ VectorXd InviscidSolver::cpcalc(XFoil& xfoil, int n, VectorXd q,
   }
 
   if (denneg) {
-    xfoil.writeString("CpCalc: local speed too larger\n Compressibility corrections "
-                      "invalid\n");
+    Logger::instance().write(
+        "CpCalc: local speed too larger\n Compressibility corrections "
+        "invalid\n");
   }
 
   return cp;
