@@ -1228,12 +1228,6 @@ void BoundaryLayerWorkflow::copyStationState(int side, int destination, int sour
   lattice.get(side).profiles.edgeVelocity[destination] =
       lattice.get(side).profiles.edgeVelocity[source];
 }
-SetblInputView SetblInputView::fromXFoil(const XFoil& xfoil) {
-  const auto& lattice = xfoil.boundaryLayerWorkflow.lattice;
-  return SetblInputView{
-      xfoil.lblini,
-      {lattice.top.profiles, lattice.bottom.profiles}};
-}
 
 SetblOutputView SetblOutputView::fromXFoil(XFoil& xfoil) {
   auto& lattice = xfoil.boundaryLayerWorkflow.lattice;
@@ -1508,9 +1502,9 @@ XFoil::BlReferenceParams XFoil::computeBlReferenceParams() const {
 }
 
 XFoil::BlInitializationPlan XFoil::computeBlInitializationPlan(
-    const SetblInputView& input) const {
+    bool lblini) const {
   BlInitializationPlan plan;
-  if (!input.lblini) {
+  if (!lblini) {
     //----- initialize bl by marching with ue (fudge at separation)
     plan.needsInitialization = true;
     plan.message = "   Initializing bl ...\n";
@@ -1519,10 +1513,10 @@ XFoil::BlInitializationPlan XFoil::computeBlInitializationPlan(
 }
 
 XFoil::EdgeVelocitySensitivityResult XFoil::prepareEdgeVelocityAndSensitivities(
-    const SetblInputView& input) const {
+    SidePairRef<const BoundaryLayerSideProfiles> profiles) const {
   EdgeVelocitySensitivityResult result;
-  result.usav.top = input.profiles.top.edgeVelocity;
-  result.usav.bottom = input.profiles.bottom.edgeVelocity;
+  result.usav.top = profiles.top.edgeVelocity;
+  result.usav.bottom = profiles.bottom.edgeVelocity;
 
   result.edgeVelocity = boundaryLayerWorkflow.ueset(aerodynamicCache.dij);
   result.outputEdgeVelocity = result.edgeVelocity;
@@ -1530,7 +1524,7 @@ XFoil::EdgeVelocitySensitivityResult XFoil::prepareEdgeVelocityAndSensitivities(
     for (int ibl = 0;
          ibl < boundaryLayerWorkflow.lattice.get(is).stationCount - 1; ++ibl) {
       result.usav.get(is)[ibl] = result.edgeVelocity.get(is)[ibl];
-      result.outputEdgeVelocity.get(is)[ibl] = input.profiles.get(is).edgeVelocity[ibl];
+      result.outputEdgeVelocity.get(is)[ibl] = profiles.get(is).edgeVelocity[ibl];
     }
   }
   result.jvte.top = boundaryLayerWorkflow.lattice.top
@@ -2001,8 +1995,8 @@ struct SetblSideData {
 };
 }  // namespace
 
-SetblOutputView XFoil::setbl(const SetblInputView& input,
-                                    SetblOutputView output) {
+SetblOutputView XFoil::setbl(SidePairRef<const BoundaryLayerSideProfiles> profiles,
+                             SetblOutputView output) {
   //-------------------------------------------------
   //	   sets up the bl newton system coefficients for the current bl
   // variables
@@ -2048,7 +2042,7 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
   output.blReynolds = reference_params.blReynolds;
   output.blTransition.amcrit = reference_params.amcrit;
 
-  BlInitializationPlan bl_init = computeBlInitializationPlan(input);
+  BlInitializationPlan bl_init = computeBlInitializationPlan(output.lblini);
   if (bl_init.needsInitialization) {
     //----- initialize bl by marching with ue (fudge at separation)
     writeString(bl_init.message);
@@ -2060,7 +2054,7 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
   boundaryLayerWorkflow.mrchdu(*this);
 
   EdgeVelocitySensitivityResult edge_result =
-      prepareEdgeVelocityAndSensitivities(input);
+      prepareEdgeVelocityAndSensitivities(profiles);
   setblSides.usav = edge_result.usav;
   setblSides.jvte = edge_result.jvte;
   setblSides.dule = edge_result.dule;

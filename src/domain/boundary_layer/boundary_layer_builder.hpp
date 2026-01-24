@@ -4,13 +4,6 @@
 #include "domain/flow_regime.hpp"
 #include "XFoil.h"
 
-struct SetblInputView {
-  const bool& lblini;
-  SidePairRef<const BoundaryLayerSideProfiles> profiles;
-
-  static SetblInputView fromXFoil(const XFoil& xfoil);
-};
-
 struct SetblOutputView {
   bool& lblini;
   XFoil::BlCompressibilityParams& blCompressibility;

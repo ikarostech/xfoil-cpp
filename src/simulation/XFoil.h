@@ -68,7 +68,6 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 #include "infrastructure/logger.hpp"
 #include "BoundaryLayer.hpp"
 
-struct SetblInputView;
 struct SetblOutputView;
 class InviscidSolver;
 
@@ -270,7 +269,8 @@ class XFoil {
                    const Matrix2Xd& surface_vortex, double alpha,
                    double qinf) const;
 
-  SetblOutputView setbl(const SetblInputView& input, SetblOutputView output);
+  SetblOutputView setbl(SidePairRef<const BoundaryLayerSideProfiles> profiles,
+                        SetblOutputView output);
   struct EdgeVelocitySwapResult {
     SidePair<VectorXd> swappedUsav;
     SidePair<VectorXd> restoredUedg;
@@ -293,8 +293,7 @@ class XFoil {
     bool needsInitialization = false;
     std::string message;
   };
-  BlInitializationPlan computeBlInitializationPlan(
-      const SetblInputView& input) const;
+  BlInitializationPlan computeBlInitializationPlan(bool lblini) const;
   struct EdgeVelocitySensitivityResult {
     SidePair<VectorXd> usav;
     SidePair<VectorXd> edgeVelocity;
@@ -306,7 +305,7 @@ class XFoil {
     SidePair<double> ule_a;
   };
   EdgeVelocitySensitivityResult prepareEdgeVelocityAndSensitivities(
-      const SetblInputView& input) const;
+      SidePairRef<const BoundaryLayerSideProfiles> profiles) const;
   struct StationPrimaryVars {
     double xsi = 0.0;
     double uei = 0.0;
