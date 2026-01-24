@@ -1,9 +1,6 @@
 #include "XFoil.h"
 #include <algorithm>
-#include <array>
-#include <cstring>
 #include <numbers>
-#include <ranges>
 #include <unordered_map>
 
 // Initialization and global state related member functions split from XFoil.cpp
@@ -11,10 +8,10 @@
 namespace {
 struct InitState {
   double amax = 0.0;
-  std::array<double, IQX + 1> qf0{};
-  std::array<double, IQX + 1> qf1{};
-  std::array<double, IQX + 1> qf2{};
-  std::array<double, IQX + 1> qf3{};
+  std::vector<double> qf0;
+  std::vector<double> qf1;
+  std::vector<double> qf2;
+  std::vector<double> qf3;
 };
 
 using InitStateRegistry = std::unordered_map<const XFoil*, InitState>;
@@ -53,35 +50,43 @@ bool XFoil::initialize() {
 }
 
 void XFoil::initializeDataStructures() {
-  const int total_nodes_with_wake = foil.foil_shape.n + foil.wake_shape.n;
+  const int point_count = foil.foil_shape.n;
+  const int wake_nodes = foil.wake_shape.n;
+  const int total_nodes_with_wake = point_count + wake_nodes;
+  const int surface_buffer_nodes = point_count + 6;
+  const int bl_node_count = point_count + wake_nodes;
+  const int bl_system_size = 2 * bl_node_count + 2;
   auto& cache = ensureInitState(this);
 
-  boundaryLayerWorkflow.lattice.top = BoundaryLayerLattice(IVX);
-  boundaryLayerWorkflow.lattice.bottom = BoundaryLayerLattice(IVX);
+  boundaryLayerWorkflow.lattice.top = BoundaryLayerLattice(bl_node_count);
+  boundaryLayerWorkflow.lattice.bottom = BoundaryLayerLattice(bl_node_count);
 
-  aerodynamicCache.bij = MatrixXd::Zero(IQX, IZX);
-  aerodynamicCache.dij = MatrixXd::Zero(IZX, IZX);
+  aerodynamicCache.bij = MatrixXd::Zero(point_count + 1, total_nodes_with_wake);
+  aerodynamicCache.dij =
+      MatrixXd::Zero(total_nodes_with_wake, total_nodes_with_wake);
   cpi = VectorXd::Zero(total_nodes_with_wake);
-  cpv = VectorXd::Zero(foil.foil_shape.n);
-  aerodynamicCache.gamu = Matrix2Xd::Zero(2, foil.foil_shape.n + 1);
-  surface_vortex = Matrix2Xd::Zero(2, foil.foil_shape.n);
-  std::ranges::fill(cache.qf0, 0.0);
-  std::ranges::fill(cache.qf1, 0.0);
-  std::ranges::fill(cache.qf2, 0.0);
-  std::ranges::fill(cache.qf3, 0.0);
+  cpv = VectorXd::Zero(point_count);
+  aerodynamicCache.gamu = Matrix2Xd::Zero(2, point_count + 1);
+  surface_vortex = Matrix2Xd::Zero(2, point_count);
+  cache.qf0.assign(surface_buffer_nodes + 1, 0.0);
+  cache.qf1.assign(surface_buffer_nodes + 1, 0.0);
+  cache.qf2.assign(surface_buffer_nodes + 1, 0.0);
+  cache.qf3.assign(surface_buffer_nodes + 1, 0.0);
   qinv_matrix = Matrix2Xd::Zero(2, total_nodes_with_wake);
   aerodynamicCache.qinvu = Matrix2Xd::Zero(2, total_nodes_with_wake);
   qvis = VectorXd::Zero(total_nodes_with_wake);
 
-  boundaryLayerWorkflow.wgap = VectorXd::Zero(IWX);
-  va.resize(IVX, Matrix3x2d::Zero());
-  vb.resize(IVX, Matrix3x2d::Zero());
-  vdel.resize(IVX, Matrix3x2d::Zero());
-  memset(vm, 0, sizeof(vm));
+  boundaryLayerWorkflow.wgap = VectorXd::Zero(wake_nodes);
+  va.resize(bl_system_size + 1, Matrix3x2d::Zero());
+  vb.resize(bl_system_size + 1, Matrix3x2d::Zero());
+  vdel.resize(bl_system_size + 1, Matrix3x2d::Zero());
+  vm.resize(bl_system_size + 1);
   boundaryLayerWorkflow.blc.clear();
-  memset(vz, 0, sizeof(vz));
+  for (auto& row : vz) {
+    row.fill(0.0);
+  }
 
-  memset(qgamm, 0, sizeof(qgamm));
+  qgamm.assign(point_count, 0.0);
 }
 
 void XFoil::resetFlags() {

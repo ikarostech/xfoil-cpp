@@ -3,7 +3,6 @@
 #include <Eigen/Core>
 
 #include "domain/foil/foil.hpp"
-#include "infrastructure/xfoil_params.h"
 
 using Eigen::Matrix2Xd;
 using Eigen::Vector;
@@ -12,26 +11,25 @@ using Eigen::VectorXd;
 
 class PsiResult {
  public:
-  double psi;
-  double psi_ni;
-  Vector2d qtan;
-  Vector<double, IQX> dzdg;
-  Vector<double, IQX> dqdg;
-  Vector<double, IZX> dzdm;
-  Vector<double, IZX> dqdm;
+  double psi = 0.0;
+  double psi_ni = 0.0;
+  Vector2d qtan = Vector2d::Zero();
+  VectorXd dzdg;
+  VectorXd dqdg;
+  VectorXd dzdm;
+  VectorXd dqdm;
 
-  PsiResult() {
-    psi = 0;
-    psi_ni = 0;
-    qtan = Vector2d::Zero();
-    dzdg = Vector<double, IQX>::Zero();
-    dqdg = Vector<double, IQX>::Zero();
-    dzdm = Vector<double, IZX>::Zero();
-    dqdm = Vector<double, IZX>::Zero();
+  PsiResult() = default;
+  PsiResult(int dzdg_size, int dzdm_size) {
+    dzdg = VectorXd::Zero(dzdg_size);
+    dqdg = VectorXd::Zero(dzdg_size);
+    dzdm = VectorXd::Zero(dzdm_size);
+    dqdm = VectorXd::Zero(dzdm_size);
   }
 
-  static PsiResult sum(PsiResult a, PsiResult b) {
-    PsiResult result;
+  static PsiResult sum(const PsiResult& a, const PsiResult& b) {
+    PsiResult result(static_cast<int>(a.dzdg.size()),
+                     static_cast<int>(a.dzdm.size()));
     result.psi = a.psi + b.psi;
     result.psi_ni = a.psi_ni + b.psi_ni;
     result.qtan = a.qtan + b.qtan;

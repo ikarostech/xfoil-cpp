@@ -39,7 +39,7 @@ PsiResult psilin(const Foil& foil, int iNode, Vector2d point,
   const Matrix2Xd& points = foil_shape.points;
   const VectorXd& spline_length_values = foil_shape.spline_length;
 
-  PsiResult psi_result;
+  PsiResult psi_result(total_nodes, total_nodes);
 
   //---- distance tolerance for determining if two points are the same
   const double seps = (spline_length_values[total_nodes - 1] -
@@ -188,7 +188,7 @@ PsiResult psisig(const Foil& foil, int iNode, int jo, Vector2d point,
   const FoilShape& foil_shape = resolveFoilShape(foil, iNode, total_nodes);
   const Matrix2Xd& points = foil_shape.points;
 
-  PsiResult psi_result;
+  PsiResult psi_result(total_nodes, total_nodes);
   psi_result.psi = 0;
   psi_result.psi_ni = 0;
 
@@ -317,7 +317,7 @@ PsiResult psi_te(const Foil& foil, int iNode, Vector2d normal_vector,
   const Matrix2Xd& points = foil_shape.points;
 
   const Vector2d point = points.col(iNode);
-  PsiResult psi_result;
+  PsiResult psi_result(total_nodes, total_nodes);
 
   const double apan = apanel_values[total_nodes - 1];
 
@@ -431,7 +431,7 @@ PsiResult pswlin(const Foil& foil, int i, Vector2d point,
       resolveFoilShape(foil, i, required_nodes);
   const Matrix2Xd& points = foil_shape.points;
 
-  PsiResult psi_result;
+  PsiResult psi_result(total_nodes, total_nodes + wake_nodes);
   psi_result.psi = 0.0;
   psi_result.psi_ni = 0.0;
   const int io = i;

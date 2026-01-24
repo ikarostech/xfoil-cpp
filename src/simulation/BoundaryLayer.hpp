@@ -157,7 +157,8 @@ class BoundaryLayerWorkflow {
   double fallbackEdgeVelocity(int side, int stationIndex,
                               EdgeVelocityFallbackMode edgeMode) const;
   EdgeVelocityDistribution computeNewUeDistribution(const XFoil& xfoil) const;
-  QtanResult computeQtan(const EdgeVelocityDistribution& distribution) const;
+  QtanResult computeQtan(const EdgeVelocityDistribution& distribution,
+                         int point_count) const;
   ClContributions computeClFromEdgeVelocityDistribution(
       const XFoil& xfoil, const EdgeVelocityDistribution& distribution) const;
   BoundaryLayerDelta buildBoundaryLayerDelta(

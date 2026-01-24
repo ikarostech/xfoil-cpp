@@ -34,6 +34,7 @@ This is a translation to C++ of the original Fortran code of Mark Drela and
 Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 */
 
+#include <array>
 #include <complex>
 #include <iostream>
 #include <string>
@@ -63,7 +64,6 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 #include "simulation/psi.hpp"
 #include "simulation/skin_friction_coefficients.hpp"
 #include "simulation/boundary_layer_state.hpp"
-#include "infrastructure/xfoil_params.h"
 #include "core/boundary_layer_util.hpp"
 #include "infrastructure/logger.hpp"
 #include "BoundaryLayer.hpp"
@@ -100,6 +100,25 @@ class XFoil {
   using BoundaryLayerDelta = BoundaryLayerWorkflow::BoundaryLayerDelta;
   using BoundaryLayerMetrics = BoundaryLayerWorkflow::BoundaryLayerMetrics;
   using StagnationResult = BoundaryLayerWorkflow::StagnationResult;
+  using VzMatrix = std::array<std::array<double, 2>, 3>;
+
+  struct VmMatrix {
+    int size = 0;
+    std::vector<double> data;
+
+    void resize(int new_size) {
+      size = new_size;
+      data.assign(3 * size * size, 0.0);
+    }
+
+    double& at(int k, int i, int j) {
+      return data[(k * size + i) * size + j];
+    }
+
+    const double& at(int k, int i, int j) const {
+      return data[(k * size + i) * size + j];
+    }
+  };
 
  public:
 
@@ -465,7 +484,7 @@ class XFoil {
   VectorXd cpi, cpv;
   double avisc, mvisc, rmsbl;
   bool lvconv, lwake;
-  double qgamm[IBX + 1];
+  std::vector<double> qgamm;
   double rmxbl;
 
   bool lblini, lipan;
@@ -505,7 +524,8 @@ class XFoil {
   BlTransitionParams blTransition;
 
   Matrix3x2dVector va, vb, vdel;
-  double vm[3][IZX][IZX], vz[3][2];
+  VmMatrix vm;
+  VzMatrix vz{};
 
 
   /*

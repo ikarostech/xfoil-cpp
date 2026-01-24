@@ -1,7 +1,6 @@
 #pragma once
 #include "core/side_pair.hpp"
 #include "Eigen/Core"
-#include "infrastructure/xfoil_params.h"
 #include "domain/flow_regime.hpp"
 #include "XFoil.h"
 
@@ -21,8 +20,8 @@ struct SetblOutputView {
   std::vector<Eigen::Matrix<double, 3, 2>>& va;
   std::vector<Eigen::Matrix<double, 3, 2>>& vb;
   std::vector<Eigen::Matrix<double, 3, 2>>& vdel;
-  double (&vm)[3][IZX][IZX];
-  double (&vz)[3][2];
+  XFoil::VmMatrix& vm;
+  XFoil::VzMatrix& vz;
   FlowRegimeEnum& flowRegime;
 
   static SetblOutputView fromXFoil(XFoil& xfoil);

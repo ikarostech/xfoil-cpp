@@ -233,10 +233,11 @@ XFoil::LeTeSensitivities XFoil::computeLeTeSensitivities(int ile1, int ile2,
                                                           int ite1,
                                                           int ite2) const {
   LeTeSensitivities sensitivities;
-  sensitivities.ule1_m = VectorXd::Zero(2 * IVX + 1);
-  sensitivities.ule2_m = VectorXd::Zero(2 * IVX + 1);
-  sensitivities.ute1_m = VectorXd::Zero(2 * IVX + 1);
-  sensitivities.ute2_m = VectorXd::Zero(2 * IVX + 1);
+  const int system_size = nsys + 1;
+  sensitivities.ule1_m = VectorXd::Zero(system_size);
+  sensitivities.ule2_m = VectorXd::Zero(system_size);
+  sensitivities.ute1_m = VectorXd::Zero(system_size);
+  sensitivities.ute2_m = VectorXd::Zero(system_size);
   for (int js = 1; js <= 2; ++js) {
     for (int jbl = 0; jbl < boundaryLayerWorkflow.lattice.get(js).stationCount - 1; ++jbl) {
       const int j = boundaryLayerWorkflow.lattice.get(js).stationToPanel[jbl];
@@ -517,15 +518,9 @@ bool XFoil::ViscousIter() {
       boundaryLayerWorkflow.lattice.top.stationToSystem[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex],
       boundaryLayerWorkflow.lattice.bottom.stationToSystem[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex]
   };
-  auto result = solver.solve(nsys, ivte, VAccel(), va, vb, vm, vdel, vz);
-  auto vmIndex = [](int k, int i, int j) { return (k * IZX + i) * IZX + j; };
-  for (int k = 0; k < 3; ++k) {
-    for (int i = 0; i < IZX; ++i) {
-      for (int j = 0; j < IZX; ++j) {
-        vm[k][i][j] = result.vm[vmIndex(k, i, j)];
-      }
-    }
-  }
+  auto result =
+      solver.solve(nsys, ivte, VAccel(), va, vb, vm.data, vm.size, vdel, vz);
+  vm.data = std::move(result.vm);
   vdel = std::move(result.vdel);
 
   applyUpdateResult(update()); //	------ update bl variables

@@ -28,12 +28,8 @@ bool XFoil::abcopy(Matrix2Xd copyFrom) {
   }
   //--- number of wake points
   int wake_point_count = point_count / 8 + 2;
-  if (wake_point_count > IWX) {
-    writeString(" XYWake: array size (IWX) too small.\n  Last wake point index reduced.");
-    wake_point_count = IWX;
-  }
   foil.wake_shape.n = wake_point_count;
-  Matrix2Xd foil_points = Matrix2Xd::Zero(2, IZX);
+  Matrix2Xd foil_points = Matrix2Xd::Zero(2, point_count + wake_point_count);
   foil_points.leftCols(point_count) = copyFrom.leftCols(point_count);
 
   foil.foil_shape.n = point_count;

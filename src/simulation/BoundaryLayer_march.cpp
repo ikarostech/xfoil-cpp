@@ -94,10 +94,14 @@ void applyRelaxationLimit(const Eigen::VectorXd& dn, double dhi, double dlo,
 BoundaryLayerWorkflow::EdgeVelocityDistribution
 BoundaryLayerWorkflow::computeNewUeDistribution(const XFoil& xfoil) const {
   EdgeVelocityDistribution distribution;
-  distribution.unew.top = Eigen::VectorXd::Zero(IVX);
-  distribution.unew.bottom = Eigen::VectorXd::Zero(IVX);
-  distribution.u_ac.top = Eigen::VectorXd::Zero(IVX);
-  distribution.u_ac.bottom = Eigen::VectorXd::Zero(IVX);
+  distribution.unew.top =
+      Eigen::VectorXd::Zero(lattice.top.stationCount);
+  distribution.unew.bottom =
+      Eigen::VectorXd::Zero(lattice.bottom.stationCount);
+  distribution.u_ac.top =
+      Eigen::VectorXd::Zero(lattice.top.stationCount);
+  distribution.u_ac.bottom =
+      Eigen::VectorXd::Zero(lattice.bottom.stationCount);
 
   for (int side = 1; side <= 2; ++side) {
     for (int station = 0; station < lattice.get(side).stationCount - 1; ++station) {
@@ -133,10 +137,10 @@ BoundaryLayerWorkflow::computeNewUeDistribution(const XFoil& xfoil) const {
 }
 
 BoundaryLayerWorkflow::QtanResult BoundaryLayerWorkflow::computeQtan(
-    const EdgeVelocityDistribution& distribution) const {
+    const EdgeVelocityDistribution& distribution, int point_count) const {
   QtanResult result;
-  result.qnew = Eigen::VectorXd::Zero(IQX);
-  result.q_ac = Eigen::VectorXd::Zero(IQX);
+  result.qnew = Eigen::VectorXd::Zero(point_count);
+  result.q_ac = Eigen::VectorXd::Zero(point_count);
   for (int side = 1; side <= 2; ++side) {
     const Eigen::VectorXd& unew_vec = distribution.unew.get(side);
     const Eigen::VectorXd& uac_vec = distribution.u_ac.get(side);
@@ -156,12 +160,12 @@ BoundaryLayerWorkflow::ClContributions
 BoundaryLayerWorkflow::computeClFromEdgeVelocityDistribution(
     const XFoil& xfoil, const EdgeVelocityDistribution& distribution) const {
   ClContributions contributions;
-  const QtanResult qtan = computeQtan(distribution);
+  const int point_count = xfoil.foil.foil_shape.n;
+  const QtanResult qtan = computeQtan(distribution, point_count);
 
   const Eigen::VectorXd& qnew = qtan.qnew;
   const Eigen::VectorXd& q_ac = qtan.q_ac;
   const auto compressibility = xfoil.buildCompressibilityParams();
-  const int point_count = xfoil.foil.foil_shape.n;
   if (point_count == 0) {
     return contributions;
   }

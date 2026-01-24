@@ -972,10 +972,12 @@ bool BoundaryLayerWorkflow::trchek(XFoil& xfoil) {
 
 bool BoundaryLayerWorkflow::iblpan(int point_count, int wake_point_count,
                                    std::string* error_message) {
-  std::stringstream ss;
   if (error_message) {
     error_message->clear();
   }
+  const int lattice_size = point_count + wake_point_count;
+  lattice.top.resize(lattice_size);
+  lattice.bottom.resize(lattice_size);
 
   for (int i = 0; i <= stagnationIndex; i++) {
     lattice.top.stationToPanel[i] = stagnationIndex - i;
@@ -1007,17 +1009,6 @@ bool BoundaryLayerWorkflow::iblpan(int point_count, int wake_point_count,
     lattice.top.panelInfluenceFactor[lattice.top.trailingEdgeIndex + iw + 1] = 1.0;
   }
 
-  const int iblmax = std::max(lattice.top.trailingEdgeIndex, lattice.bottom.trailingEdgeIndex) +
-                     wake_point_count + 2;
-  if (iblmax > IVX) {
-    ss << "iblpan :  ***  bl array overflow\n";
-    ss << "Increase IVX to at least " << iblmax << "\n";
-    if (error_message) {
-      *error_message = ss.str();
-    }
-    return false;
-  }
-
   return true;
 }
 
@@ -1031,10 +1022,11 @@ bool BoundaryLayerWorkflow::iblsys(XFoil& xfoil) {
   }
 
   xfoil.nsys = iv;
-  if (xfoil.nsys > 2 * IVX) {
-    xfoil.writeString("*** iblsys: bl system array overflow. ***");
-    return false;
-  }
+  const int system_size = xfoil.nsys + 1;
+  xfoil.va.resize(system_size, XFoil::Matrix3x2d::Zero());
+  xfoil.vb.resize(system_size, XFoil::Matrix3x2d::Zero());
+  xfoil.vdel.resize(system_size, XFoil::Matrix3x2d::Zero());
+  xfoil.vm.resize(system_size);
 
   return true;
 }
@@ -1585,7 +1577,7 @@ void XFoil::assembleBlJacobianForStation(
     const SidePairRef<const double>& dule, double re_clmr, double msq_clmr,
     SetblOutputView& output) {
   for (int jv = 1; jv <= nsys; jv++) {
-    output.vm[0][jv][iv] =
+    output.vm.at(0, jv, iv) =
         boundaryLayerWorkflow.blc.a1(0, 2) * d_m.get(1)[jv] +
         boundaryLayerWorkflow.blc.a1(0, 3) * u_m.get(1)[jv] +
         boundaryLayerWorkflow.blc.a2(0, 2) * d_m.get(2)[jv] +
@@ -1631,7 +1623,7 @@ void XFoil::assembleBlJacobianForStation(
            xi_ule.get(2) * dule.get(2));
 
   for (int jv = 1; jv <= nsys; jv++) {
-    output.vm[1][jv][iv] =
+    output.vm.at(1, jv, iv) =
         boundaryLayerWorkflow.blc.a1(1, 2) * d_m.get(1)[jv] +
         boundaryLayerWorkflow.blc.a1(1, 3) * u_m.get(1)[jv] +
         boundaryLayerWorkflow.blc.a2(1, 2) * d_m.get(2)[jv] +
@@ -1677,7 +1669,7 @@ void XFoil::assembleBlJacobianForStation(
 
   // memory overlap problem
   for (int jv = 1; jv <= nsys; jv++) {
-    output.vm[2][jv][iv] =
+    output.vm.at(2, jv, iv) =
         boundaryLayerWorkflow.blc.a1(2, 2) * d_m.get(1)[jv] +
         boundaryLayerWorkflow.blc.a1(2, 3) * u_m.get(1)[jv] +
         boundaryLayerWorkflow.blc.a2(2, 2) * d_m.get(2)[jv] +
@@ -2017,13 +2009,26 @@ SetblOutputView XFoil::setbl(const SetblInputView& input,
   //     and the edge velocities received from setup. the local bl system
   //     coefficients are then incorporated into the global newton system.
   //-------------------------------------------------
+  const int system_size = nsys + 1;
+  if (output.vm.size < system_size) {
+    output.vm.resize(system_size);
+  }
+  if (static_cast<int>(output.va.size()) < system_size) {
+    output.va.resize(system_size, Matrix3x2d::Zero());
+  }
+  if (static_cast<int>(output.vb.size()) < system_size) {
+    output.vb.resize(system_size, Matrix3x2d::Zero());
+  }
+  if (static_cast<int>(output.vdel.size()) < system_size) {
+    output.vdel.resize(system_size, Matrix3x2d::Zero());
+  }
 
   std::array<SetblStation, 2> setblStations{};
-  setblStations[0].resizeSystem(2 * IVX + 1);
-  setblStations[1].resizeSystem(2 * IVX + 1);
+  setblStations[0].resizeSystem(system_size);
+  setblStations[1].resizeSystem(system_size);
 
   SetblSideData setblSides;
-  setblSides.resizeSystem(2 * IVX + 1);
+  setblSides.resizeSystem(system_size);
 
   double msq_clmr = 0.0;
   double re_clmr = 0.0;

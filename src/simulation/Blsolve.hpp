@@ -5,7 +5,6 @@
 
 #include "Eigen/Core"
 #include "core/side_pair.hpp"
-#include "infrastructure/xfoil_params.h"
 
 class Blsolve {
  public:
@@ -21,7 +20,8 @@ class Blsolve {
                double vaccel,
                const Matrix3x2dVector& va,
                const Matrix3x2dVector& vb,
-               const double (&vm)[3][IZX][IZX],
+               const std::vector<double>& vm,
+               int vm_size,
                Matrix3x2dVector vdel,
-               const double (&vz)[3][2]) const;
+               const std::array<std::array<double, 2>, 3>& vz) const;
 };

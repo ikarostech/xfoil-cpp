@@ -3,7 +3,6 @@
 #include <Eigen/Core>
 #include <Eigen/LU>
 
-#include "infrastructure/xfoil_params.h"
 
 /**
  * Holds aerodynamic influence data derived purely from a foil geometry.
