@@ -105,7 +105,7 @@ bool XFoil::qdcalc() {
   for (int i = 0; i < point_count; i++) {
     PsiResult psi_result =
         pswlin(foil, i, foil.foil_shape.points.col(i),
-               foil.foil_shape.normal_vector.col(i), point_count, foil.wake_shape.n, foil.wake_shape.angle_panel);
+               foil.foil_shape.normal_vector.col(i), foil.wake_shape.angle_panel);
     aerodynamicCache.bij.row(i).segment(point_count, foil.wake_shape.n) = -psi_result.dzdm.segment(point_count, foil.wake_shape.n).transpose();
   }
 
@@ -129,16 +129,15 @@ bool XFoil::qdcalc() {
     //------ airfoil contribution at wake panel node
     PsiResult psi_result =
         psilin(foil, i, foil.wake_shape.points.col(i),
-               foil.wake_shape.normal_vector.col(i), true, point_count, aerodynamicCache.gamu,
+               foil.wake_shape.normal_vector.col(i), true, aerodynamicCache.gamu,
                surface_vortex, analysis_state_.alpha, analysis_state_.qinf,
-               foil.wake_shape.angle_panel, foil.edge.sharp, foil.edge.ante, foil.edge.dste,
-               foil.edge.aste);
+               foil.wake_shape.angle_panel);
     cij.row(iw) = psi_result.dqdg.head(point_count).transpose();
     aerodynamicCache.dij.row(i).head(point_count) = psi_result.dqdm.head(point_count).transpose();
     //------ wake contribution
     psi_result =
         pswlin(foil, i, foil.wake_shape.points.col(i),
-               foil.wake_shape.normal_vector.col(i), point_count, foil.wake_shape.n, foil.wake_shape.angle_panel);
+               foil.wake_shape.normal_vector.col(i), foil.wake_shape.angle_panel);
     aerodynamicCache.dij.row(i).segment(point_count, foil.wake_shape.n) = psi_result.dqdm.segment(point_count, foil.wake_shape.n).transpose();
   }
 
@@ -194,10 +193,8 @@ Matrix2Xd XFoil::qwcalc(const Foil& foil, const Matrix2Xd& base_qinvu,
   for (int i = point_count + 1; i < point_count + foil.wake_shape.n; i++) {
     updated_qinvu.col(i) =
         psilin(foil, i, foil.wake_shape.points.col(i),
-               foil.wake_shape.normal_vector.col(i), false, point_count, gamu,
-               surface_vortex, alpha, qinf,
-               foil.wake_shape.angle_panel, foil.edge.sharp,
-               foil.edge.ante, foil.edge.dste, foil.edge.aste)
+               foil.wake_shape.normal_vector.col(i), false, gamu,
+               surface_vortex, alpha, qinf, foil.wake_shape.angle_panel)
             .qtan;
   }
 

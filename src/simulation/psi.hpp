@@ -42,17 +42,13 @@ class PsiResult {
 };
 
 PsiResult psilin(const Foil& foil, int i, Vector2d point,
-                 Vector2d normal_vector, bool siglin, int total_nodes,
+                 Vector2d normal_vector, bool siglin,
                  const Matrix2Xd& gamu, const Matrix2Xd& surface_vortex,
-                 double alfa, double qinf, const VectorXd& apanel, bool sharp,
-                 double ante, double dste, double aste);
+                 double alfa, double qinf, const VectorXd& apanel);
 PsiResult pswlin(const Foil& foil, int i, Vector2d point,
-                 Vector2d normal_vector, int total_nodes, int wake_nodes,
-                 const VectorXd& apanel);
+                 Vector2d normal_vector, const VectorXd& apanel);
 PsiResult psisig(const Foil& foil, int iNode, int jNode, Vector2d point,
-                 Vector2d normal_vector, int total_nodes,
-                 const VectorXd& apanel);
+                 Vector2d normal_vector, const VectorXd& apanel);
 PsiResult psi_te(const Foil& foil, int i, Vector2d normal_vector,
-                 int total_nodes, const VectorXd& apanel, bool sharp,
-                 double ante, double dste, double aste, const Matrix2Xd& gamu,
+                 const VectorXd& apanel, const Matrix2Xd& gamu,
                  const Matrix2Xd& surface_vortex);

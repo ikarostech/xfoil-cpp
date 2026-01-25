@@ -61,18 +61,15 @@ Eigen::Vector2d computePsiGradient(const Foil& foil, int node_index,
                                    Eigen::VectorXd& apanel) {
   Eigen::Vector2d psi;
   psi.x() = psilin(foil, node_index, point, {1.0, 0.0}, false,
-                   foil.foil_shape.n, gamu, surface_vortex, alfa, qinf,
-                   apanel, foil.edge.sharp, foil.edge.ante, foil.edge.dste,
-                   foil.edge.aste)
+                   gamu, surface_vortex, alfa, qinf,
+                   apanel)
                 .psi_ni;
   psi.y() = psilin(foil, node_index, point, {0.0, 1.0}, false,
-                   foil.foil_shape.n, gamu, surface_vortex, alfa, qinf,
-                   apanel, foil.edge.sharp, foil.edge.ante, foil.edge.dste,
-                   foil.edge.aste)
+                   gamu, surface_vortex, alfa, qinf,
+                   apanel)
                 .psi_ni;
   return psi;
 }
-
 }  // namespace
 
 bool Foil::xyWake(int wake_point_count,

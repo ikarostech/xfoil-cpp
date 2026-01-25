@@ -30,19 +30,18 @@ static const FoilShape& resolveFoilShape(const Foil& foil, int node_index,
 }
 
 PsiResult psilin(const Foil& foil, int iNode, Vector2d point,
-                 Vector2d normal_vector, bool siglin, int total_nodes,
+                 Vector2d normal_vector, bool siglin,
                  const Matrix2Xd& gamu_values,
                  const Matrix2Xd& surface_vortex_values, double alfa_value,
-                 double qinf_value, const VectorXd& apanel_values, bool sharp,
-                 double ante, double dste, double aste) {
-  const FoilShape& foil_shape = resolveFoilShape(foil, iNode, total_nodes);
+                 double qinf_value, const VectorXd& apanel_values) {
+  const FoilShape& foil_shape = resolveFoilShape(foil, iNode, foil.foil_shape.n);
   const Matrix2Xd& points = foil_shape.points;
   const VectorXd& spline_length_values = foil_shape.spline_length;
 
-  PsiResult psi_result(total_nodes, total_nodes);
+  PsiResult psi_result(foil.foil_shape.n, foil.foil_shape.n);
 
   //---- distance tolerance for determining if two points are the same
-  const double seps = (spline_length_values[total_nodes - 1] -
+  const double seps = (spline_length_values[foil.foil_shape.n - 1] -
                        spline_length_values[0]) *
                       0.00001;
 
@@ -50,7 +49,7 @@ PsiResult psilin(const Foil& foil, int iNode, Vector2d point,
   psi_result.psi_ni = 0.0;
   psi_result.qtan = Vector2d::Zero();
 
-  const int panels = total_nodes - 1;
+  const int panels = foil_shape.n - 1;
 
   // panel end points
   Matrix2Xd p1 = points.leftCols(panels);
@@ -73,7 +72,7 @@ PsiResult psilin(const Foil& foil, int iNode, Vector2d point,
   ArrayXd rs2 = r2.colwise().squaredNorm();
 
   ArrayXd sgn = ArrayXd::Ones(panels);
-  if (!(iNode >= 0 && iNode < total_nodes)) {
+  if (!(iNode >= 0 && iNode < foil.foil_shape.n)) {
     sgn = (yy >= 0.0).select(ArrayXd::Ones(panels), ArrayXd::Constant(panels, -1.0));
   }
 
@@ -156,16 +155,14 @@ PsiResult psilin(const Foil& foil, int iNode, Vector2d point,
   if (siglin) {
     for (int jo = 0; jo < panels; ++jo) {
       if (!valid_panel(jo)) continue;
-      PsiResult sig_result = psisig(foil, iNode, jo, point, normal_vector,
-                                    total_nodes, apanel_values);
+      PsiResult sig_result = psisig(foil, iNode, jo, point, normal_vector, apanel_values);
       psi_result = PsiResult::sum(psi_result, sig_result);
     }
   }
 
-  if ((points.col(total_nodes - 1) - points.col(0)).norm() > seps) {
+  if ((points.col(foil.foil_shape.n - 1) - points.col(0)).norm() > seps) {
     PsiResult te_result =
-        psi_te(foil, iNode, normal_vector, total_nodes, apanel_values, sharp,
-               ante, dste, aste, gamu_values, surface_vortex_values);
+        psi_te(foil, iNode, normal_vector, apanel_values, gamu_values, surface_vortex_values);
     psi_result = PsiResult::sum(psi_result, te_result);
   }
 
@@ -183,29 +180,28 @@ PsiResult psilin(const Foil& foil, int iNode, Vector2d point,
 }
 
 PsiResult psisig(const Foil& foil, int iNode, int jo, Vector2d point,
-                 Vector2d normal_vector, int total_nodes,
-                 const VectorXd& apanel_values) {
-  const FoilShape& foil_shape = resolveFoilShape(foil, iNode, total_nodes);
+                 Vector2d normal_vector, const VectorXd& apanel_values) {
+  const FoilShape& foil_shape = resolveFoilShape(foil, iNode, foil.foil_shape.n);
   const Matrix2Xd& points = foil_shape.points;
 
-  PsiResult psi_result(total_nodes, total_nodes);
+  PsiResult psi_result(foil.foil_shape.n, foil.foil_shape.n);
   psi_result.psi = 0;
   psi_result.psi_ni = 0;
 
   const int io = iNode;
 
-  const int jp = (jo == total_nodes - 1) ? 0 : jo + 1;
+  const int jp = (jo == foil.foil_shape.n - 1) ? 0 : jo + 1;
   const int jm = std::max(0, jo - 1);
-  const int jq = (jo >= total_nodes - 2) ? jp : jp + 1;
+  const int jq = (jo >= foil.foil_shape.n - 2) ? jp : jp + 1;
 
-  const double dso = (points.col(jo) - points.col(jp)).norm();
+  const double dso = (foil_shape.points.col(jo) - foil_shape.points.col(jp)).norm();
   const double dsio = 1.0 / dso;
 
   const double apan = apanel_values[jo];
 
-  const Vector2d r1 = point - points.col(jo);
-  const Vector2d r2 = point - points.col(jp);
-  const Vector2d s = (points.col(jp) - points.col(jo)).normalized();
+  const Vector2d r1 = point - foil_shape.points.col(jo);
+  const Vector2d r2 = point - foil_shape.points.col(jp);
+  const Vector2d s = (foil_shape.points.col(jp) - foil_shape.points.col(jo)).normalized();
 
   const double x1 = s.dot(r1);
   const double x2 = s.dot(r2);
@@ -214,7 +210,7 @@ PsiResult psisig(const Foil& foil, int iNode, int jo, Vector2d point,
   const double rs1 = r1.dot(r1);
   const double rs2 = r2.dot(r2);
 
-  const double sgn = (io >= 0 && io < total_nodes) ? 1.0 : (yy >= 0.0 ? 1.0 : -1.0);
+  const double sgn = (io >= 0 && io < foil.foil_shape.n) ? 1.0 : (yy >= 0.0 ? 1.0 : -1.0);
 
   double logr12 = 0.0;
   double t1 = 0.0;
@@ -258,7 +254,7 @@ PsiResult psisig(const Foil& foil, int iNode, int jo, Vector2d point,
   double pdyy =
       ((x1 + x0) * psyy + 2.0 * (x0 - x1 + yy * (t1 - momentumThickness0))) * dxinv;
 
-  const double dsm = (points.col(jp) - points.col(jm)).norm();
+  const double dsm = (foil_shape.points.col(jp) - foil_shape.points.col(jm)).norm();
   const double dsim = 1.0 / dsm;
 
   const double cfac = 1.0 / (4 * std::numbers::pi);
@@ -309,21 +305,19 @@ PsiResult psisig(const Foil& foil, int iNode, int jo, Vector2d point,
 }
 
 PsiResult psi_te(const Foil& foil, int iNode, Vector2d normal_vector,
-                 int total_nodes, const VectorXd& apanel_values, bool sharp,
-                 double ante, double dste, double aste,
+                 const VectorXd& apanel_values,
                  const Matrix2Xd& gamu_values,
                  const Matrix2Xd& surface_vortex_values) {
-  const FoilShape& foil_shape = resolveFoilShape(foil, iNode, total_nodes);
+  const FoilShape& foil_shape = resolveFoilShape(foil, iNode, foil.foil_shape.n);
   const Matrix2Xd& points = foil_shape.points;
 
   const Vector2d point = points.col(iNode);
-  PsiResult psi_result(total_nodes, total_nodes);
+  PsiResult psi_result(foil.foil_shape.n, foil.foil_shape.n);
+  const double apan = apanel_values[foil.foil_shape.n - 1];
 
-  const double apan = apanel_values[total_nodes - 1];
-
-  const Vector2d r1 = point - points.col(total_nodes - 1);
+  const Vector2d r1 = point - points.col(foil.foil_shape.n - 1);
   const Vector2d r2 = point - points.col(0);
-  const Vector2d s = (points.col(0) - points.col(total_nodes - 1)).normalized();
+  const Vector2d s = (points.col(0) - points.col(foil.foil_shape.n - 1)).normalized();
 
   const double xz1 = s.dot(r1);
   const double xz2 = s.dot(r2);
@@ -333,11 +327,11 @@ PsiResult psi_te(const Foil& foil, int iNode, Vector2d normal_vector,
   const double rs2 = r2.dot(r2);
 
   const double sgn =
-      (iNode >= 0 && iNode < total_nodes) ? 1.0 : (yy >= 0.0 ? 1.0 : -1.0);
+      (iNode >= 0 && iNode < foil.foil_shape.n) ? 1.0 : (yy >= 0.0 ? 1.0 : -1.0);
 
   double logr12 = 0.0;
   double tz1 = 0.0;
-  if (iNode != total_nodes - 1 && rs1 > 0.0) {
+  if (iNode != foil.foil_shape.n - 1 && rs1 > 0.0) {
     logr12 = log(rs1);
     tz1 = atan2(sgn * xz1, sgn * yy) + (0.5 - 0.5 * sgn) * std::numbers::pi;
   }
@@ -351,9 +345,9 @@ PsiResult psi_te(const Foil& foil, int iNode, Vector2d normal_vector,
 
   double scs = 1.0;
   double sds = 0.0;
-  if (!sharp) {
-    scs = ante / dste;
-    sds = aste / dste;
+  if (!foil.edge.sharp) {
+    scs = foil.edge.ante / foil.edge.dste;
+    sds = foil.edge.aste / foil.edge.dste;
   }
 
   const double x1i = s.dot(normal_vector);
@@ -376,24 +370,24 @@ PsiResult psi_te(const Foil& foil, int iNode, Vector2d normal_vector,
   const double pgamni = pgamx1 * x1i + pgamx2 * x2i + pgamyy * yyi;
 
   const Vector2d sigte_vector =
-      0.5 * scs * (gamu_values.col(0) - gamu_values.col(total_nodes - 1));
+      0.5 * scs * (gamu_values.col(0) - gamu_values.col(foil.foil_shape.n - 1));
   const Vector2d gamte_vector =
-      -0.5 * sds * (gamu_values.col(0) - gamu_values.col(total_nodes - 1));
+      -0.5 * sds * (gamu_values.col(0) - gamu_values.col(foil.foil_shape.n - 1));
 
   const double sigte =
       0.5 * scs * (surface_vortex_values(0, 0) -
-                   surface_vortex_values(0, total_nodes - 1));
+                   surface_vortex_values(0, foil.foil_shape.n - 1));
   const double gamte =
       -0.5 * sds * (surface_vortex_values(0, 0) -
-                    surface_vortex_values(0, total_nodes - 1));
+                    surface_vortex_values(0, foil.foil_shape.n - 1));
 
   const double cfac = 1.0 / (2 * std::numbers::pi);
   psi_result.psi += cfac * (psig * sigte + pgam * gamte);
 
-  psi_result.dzdg[total_nodes - 1] += -cfac * psig * scs * 0.5;
+  psi_result.dzdg[foil.foil_shape.n - 1] += -cfac * psig * scs * 0.5;
   psi_result.dzdg[0] += cfac * psig * scs * 0.5;
 
-  psi_result.dzdg[total_nodes - 1] += cfac * pgam * sds * 0.5;
+  psi_result.dzdg[foil.foil_shape.n - 1] += cfac * pgam * sds * 0.5;
   psi_result.dzdg[0] += -cfac * pgam * sds * 0.5;
 
   psi_result.psi_ni += cfac * (psigni * sigte + pgamni * gamte);
@@ -401,7 +395,7 @@ PsiResult psi_te(const Foil& foil, int iNode, Vector2d normal_vector,
   psi_result.qtan +=
       cfac * (psigni * sigte_vector + pgamni * gamte_vector);
 
-  psi_result.dqdg[total_nodes - 1] +=
+  psi_result.dqdg[foil.foil_shape.n - 1] +=
       -cfac * (psigni * 0.5 * scs - pgamni * 0.5 * sds);
   psi_result.dqdg[0] +=
       cfac * (psigni * 0.5 * scs - pgamni * 0.5 * sds);
@@ -424,22 +418,21 @@ PsiResult psi_te(const Foil& foil, int iNode, Vector2d normal_vector,
  *			wake:	  n+1 < i < n+nw
  * ----------------------------------------------------------------------- */
 PsiResult pswlin(const Foil& foil, int i, Vector2d point,
-                 Vector2d normal_vector, int total_nodes, int wake_nodes,
-                 const VectorXd& apanel_values) {
-  const int required_nodes = total_nodes + wake_nodes;
+                 Vector2d normal_vector, const VectorXd& apanel_values) {
+  const int required_nodes = foil.foil_shape.n + foil.wake_shape.n;
   const FoilShape& foil_shape =
       resolveFoilShape(foil, i, required_nodes);
   const Matrix2Xd& points = foil_shape.points;
 
-  PsiResult psi_result(total_nodes, total_nodes + wake_nodes);
+  PsiResult psi_result(foil.foil_shape.n, foil.foil_shape.n + foil.wake_shape.n);
   psi_result.psi = 0.0;
   psi_result.psi_ni = 0.0;
   const int io = i;
-  const int segs = wake_nodes - 1;
+  const int segs = foil.wake_shape.n - 1;
   if (segs <= 0)
     return psi_result;
-  Matrix2Xd p0 = points.block(0, total_nodes, 2, segs);
-  Matrix2Xd p1 = points.block(0, total_nodes + 1, 2, segs);
+  Matrix2Xd p0 = points.block(0, foil.foil_shape.n, 2, segs);
+  Matrix2Xd p1 = points.block(0, foil.foil_shape.n + 1, 2, segs);
   Matrix2Xd svec = p1 - p0;
   VectorXd dso = svec.colwise().norm();
   ArrayXd dsio = dso.array().inverse();
@@ -453,10 +446,10 @@ PsiResult pswlin(const Foil& foil, int i, Vector2d point,
   ArrayXd rs1 = r1.colwise().squaredNorm().array();
   ArrayXd rs2 = r2.colwise().squaredNorm().array();
   ArrayXd sgn = ArrayXd::Ones(segs);
-  if (!(io >= total_nodes + 1 && io <= total_nodes + wake_nodes)) {
+  if (!(io >= foil.foil_shape.n + 1 && io <= foil.foil_shape.n + foil.wake_shape.n)) {
     sgn = (yy >= 0).select(ArrayXd::Ones(segs), ArrayXd::Constant(segs, -1.0));
   }
-  VectorXi jo = VectorXi::LinSpaced(segs, total_nodes, total_nodes + segs - 1);
+  VectorXi jo = VectorXi::LinSpaced(segs, foil.foil_shape.n, foil.foil_shape.n + segs - 1);
   VectorXi jp = jo.array() + 1;
   VectorXi jm = jo.array() - 1;
   VectorXi jq = jp.array() + 1;
@@ -488,7 +481,7 @@ PsiResult pswlin(const Foil& foil, int i, Vector2d point,
     return std::atan2(a, b);
   }) - (0.5 - 0.5 * sgn) * std::numbers::pi;
   ArrayXd dxinv = (x1 - x0).inverse();
-  ArrayXd apan = apanel_values.segment(total_nodes, segs).array();
+  ArrayXd apan = apanel_values.segment(foil.foil_shape.n, segs).array();
   ArrayXd psum = x0 * (t0 - apan) - x1 * (t1 - apan) + 0.5 * yy * (g1 - g0);
   ArrayXd pdif = ((x1 + x0) * psum + rs1 * (t1 - apan) - rs0 * (t0 - apan) +
                   (x0 - x1) * yy) *
@@ -501,12 +494,12 @@ PsiResult pswlin(const Foil& foil, int i, Vector2d point,
   ArrayXd pdx0 =
       ((x1 + x0) * psx0 + psum - 2.0 * x0 * (t0 - apan) + pdif) * dxinv;
   ArrayXd pdyy = ((x1 + x0) * psyy + 2.0 * (x0 - x1 + yy * (t1 - t0))) * dxinv;
-  Matrix2Xd jm_p = points.block(0, total_nodes - 1, 2, segs);
+  Matrix2Xd jm_p = points.block(0, foil.foil_shape.n - 1, 2, segs);
   jm_p.col(0) = p0.col(0);
   Matrix2Xd jp_p = p1;
   VectorXd dsm = (jp_p - jm_p).colwise().norm();
   ArrayXd dsim = dsm.array().inverse();
-  Matrix2Xd jq_p = points.block(0, total_nodes + 2, 2, segs);
+  Matrix2Xd jq_p = points.block(0, foil.foil_shape.n + 2, 2, segs);
   jq_p.col(segs - 1) = p1.col(segs - 1);
   VectorXd dsp = (jq_p - p0).colwise().norm();
   ArrayXd dsip = dsp.array().inverse();
@@ -541,8 +534,8 @@ PsiResult pswlin(const Foil& foil, int i, Vector2d point,
   ArrayXd dqdm_jo2 = cfac * (-psni2 * (dsip + dsio) - pdni2 * (dsip - dsio));
   ArrayXd dqdm_jp2 = cfac * (psni2 / dso.array() - pdni2 / dso.array());
   ArrayXd dqdm_jq = cfac * (psni2 * dsip + pdni2 * dsip);
-  VectorXd dzdm_acc = VectorXd::Zero(total_nodes + wake_nodes);
-  VectorXd dqdm_acc = VectorXd::Zero(total_nodes + wake_nodes);
+  VectorXd dzdm_acc = VectorXd::Zero(foil.foil_shape.n + foil.wake_shape.n);
+  VectorXd dqdm_acc = VectorXd::Zero(foil.foil_shape.n + foil.wake_shape.n);
   dzdm_acc(jm) += dzdm_jm.matrix();
   MatrixXd dzdm_jo_mat(segs, 2);
   dzdm_jo_mat.col(0) = dzdm_jo1.matrix();
@@ -563,7 +556,7 @@ PsiResult pswlin(const Foil& foil, int i, Vector2d point,
   dqdm_jp_mat.col(1) = dqdm_jp2.matrix();
   dqdm_acc(jp) += dqdm_jp_mat.rowwise().sum();
   dqdm_acc(jq) += dqdm_jq.matrix();
-  psi_result.dzdm.segment(0, total_nodes + wake_nodes) = dzdm_acc;
-  psi_result.dqdm.segment(0, total_nodes + wake_nodes) = dqdm_acc;
+  psi_result.dzdm.segment(0, foil.foil_shape.n + foil.wake_shape.n) = dzdm_acc;
+  psi_result.dqdm.segment(0, foil.foil_shape.n + foil.wake_shape.n) = dqdm_acc;
   return psi_result;
 }

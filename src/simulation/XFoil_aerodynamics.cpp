@@ -148,11 +148,9 @@ bool XFoil::ggcalc() {
     //------ calculate psi and dpsi/dgamma array for current node
     PsiResult psi_result =
         psilin(foil, i, foil.foil_shape.points.col(i),
-               foil.foil_shape.normal_vector.col(i), true, point_count, cache.gamu,
+               foil.foil_shape.normal_vector.col(i), true, cache.gamu,
                surface_vortex, analysis_state_.alpha, analysis_state_.qinf,
-               foil.foil_shape.angle_panel, foil.edge.sharp, foil.edge.ante, foil.edge.dste,
-               foil.edge.aste);
-
+               foil.foil_shape.angle_panel);
     const Vector2d res = analysis_state_.qinf *
                          Vector2d{foil.foil_shape.points.col(i).y(),
                                   -foil.foil_shape.points.col(i).x()};
@@ -206,10 +204,9 @@ bool XFoil::ggcalc() {
 
     //----- set velocity component along bisector line
     PsiResult psi_result =
-        psilin(foil, -1, bis, normal_bis, true, point_count, cache.gamu,
+        psilin(foil, -1, bis, normal_bis, true, cache.gamu,
                surface_vortex, analysis_state_.alpha, analysis_state_.qinf,
-               foil.foil_shape.angle_panel, foil.edge.sharp, foil.edge.ante, foil.edge.dste,
-               foil.edge.aste);
+               foil.foil_shape.angle_panel);
 
     //----- dres/dgamma
     dpsi_dgam.row(point_count - 1).head(point_count) = psi_result.dzdg.head(point_count);
