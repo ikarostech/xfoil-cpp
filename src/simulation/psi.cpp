@@ -13,36 +13,18 @@ using Eigen::Vector2d;
 using Eigen::VectorXd;
 using Eigen::VectorXi;
 
-static const FoilShape& resolveFoilShape(const Foil& foil, int node_index,
-                                         int required_nodes) {
-  const bool has_wake = foil.wake_shape.n > 0;
-  const bool node_in_wake =
-      has_wake && node_index >= 0 && node_index >= foil.foil_shape.n &&
-      node_index < foil.wake_shape.n;
-  const bool requires_wake_nodes =
-      has_wake && required_nodes > foil.foil_shape.n;
-
-  if (node_in_wake || requires_wake_nodes) {
-    return foil.wake_shape;
-  }
-
-  return foil.foil_shape;
-}
-
 PsiResult psilin(const Foil& foil, int iNode, Vector2d point,
                  Vector2d normal_vector, bool siglin,
                  const Matrix2Xd& gamu_values,
                  const Matrix2Xd& surface_vortex_values, double alfa_value,
                  double qinf_value, const VectorXd& apanel_values) {
-  const FoilShape& foil_shape = resolveFoilShape(foil, iNode, foil.foil_shape.n);
-  const Matrix2Xd& points = foil_shape.points;
-  const VectorXd& spline_length_values = foil_shape.spline_length;
+  const FoilShape& foil_shape = foil.getFoilShape(iNode);
 
   PsiResult psi_result(foil.foil_shape.n, foil.foil_shape.n);
 
   //---- distance tolerance for determining if two points are the same
-  const double seps = (spline_length_values[foil.foil_shape.n - 1] -
-                       spline_length_values[0]) *
+  const double seps = (foil_shape.spline_length[foil.foil_shape.n - 1] -
+                       foil_shape.spline_length[0]) *
                       0.00001;
 
   psi_result.psi = 0.0;
@@ -52,10 +34,10 @@ PsiResult psilin(const Foil& foil, int iNode, Vector2d point,
   const int panels = foil_shape.n - 1;
 
   // panel end points
-  Matrix2Xd p1 = points.leftCols(panels);
+  Matrix2Xd p1 = foil_shape.points.leftCols(panels);
   Matrix2Xd p2(2, panels);
-  p2.leftCols(panels - 1) = points.middleCols(1, panels - 1);
-  p2.col(panels - 1) = points.col(panels);
+  p2.leftCols(panels - 1) = foil_shape.points.middleCols(1, panels - 1);
+  p2.col(panels - 1) = foil_shape.points.col(panels);
 
   Matrix2Xd edge = p2 - p1;
   ArrayXd dso = edge.colwise().norm();
@@ -160,7 +142,7 @@ PsiResult psilin(const Foil& foil, int iNode, Vector2d point,
     }
   }
 
-  if ((points.col(foil.foil_shape.n - 1) - points.col(0)).norm() > seps) {
+  if ((foil_shape.points.col(foil.foil_shape.n - 1) - foil_shape.points.col(0)).norm() > seps) {
     PsiResult te_result =
         psi_te(foil, iNode, normal_vector, apanel_values, gamu_values, surface_vortex_values);
     psi_result = PsiResult::sum(psi_result, te_result);
@@ -181,8 +163,7 @@ PsiResult psilin(const Foil& foil, int iNode, Vector2d point,
 
 PsiResult psisig(const Foil& foil, int iNode, int jo, Vector2d point,
                  Vector2d normal_vector, const VectorXd& apanel_values) {
-  const FoilShape& foil_shape = resolveFoilShape(foil, iNode, foil.foil_shape.n);
-  const Matrix2Xd& points = foil_shape.points;
+  const FoilShape& foil_shape = foil.getFoilShape(iNode);
 
   PsiResult psi_result(foil.foil_shape.n, foil.foil_shape.n);
   psi_result.psi = 0;
@@ -287,7 +268,7 @@ PsiResult psisig(const Foil& foil, int iNode, int jo, Vector2d point,
   pdyy =
       ((x0 + x2) * psyy + 2.0 * (x2 - x0 + yy * (momentumThickness0 - t2))) * dxinv;
 
-  const double dsp = (points.col(jq) - points.col(jo)).norm();
+  const double dsp = (foil_shape.points.col(jq) - foil_shape.points.col(jo)).norm();
   const double dsip = 1.0 / dsp;
 
   psi_result.dzdm[jo] += cfac * (-psum * (dsip + dsio) - pdif * (dsip - dsio));
@@ -308,16 +289,15 @@ PsiResult psi_te(const Foil& foil, int iNode, Vector2d normal_vector,
                  const VectorXd& apanel_values,
                  const Matrix2Xd& gamu_values,
                  const Matrix2Xd& surface_vortex_values) {
-  const FoilShape& foil_shape = resolveFoilShape(foil, iNode, foil.foil_shape.n);
-  const Matrix2Xd& points = foil_shape.points;
+  const FoilShape& foil_shape = foil.getFoilShape(iNode);
 
-  const Vector2d point = points.col(iNode);
+  const Vector2d point = foil_shape.points.col(iNode);
   PsiResult psi_result(foil.foil_shape.n, foil.foil_shape.n);
   const double apan = apanel_values[foil.foil_shape.n - 1];
 
-  const Vector2d r1 = point - points.col(foil.foil_shape.n - 1);
-  const Vector2d r2 = point - points.col(0);
-  const Vector2d s = (points.col(0) - points.col(foil.foil_shape.n - 1)).normalized();
+  const Vector2d r1 = point - foil_shape.points.col(foil.foil_shape.n - 1);
+  const Vector2d r2 = point - foil_shape.points.col(0);
+  const Vector2d s = (foil_shape.points.col(0) - foil_shape.points.col(foil.foil_shape.n - 1)).normalized();
 
   const double xz1 = s.dot(r1);
   const double xz2 = s.dot(r2);
@@ -420,10 +400,7 @@ PsiResult psi_te(const Foil& foil, int iNode, Vector2d normal_vector,
 PsiResult pswlin(const Foil& foil, int i, Vector2d point,
                  Vector2d normal_vector, const VectorXd& apanel_values) {
   const int required_nodes = foil.foil_shape.n + foil.wake_shape.n;
-  const FoilShape& foil_shape =
-      resolveFoilShape(foil, i, required_nodes);
-  const Matrix2Xd& points = foil_shape.points;
-
+  const FoilShape& foil_shape = foil.getFoilShape(i);
   PsiResult psi_result(foil.foil_shape.n, foil.foil_shape.n + foil.wake_shape.n);
   psi_result.psi = 0.0;
   psi_result.psi_ni = 0.0;
@@ -431,8 +408,8 @@ PsiResult pswlin(const Foil& foil, int i, Vector2d point,
   const int segs = foil.wake_shape.n - 1;
   if (segs <= 0)
     return psi_result;
-  Matrix2Xd p0 = points.block(0, foil.foil_shape.n, 2, segs);
-  Matrix2Xd p1 = points.block(0, foil.foil_shape.n + 1, 2, segs);
+  Matrix2Xd p0 = foil_shape.points.block(0, foil.foil_shape.n, 2, segs);
+  Matrix2Xd p1 = foil_shape.points.block(0, foil.foil_shape.n + 1, 2, segs);
   Matrix2Xd svec = p1 - p0;
   VectorXd dso = svec.colwise().norm();
   ArrayXd dsio = dso.array().inverse();
@@ -494,12 +471,12 @@ PsiResult pswlin(const Foil& foil, int i, Vector2d point,
   ArrayXd pdx0 =
       ((x1 + x0) * psx0 + psum - 2.0 * x0 * (t0 - apan) + pdif) * dxinv;
   ArrayXd pdyy = ((x1 + x0) * psyy + 2.0 * (x0 - x1 + yy * (t1 - t0))) * dxinv;
-  Matrix2Xd jm_p = points.block(0, foil.foil_shape.n - 1, 2, segs);
+  Matrix2Xd jm_p = foil_shape.points.block(0, foil.foil_shape.n - 1, 2, segs);
   jm_p.col(0) = p0.col(0);
   Matrix2Xd jp_p = p1;
   VectorXd dsm = (jp_p - jm_p).colwise().norm();
   ArrayXd dsim = dsm.array().inverse();
-  Matrix2Xd jq_p = points.block(0, foil.foil_shape.n + 2, 2, segs);
+  Matrix2Xd jq_p = foil_shape.points.block(0, foil.foil_shape.n + 2, 2, segs);
   jq_p.col(segs - 1) = p1.col(segs - 1);
   VectorXd dsp = (jq_p - p0).colwise().norm();
   ArrayXd dsip = dsp.array().inverse();

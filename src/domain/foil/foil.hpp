@@ -23,6 +23,15 @@ class Foil {
       wake_shape.n = foil_shape.n / 8 + 2;
       edge = Edge(foil_shape);
     }
+    const FoilShape& getFoilShape(int index) const {
+      if (0 <= index && index < foil_shape.n) {
+        return foil_shape;
+      } else if (foil_shape.n <= index &&
+                 index < foil_shape.n + wake_shape.n) {
+        return wake_shape;
+      }
+      throw std::out_of_range("Foil::getFoilShape: index out of range");
+    }
 
     bool xyWake(int wake_point_count,
                 const Eigen::Matrix2Xd &gamu,
