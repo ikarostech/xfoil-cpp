@@ -499,10 +499,11 @@ bool XFoil::ViscousIter() {
   std::stringstream ss;
   double eps1 = 0.0001;
 
-  setbl(SidePairRef<const BoundaryLayerSideProfiles>{
-            boundaryLayerWorkflow.lattice.top.profiles,
-            boundaryLayerWorkflow.lattice.bottom.profiles},
-        SetblOutputView::fromXFoil(*this)); //	------ fill newton system for bl variables
+  auto setbl_output = setbl(SidePairRef<const BoundaryLayerSideProfiles>{
+      boundaryLayerWorkflow.lattice.top.profiles,
+      boundaryLayerWorkflow.lattice.bottom.profiles});
+  setbl_output.applyToXFoil(
+      *this); //	------ fill newton system for bl variables
 
   Blsolve solver;
   SidePair<int> ivte{

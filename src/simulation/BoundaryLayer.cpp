@@ -1229,21 +1229,37 @@ void BoundaryLayerWorkflow::copyStationState(int side, int destination, int sour
       lattice.get(side).profiles.edgeVelocity[source];
 }
 
-SetblOutputView SetblOutputView::fromXFoil(XFoil& xfoil) {
-  auto& lattice = xfoil.boundaryLayerWorkflow.lattice;
-  return SetblOutputView{
-      xfoil.lblini,
-      xfoil.blCompressibility,
-      xfoil.blReynolds,
-      xfoil.blTransition,
-      {lattice.top.profiles, lattice.bottom.profiles},
-      xfoil.va,
-      xfoil.vb,
-      xfoil.vdel,
-      xfoil.vm,
-      xfoil.vz,
-      xfoil.flowRegime,
-      };
+SetblOutputView SetblOutputView::fromXFoil(const XFoil& xfoil) {
+  SetblOutputView output;
+  output.lblini = xfoil.lblini;
+  output.blCompressibility = xfoil.blCompressibility;
+  output.blReynolds = xfoil.blReynolds;
+  output.blTransition = xfoil.blTransition;
+  output.profiles.top = xfoil.boundaryLayerWorkflow.lattice.top.profiles;
+  output.profiles.bottom = xfoil.boundaryLayerWorkflow.lattice.bottom.profiles;
+  output.va = xfoil.va;
+  output.vb = xfoil.vb;
+  output.vdel = xfoil.vdel;
+  output.vm = xfoil.vm;
+  output.vz = xfoil.vz;
+  output.flowRegime = xfoil.flowRegime;
+  return output;
+}
+
+void SetblOutputView::applyToXFoil(XFoil& xfoil) {
+  xfoil.lblini = lblini;
+  xfoil.blCompressibility = blCompressibility;
+  xfoil.blReynolds = blReynolds;
+  xfoil.blTransition = blTransition;
+  xfoil.boundaryLayerWorkflow.lattice.top.profiles = std::move(profiles.top);
+  xfoil.boundaryLayerWorkflow.lattice.bottom.profiles =
+      std::move(profiles.bottom);
+  xfoil.va = std::move(va);
+  xfoil.vb = std::move(vb);
+  xfoil.vdel = std::move(vdel);
+  xfoil.vm = std::move(vm);
+  xfoil.vz = vz;
+  xfoil.flowRegime = flowRegime;
 }
 
 XFoil::MixedModeStationContext XFoil::prepareMixedModeStation(int side, int ibl,
@@ -1995,14 +2011,15 @@ struct SetblSideData {
 };
 }  // namespace
 
-SetblOutputView XFoil::setbl(SidePairRef<const BoundaryLayerSideProfiles> profiles,
-                             SetblOutputView output) {
+SetblOutputView XFoil::setbl(
+    SidePairRef<const BoundaryLayerSideProfiles> profiles) {
   //-------------------------------------------------
   //	   sets up the bl newton system coefficients for the current bl
   // variables
   //     and the edge velocities received from setup. the local bl system
   //     coefficients are then incorporated into the global newton system.
   //-------------------------------------------------
+  SetblOutputView output{};
   const int system_size = nsys + 1;
   if (output.vm.size < system_size) {
     output.vm.resize(system_size);
@@ -2041,17 +2058,25 @@ SetblOutputView XFoil::setbl(SidePairRef<const BoundaryLayerSideProfiles> profil
   output.blCompressibility = reference_params.blCompressibility;
   output.blReynolds = reference_params.blReynolds;
   output.blTransition.amcrit = reference_params.amcrit;
+  blCompressibility = output.blCompressibility;
+  blReynolds = output.blReynolds;
+  blTransition.amcrit = output.blTransition.amcrit;
 
-  BlInitializationPlan bl_init = computeBlInitializationPlan(output.lblini);
+  const bool current_lblini = lblini;
+  output.lblini = current_lblini;
+  BlInitializationPlan bl_init = computeBlInitializationPlan(current_lblini);
   if (bl_init.needsInitialization) {
     //----- initialize bl by marching with ue (fudge at separation)
     writeString(bl_init.message);
     boundaryLayerWorkflow.mrchue(*this);
     output.lblini = true;
+    lblini = true;
   }
 
   //---- march bl with current ue and ds to establish transition
   boundaryLayerWorkflow.mrchdu(*this);
+  output.profiles.top = boundaryLayerWorkflow.lattice.top.profiles;
+  output.profiles.bottom = boundaryLayerWorkflow.lattice.bottom.profiles;
 
   EdgeVelocitySensitivityResult edge_result =
       prepareEdgeVelocityAndSensitivities(profiles);
@@ -2067,6 +2092,10 @@ SetblOutputView XFoil::setbl(SidePairRef<const BoundaryLayerSideProfiles> profil
       edge_result.edgeVelocity.bottom;
   output.profiles.top.edgeVelocity = edge_result.outputEdgeVelocity.top;
   output.profiles.bottom.edgeVelocity = edge_result.outputEdgeVelocity.bottom;
+  boundaryLayerWorkflow.lattice.top.profiles.edgeVelocity =
+      output.profiles.top.edgeVelocity;
+  boundaryLayerWorkflow.lattice.bottom.profiles.edgeVelocity =
+      output.profiles.bottom.edgeVelocity;
 
   //*** process each boundary layer side
   for (int is = 1; is <= 2; is++) {
@@ -2083,6 +2112,7 @@ SetblOutputView XFoil::setbl(SidePairRef<const BoundaryLayerSideProfiles> profil
     setblStations[0].due = sweep_init.due1;
     setblStations[0].dds = sweep_init.dds1;
     output.blTransition.xiforc = sweep_init.xiforc;
+    blTransition.xiforc = output.blTransition.xiforc;
 
     //**** sweep downstream setting up bl equation linearizations
     for (int ibl = 0; ibl < boundaryLayerWorkflow.lattice.get(is).stationCount - 1; ++ibl) {
@@ -2097,6 +2127,7 @@ SetblOutputView XFoil::setbl(SidePairRef<const BoundaryLayerSideProfiles> profil
           boundaryLayerWorkflow.determineRegimeForStation(is, ibl,
                                                           stationIsSimilarity,
                                                           stationIsWake);
+      flowRegime = output.flowRegime;
 
       //---- set primary variables for current station
       StationPrimaryVars vars = loadStationPrimaryVars(
@@ -2122,7 +2153,7 @@ SetblOutputView XFoil::setbl(SidePairRef<const BoundaryLayerSideProfiles> profil
         ami = boundaryLayerWorkflow.state.station2.param.amplz;
       }
       TransitionLogResult transition_log =
-          buildTransitionLog(stationIsTransitionCandidate, flowRegime);
+          buildTransitionLog(stationIsTransitionCandidate, output.flowRegime);
       if (!transition_log.message.empty()) {
         writeString(transition_log.message);
       }
@@ -2184,15 +2215,18 @@ SetblOutputView XFoil::setbl(SidePairRef<const BoundaryLayerSideProfiles> profil
       }
 
       //---- turbulent intervals will follow if currently at transition interval
-      if (flowRegime == FlowRegimeEnum::Transition) {
+      if (output.flowRegime == FlowRegimeEnum::Transition) {
         //------ save transition location
         output.profiles.get(is).transitionIndex = ibl;
+        boundaryLayerWorkflow.lattice.get(is).profiles.transitionIndex = ibl;
         output.flowRegime = FlowRegimeEnum::Turbulent;
+        flowRegime = output.flowRegime;
       }
 
       if (ibl == boundaryLayerWorkflow.lattice.get(is).trailingEdgeIndex) {
         //----- set "2" variables at te to output.wake correlations for next station
         output.flowRegime = FlowRegimeEnum::Wake;
+        flowRegime = output.flowRegime;
         boundaryLayerWorkflow.state.station2 =
             boundaryLayerWorkflow.blvar(
                 boundaryLayerWorkflow.state.station2,
