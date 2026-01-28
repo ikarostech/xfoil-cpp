@@ -2,13 +2,16 @@
 #include "core/side_pair.hpp"
 #include "Eigen/Core"
 #include "domain/flow_regime.hpp"
+#include "domain/boundary_layer/bl_compressibility_params.hpp"
+#include "domain/boundary_layer/bl_reynolds_params.hpp"
+#include "domain/boundary_layer/bl_transition_params.hpp"
 #include "XFoil.h"
 
 struct SetblOutputView {
   bool lblini = false;
-  XFoil::BlCompressibilityParams blCompressibility{};
-  XFoil::BlReynoldsParams blReynolds{};
-  XFoil::BlTransitionParams blTransition{};
+  BlCompressibilityParams blCompressibility{};
+  BlReynoldsParams blReynolds{};
+  BlTransitionParams blTransition{};
   SidePair<BoundaryLayerSideProfiles> profiles{};
   std::vector<Eigen::Matrix<double, 3, 2>> va;
   std::vector<Eigen::Matrix<double, 3, 2>> vb;

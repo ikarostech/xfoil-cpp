@@ -59,6 +59,9 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 #include "domain/boundary_layer.hpp"
 #include "domain/boundary_layer/boundary_layer_diff_solver.hpp"
 #include "domain/boundary_layer/boundary_layer_variables_solver.hpp"
+#include "domain/boundary_layer/bl_compressibility_params.hpp"
+#include "domain/boundary_layer/bl_reynolds_params.hpp"
+#include "domain/boundary_layer/bl_transition_params.hpp"
 #include "domain/foil/foil.hpp"
 #include "domain/foil/FoilAerodynamicCache.hpp"
 #include "simulation/psi.hpp"
@@ -433,25 +436,6 @@ class XFoil {
  double sign(double a, double b);
 
  public:
-  struct BlCompressibilityParams {
-    double gm1bl;
-    double qinfbl;
-    double tkbl;
-    double tkbl_ms;
-    double rstbl;
-    double rstbl_ms;
-    double hstinv;
-    double hstinv_ms;
-  };
-  struct BlReynoldsParams {
-    double reybl;
-    double reybl_re;
-    double reybl_ms;
-  };
-  struct BlTransitionParams {
-    double xiforc;
-    double amcrit;
-  };
   struct BlReferenceParams {
     double currentMach = 0.0;
     double currentRe = 0.0;
@@ -510,9 +494,6 @@ class XFoil {
   // Grouped BL Newton system coefficients (Proposal A)
   bool trforc, trfree;
 
-  BlCompressibilityParams blCompressibility;
-  BlReynoldsParams blReynolds;
-  BlTransitionParams blTransition;
 
   Matrix3x2dVector va, vb, vdel;
   VmMatrix vm;

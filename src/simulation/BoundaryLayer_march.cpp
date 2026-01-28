@@ -11,7 +11,7 @@ using BoundaryContext = BoundaryLayerWorkflow::MixedModeStationContext;
 
 int BoundaryLayerWorkflow::resetSideState(int side, XFoil& xfoil) {
   const int previousTransition = lattice.get(side).profiles.transitionIndex;
-  xfoil.blTransition.xiforc = xifset(xfoil.foil, xfoil.stagnation, side);
+  blTransition.xiforc = xifset(xfoil.foil, xfoil.stagnation, side);
   flowRegime = FlowRegimeEnum::Laminar;
   lattice.get(side).profiles.transitionIndex = lattice.get(side).trailingEdgeIndex;
   return previousTransition;
@@ -571,7 +571,7 @@ void BoundaryLayerWorkflow::initializeMrchueSide(int side, double& thi,
   const double xsi = lattice.get(side).arcLengthCoordinates[0];
   const double uei = lattice.get(side).profiles.edgeVelocity[0];
   const double ucon = uei / xsi;
-  const double tsq = 0.45 / (ucon * 6.0 * xfoil.blReynolds.reybl);
+  const double tsq = 0.45 / (ucon * 6.0 * blReynolds.reybl);
   thi = std::sqrt(tsq);
   dsi = 2.2 * thi;
   ami = 0.0;
@@ -686,9 +686,9 @@ bool BoundaryLayerWorkflow::performMrchueNewtonLoop(
 
       if (stationIndex != lattice.get(side).trailingEdgeIndex + 1) {
         const double msq =
-            ctx.uei * ctx.uei * xfoil.blCompressibility.hstinv /
-            (xfoil.blCompressibility.gm1bl *
-             (1.0 - 0.5 * ctx.uei * ctx.uei * xfoil.blCompressibility.hstinv));
+            ctx.uei * ctx.uei * blCompressibility.hstinv /
+            (blCompressibility.gm1bl *
+             (1.0 - 0.5 * ctx.uei * ctx.uei * blCompressibility.hstinv));
         const double htest =
             (ctx.dsi + rlx * blc.rhs[2]) /
             (ctx.thi + rlx * blc.rhs[1]);
@@ -761,9 +761,9 @@ bool BoundaryLayerWorkflow::performMrchueNewtonLoop(
         (stationIndex <= lattice.get(side).trailingEdgeIndex) ? 1.02
                                                               : 1.00005;
     const double msq =
-        ctx.uei * ctx.uei * xfoil.blCompressibility.hstinv /
-        (xfoil.blCompressibility.gm1bl *
-         (1.0 - 0.5 * ctx.uei * ctx.uei * xfoil.blCompressibility.hstinv));
+        ctx.uei * ctx.uei * blCompressibility.hstinv /
+        (blCompressibility.gm1bl *
+         (1.0 - 0.5 * ctx.uei * ctx.uei * blCompressibility.hstinv));
     double dsw = ctx.dsi - ctx.dswaki;
     dsw = adjustDisplacementForHkLimit(dsw, ctx.thi, msq, hklim);
     ctx.dsi = dsw + ctx.dswaki;

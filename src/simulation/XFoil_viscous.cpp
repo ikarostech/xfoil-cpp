@@ -373,7 +373,7 @@ void XFoil::applyUpdateResult(UpdateResult result) {
   rlx = result.rlx;
   rmsbl = result.rmsbl;
   rmxbl = result.rmxbl;
-  blCompressibility.hstinv = result.hstinv;
+  boundaryLayerWorkflow.blCompressibility.hstinv = result.hstinv;
   analysis_state_ = std::move(result.analysis_state);
   aero_coeffs_ = std::move(result.aero_coeffs);
   boundaryLayerWorkflow.lattice.top.profiles =

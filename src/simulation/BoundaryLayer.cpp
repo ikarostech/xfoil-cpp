@@ -35,28 +35,30 @@ bool BoundaryLayerWorkflow::blkin(XFoil& xfoil, BoundaryLayerState& state) {
   //     calculates turbulence-independent secondary "2"
   //     variables from the primary "2" variables.
   //----------------------------------------------------------
+  BlCompressibilityParams& blCompressibility = this->blCompressibility;
+  BlReynoldsParams& blReynolds = this->blReynolds;
   blData& current = state.current();
   //---- set edge mach number ** 2
   current.param.mz =
-      current.param.uz * current.param.uz * xfoil.blCompressibility.hstinv /
-      (xfoil.blCompressibility.gm1bl *
-       (1.0 - 0.5 * current.param.uz * current.param.uz * xfoil.blCompressibility.hstinv));
-  double tr2 = 1.0 + 0.5 * xfoil.blCompressibility.gm1bl * current.param.mz;
+      current.param.uz * current.param.uz * blCompressibility.hstinv /
+      (blCompressibility.gm1bl *
+       (1.0 - 0.5 * current.param.uz * current.param.uz * blCompressibility.hstinv));
+  double tr2 = 1.0 + 0.5 * blCompressibility.gm1bl * current.param.mz;
   current.param.mz_uz = 2.0 * current.param.mz * tr2 / current.param.uz;
   current.param.mz_ms =
       current.param.uz * current.param.uz * tr2 /
-      (xfoil.blCompressibility.gm1bl *
-       (1.0 - 0.5 * current.param.uz * current.param.uz * xfoil.blCompressibility.hstinv)) *
-      xfoil.blCompressibility.hstinv_ms;
+      (blCompressibility.gm1bl *
+       (1.0 - 0.5 * current.param.uz * current.param.uz * blCompressibility.hstinv)) *
+      blCompressibility.hstinv_ms;
 
   //---- set edge density (isentropic relation)
   current.param.rz =
-      xfoil.blCompressibility.rstbl *
-      pow(tr2, (-1.0 / xfoil.blCompressibility.gm1bl));
+      blCompressibility.rstbl *
+      pow(tr2, (-1.0 / blCompressibility.gm1bl));
   current.param.rz_uz = -current.param.rz / tr2 * 0.5 * current.param.mz_uz;
   current.param.rz_ms = -current.param.rz / tr2 * 0.5 * current.param.mz_ms +
-                        xfoil.blCompressibility.rstbl_ms *
-                            pow(tr2, (-1.0 / xfoil.blCompressibility.gm1bl));
+                        blCompressibility.rstbl_ms *
+                            pow(tr2, (-1.0 / blCompressibility.gm1bl));
 
   //---- set shape parameter
   current.param.hz = current.param.dz / current.param.tz;
@@ -65,10 +67,10 @@ bool BoundaryLayerWorkflow::blkin(XFoil& xfoil, BoundaryLayerState& state) {
 
   //---- set edge static/stagnation enthalpy
   double herat =
-      1.0 - 0.5 * current.param.uz * current.param.uz * xfoil.blCompressibility.hstinv;
-  double he_u2 = -current.param.uz * xfoil.blCompressibility.hstinv;
+      1.0 - 0.5 * current.param.uz * current.param.uz * blCompressibility.hstinv;
+  double he_u2 = -current.param.uz * blCompressibility.hstinv;
   double he_ms =
-      -0.5 * current.param.uz * current.param.uz * xfoil.blCompressibility.hstinv_ms;
+      -0.5 * current.param.uz * current.param.uz * blCompressibility.hstinv_ms;
   //---- set molecular viscosity
   double v2_he = (1.5 / herat - 1.0 / (herat + kHvrat));
 
@@ -86,17 +88,17 @@ bool BoundaryLayerWorkflow::blkin(XFoil& xfoil, BoundaryLayerState& state) {
   current.rtz.scalar =
       current.param.rz * current.param.uz * current.param.tz /
       (sqrt(herat * herat * herat) * (1.0 + kHvrat) / (herat + kHvrat) /
-       xfoil.blReynolds.reybl);
+       blReynolds.reybl);
   current.rtz.u() = current.rtz.scalar *
                     (1.0 / current.param.uz +
                      current.param.rz_uz / current.param.rz - v2_he * he_u2);
   current.rtz.t() = current.rtz.scalar / current.param.tz;
   current.rtz.ms() =
       current.rtz.scalar * (current.param.rz_ms / current.param.rz +
-                            (1 / xfoil.blReynolds.reybl * xfoil.blReynolds.reybl_ms -
+                            (1 / blReynolds.reybl * blReynolds.reybl_ms -
                              v2_he * he_ms));
   current.rtz.re() =
-      current.rtz.scalar * (xfoil.blReynolds.reybl_re / xfoil.blReynolds.reybl);
+      current.rtz.scalar * (blReynolds.reybl_re / blReynolds.reybl);
 
   return true;
 }
@@ -148,9 +150,9 @@ void BoundaryLayerWorkflow::initializeFirstIterationState(
     }
     const double uem_sq = uem * uem;
     const double msq =
-        uem_sq * xfoil.blCompressibility.hstinv /
-        (xfoil.blCompressibility.gm1bl *
-         (1.0 - 0.5 * uem_sq * xfoil.blCompressibility.hstinv));
+        uem_sq * blCompressibility.hstinv /
+        (blCompressibility.gm1bl *
+         (1.0 - 0.5 * uem_sq * blCompressibility.hstinv));
     const auto hkin_result =
         boundary_layer::hkin(dsm / thm, msq);
     hkref = hkin_result.hk;
@@ -248,9 +250,9 @@ bool BoundaryLayerWorkflow::applyMixedModeNewtonStep(
       (stationIndex <= lattice.get(side).trailingEdgeIndex) ? 1.02 : 1.00005;
   const double uei_sq = ctx.uei * ctx.uei;
   const double msq =
-      uei_sq * xfoil.blCompressibility.hstinv /
-      (xfoil.blCompressibility.gm1bl *
-       (1.0 - 0.5 * uei_sq * xfoil.blCompressibility.hstinv));
+      uei_sq * blCompressibility.hstinv /
+      (blCompressibility.gm1bl *
+       (1.0 - 0.5 * uei_sq * blCompressibility.hstinv));
   double dsw = ctx.dsi - ctx.dswaki;
   dsw = adjustDisplacementForHkLimit(dsw, ctx.thi, msq, hklim);
   ctx.dsi = dsw + ctx.dswaki;
@@ -325,25 +327,25 @@ blData BoundaryLayerWorkflow::blprv(XFoil& xfoil, blData data, double xsi,
   data.param.dwz = dswaki;
 
   data.param.uz =
-      uei * (1.0 - xfoil.blCompressibility.tkbl) /
-      (1.0 - xfoil.blCompressibility.tkbl * (uei / xfoil.blCompressibility.qinfbl) *
-                 (uei / xfoil.blCompressibility.qinfbl));
+      uei * (1.0 - blCompressibility.tkbl) /
+      (1.0 - blCompressibility.tkbl * (uei / blCompressibility.qinfbl) *
+                 (uei / blCompressibility.qinfbl));
   data.param.uz_uei =
-      (1.0 + xfoil.blCompressibility.tkbl *
-                (2.0 * data.param.uz * uei / xfoil.blCompressibility.qinfbl /
-                     xfoil.blCompressibility.qinfbl -
+      (1.0 + blCompressibility.tkbl *
+                (2.0 * data.param.uz * uei / blCompressibility.qinfbl /
+                     blCompressibility.qinfbl -
                  1.0)) /
-      (1.0 - xfoil.blCompressibility.tkbl *
-                 (uei / xfoil.blCompressibility.qinfbl) *
-                 (uei / xfoil.blCompressibility.qinfbl));
+      (1.0 - blCompressibility.tkbl *
+                 (uei / blCompressibility.qinfbl) *
+                 (uei / blCompressibility.qinfbl));
   data.param.uz_ms =
-      (data.param.uz * (uei / xfoil.blCompressibility.qinfbl) *
-           (uei / xfoil.blCompressibility.qinfbl) -
+      (data.param.uz * (uei / blCompressibility.qinfbl) *
+           (uei / blCompressibility.qinfbl) -
        uei) *
-      xfoil.blCompressibility.tkbl_ms /
-      (1.0 - xfoil.blCompressibility.tkbl *
-                 (uei / xfoil.blCompressibility.qinfbl) *
-                 (uei / xfoil.blCompressibility.qinfbl));
+      blCompressibility.tkbl_ms /
+      (1.0 - blCompressibility.tkbl *
+                 (uei / blCompressibility.qinfbl) *
+                 (uei / blCompressibility.qinfbl));
   return data;
 }
 
@@ -362,7 +364,7 @@ bool BoundaryLayerWorkflow::blsys(XFoil& xfoil) {
     trdif(xfoil);
   } else {
     blc = blDiffSolver.solve(flowRegime, state, skinFriction,
-                             xfoil.blTransition.amcrit);
+                             blTransition.amcrit);
   }
 
   if (flowRegime == FlowRegimeEnum::Similarity) {
@@ -438,7 +440,7 @@ bool BoundaryLayerWorkflow::trdif(XFoil& xfoil) {
   state.station2.param.dz = dt.scalar;
   state.station2.param.uz = ut.scalar;
 
-  state.station2.param.amplz = xfoil.blTransition.amcrit;
+  state.station2.param.amplz = blTransition.amcrit;
   state.station2.param.sz = 0.0;
 
   //---- calculate laminar secondary "t" variables
@@ -453,7 +455,7 @@ bool BoundaryLayerWorkflow::trdif(XFoil& xfoil) {
 
   //---- set up newton system for dam, dth, dds, due, dxi  at  x1 and xt
   blc = blDiffSolver.solve(FlowRegimeEnum::Laminar, state, laminarSkinFriction,
-                           xfoil.blTransition.amcrit);
+                           blTransition.amcrit);
 
   //---- the current newton system is in terms of "1" and "t" variables,
   //-    so calculate its equivalent in terms of "1" and "2" variables.
@@ -525,7 +527,7 @@ bool BoundaryLayerWorkflow::trdif(XFoil& xfoil) {
 
   //---- set up newton system for dct, dth, dds, due, dxi  at  xt and x2
   blc = blDiffSolver.solve(FlowRegimeEnum::Turbulent, state, turbulentSkinFriction,
-                           xfoil.blTransition.amcrit);
+                           blTransition.amcrit);
 
   //---- convert sensitivities wrt "t" variables into sensitivities
   //-    wrt "1" and "2" variables as done before for the laminar part
@@ -683,7 +685,7 @@ bool BoundaryLayerWorkflow::trchek(XFoil& xfoil) {
       BoundaryLayerUtil::axset(state.station1.hkz.scalar, state.station1.param.tz, state.station1.rtz.scalar,
             state.station1.param.amplz, state.station2.hkz.scalar, state.station2.param.tz,
             state.station2.rtz.scalar, state.station2.param.amplz,
-            xfoil.blTransition.amcrit);
+            blTransition.amcrit);
 
   //---- set initial guess for iterate n2 (ampl2) at x2
   state.station2.param.amplz = state.station1.param.amplz +
@@ -692,7 +694,7 @@ bool BoundaryLayerWorkflow::trchek(XFoil& xfoil) {
   auto iterateAmplification = [&]() -> bool {
     for (int itam = 0; itam < 30; itam++) {
       //---- define weighting factors wf1,wf2 for defining "t" quantities
-      if (state.station2.param.amplz <= xfoil.blTransition.amcrit) {
+      if (state.station2.param.amplz <= blTransition.amcrit) {
         //------ there is no transition yet,  "t" is the same as "2"
         amplt = state.station2.param.amplz;
         amplt_a2 = 1.0;
@@ -701,7 +703,7 @@ bool BoundaryLayerWorkflow::trchek(XFoil& xfoil) {
         sfa_a2 = 0.0;
       } else {
         //------ there is transition in x1..x2, "t" is set from n1, n2
-        amplt = xfoil.blTransition.amcrit;
+        amplt = blTransition.amcrit;
         amplt_a2 = 0.0;
         sfa = (amplt - state.station1.param.amplz) /
               (state.station2.param.amplz - state.station1.param.amplz);
@@ -709,8 +711,8 @@ bool BoundaryLayerWorkflow::trchek(XFoil& xfoil) {
         sfa_a2 = (-sfa) / (state.station2.param.amplz - state.station1.param.amplz);
       }
 
-      if (xfoil.blTransition.xiforc < state.station2.param.xz) {
-        sfx = (xfoil.blTransition.xiforc - state.station1.param.xz) /
+      if (blTransition.xiforc < state.station2.param.xz) {
+        sfx = (blTransition.xiforc - state.station1.param.xz) /
               (state.station2.param.xz - state.station1.param.xz);
         sfx_x1 = (sfx - 1.0) / (state.station2.param.xz - state.station1.param.xz);
         sfx_x2 = (-sfx) / (state.station2.param.xz - state.station1.param.xz);
@@ -772,7 +774,7 @@ bool BoundaryLayerWorkflow::trchek(XFoil& xfoil) {
       //---- calculate amplification rate ax over current x1-xt interval
       ax_result = BoundaryLayerUtil::axset(state.station1.hkz.scalar, state.station1.param.tz,
                         state.station1.rtz.scalar, state.station1.param.amplz, hkt.scalar, tt, rtt.scalar,
-                        amplt, xfoil.blTransition.amcrit);
+                        amplt, blTransition.amcrit);
 
       //---- punch out early if there is no amplification here
       if (ax_result.ax <= 0.0) {
@@ -811,13 +813,13 @@ bool BoundaryLayerWorkflow::trchek(XFoil& xfoil) {
         return true;
       }
 
-      if ((state.station2.param.amplz > xfoil.blTransition.amcrit &&
-           state.station2.param.amplz + xfoil.rlx * da2 < xfoil.blTransition.amcrit) ||
-          (state.station2.param.amplz < xfoil.blTransition.amcrit &&
-           state.station2.param.amplz + xfoil.rlx * da2 > xfoil.blTransition.amcrit)) {
+      if ((state.station2.param.amplz > blTransition.amcrit &&
+           state.station2.param.amplz + xfoil.rlx * da2 < blTransition.amcrit) ||
+          (state.station2.param.amplz < blTransition.amcrit &&
+           state.station2.param.amplz + xfoil.rlx * da2 > blTransition.amcrit)) {
         //------ limited newton step so ampl2 doesn't step across amcrit either
         // way
-        state.station2.param.amplz = xfoil.blTransition.amcrit;
+        state.station2.param.amplz = blTransition.amcrit;
       } else {
         //------ regular newton step
         state.station2.param.amplz = state.station2.param.amplz + xfoil.rlx * da2;
@@ -834,10 +836,10 @@ bool BoundaryLayerWorkflow::trchek(XFoil& xfoil) {
   }
 
   //---- test for free or forced transition
-  xfoil.trfree = (state.station2.param.amplz >= xfoil.blTransition.amcrit);
+  xfoil.trfree = (state.station2.param.amplz >= blTransition.amcrit);
   xfoil.trforc =
-      (xfoil.blTransition.xiforc > state.station1.param.xz) &&
-      (xfoil.blTransition.xiforc <= state.station2.param.xz);
+      (blTransition.xiforc > state.station1.param.xz) &&
+      (blTransition.xiforc <= state.station2.param.xz);
 
   //---- set transition interval flag
   const bool transitionDetected = (xfoil.trforc || xfoil.trfree);
@@ -849,14 +851,14 @@ bool BoundaryLayerWorkflow::trchek(XFoil& xfoil) {
 
   //---- resolve if both forced and free transition
   if (xfoil.trfree && xfoil.trforc) {
-    xfoil.trforc = xfoil.blTransition.xiforc < xt.scalar;
-    xfoil.trfree = xfoil.blTransition.xiforc >= xt.scalar;
+    xfoil.trforc = blTransition.xiforc < xt.scalar;
+    xfoil.trfree = blTransition.xiforc >= xt.scalar;
   }
 
   if (xfoil.trforc) {
     //----- if forced transition, then xt is prescribed,
     //-     no sense calculating the sensitivities, since we know them...
-    xt.scalar = xfoil.blTransition.xiforc;
+    xt.scalar = blTransition.xiforc;
     xt.a() = 0.0;
     xt.x1() = 0.0;
     xt.t1() = 0.0;
@@ -1232,9 +1234,8 @@ void BoundaryLayerWorkflow::copyStationState(int side, int destination, int sour
 SetblOutputView SetblOutputView::fromXFoil(const XFoil& xfoil) {
   SetblOutputView output;
   output.lblini = xfoil.lblini;
-  output.blCompressibility = xfoil.blCompressibility;
-  output.blReynolds = xfoil.blReynolds;
-  output.blTransition = xfoil.blTransition;
+  output.blCompressibility = xfoil.boundaryLayerWorkflow.blCompressibility;
+  output.blReynolds = xfoil.boundaryLayerWorkflow.blReynolds;
   output.profiles.top = xfoil.boundaryLayerWorkflow.lattice.top.profiles;
   output.profiles.bottom = xfoil.boundaryLayerWorkflow.lattice.bottom.profiles;
   output.va = xfoil.va;
@@ -1243,14 +1244,14 @@ SetblOutputView SetblOutputView::fromXFoil(const XFoil& xfoil) {
   output.vm = xfoil.vm;
   output.vz = xfoil.vz;
   output.flowRegime = xfoil.boundaryLayerWorkflow.flowRegime;
+  output.blTransition = xfoil.boundaryLayerWorkflow.blTransition;
   return output;
 }
 
 void SetblOutputView::applyToXFoil(XFoil& xfoil) {
   xfoil.lblini = lblini;
-  xfoil.blCompressibility = blCompressibility;
-  xfoil.blReynolds = blReynolds;
-  xfoil.blTransition = blTransition;
+  xfoil.boundaryLayerWorkflow.blCompressibility = blCompressibility;
+  xfoil.boundaryLayerWorkflow.blReynolds = blReynolds;
   xfoil.boundaryLayerWorkflow.lattice.top.profiles = std::move(profiles.top);
   xfoil.boundaryLayerWorkflow.lattice.bottom.profiles =
       std::move(profiles.bottom);
@@ -1260,6 +1261,7 @@ void SetblOutputView::applyToXFoil(XFoil& xfoil) {
   xfoil.vm = std::move(vm);
   xfoil.vz = vz;
   xfoil.boundaryLayerWorkflow.flowRegime = flowRegime;
+  xfoil.boundaryLayerWorkflow.blTransition = blTransition;
 }
 
 void XFoil::checkTransitionIfNeeded(int side, int ibl, bool skipCheck,
@@ -1984,6 +1986,9 @@ SetblOutputView XFoil::setbl(
   //-------------------------------------------------
   SetblOutputView output{};
   FlowRegimeEnum& flowRegime = boundaryLayerWorkflow.flowRegime;
+  BlCompressibilityParams& blCompressibility = boundaryLayerWorkflow.blCompressibility;
+  BlReynoldsParams& blReynolds = boundaryLayerWorkflow.blReynolds;
+  BlTransitionParams& blTransition = boundaryLayerWorkflow.blTransition;
   const int system_size = nsys + 1;
   if (output.vm.size < system_size) {
     output.vm.resize(system_size);

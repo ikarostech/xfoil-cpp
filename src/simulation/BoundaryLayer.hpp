@@ -8,6 +8,9 @@
 #include "simulation/boundary_layer_state.hpp"
 #include "domain/coefficient/bl_newton.hpp"
 #include "domain/boundary_layer/boundary_layer_variables_solver.hpp"
+#include "domain/boundary_layer/bl_compressibility_params.hpp"
+#include "domain/boundary_layer/bl_reynolds_params.hpp"
+#include "domain/boundary_layer/bl_transition_params.hpp"
 #include "simulation/skin_friction_coefficients.hpp"
 #include "domain/boundary_layer/boundary_layer_diff_solver.hpp"
 #include "simulation/BoundaryLayerStore.hpp"
@@ -23,6 +26,9 @@ class BoundaryLayerWorkflow {
   BoundaryLayerStore boundaryLayerStore;
   BlDiffSolver blDiffSolver;
   FlowRegimeEnum flowRegime = FlowRegimeEnum::Laminar;
+  BlCompressibilityParams blCompressibility{};
+  BlReynoldsParams blReynolds{};
+  BlTransitionParams blTransition{};
 
   // Sutherland's const./T0 (assumes stagnation conditions are at STP).
   static constexpr double kHvrat = 0.35;

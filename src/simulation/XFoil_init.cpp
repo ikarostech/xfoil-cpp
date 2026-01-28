@@ -123,13 +123,19 @@ void XFoil::resetVariables() {
   cmref = Vector2d{0.25, 0.0};
   boundaryLayerWorkflow.stagnationIndex = 0;
   boundaryLayerWorkflow.stagnationSst = 0.0;
-  blCompressibility.qinfbl = blCompressibility.tkbl = blCompressibility.tkbl_ms = 0.0;
-  blCompressibility.rstbl = blCompressibility.rstbl_ms = 0.0;
-  blCompressibility.hstinv = blCompressibility.hstinv_ms = 0.0;
-  blReynolds.reybl = blReynolds.reybl_ms = blReynolds.reybl_re = 0.0;
-  blCompressibility.gm1bl = 0.0;
-  blTransition.xiforc = 0.0;
-  blTransition.amcrit = 0.0;
+  boundaryLayerWorkflow.blCompressibility.qinfbl =
+      boundaryLayerWorkflow.blCompressibility.tkbl =
+          boundaryLayerWorkflow.blCompressibility.tkbl_ms = 0.0;
+  boundaryLayerWorkflow.blCompressibility.rstbl =
+      boundaryLayerWorkflow.blCompressibility.rstbl_ms = 0.0;
+  boundaryLayerWorkflow.blCompressibility.hstinv =
+      boundaryLayerWorkflow.blCompressibility.hstinv_ms = 0.0;
+  boundaryLayerWorkflow.blReynolds.reybl =
+      boundaryLayerWorkflow.blReynolds.reybl_ms =
+          boundaryLayerWorkflow.blReynolds.reybl_re = 0.0;
+  boundaryLayerWorkflow.blCompressibility.gm1bl = 0.0;
+  boundaryLayerWorkflow.blTransition.xiforc = 0.0;
+  boundaryLayerWorkflow.blTransition.amcrit = 0.0;
   auto& cache = ensureInitState(this);
   cache.amax = 0.0;
   analysis_state_.alpha = 0.0;
