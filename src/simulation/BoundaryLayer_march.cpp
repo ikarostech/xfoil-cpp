@@ -12,7 +12,7 @@ using BoundaryContext = BoundaryLayerWorkflow::MixedModeStationContext;
 int BoundaryLayerWorkflow::resetSideState(int side, XFoil& xfoil) {
   const int previousTransition = lattice.get(side).profiles.transitionIndex;
   xfoil.blTransition.xiforc = xifset(xfoil.foil, xfoil.stagnation, side);
-  xfoil.flowRegime = FlowRegimeEnum::Laminar;
+  flowRegime = FlowRegimeEnum::Laminar;
   lattice.get(side).profiles.transitionIndex = lattice.get(side).trailingEdgeIndex;
   return previousTransition;
 }
@@ -39,14 +39,56 @@ void BoundaryLayerWorkflow::storeStationStateCommon(
   blkin(xfoil, state);
   state.stepbl();
 
-  if (xfoil.flowRegime == FlowRegimeEnum::Wake) {
+  if (flowRegime == FlowRegimeEnum::Wake) {
     // Keep wake state.
-  } else if (xfoil.flowRegime == FlowRegimeEnum::Transition ||
+  } else if (flowRegime == FlowRegimeEnum::Transition ||
              stationIndex == lattice.get(side).trailingEdgeIndex) {
-    xfoil.flowRegime = FlowRegimeEnum::Turbulent;
+    flowRegime = FlowRegimeEnum::Turbulent;
   } else {
-    xfoil.flowRegime = FlowRegimeEnum::Laminar;
+    flowRegime = FlowRegimeEnum::Laminar;
   }
+}
+
+BoundaryLayerWorkflow::MixedModeStationContext
+BoundaryLayerWorkflow::prepareMixedModeStation(int side, int stationIndex,
+                                               int previousTransition,
+                                               double& ami) {
+  MixedModeStationContext ctx;
+
+  ctx.simi = (stationIndex == 0);
+  ctx.wake = stationIndex > lattice.get(side).trailingEdgeIndex;
+  ctx.xsi = lattice.get(side).arcLengthCoordinates[stationIndex];
+  ctx.uei = lattice.get(side).profiles.edgeVelocity[stationIndex];
+  ctx.thi = lattice.get(side).profiles.momentumThickness[stationIndex];
+  ctx.dsi = lattice.get(side).profiles.displacementThickness[stationIndex];
+
+  if (stationIndex < previousTransition) {
+    ami = lattice.get(side).profiles.skinFrictionCoeff[stationIndex];
+    ctx.cti = 0.03;
+  } else {
+    ctx.cti = lattice.get(side).profiles.skinFrictionCoeff[stationIndex];
+    if (ctx.cti <= 0.0) {
+      ctx.cti = 0.03;
+    }
+  }
+  ctx.ami = ami;
+
+  if (ctx.wake) {
+    int iw = stationIndex - lattice.get(side).trailingEdgeIndex;
+    ctx.dswaki = wgap[iw - 1];
+  } else {
+    ctx.dswaki = 0.0;
+  }
+
+  double thickness_limit =
+      (stationIndex <= lattice.get(side).trailingEdgeIndex) ? 1.02 : 1.00005;
+  ctx.dsi = std::max(ctx.dsi - ctx.dswaki, thickness_limit * ctx.thi) +
+            ctx.dswaki;
+
+  flowRegime =
+      determineRegimeForStation(side, stationIndex, ctx.simi, ctx.wake);
+
+  return ctx;
 }
 
 double BoundaryLayerWorkflow::fallbackEdgeVelocity(
@@ -375,7 +417,7 @@ void BoundaryLayerWorkflow::syncStationRegimeStates(int side,
     blmid(FlowRegimeEnum::Wake);
   }
   const bool similarity = (stationIndex == 0);
-  xfoil.flowRegime = determineRegimeForStation(side, stationIndex,
+  flowRegime = determineRegimeForStation(side, stationIndex,
                                                 similarity, wake);
 }
 
@@ -440,8 +482,7 @@ bool BoundaryLayerWorkflow::processBoundaryLayerStation(
     int previousTransition, double deps, double senswt, double& sens,
     double& sennew, double& ami, XFoil& xfoil) {
   BoundaryContext ctx =
-      xfoil.prepareMixedModeStation(side, stationIndex, previousTransition,
-                                    ami);
+      prepareMixedModeStation(side, stationIndex, previousTransition, ami);
 
   bool converged =
       xfoil.performMixedModeNewtonIteration(side, stationIndex,
@@ -558,7 +599,7 @@ void BoundaryLayerWorkflow::prepareMrchueStationContext(
   } else {
     ctx.dswaki = 0.0;
   }
-  xfoil.flowRegime = determineRegimeForStation(side, stationIndex, ctx.simi,
+  flowRegime = determineRegimeForStation(side, stationIndex, ctx.simi,
                                                 ctx.wake);
 }
 
@@ -572,7 +613,7 @@ bool BoundaryLayerWorkflow::performMrchueNewtonLoop(
   bool direct = true;
   double htarg = 0.0;
   double dmax_local = 0.0;
-  xfoil.flowRegime = determineRegimeForStation(side, stationIndex, ctx.simi,
+  flowRegime = determineRegimeForStation(side, stationIndex, ctx.simi,
                                                 ctx.wake);
 
   for (int itbl = 1; itbl <= 25; ++itbl) {
@@ -584,11 +625,11 @@ bool BoundaryLayerWorkflow::performMrchueNewtonLoop(
     }
     blkin(xfoil, state);
 
-    if ((!ctx.simi) && (!(xfoil.flowRegime == FlowRegimeEnum::Turbulent || xfoil.flowRegime == FlowRegimeEnum::Wake))) {
+    if ((!ctx.simi) && (!(flowRegime == FlowRegimeEnum::Turbulent || flowRegime == FlowRegimeEnum::Wake))) {
       trchek(xfoil);
       ctx.ami = state.station2.param.amplz;
 
-      if (xfoil.flowRegime == FlowRegimeEnum::Transition) {
+      if (flowRegime == FlowRegimeEnum::Transition) {
         lattice.get(side).profiles.transitionIndex = stationIndex;
         if (ctx.cti <= 0.0) {
           ctx.cti = 0.03;
@@ -742,7 +783,7 @@ bool BoundaryLayerWorkflow::performMrchueNewtonLoop(
 void BoundaryLayerWorkflow::handleMrchueStationFailure(
     int side, int stationIndex, MrchueStationContext& ctx, XFoil& xfoil,
     std::stringstream& ss) {
-  xfoil.flowRegime = determineRegimeForStation(side, stationIndex, ctx.simi,
+  flowRegime = determineRegimeForStation(side, stationIndex, ctx.simi,
                                                 ctx.wake);
 
   ss << "     mrchue: convergence failed at " << stationIndex << ",  side "

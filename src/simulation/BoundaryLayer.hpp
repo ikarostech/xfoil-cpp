@@ -11,17 +11,18 @@
 #include "simulation/skin_friction_coefficients.hpp"
 #include "domain/boundary_layer/boundary_layer_diff_solver.hpp"
 #include "simulation/BoundaryLayerStore.hpp"
+#include "domain/flow_regime.hpp"
 
 class XFoil;
 class Foil;
 class Edge;
-enum class FlowRegimeEnum;
 
 class BoundaryLayerWorkflow {
  public:
   BoundaryLayerVariablesSolver boundaryLayerVariablesSolver;
   BoundaryLayerStore boundaryLayerStore;
   BlDiffSolver blDiffSolver;
+  FlowRegimeEnum flowRegime = FlowRegimeEnum::Laminar;
 
   // Sutherland's const./T0 (assumes stagnation conditions are at STP).
   static constexpr double kHvrat = 0.35;
@@ -177,6 +178,9 @@ class BoundaryLayerWorkflow {
   FlowRegimeEnum determineRegimeForStation(int side, int stationIndex,
                                            bool similarity,
                                            bool wake) const;
+  MixedModeStationContext prepareMixedModeStation(int side, int stationIndex,
+                                                  int previousTransition,
+                                                  double& ami);
 
   bool iblpan(int point_count, int wake_point_count,
               std::string* error_message);

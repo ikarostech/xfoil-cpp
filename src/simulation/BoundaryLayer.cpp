@@ -157,16 +157,16 @@ void BoundaryLayerWorkflow::initializeFirstIterationState(
   }
 
   if (stationIndex < previousTransition) {
-    if (xfoil.flowRegime == FlowRegimeEnum::Transition) {
+    if (flowRegime == FlowRegimeEnum::Transition) {
       lattice.get(side).profiles.skinFrictionCoeff[stationIndex] = 0.03;
     }
-    if (xfoil.flowRegime == FlowRegimeEnum::Turbulent || xfoil.flowRegime == FlowRegimeEnum::Wake) {
+    if (flowRegime == FlowRegimeEnum::Turbulent || flowRegime == FlowRegimeEnum::Wake) {
       const double prev =
           (stationIndex >= 1) ? lattice.get(side).profiles.skinFrictionCoeff[stationIndex - 1]
                               : lattice.get(side).profiles.skinFrictionCoeff[stationIndex];
       lattice.get(side).profiles.skinFrictionCoeff[stationIndex] = prev;
     }
-    if (xfoil.flowRegime == FlowRegimeEnum::Transition || xfoil.flowRegime == FlowRegimeEnum::Turbulent || xfoil.flowRegime == FlowRegimeEnum::Wake) {
+    if (flowRegime == FlowRegimeEnum::Transition || flowRegime == FlowRegimeEnum::Turbulent || flowRegime == FlowRegimeEnum::Wake) {
       ctx.cti = lattice.get(side).profiles.skinFrictionCoeff[stationIndex - 1];
       state.station2.param.sz = ctx.cti;
     }
@@ -351,21 +351,21 @@ bool BoundaryLayerWorkflow::blsys(XFoil& xfoil) {
   blData& previous = state.previous();
   blData& current = state.current();
 
-  SkinFrictionCoefficients skinFriction = blmid(xfoil.flowRegime);
-  current = blvar(current, xfoil.flowRegime);
+  SkinFrictionCoefficients skinFriction = blmid(flowRegime);
+  current = blvar(current, flowRegime);
 
-  if (xfoil.flowRegime == FlowRegimeEnum::Similarity) {
+  if (flowRegime == FlowRegimeEnum::Similarity) {
     state.stepbl();
   }
 
-  if (xfoil.flowRegime == FlowRegimeEnum::Transition) {
+  if (flowRegime == FlowRegimeEnum::Transition) {
     trdif(xfoil);
   } else {
-    blc = blDiffSolver.solve(xfoil.flowRegime, state, skinFriction,
+    blc = blDiffSolver.solve(flowRegime, state, skinFriction,
                              xfoil.blTransition.amcrit);
   }
 
-  if (xfoil.flowRegime == FlowRegimeEnum::Similarity) {
+  if (flowRegime == FlowRegimeEnum::Similarity) {
     blc.a2 += blc.a1;
     blc.a1.setZero();
   }
@@ -841,7 +841,7 @@ bool BoundaryLayerWorkflow::trchek(XFoil& xfoil) {
 
   //---- set transition interval flag
   const bool transitionDetected = (xfoil.trforc || xfoil.trfree);
-  xfoil.flowRegime = transitionDetected ? FlowRegimeEnum::Transition
+  flowRegime = transitionDetected ? FlowRegimeEnum::Transition
                                    : FlowRegimeEnum::Laminar;
 
   if (!transitionDetected)
@@ -1242,7 +1242,7 @@ SetblOutputView SetblOutputView::fromXFoil(const XFoil& xfoil) {
   output.vdel = xfoil.vdel;
   output.vm = xfoil.vm;
   output.vz = xfoil.vz;
-  output.flowRegime = xfoil.flowRegime;
+  output.flowRegime = xfoil.boundaryLayerWorkflow.flowRegime;
   return output;
 }
 
@@ -1259,49 +1259,12 @@ void SetblOutputView::applyToXFoil(XFoil& xfoil) {
   xfoil.vdel = std::move(vdel);
   xfoil.vm = std::move(vm);
   xfoil.vz = vz;
-  xfoil.flowRegime = flowRegime;
-}
-
-XFoil::MixedModeStationContext XFoil::prepareMixedModeStation(int side, int ibl,
-                                                              int itrold,
-                                                              double& ami) {
-  MixedModeStationContext ctx;
-
-  ctx.simi = (ibl == 0);
-  ctx.wake = ibl > boundaryLayerWorkflow.lattice.get(side).trailingEdgeIndex;
-  ctx.xsi = boundaryLayerWorkflow.lattice.get(side).arcLengthCoordinates[ibl];
-  ctx.uei = boundaryLayerWorkflow.lattice.get(side).profiles.edgeVelocity[ibl];
-  ctx.thi = boundaryLayerWorkflow.lattice.get(side).profiles.momentumThickness[ibl];
-  ctx.dsi = boundaryLayerWorkflow.lattice.get(side).profiles.displacementThickness[ibl];
-
-  if (ibl < itrold) {
-    ami = boundaryLayerWorkflow.lattice.get(side).profiles.skinFrictionCoeff[ibl];
-    ctx.cti = 0.03;
-  } else {
-    ctx.cti = boundaryLayerWorkflow.lattice.get(side).profiles.skinFrictionCoeff[ibl];
-    if (ctx.cti <= 0.0) {
-      ctx.cti = 0.03;
-    }
-  }
-  ctx.ami = ami;
-
-  if (ctx.wake) {
-    int iw = ibl - boundaryLayerWorkflow.lattice.get(side).trailingEdgeIndex;
-    ctx.dswaki = boundaryLayerWorkflow.wgap[iw - 1];
-  } else {
-    ctx.dswaki = 0.0;
-  }
-
-  double thickness_limit = (ibl <= boundaryLayerWorkflow.lattice.get(side).trailingEdgeIndex) ? 1.02 : 1.00005;
-  ctx.dsi = std::max(ctx.dsi - ctx.dswaki, thickness_limit * ctx.thi) + ctx.dswaki;
-
-  flowRegime = boundaryLayerWorkflow.determineRegimeForStation(side, ibl, ctx.simi, ctx.wake);
-
-  return ctx;
+  xfoil.boundaryLayerWorkflow.flowRegime = flowRegime;
 }
 
 void XFoil::checkTransitionIfNeeded(int side, int ibl, bool skipCheck,
                                     int laminarAdvance, double& ami) {
+  FlowRegimeEnum& flowRegime = boundaryLayerWorkflow.flowRegime;
   if (skipCheck || flowRegime == FlowRegimeEnum::Turbulent || flowRegime == FlowRegimeEnum::Wake) {
     return;
   }
@@ -2020,6 +1983,7 @@ SetblOutputView XFoil::setbl(
   //     coefficients are then incorporated into the global newton system.
   //-------------------------------------------------
   SetblOutputView output{};
+  FlowRegimeEnum& flowRegime = boundaryLayerWorkflow.flowRegime;
   const int system_size = nsys + 1;
   if (output.vm.size < system_size) {
     output.vm.resize(system_size);

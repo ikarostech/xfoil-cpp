@@ -241,8 +241,6 @@ class XFoil {
   Matrix2Xd gamqv() const;
   bool ggcalc();
 
-  MixedModeStationContext prepareMixedModeStation(int side, int ibl, int itrold,
-                                                  double& ami);
   bool performMixedModeNewtonIteration(int side, int ibl, int itrold,
                                        MixedModeStationContext& ctx, double deps,
                                        double senswt, double& sens,
@@ -511,7 +509,6 @@ class XFoil {
 
   // Grouped BL Newton system coefficients (Proposal A)
   bool trforc, trfree;
-  FlowRegimeEnum flowRegime = FlowRegimeEnum::Laminar;
 
   BlCompressibilityParams blCompressibility;
   BlReynoldsParams blReynolds;
