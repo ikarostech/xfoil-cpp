@@ -102,7 +102,7 @@ class BoundaryLayerWorkflow {
     double htarg = 0.0;
   };
 
-  bool isStartOfWake(const XFoil& xfoil, int side, int stationIndex);
+  bool isStartOfWake(int side, int stationIndex);
   void updateSystemMatricesForStation(XFoil& xfoil, int side,
                                       int stationIndex,
                                       MixedModeStationContext& ctx);
@@ -202,7 +202,7 @@ class BoundaryLayerWorkflow {
       const Foil& foil, const BoundaryLayerLattice& bottom,
       const Eigen::VectorXd& bottomArcLengths);
   SidePair<Eigen::Matrix2Xd> uicalc(const Eigen::Matrix2Xd& qinv_matrix) const;
-  bool blkin(XFoil& xfoil, BoundaryLayerState& state);
+  bool blkin(BoundaryLayerState& state);
   bool tesys(const BoundaryLayerSideProfiles& top_profiles,
              const BoundaryLayerSideProfiles& bottom_profiles,
              const Edge& edge);

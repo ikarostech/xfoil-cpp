@@ -30,13 +30,13 @@ double BoundaryLayerWorkflow::adjustDisplacementForHkLimit(
   return displacementThickness + dh * momentumThickness;
 }
 
-bool BoundaryLayerWorkflow::blkin(XFoil& xfoil, BoundaryLayerState& state) {
+bool BoundaryLayerWorkflow::blkin(BoundaryLayerState& state) {
   //----------------------------------------------------------
   //     calculates turbulence-independent secondary "2"
   //     variables from the primary "2" variables.
   //----------------------------------------------------------
-  BlCompressibilityParams& blCompressibility = this->blCompressibility;
-  BlReynoldsParams& blReynolds = this->blReynolds;
+  //BlCompressibilityParams& blCompressibility = this->blCompressibility;
+  //BlReynoldsParams& blReynolds = this->blReynolds;
   blData& current = state.current();
   //---- set edge mach number ** 2
   current.param.mz =
@@ -103,14 +103,13 @@ bool BoundaryLayerWorkflow::blkin(XFoil& xfoil, BoundaryLayerState& state) {
   return true;
 }
 
-bool BoundaryLayerWorkflow::isStartOfWake(const XFoil& xfoil, int side,
-                                          int stationIndex) {
+bool BoundaryLayerWorkflow::isStartOfWake(int side, int stationIndex) {
   return stationIndex == lattice.get(side).trailingEdgeIndex + 1;
 }
 
 void BoundaryLayerWorkflow::updateSystemMatricesForStation(
     XFoil& xfoil, int side, int stationIndex, BoundaryContext& ctx) {
-  if (isStartOfWake(xfoil, side, stationIndex)) {
+  if (isStartOfWake(side, stationIndex)) {
     ctx.tte = lattice.get(1).profiles.momentumThickness[lattice.top.trailingEdgeIndex] +
               lattice.get(2).profiles.momentumThickness[lattice.bottom.trailingEdgeIndex];
     ctx.dte = lattice.get(1).profiles.displacementThickness[lattice.top.trailingEdgeIndex] +
@@ -444,7 +443,7 @@ bool BoundaryLayerWorkflow::trdif(XFoil& xfoil) {
   state.station2.param.sz = 0.0;
 
   //---- calculate laminar secondary "t" variables
-  blkin(xfoil, state);
+  blkin(state);
   state.station2 = blvar(state.station2, FlowRegimeEnum::Laminar);
 
   //---- calculate x1-xt midpoint cfm value
@@ -759,7 +758,7 @@ bool BoundaryLayerWorkflow::trchek(XFoil& xfoil) {
       state.station2.param.uz = ut;
 
       //---- calculate laminar secondary "t" variables hkt, rtt
-      blkin(xfoil, state);
+      blkin(state);
 
       blData::blVector hkt = state.station2.hkz;
       blData::blVector rtt = state.station2.rtz;
@@ -1297,12 +1296,12 @@ bool XFoil::performMixedModeNewtonIteration(int side, int ibl, int itrold,
                                   ctx.dswaki, ctx.uei);
       boundaryLayerWorkflow.state.current() = updatedCurrent;
     }
-    boundaryLayerWorkflow.blkin(*this, boundaryLayerWorkflow.state);
+    boundaryLayerWorkflow.blkin(boundaryLayerWorkflow.state);
 
     checkTransitionIfNeeded(side, ibl, ctx.simi, 1, ami);
 
     const bool startOfWake =
-        boundaryLayerWorkflow.isStartOfWake(*this, side, ibl);
+        boundaryLayerWorkflow.isStartOfWake(side, ibl);
     boundaryLayerWorkflow.updateSystemMatricesForStation(*this, side, ibl,
                                                           ctx);
 
@@ -1351,7 +1350,7 @@ void XFoil::handleMixedModeNonConvergence(int side, int ibl,
             ctx.cti, ctx.thi, ctx.dsi, ctx.dswaki, ctx.uei);
     boundaryLayerWorkflow.state.current() = updatedCurrent;
   }
-  boundaryLayerWorkflow.blkin(*this, boundaryLayerWorkflow.state);
+  boundaryLayerWorkflow.blkin(boundaryLayerWorkflow.state);
 
   checkTransitionIfNeeded(side, ibl, ctx.simi, 2, ami);
 
@@ -1787,7 +1786,7 @@ XFoil::StationUpdateResult XFoil::updateStationMatricesAndState(
       boundaryLayerWorkflow.blprv(*this, result.state.current(), vars.xsi,
                                   vars.ami, vars.cti, vars.thi, vars.dsi,
                                   vars.dswaki, vars.uei);
-  boundaryLayerWorkflow.blkin(*this, result.state);
+  boundaryLayerWorkflow.blkin(result.state);
   return result;
 }
 
