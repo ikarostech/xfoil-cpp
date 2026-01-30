@@ -122,12 +122,12 @@ void BoundaryLayerWorkflow::updateSystemMatricesForStation(
         ctx.tte;
     tesys(lattice.top.profiles, lattice.bottom.profiles, xfoil.foil.edge);
   } else {
-    blsys(xfoil);
+    blsys();
   }
 }
 
 void BoundaryLayerWorkflow::initializeFirstIterationState(
-    XFoil& xfoil, int side, int stationIndex, int previousTransition,
+    int side, int stationIndex, int previousTransition,
     BoundaryContext& ctx, double& ueref, double& hkref, double& ami) {
   ueref = state.station2.param.uz;
   hkref = state.station2.hkz.scalar;
@@ -314,7 +314,7 @@ SkinFrictionCoefficients BoundaryLayerWorkflow::blmid(
   return coeffs;
 }
 
-blData BoundaryLayerWorkflow::blprv(XFoil& xfoil, blData data, double xsi,
+blData BoundaryLayerWorkflow::blprv(blData data, double xsi,
                                     double ami, double cti, double thi,
                                     double dsi, double dswaki,
                                     double uei) const {
@@ -348,7 +348,7 @@ blData BoundaryLayerWorkflow::blprv(XFoil& xfoil, blData data, double xsi,
   return data;
 }
 
-bool BoundaryLayerWorkflow::blsys(XFoil& xfoil) {
+bool BoundaryLayerWorkflow::blsys() {
   blData& previous = state.previous();
   blData& current = state.current();
 
@@ -360,7 +360,7 @@ bool BoundaryLayerWorkflow::blsys(XFoil& xfoil) {
   }
 
   if (flowRegime == FlowRegimeEnum::Transition) {
-    trdif(xfoil);
+    trdif();
   } else {
     blc = blDiffSolver.solve(flowRegime, state, skinFriction,
                              blTransition.amcrit);
@@ -385,7 +385,7 @@ bool BoundaryLayerWorkflow::blsys(XFoil& xfoil) {
   return true;
 }
 
-bool BoundaryLayerWorkflow::trdif(XFoil& xfoil) {
+bool BoundaryLayerWorkflow::trdif() {
   //-----------------------------------------------
   //     sets up the newton system governing the
   //     transition interval.  equations governing
@@ -1291,7 +1291,7 @@ bool XFoil::performMixedModeNewtonIteration(int side, int ibl, int itrold,
   for (int itbl = 1; itbl <= 25; ++itbl) {
     {
     blData updatedCurrent =
-      boundaryLayerWorkflow.blprv(*this, boundaryLayerWorkflow.state.current(),
+      boundaryLayerWorkflow.blprv(boundaryLayerWorkflow.state.current(),
                                   ctx.xsi, ami, ctx.cti, ctx.thi, ctx.dsi,
                                   ctx.dswaki, ctx.uei);
       boundaryLayerWorkflow.state.current() = updatedCurrent;
@@ -1307,7 +1307,7 @@ bool XFoil::performMixedModeNewtonIteration(int side, int ibl, int itrold,
 
     if (itbl == 1) {
       boundaryLayerWorkflow.initializeFirstIterationState(
-          *this, side, ibl, itrold, ctx, ueref, hkref, ami);
+          side, ibl, itrold, ctx, ueref, hkref, ami);
     }
 
     if (ctx.simi || startOfWake) {
@@ -1346,7 +1346,7 @@ void XFoil::handleMixedModeNonConvergence(int side, int ibl,
   {
     blData updatedCurrent =
         boundaryLayerWorkflow.blprv(
-            *this, boundaryLayerWorkflow.state.current(), ctx.xsi, ami,
+            boundaryLayerWorkflow.state.current(), ctx.xsi, ami,
             ctx.cti, ctx.thi, ctx.dsi, ctx.dswaki, ctx.uei);
     boundaryLayerWorkflow.state.current() = updatedCurrent;
   }
@@ -1354,7 +1354,7 @@ void XFoil::handleMixedModeNonConvergence(int side, int ibl,
 
   checkTransitionIfNeeded(side, ibl, ctx.simi, 2, ami);
 
-  boundaryLayerWorkflow.syncStationRegimeStates(side, ibl, ctx.wake, *this);
+  boundaryLayerWorkflow.syncStationRegimeStates(side, ibl, ctx.wake);
 
   ctx.ami = ami;
 }
@@ -1783,7 +1783,7 @@ XFoil::StationUpdateResult XFoil::updateStationMatricesAndState(
 
   result.state = base_state;
   result.state.current() =
-      boundaryLayerWorkflow.blprv(*this, result.state.current(), vars.xsi,
+      boundaryLayerWorkflow.blprv(result.state.current(), vars.xsi,
                                   vars.ami, vars.cti, vars.thi, vars.dsi,
                                   vars.dswaki, vars.uei);
   boundaryLayerWorkflow.blkin(result.state);
@@ -2140,7 +2140,7 @@ SetblOutputView XFoil::setbl(
         setblStations[0].due = te_update.due1;
         setblStations[0].dds = te_update.dds1;
       } else {
-        boundaryLayerWorkflow.blsys(*this);
+        boundaryLayerWorkflow.blsys();
       }
 
       //---- save wall shear and equil. max shear coefficient for plotting

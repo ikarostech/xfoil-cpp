@@ -19,7 +19,7 @@ int BoundaryLayerWorkflow::resetSideState(int side, XFoil& xfoil) {
 
 void BoundaryLayerWorkflow::storeStationStateCommon(
     int side, int stationIndex, double ami, double cti, double thi,
-    double dsi, double uei, double xsi, double dswaki, XFoil& xfoil) {
+    double dsi, double uei, double xsi, double dswaki) {
   if (stationIndex < lattice.get(side).profiles.transitionIndex) {
     lattice.get(side).profiles.skinFrictionCoeff[stationIndex] = ami;
   } else {
@@ -33,7 +33,7 @@ void BoundaryLayerWorkflow::storeStationStateCommon(
 
   {
     blData updatedCurrent =
-        blprv(xfoil, state.current(), xsi, ami, cti, thi, dsi, dswaki, uei);
+        blprv(state.current(), xsi, ami, cti, thi, dsi, dswaki, uei);
     state.current() = updatedCurrent;
   }
   blkin(state);
@@ -402,8 +402,7 @@ BoundaryLayerSideProfiles BoundaryLayerWorkflow::applyBoundaryLayerDelta(
 
 void BoundaryLayerWorkflow::syncStationRegimeStates(int side,
                                                     int stationIndex,
-                                                    bool wake,
-                                                    XFoil& xfoil) {
+                                                    bool wake) {
   if (stationIndex < lattice.get(side).profiles.transitionIndex) {
     state.station2 = blvar(state.station2, FlowRegimeEnum::Laminar);
     blmid(FlowRegimeEnum::Laminar);
@@ -494,7 +493,7 @@ bool BoundaryLayerWorkflow::processBoundaryLayerStation(
 
   sens = sennew;
   storeStationStateCommon(side, stationIndex, ctx.ami, ctx.cti, ctx.thi,
-                          ctx.dsi, ctx.uei, ctx.xsi, ctx.dswaki, xfoil);
+                          ctx.dsi, ctx.uei, ctx.xsi, ctx.dswaki);
 
   if (XFoil::isCancelled()) {
     return false;
@@ -530,19 +529,18 @@ bool BoundaryLayerWorkflow::marchMrchueSide(BoundaryLayerState& state,
   double dsi = 0.0;
   double ami = 0.0;
   double cti = 0.0;
-  initializeMrchueSide(side, thi, dsi, ami, cti, xfoil);
+  initializeMrchueSide(side, thi, dsi, ami, cti);
 
   for (int stationIndex = 0;
        stationIndex < lattice.get(side).stationCount - 1; ++stationIndex) {
     MrchueStationContext ctx;
-    prepareMrchueStationContext(side, stationIndex, ctx, thi, dsi, ami, cti,
-                                xfoil);
+    prepareMrchueStationContext(side, stationIndex, ctx, thi, dsi, ami, cti);
     bool converged =
         performMrchueNewtonLoop(side, stationIndex, ctx, xfoil, ss);
     if (!converged) {
       handleMrchueStationFailure(side, stationIndex, ctx, xfoil, ss);
     }
-    storeMrchueStationState(side, stationIndex, ctx, xfoil);
+    storeMrchueStationState(side, stationIndex, ctx);
 
     ami = ctx.ami;
     cti = ctx.cti;
@@ -567,7 +565,7 @@ bool BoundaryLayerWorkflow::marchMrchueSide(BoundaryLayerState& state,
 
 void BoundaryLayerWorkflow::initializeMrchueSide(int side, double& thi,
                                                  double& dsi, double& ami,
-                                                 double& cti, XFoil& xfoil) {
+                                                 double& cti) {
   const double xsi = lattice.get(side).arcLengthCoordinates[0];
   const double uei = lattice.get(side).profiles.edgeVelocity[0];
   const double ucon = uei / xsi;
@@ -580,7 +578,7 @@ void BoundaryLayerWorkflow::initializeMrchueSide(int side, double& thi,
 
 void BoundaryLayerWorkflow::prepareMrchueStationContext(
     int side, int stationIndex, MrchueStationContext& ctx, double thi,
-    double dsi, double ami, double cti, XFoil& xfoil) {
+    double dsi, double ami, double cti) {
   ctx.simi = (stationIndex == 0);
   ctx.wake = stationIndex > lattice.get(side).trailingEdgeIndex;
   ctx.xsi = lattice.get(side).arcLengthCoordinates[stationIndex];
@@ -619,7 +617,7 @@ bool BoundaryLayerWorkflow::performMrchueNewtonLoop(
   for (int itbl = 1; itbl <= 25; ++itbl) {
     {
       blData updatedCurrent =
-          blprv(xfoil, state.current(), ctx.xsi, ctx.ami, ctx.cti, ctx.thi,
+          blprv(state.current(), ctx.xsi, ctx.ami, ctx.cti, ctx.thi,
                 ctx.dsi, ctx.dswaki, ctx.uei);
       state.current() = updatedCurrent;
     }
@@ -655,7 +653,7 @@ bool BoundaryLayerWorkflow::performMrchueNewtonLoop(
           ctx.tte;
       tesys(lattice.top.profiles, lattice.bottom.profiles, xfoil.foil.edge);
     } else {
-      blsys(xfoil);
+      blsys();
     }
 
     if (direct) {
@@ -798,18 +796,18 @@ void BoundaryLayerWorkflow::handleMrchueStationFailure(
 
   {
     blData updatedCurrent =
-        blprv(xfoil, state.current(), ctx.xsi, ctx.ami, ctx.cti, ctx.thi,
+        blprv(state.current(), ctx.xsi, ctx.ami, ctx.cti, ctx.thi,
               ctx.dsi, ctx.dswaki, ctx.uei);
     state.current() = updatedCurrent;
   }
   blkin(state);
 
   xfoil.checkTransitionIfNeeded(side, stationIndex, ctx.simi, 2, ctx.ami);
-  syncStationRegimeStates(side, stationIndex, ctx.wake, xfoil);
+  syncStationRegimeStates(side, stationIndex, ctx.wake);
 }
 
 void BoundaryLayerWorkflow::storeMrchueStationState(
-    int side, int stationIndex, const MrchueStationContext& ctx, XFoil& xfoil) {
+    int side, int stationIndex, const MrchueStationContext& ctx) {
   storeStationStateCommon(side, stationIndex, ctx.ami, ctx.cti, ctx.thi,
-                          ctx.dsi, ctx.uei, ctx.xsi, ctx.dswaki, xfoil);
+                          ctx.dsi, ctx.uei, ctx.xsi, ctx.dswaki);
 }

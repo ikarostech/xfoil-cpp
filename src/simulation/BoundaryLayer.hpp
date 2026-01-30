@@ -106,8 +106,7 @@ class BoundaryLayerWorkflow {
   void updateSystemMatricesForStation(XFoil& xfoil, int side,
                                       int stationIndex,
                                       MixedModeStationContext& ctx);
-  void initializeFirstIterationState(XFoil& xfoil, int side,
-                                     int stationIndex,
+  void initializeFirstIterationState(int side, int stationIndex,
                                      int previousTransition,
                                      MixedModeStationContext& ctx,
                                      double& ueref, double& hkref,
@@ -122,10 +121,10 @@ class BoundaryLayerWorkflow {
                                 MixedModeStationContext& ctx);
   blData blvar(blData data, FlowRegimeEnum flowRegimeType);
   SkinFrictionCoefficients blmid(FlowRegimeEnum flowRegimeType);
-  blData blprv(XFoil& xfoil, blData data, double xsi, double ami, double cti,
+  blData blprv(blData data, double xsi, double ami, double cti,
                double thi, double dsi, double dswaki, double uei) const;
-  bool blsys(XFoil& xfoil);
-  bool trdif(XFoil& xfoil);
+  bool blsys();
+  bool trdif();
   bool mrchdu(XFoil& xfoil);
   bool mrchdu(BoundaryLayerState& state, XFoil& xfoil);
   int resetSideState(int side, XFoil& xfoil);
@@ -141,11 +140,10 @@ class BoundaryLayerWorkflow {
   bool marchMrchueSide(BoundaryLayerState& state, int side,
                        XFoil& xfoil, std::stringstream& ss);
   void initializeMrchueSide(int side, double& thi, double& dsi,
-                            double& ami, double& cti, XFoil& xfoil);
+                            double& ami, double& cti);
   void prepareMrchueStationContext(int side, int stationIndex,
                                    MrchueStationContext& ctx, double thi,
-                                   double dsi, double ami, double cti,
-                                   XFoil& xfoil);
+                                   double dsi, double ami, double cti);
   bool performMrchueNewtonLoop(int side, int stationIndex,
                                MrchueStationContext& ctx, XFoil& xfoil,
                                std::stringstream& ss);
@@ -153,10 +151,10 @@ class BoundaryLayerWorkflow {
                                   MrchueStationContext& ctx, XFoil& xfoil,
                                   std::stringstream& ss);
   void storeMrchueStationState(int side, int stationIndex,
-                               const MrchueStationContext& ctx, XFoil& xfoil);
+                               const MrchueStationContext& ctx);
   void storeStationStateCommon(int side, int stationIndex, double ami,
                                double cti, double thi, double dsi, double uei,
-                               double xsi, double dswaki, XFoil& xfoil);
+                               double xsi, double dswaki);
   template <typename StationContext>
   void resetStationKinematicsAfterFailure(int side, int stationIndex,
                                           StationContext& ctx,
@@ -179,8 +177,7 @@ class BoundaryLayerWorkflow {
       int side, const BoundaryLayerDelta& delta, double relaxation,
       double hstinv, double gamm1) const;
   SidePair<Eigen::VectorXd> ueset(const Eigen::MatrixXd& dij) const;
-  void syncStationRegimeStates(int side, int stationIndex, bool wake,
-                               XFoil& xfoil);
+  void syncStationRegimeStates(int side, int stationIndex, bool wake);
   FlowRegimeEnum determineRegimeForStation(int side, int stationIndex,
                                            bool similarity,
                                            bool wake) const;
