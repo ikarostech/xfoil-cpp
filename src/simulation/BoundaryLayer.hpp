@@ -17,6 +17,7 @@
 #include "domain/flow_regime.hpp"
 
 class XFoil;
+struct SetblOutputView;
 class Foil;
 class Edge;
 
@@ -101,6 +102,77 @@ class BoundaryLayerWorkflow {
     double hmax = 0.0;
     double htarg = 0.0;
   };
+  struct BlInitializationPlan {
+    bool needsInitialization = false;
+    std::string message;
+  };
+  struct StationPrimaryVars {
+    double xsi = 0.0;
+    double uei = 0.0;
+    double thi = 0.0;
+    double mdi = 0.0;
+    double dsi = 0.0;
+    double dswaki = 0.0;
+    double ami = 0.0;
+    double cti = 0.0;
+  };
+  struct TeWakeCoefficients {
+    double tte = 0.0;
+    double cte = 0.0;
+    double dte = 0.0;
+    double tte_tte1 = 0.0;
+    double tte_tte2 = 0.0;
+    double dte_mte1 = 0.0;
+    double dte_ute1 = 0.0;
+    double dte_mte2 = 0.0;
+    double dte_ute2 = 0.0;
+    double cte_cte1 = 0.0;
+    double cte_cte2 = 0.0;
+    double cte_tte1 = 0.0;
+    double cte_tte2 = 0.0;
+  };
+  struct SimilarityStationCoefficients {
+    Eigen::VectorXd u_m1;
+    Eigen::VectorXd d_m1;
+  };
+  struct SideSweepInitResult {
+    double u_a1 = 0.0;
+    double d_a1 = 0.0;
+    double due1 = 0.0;
+    double dds1 = 0.0;
+    double xiforc = 0.0;
+  };
+  struct StationUpdateResult {
+    BoundaryLayerState state;
+    Eigen::VectorXd u_m2;
+    Eigen::VectorXd d_m2;
+    double u_a2 = 0.0;
+    double d_a2 = 0.0;
+    double due2 = 0.0;
+    double dds2 = 0.0;
+  };
+  struct TransitionLogResult {
+    std::string message;
+  };
+  struct TeWakeUpdateResult {
+    bool isStartOfWake = false;
+    Eigen::VectorXd d_m1;
+    double due1 = 0.0;
+    double dds1 = 0.0;
+    TeWakeCoefficients coeffs;
+  };
+  struct TeWakeJacobianAdjustments {
+    double vz[3][2] = {{0.0, 0.0}, {0.0, 0.0}, {0.0, 0.0}};
+    Eigen::Matrix<double, 3, 2> vb = Eigen::Matrix<double, 3, 2>::Zero();
+  };
+  struct StationArraysAdvanceResult {
+    Eigen::VectorXd u_m1;
+    Eigen::VectorXd d_m1;
+    double u_a1 = 0.0;
+    double d_a1 = 0.0;
+    double due1 = 0.0;
+    double dds1 = 0.0;
+  };
 
   bool isStartOfWake(int side, int stationIndex);
   void updateSystemMatricesForStation(XFoil& xfoil, int side,
@@ -119,6 +191,45 @@ class BoundaryLayerWorkflow {
   bool applyMixedModeNewtonStep(XFoil& xfoil, int side, int stationIndex,
                                 double deps, double& ami,
                                 MixedModeStationContext& ctx);
+  BlInitializationPlan computeBlInitializationPlan(bool lblini) const;
+  SimilarityStationCoefficients resetSimilarityStationCoefficients(
+      const Eigen::VectorXd& u_m1, const Eigen::VectorXd& d_m1) const;
+  SideSweepInitResult initializeSideSweepState(
+      const Foil& foil, const StagnationResult& stagnation, int is) const;
+  StationPrimaryVars loadStationPrimaryVars(int is, int ibl,
+                                            bool stationIsWake,
+                                            const SetblOutputView& output,
+                                            double ami,
+                                            double cti) const;
+  StationUpdateResult updateStationMatricesAndState(
+      int is, int ibl, int iv, const StationPrimaryVars& vars,
+      const SidePair<Eigen::VectorXd>& usav, const SetblOutputView& output,
+      const BoundaryLayerState& base_state, int system_size,
+      const Eigen::MatrixXd& dij);
+  TransitionLogResult buildTransitionLog(
+      bool stationIsTransitionCandidate, FlowRegimeEnum flowRegime) const;
+  TeWakeUpdateResult computeTeWakeCoefficients(
+      int is, int ibl, const SidePair<Eigen::VectorXd>& usav,
+      const SidePair<Eigen::VectorXd>& ute_m, const SidePair<int>& jvte,
+      const Eigen::VectorXd& d_m1_template, const SetblOutputView& output,
+      const Edge& edge) const;
+  TeWakeJacobianAdjustments computeTeWakeJacobianAdjustments(
+      const TeWakeCoefficients& coeffs) const;
+  StationArraysAdvanceResult advanceStationArrays(
+      const Eigen::VectorXd& u_m2, const Eigen::VectorXd& d_m2, double u_a2,
+      double d_a2, double due2, double dds2) const;
+  void assembleBlJacobianForStation(
+      int is, int iv, int nsys, const SidePairRef<const Eigen::VectorXd>& d_m,
+      const SidePairRef<const Eigen::VectorXd>& u_m,
+      const SidePairRef<const double>& xi_ule,
+      const SidePairRef<const Eigen::VectorXd>& ule_m,
+      const SidePairRef<const double>& ule_a,
+      const SidePairRef<const double>& u_a,
+      const SidePairRef<const double>& d_a,
+      const SidePairRef<const double>& due,
+      const SidePairRef<const double>& dds,
+      const SidePairRef<const double>& dule, bool controlByAlpha,
+      double re_clmr, double msq_clmr, SetblOutputView& output);
   blData blvar(blData data, FlowRegimeEnum flowRegimeType);
   SkinFrictionCoefficients blmid(FlowRegimeEnum flowRegimeType);
   blData blprv(blData data, double xsi, double ami, double cti,

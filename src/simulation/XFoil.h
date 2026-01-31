@@ -285,11 +285,6 @@ class XFoil {
 
  private:
   BlReferenceParams computeBlReferenceParams() const;
-  struct BlInitializationPlan {
-    bool needsInitialization = false;
-    std::string message;
-  };
-  BlInitializationPlan computeBlInitializationPlan(bool lblini) const;
   struct EdgeVelocitySensitivityResult {
     SidePair<VectorXd> usav;
     SidePair<VectorXd> edgeVelocity;
@@ -302,108 +297,6 @@ class XFoil {
   };
   EdgeVelocitySensitivityResult prepareEdgeVelocityAndSensitivities(
       SidePairRef<const BoundaryLayerSideProfiles> profiles) const;
-  struct StationPrimaryVars {
-    double xsi = 0.0;
-    double uei = 0.0;
-    double thi = 0.0;
-    double mdi = 0.0;
-    double dsi = 0.0;
-    double dswaki = 0.0;
-    double ami = 0.0;
-    double cti = 0.0;
-  };
-  struct TeWakeCoefficients {
-    double tte = 0.0;
-    double cte = 0.0;
-    double dte = 0.0;
-    double tte_tte1 = 0.0;
-    double tte_tte2 = 0.0;
-    double dte_mte1 = 0.0;
-    double dte_ute1 = 0.0;
-    double dte_mte2 = 0.0;
-    double dte_ute2 = 0.0;
-    double cte_cte1 = 0.0;
-    double cte_cte2 = 0.0;
-    double cte_tte1 = 0.0;
-    double cte_tte2 = 0.0;
-  };
-  struct SimilarityStationCoefficients {
-    VectorXd u_m1;
-    VectorXd d_m1;
-  };
-  struct SideSweepInitResult {
-    double u_a1 = 0.0;
-    double d_a1 = 0.0;
-    double due1 = 0.0;
-    double dds1 = 0.0;
-    double xiforc = 0.0;
-  };
-  struct StationUpdateResult {
-    BoundaryLayerState state;
-    VectorXd u_m2;
-    VectorXd d_m2;
-    double u_a2 = 0.0;
-    double d_a2 = 0.0;
-    double due2 = 0.0;
-    double dds2 = 0.0;
-  };
-  struct TransitionLogResult {
-    std::string message;
-  };
-  struct TeWakeUpdateResult {
-    bool isStartOfWake = false;
-    VectorXd d_m1;
-    double due1 = 0.0;
-    double dds1 = 0.0;
-    TeWakeCoefficients coeffs;
-  };
-  struct TeWakeJacobianAdjustments {
-    double vz[3][2] = {{0.0, 0.0}, {0.0, 0.0}, {0.0, 0.0}};
-    Matrix3x2d vb = Matrix3x2d::Zero();
-  };
-  struct StationArraysAdvanceResult {
-    VectorXd u_m1;
-    VectorXd d_m1;
-    double u_a1 = 0.0;
-    double d_a1 = 0.0;
-    double due1 = 0.0;
-    double dds1 = 0.0;
-  };
-  SimilarityStationCoefficients resetSimilarityStationCoefficients(
-      const VectorXd& u_m1, const VectorXd& d_m1) const;
-  SideSweepInitResult initializeSideSweepState(int is) const;
-  StationPrimaryVars loadStationPrimaryVars(int is, int ibl,
-                                            bool stationIsWake,
-                                            const SetblOutputView& output,
-                                            double ami,
-                                            double cti) const;
-  StationUpdateResult updateStationMatricesAndState(
-      int is, int ibl, int iv, const StationPrimaryVars& vars,
-      const SidePair<VectorXd>& usav, const SetblOutputView& output,
-      const BoundaryLayerState& base_state, int system_size);
-  TransitionLogResult buildTransitionLog(
-      bool stationIsTransitionCandidate, FlowRegimeEnum flowRegime) const;
-  TeWakeUpdateResult computeTeWakeCoefficients(
-      int is, int ibl, const SidePair<VectorXd>& usav,
-      const SidePair<VectorXd>& ute_m, const SidePair<int>& jvte,
-      const VectorXd& d_m1_template, const SetblOutputView& output) const;
-  TeWakeJacobianAdjustments computeTeWakeJacobianAdjustments(
-      const TeWakeCoefficients& coeffs) const;
-  StationArraysAdvanceResult advanceStationArrays(
-      const VectorXd& u_m2, const VectorXd& d_m2, double u_a2, double d_a2,
-      double due2, double dds2) const;
-  void assembleBlJacobianForStation(
-      int is, int iv, int nsys, const SidePairRef<const VectorXd>& d_m,
-      const SidePairRef<const VectorXd>& u_m,
-      const SidePairRef<const double>& xi_ule,
-      const SidePairRef<const VectorXd>& ule_m,
-      const SidePairRef<const double>& ule_a,
-      const SidePairRef<const double>& u_a,
-      const SidePairRef<const double>& d_a,
-      const SidePairRef<const double>& due,
-      const SidePairRef<const double>& dds,
-      const SidePairRef<const double>& dule, double re_clmr, double msq_clmr,
-      SetblOutputView& output);
 
  public:
   struct UpdateResult {
