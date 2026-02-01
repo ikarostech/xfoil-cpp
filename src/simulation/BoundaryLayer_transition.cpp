@@ -17,7 +17,8 @@ BoundaryLayerTransitionSolver::BoundaryLayerTransitionSolver(
     : workflow_(&workflow) {}
 
 BoundaryLayerWorkflow::BoundaryLayerWorkflow()
-    : transitionSolver(*this) {}
+    : transitionSolver(*this),
+      geometry(lattice, wgap, stagnationIndex, stagnationSst) {}
 
 double BoundaryLayerTransitionSolver::computeTransitionLocation(
     double weightingFactor) const {

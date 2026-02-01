@@ -101,7 +101,6 @@ class XFoil {
   using EdgeVelocityDistribution = BoundaryLayerWorkflow::EdgeVelocityDistribution;
   using BoundaryLayerDelta = BoundaryLayerWorkflow::BoundaryLayerDelta;
   using BoundaryLayerMetrics = BoundaryLayerWorkflow::BoundaryLayerMetrics;
-  using StagnationResult = BoundaryLayerWorkflow::StagnationResult;
   using VzMatrix = std::array<std::array<double, 2>, 3>;
 
   struct VmMatrix {

@@ -14,6 +14,7 @@
 #include "simulation/skin_friction_coefficients.hpp"
 #include "domain/boundary_layer/boundary_layer_diff_solver.hpp"
 #include "simulation/BoundaryLayer_transition.hpp"
+#include "simulation/boundary_layer_geometry.hpp"
 #include "domain/flow_regime.hpp"
 
 class XFoil;
@@ -53,13 +54,6 @@ class BoundaryLayerWorkflow {
     double cl_a = 0.0;
     double cl_ms = 0.0;
     double cl_ac = 0.0;
-  };
-  struct StagnationResult {
-    int stagnationIndex = 0;
-    double sst = 0.0;
-    double sst_go = 0.0;
-    double sst_gp = 0.0;
-    bool found = true;
   };
   struct BoundaryLayerDelta {
     Eigen::VectorXd dskinFrictionCoeff;
@@ -304,12 +298,6 @@ class BoundaryLayerWorkflow {
                           const Eigen::VectorXd& spline_length) const;
   bool stmove(XFoil& xfoil);
   bool xicalc(const Foil& foil);
-  static SidePair<Eigen::VectorXd> computeArcLengthCoordinates(
-      const Foil& foil, double stagnationSst,
-      const SidePair<BoundaryLayerLattice>& lattice);
-  static Eigen::VectorXd computeWakeGap(
-      const Foil& foil, const BoundaryLayerLattice& bottom,
-      const Eigen::VectorXd& bottomArcLengths);
   SidePair<Eigen::Matrix2Xd> uicalc(const Eigen::Matrix2Xd& qinv_matrix) const;
   bool blkin(BoundaryLayerState& state);
   bool tesys(const BoundaryLayerSideProfiles& top_profiles,
@@ -324,7 +312,6 @@ private:
   static double adjustDisplacementForHkLimit(double displacementThickness,
                                              double momentumThickness,
                                              double msq, double hklim);
-  void copyStationState(int side, int destination, int source);
 
 public:
   Eigen::VectorXd wgap;
@@ -334,6 +321,7 @@ public:
   blDiff xt;
   int stagnationIndex = 0;
   double stagnationSst = 0.0;
+  BoundaryLayerGeometry geometry;
 };
 
 template <typename StationContext>
