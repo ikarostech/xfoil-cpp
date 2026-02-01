@@ -259,10 +259,6 @@ bool BoundaryLayerWorkflow::applyMixedModeNewtonStep(
   return ctx.dmax <= deps;
 }
 
-blData BoundaryLayerWorkflow::blvar(blData data, FlowRegimeEnum flowRegimeType) {
-  return this->boundaryLayerVariablesSolver.solve(data, flowRegimeType);
-}
-
 SkinFrictionCoefficients BoundaryLayerWorkflow::blmid(
     FlowRegimeEnum flowRegimeType) {
   BoundaryLayerState& state = this->state;
@@ -353,7 +349,7 @@ bool BoundaryLayerWorkflow::blsys() {
   blData& current = state.current();
 
   SkinFrictionCoefficients skinFriction = blmid(flowRegime);
-  current = blvar(current, flowRegime);
+  current = boundaryLayerVariablesSolver.solve(current, flowRegime);
 
   if (flowRegime == FlowRegimeEnum::Similarity) {
     state.stepbl();
@@ -635,7 +631,8 @@ bool BoundaryLayerWorkflow::tesys(const BoundaryLayerSideProfiles& top_profiles,
                                   const Edge& edge) {
   blc.clear();
 
-  state.station2 = this->blvar(state.station2, FlowRegimeEnum::Wake);
+  state.station2 =
+      boundaryLayerVariablesSolver.solve(state.station2, FlowRegimeEnum::Wake);
 
   const int top_te = lattice.top.trailingEdgeIndex;
   const int bottom_te = lattice.bottom.trailingEdgeIndex;
@@ -1659,9 +1656,8 @@ SetblOutputView XFoil::setbl(
         output.flowRegime = FlowRegimeEnum::Wake;
         flowRegime = output.flowRegime;
         boundaryLayerWorkflow.state.station2 =
-            boundaryLayerWorkflow.blvar(
-                boundaryLayerWorkflow.state.station2,
-                FlowRegimeEnum::Wake);
+            boundaryLayerWorkflow.boundaryLayerVariablesSolver.solve(
+                boundaryLayerWorkflow.state.station2, FlowRegimeEnum::Wake);
         boundaryLayerWorkflow.blmid(FlowRegimeEnum::Wake);
       }
 

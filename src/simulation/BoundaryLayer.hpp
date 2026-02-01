@@ -232,7 +232,6 @@ class BoundaryLayerWorkflow {
       const SidePairRef<const double>& dds,
       const SidePairRef<const double>& dule, bool controlByAlpha,
       double re_clmr, double msq_clmr, SetblOutputView& output);
-  blData blvar(blData data, FlowRegimeEnum flowRegimeType);
   SkinFrictionCoefficients blmid(FlowRegimeEnum flowRegimeType);
   blData blprv(blData data, double xsi, double ami, double cti,
                double thi, double dsi, double dswaki, double uei) const;

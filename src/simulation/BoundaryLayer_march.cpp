@@ -404,15 +404,18 @@ void BoundaryLayerWorkflow::syncStationRegimeStates(int side,
                                                     int stationIndex,
                                                     bool wake) {
   if (stationIndex < lattice.get(side).profiles.transitionIndex) {
-    state.station2 = blvar(state.station2, FlowRegimeEnum::Laminar);
+    state.station2 =
+        boundaryLayerVariablesSolver.solve(state.station2, FlowRegimeEnum::Laminar);
     blmid(FlowRegimeEnum::Laminar);
   }
   if (stationIndex >= lattice.get(side).profiles.transitionIndex) {
-    state.station2 = blvar(state.station2, FlowRegimeEnum::Turbulent);
+    state.station2 = boundaryLayerVariablesSolver.solve(state.station2,
+                                                        FlowRegimeEnum::Turbulent);
     blmid(FlowRegimeEnum::Turbulent);
   }
   if (wake) {
-    state.station2 = blvar(state.station2, FlowRegimeEnum::Wake);
+    state.station2 =
+        boundaryLayerVariablesSolver.solve(state.station2, FlowRegimeEnum::Wake);
     blmid(FlowRegimeEnum::Wake);
   }
   const bool similarity = (stationIndex == 0);
