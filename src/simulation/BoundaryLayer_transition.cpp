@@ -38,7 +38,6 @@ bool BoundaryLayerTransitionSolver::trdif() {
   auto& state = workflow_->state;
   auto& blTransition = workflow_->blTransition;
   auto& blc = workflow_->blc;
-  auto& blDiffSolver = workflow_->blDiffSolver;
   auto& xt = workflow_->xt;
 
   Matrix<double, 4, 5> bl1, bl2, bt1, bt2;
@@ -96,7 +95,8 @@ bool BoundaryLayerTransitionSolver::trdif() {
 
   //---- calculate laminar secondary "t" variables
   workflow_->blkin(state);
-  state.station2 = workflow_->blvar(state.station2, FlowRegimeEnum::Laminar);
+  state.station2 =
+      boundaryLayerVariablesSolver.solve(state.station2, FlowRegimeEnum::Laminar);
 
   //---- calculate x1-xt midpoint cfm value
   SkinFrictionCoefficients laminarSkinFriction =
@@ -145,7 +145,8 @@ bool BoundaryLayerTransitionSolver::trdif() {
   //**** second, set up turbulent part between xt and x2  ****
 
   //---- calculate equilibrium shear coefficient cqt at transition point
-  state.station2 = workflow_->blvar(state.station2, FlowRegimeEnum::Turbulent);
+  state.station2 = boundaryLayerVariablesSolver.solve(state.station2,
+                                                      FlowRegimeEnum::Turbulent);
 
   //---- set initial shear coefficient value st at transition point
   //-    ( note that cq2, cq2_t2, etc. are really "cqt", "cqt_tt", etc.)
@@ -169,7 +170,8 @@ bool BoundaryLayerTransitionSolver::trdif() {
   state.station2.param.sz = st;
 
   //---- recalculate turbulent secondary "t" variables using proper cti
-  state.station2 = workflow_->blvar(state.station2, FlowRegimeEnum::Turbulent);
+  state.station2 = boundaryLayerVariablesSolver.solve(state.station2,
+                                                      FlowRegimeEnum::Turbulent);
 
   state.stepbl();
   state.station2 = boundaryLayerStore.restoreblData(2);

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "domain/boundary_layer/boundary_layer_diff_solver.hpp"
+#include "domain/boundary_layer/boundary_layer_variables_solver.hpp"
 #include "simulation/BoundaryLayerStore.hpp"
 
 class BoundaryLayerWorkflow;
@@ -17,4 +19,6 @@ class BoundaryLayerTransitionSolver {
 
   BoundaryLayerWorkflow* workflow_;
   BoundaryLayerStore boundaryLayerStore;
+  BoundaryLayerVariablesSolver boundaryLayerVariablesSolver;
+  BlDiffSolver blDiffSolver;
 };
