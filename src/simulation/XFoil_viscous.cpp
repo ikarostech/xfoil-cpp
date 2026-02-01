@@ -551,7 +551,18 @@ bool XFoil::ViscousIter() {
 }
 
 bool XFoil::isValidFoilAngles(Matrix2Xd points) {
-
+  auto cang = [&](Matrix2Xd points) {
+    double max_angle = 0;
+    //---- go over each point, calculating corner angle
+    for (int i = 1; i < points.cols() - 1; i++) {
+      Vector2d delta_former = points.col(i) - points.col(i - 1);
+      Vector2d delta_later = points.col(i) - points.col(i + 1);
+      double sin = MathUtil::cross2(delta_later, delta_former) / delta_former.norm() / delta_later.norm();
+      double delta_angle = asin(sin) * 180.0 / std::numbers::pi;
+      max_angle = std::max(fabs(delta_angle), max_angle);
+    }
+    return max_angle;
+  };
   double max_angle = cang(points);
   return max_angle <= kAngleTolerance;
 }

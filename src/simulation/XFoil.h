@@ -193,8 +193,6 @@ class XFoil {
   double getActualReynolds(double cls, ReynoldsType reynolds_type);
 
   void updateTrailingEdgeState();
-
-  double cang(Matrix2Xd points);
   double cdcalc() const;
 
   struct CompressibilityParams {
