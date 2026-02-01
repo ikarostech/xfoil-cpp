@@ -53,6 +53,7 @@ add_library(xfoil_simulation
     src/simulation/BoundaryLayer.cpp
     src/simulation/BoundaryLayerStore.cpp
     src/simulation/BoundaryLayer_march.cpp
+    src/simulation/BoundaryLayer_transition.cpp
     src/simulation/psi.cpp
     src/domain/foil/foil.cpp
 )

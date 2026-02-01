@@ -13,7 +13,7 @@
 #include "domain/boundary_layer/bl_transition_params.hpp"
 #include "simulation/skin_friction_coefficients.hpp"
 #include "domain/boundary_layer/boundary_layer_diff_solver.hpp"
-#include "simulation/BoundaryLayerStore.hpp"
+#include "simulation/BoundaryLayer_transition.hpp"
 #include "domain/flow_regime.hpp"
 
 class XFoil;
@@ -23,9 +23,11 @@ class Edge;
 
 class BoundaryLayerWorkflow {
  public:
+  BoundaryLayerWorkflow();
+
   BoundaryLayerVariablesSolver boundaryLayerVariablesSolver;
-  BoundaryLayerStore boundaryLayerStore;
   BlDiffSolver blDiffSolver;
+  BoundaryLayerTransitionSolver transitionSolver;
   FlowRegimeEnum flowRegime = FlowRegimeEnum::Laminar;
   BlCompressibilityParams blCompressibility{};
   BlReynoldsParams blReynolds{};
@@ -323,7 +325,6 @@ private:
   static double adjustDisplacementForHkLimit(double displacementThickness,
                                              double momentumThickness,
                                              double msq, double hklim);
-  double computeTransitionLocation(double weightingFactor) const;
   void copyStationState(int side, int destination, int source);
 
 public:
