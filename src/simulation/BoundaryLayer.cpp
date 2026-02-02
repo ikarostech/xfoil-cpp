@@ -1,4 +1,5 @@
 #include "BoundaryLayer.hpp"
+#include "BoundaryLayer_march.hpp"
 
 #include <algorithm>
 #include <array>
@@ -557,14 +558,15 @@ bool XFoil::performMixedModeNewtonIteration(int side, int ibl, int itrold,
 void XFoil::handleMixedModeNonConvergence(int side, int ibl,
                                           MixedModeStationContext& ctx,
                                           double& ami) {
+  BoundaryLayerMarcher marcher;
   std::stringstream ss;
   ss << "     mrchdu: convergence failed at " << ibl << " ,  side " << side
      << ", res=" << std::setw(4) << std::fixed << std::setprecision(3)
      << ctx.dmax << "\n";
   writeString(ss.str());
 
-  boundaryLayerWorkflow.resetStationKinematicsAfterFailure(
-      side, ibl, ctx,
+  marcher.resetStationKinematicsAfterFailure(
+      boundaryLayerWorkflow, side, ibl, ctx,
       BoundaryLayerWorkflow::EdgeVelocityFallbackMode::UsePreviousStation);
 
   {
@@ -578,7 +580,7 @@ void XFoil::handleMixedModeNonConvergence(int side, int ibl,
 
   checkTransitionIfNeeded(side, ibl, ctx.simi, 2, ami);
 
-  boundaryLayerWorkflow.syncStationRegimeStates(side, ibl, ctx.wake);
+  marcher.syncStationRegimeStates(boundaryLayerWorkflow, side, ibl, ctx.wake);
 
   ctx.ami = ami;
 }
@@ -1262,6 +1264,7 @@ SetblOutputView XFoil::setbl(
   blReynolds = output.blReynolds;
   blTransition.amcrit = output.blTransition.amcrit;
 
+  BoundaryLayerMarcher marcher;
   const bool current_lblini = lblini;
   output.lblini = current_lblini;
   BoundaryLayerWorkflow::BlInitializationPlan bl_init =
@@ -1269,13 +1272,13 @@ SetblOutputView XFoil::setbl(
   if (bl_init.needsInitialization) {
     //----- initialize bl by marching with ue (fudge at separation)
     writeString(bl_init.message);
-    boundaryLayerWorkflow.mrchue(*this);
+    marcher.mrchue(boundaryLayerWorkflow, *this);
     output.lblini = true;
     lblini = true;
   }
 
   //---- march bl with current ue and ds to establish transition
-  boundaryLayerWorkflow.mrchdu(*this);
+  marcher.mrchdu(boundaryLayerWorkflow, *this);
   output.profiles.top = boundaryLayerWorkflow.lattice.top.profiles;
   output.profiles.bottom = boundaryLayerWorkflow.lattice.bottom.profiles;
 
@@ -1326,9 +1329,9 @@ SetblOutputView XFoil::setbl(
       const bool stationIsTransitionCandidate = (ibl == output.profiles.get(is).transitionIndex);
       
       output.flowRegime =
-          boundaryLayerWorkflow.determineRegimeForStation(is, ibl,
-                                                          stationIsSimilarity,
-                                                          stationIsWake);
+          marcher.determineRegimeForStation(boundaryLayerWorkflow, is, ibl,
+                                            stationIsSimilarity,
+                                            stationIsWake);
       flowRegime = output.flowRegime;
 
       //---- set primary variables for current station

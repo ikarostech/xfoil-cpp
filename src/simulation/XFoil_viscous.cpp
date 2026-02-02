@@ -1,6 +1,7 @@
 #include "XFoil.h"
 #include "simulation/InviscidSolver.hpp"
 #include "simulation/Blsolve.hpp"
+#include "simulation/BoundaryLayer_march.hpp"
 #include "domain/boundary_layer/boundary_layer_builder.hpp"
 #include <algorithm>
 #include <cstring>
@@ -298,14 +299,17 @@ XFoil::UpdateResult XFoil::update() const {
   result.profiles.bottom.skinFrictionCoeffHistory =
       boundaryLayerWorkflow.lattice.bottom.profiles.skinFrictionCoeffHistory;
 
+  BoundaryLayerMarcher marcher;
   result.hstinv =
       gamm1 * MathUtil::pow(analysis_state_.currentMach / analysis_state_.qinf, 2) /
       (1.0 + 0.5 * gamm1 * analysis_state_.currentMach * analysis_state_.currentMach);
 
   //--- calculate new ue distribution and tangential velocities
-  const auto ue_distribution = boundaryLayerWorkflow.computeNewUeDistribution(*this);
+  const auto ue_distribution =
+      marcher.computeNewUeDistribution(boundaryLayerWorkflow, *this);
   const auto cl_contributions =
-      boundaryLayerWorkflow.computeClFromEdgeVelocityDistribution(*this, ue_distribution);
+      marcher.computeClFromEdgeVelocityDistribution(boundaryLayerWorkflow,
+                                                    *this, ue_distribution);
 
   const double cl_target =
       analysis_state_.controlByAlpha ? aero_coeffs_.cl : analysis_state_.clspec;
@@ -324,17 +328,18 @@ XFoil::UpdateResult XFoil::update() const {
   SidePair<BoundaryLayerMetrics> metrics;
   for (int side = 1; side <= 2; ++side) {
     deltas.get(side) =
-        boundaryLayerWorkflow.buildBoundaryLayerDelta(
-            side, ue_distribution.unew.get(side),
+        marcher.buildBoundaryLayerDelta(
+            boundaryLayerWorkflow, side, ue_distribution.unew.get(side),
             ue_distribution.u_ac.get(side), dac, *this);
     metrics.get(side) =
-        boundaryLayerWorkflow.evaluateSegmentRelaxation(
-            side, deltas.get(side), dhi, dlo, rlx);
+        marcher.evaluateSegmentRelaxation(
+            boundaryLayerWorkflow, side, deltas.get(side), dhi, dlo, rlx);
     rmsbl += metrics.get(side).rmsContribution;
     rmxbl = std::max(rmxbl, metrics.get(side).maxChange);
     result.profiles.get(side) =
-        boundaryLayerWorkflow.applyBoundaryLayerDelta(
-            side, deltas.get(side), rlx, result.hstinv, gamm1);
+        marcher.applyBoundaryLayerDelta(
+            boundaryLayerWorkflow, side, deltas.get(side), rlx, result.hstinv,
+            gamm1);
   }
 
   rmsbl = sqrt(rmsbl / (4.0 * double(boundaryLayerWorkflow.lattice.top.stationCount + boundaryLayerWorkflow.lattice.bottom.stationCount)));

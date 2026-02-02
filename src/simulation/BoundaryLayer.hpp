@@ -21,7 +21,6 @@ class XFoil;
 struct SetblOutputView;
 class Foil;
 class Edge;
-
 class BoundaryLayerWorkflow {
  public:
   BoundaryLayerWorkflow();
@@ -79,24 +78,6 @@ class BoundaryLayerWorkflow {
     double dte = 0.0;
     double tte = 0.0;
     double dmax = 0.0;
-  };
-  struct MrchueStationContext {
-    bool simi = false;
-    bool wake = false;
-    bool direct = true;
-    double xsi = 0.0;
-    double uei = 0.0;
-    double thi = 0.0;
-    double dsi = 0.0;
-    double ami = 0.0;
-    double cti = 0.0;
-    double dswaki = 0.0;
-    double cte = 0.0;
-    double dte = 0.0;
-    double tte = 0.0;
-    double dmax = 0.0;
-    double hmax = 0.0;
-    double htarg = 0.0;
   };
   struct BlInitializationPlan {
     bool needsInitialization = false;
@@ -231,65 +212,7 @@ class BoundaryLayerWorkflow {
                double thi, double dsi, double dswaki, double uei) const;
   bool blsys();
   bool trdif();
-  bool mrchdu(XFoil& xfoil);
-  bool mrchdu(BoundaryLayerState& state, XFoil& xfoil);
-  int resetSideState(int side, XFoil& xfoil);
-  bool marchBoundaryLayerSide(BoundaryLayerState& state, int side,
-                              double deps, double senswt, double& sens,
-                              double& sennew, double& ami, XFoil& xfoil);
-  bool processBoundaryLayerStation(BoundaryLayerState& state, int side,
-                                   int stationIndex, int previousTransition,
-                                   double deps, double senswt, double& sens,
-                                   double& sennew, double& ami, XFoil& xfoil);
-  bool mrchue(XFoil& xfoil);
-  bool mrchue(BoundaryLayerState& state, XFoil& xfoil);
-  bool marchMrchueSide(BoundaryLayerState& state, int side,
-                       XFoil& xfoil, std::stringstream& ss);
-  void initializeMrchueSide(int side, double& thi, double& dsi,
-                            double& ami, double& cti);
-  void prepareMrchueStationContext(int side, int stationIndex,
-                                   MrchueStationContext& ctx, double thi,
-                                   double dsi, double ami, double cti);
-  bool performMrchueNewtonLoop(int side, int stationIndex,
-                               MrchueStationContext& ctx, XFoil& xfoil,
-                               std::stringstream& ss);
-  void handleMrchueStationFailure(int side, int stationIndex,
-                                  MrchueStationContext& ctx, XFoil& xfoil,
-                                  std::stringstream& ss);
-  void storeMrchueStationState(int side, int stationIndex,
-                               const MrchueStationContext& ctx);
-  void storeStationStateCommon(int side, int stationIndex, double ami,
-                               double cti, double thi, double dsi, double uei,
-                               double xsi, double dswaki);
-  template <typename StationContext>
-  void resetStationKinematicsAfterFailure(int side, int stationIndex,
-                                          StationContext& ctx,
-                                          EdgeVelocityFallbackMode edgeMode);
-  double fallbackEdgeVelocity(int side, int stationIndex,
-                              EdgeVelocityFallbackMode edgeMode) const;
-  EdgeVelocityDistribution computeNewUeDistribution(const XFoil& xfoil) const;
-  QtanResult computeQtan(const EdgeVelocityDistribution& distribution,
-                         int point_count) const;
-  ClContributions computeClFromEdgeVelocityDistribution(
-      const XFoil& xfoil, const EdgeVelocityDistribution& distribution) const;
-  BoundaryLayerDelta buildBoundaryLayerDelta(
-      int side, const Eigen::VectorXd& unew_side,
-      const Eigen::VectorXd& u_ac_side, double dac,
-      const XFoil& xfoil) const;
-  BoundaryLayerMetrics evaluateSegmentRelaxation(
-      int side, const BoundaryLayerDelta& delta, double dhi, double dlo,
-      double& relaxation) const;
-  BoundaryLayerSideProfiles applyBoundaryLayerDelta(
-      int side, const BoundaryLayerDelta& delta, double relaxation,
-      double hstinv, double gamm1) const;
   SidePair<Eigen::VectorXd> ueset(const Eigen::MatrixXd& dij) const;
-  void syncStationRegimeStates(int side, int stationIndex, bool wake);
-  FlowRegimeEnum determineRegimeForStation(int side, int stationIndex,
-                                           bool similarity,
-                                           bool wake) const;
-  MixedModeStationContext prepareMixedModeStation(int side, int stationIndex,
-                                                  int previousTransition,
-                                                  double& ami);
 
   bool iblpan(int point_count, int wake_point_count,
               std::string* error_message);
@@ -323,45 +246,3 @@ public:
   double stagnationSst = 0.0;
   BoundaryLayerGeometry geometry;
 };
-
-template <typename StationContext>
-inline void BoundaryLayerWorkflow::resetStationKinematicsAfterFailure(
-    int side, int stationIndex, StationContext& ctx,
-    EdgeVelocityFallbackMode edgeMode) {
-  if (ctx.dmax <= 0.1 || stationIndex < 2) {
-    return;
-  }
-
-  if (stationIndex <= lattice.get(side).trailingEdgeIndex) {
-    const double ratio =
-        lattice.get(side).arcLengthCoordinates[stationIndex] /
-        lattice.get(side).arcLengthCoordinates[stationIndex - 1];
-    const double scale = std::sqrt(ratio);
-    ctx.thi = lattice.get(side).profiles.momentumThickness[stationIndex - 1] * scale;
-    ctx.dsi = lattice.get(side).profiles.displacementThickness[stationIndex - 1] * scale;
-  } else {
-    if (stationIndex == lattice.get(side).trailingEdgeIndex + 1) {
-      ctx.cti = ctx.cte;
-      ctx.thi = ctx.tte;
-      ctx.dsi = ctx.dte;
-    } else {
-      ctx.thi = lattice.get(side).profiles.momentumThickness[stationIndex - 1];
-      const double ratlen =
-          (lattice.get(side).arcLengthCoordinates[stationIndex] -
-           lattice.get(side).arcLengthCoordinates[stationIndex - 1]) /
-          (10.0 * lattice.get(side).profiles.displacementThickness[stationIndex - 1]);
-      ctx.dsi =
-          (lattice.get(side).profiles.displacementThickness[stationIndex - 1] + ctx.thi * ratlen) /
-          (1.0 + ratlen);
-    }
-  }
-
-  ctx.uei = fallbackEdgeVelocity(side, stationIndex, edgeMode);
-
-  if (stationIndex == lattice.get(side).profiles.transitionIndex) {
-    ctx.cti = 0.05;
-  }
-  if (stationIndex > lattice.get(side).profiles.transitionIndex) {
-    ctx.cti = lattice.get(side).profiles.skinFrictionCoeff[stationIndex - 1];
-  }
-}
