@@ -263,10 +263,8 @@ class XFoil {
   };
   EdgeVelocitySwapResult swapEdgeVelocities(const SidePair<VectorXd>& usav) const;
   struct LeTeSensitivities {
-    VectorXd ule1_m;
-    VectorXd ule2_m;
-    VectorXd ute1_m;
-    VectorXd ute2_m;
+    SidePair<VectorXd> ule_m;
+    SidePair<VectorXd> ute_m;
   };
   LeTeSensitivities computeLeTeSensitivities(int ile1, int ile2, int ite1,
                                              int ite2) const;

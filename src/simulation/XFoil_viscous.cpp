@@ -224,19 +224,19 @@ XFoil::LeTeSensitivities XFoil::computeLeTeSensitivities(int ile1, int ile2,
                                                           int ite2) const {
   LeTeSensitivities sensitivities;
   const int system_size = nsys + 1;
-  sensitivities.ule1_m = VectorXd::Zero(system_size);
-  sensitivities.ule2_m = VectorXd::Zero(system_size);
-  sensitivities.ute1_m = VectorXd::Zero(system_size);
-  sensitivities.ute2_m = VectorXd::Zero(system_size);
+  sensitivities.ule_m.top = VectorXd::Zero(system_size);
+  sensitivities.ule_m.bottom = VectorXd::Zero(system_size);
+  sensitivities.ute_m.top = VectorXd::Zero(system_size);
+  sensitivities.ute_m.bottom = VectorXd::Zero(system_size);
   for (int js = 1; js <= 2; ++js) {
     for (int jbl = 0; jbl < boundaryLayerWorkflow.lattice.get(js).stationCount - 1; ++jbl) {
       const int j = boundaryLayerWorkflow.lattice.get(js).stationToPanel[jbl];
       const int jv = boundaryLayerWorkflow.lattice.get(js).stationToSystem[jbl];
       const double panelInfluenceFactor_js = boundaryLayerWorkflow.lattice.get(js).panelInfluenceFactor[jbl];
-      sensitivities.ule1_m[jv] = -boundaryLayerWorkflow.lattice.top.panelInfluenceFactor[0] * panelInfluenceFactor_js * aerodynamicCache.dij(ile1, j);
-      sensitivities.ule2_m[jv] = -boundaryLayerWorkflow.lattice.bottom.panelInfluenceFactor[0] * panelInfluenceFactor_js * aerodynamicCache.dij(ile2, j);
-      sensitivities.ute1_m[jv] = -boundaryLayerWorkflow.lattice.top.panelInfluenceFactor[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex] * panelInfluenceFactor_js * aerodynamicCache.dij(ite1, j);
-      sensitivities.ute2_m[jv] = -boundaryLayerWorkflow.lattice.bottom.panelInfluenceFactor[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex] * panelInfluenceFactor_js * aerodynamicCache.dij(ite2, j);
+      sensitivities.ule_m.top[jv] = -boundaryLayerWorkflow.lattice.top.panelInfluenceFactor[0] * panelInfluenceFactor_js * aerodynamicCache.dij(ile1, j);
+      sensitivities.ule_m.bottom[jv] = -boundaryLayerWorkflow.lattice.bottom.panelInfluenceFactor[0] * panelInfluenceFactor_js * aerodynamicCache.dij(ile2, j);
+      sensitivities.ute_m.top[jv] = -boundaryLayerWorkflow.lattice.top.panelInfluenceFactor[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex] * panelInfluenceFactor_js * aerodynamicCache.dij(ite1, j);
+      sensitivities.ute_m.bottom[jv] = -boundaryLayerWorkflow.lattice.bottom.panelInfluenceFactor[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex] * panelInfluenceFactor_js * aerodynamicCache.dij(ite2, j);
     }
   }
   return sensitivities;

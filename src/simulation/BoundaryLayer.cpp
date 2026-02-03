@@ -757,10 +757,8 @@ XFoil::EdgeVelocitySensitivityResult XFoil::prepareEdgeVelocityAndSensitivities(
           [boundaryLayerWorkflow.lattice.top.trailingEdgeIndex],
       boundaryLayerWorkflow.lattice.get(2).stationToPanel
           [boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex]);
-  result.ule_m.top = le_te_sensitivities.ule1_m;
-  result.ule_m.bottom = le_te_sensitivities.ule2_m;
-  result.ute_m.top = le_te_sensitivities.ute1_m;
-  result.ute_m.bottom = le_te_sensitivities.ute2_m;
+  result.ule_m = le_te_sensitivities.ule_m;
+  result.ute_m = le_te_sensitivities.ute_m;
 
   result.ule_a.top =
       boundaryLayerWorkflow.lattice.get(1).inviscidEdgeVelocityMatrix(1, 0);
