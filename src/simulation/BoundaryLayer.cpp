@@ -455,24 +455,6 @@ bool BoundaryLayerWorkflow::tesys(const BoundaryLayerSideProfiles& top_profiles,
   return true;
 }
 
-
-SetblOutputView SetblOutputView::fromXFoil(const XFoil& xfoil) {
-  SetblOutputView output;
-  output.lblini = xfoil.lblini;
-  output.blCompressibility = xfoil.boundaryLayerWorkflow.blCompressibility;
-  output.blReynolds = xfoil.boundaryLayerWorkflow.blReynolds;
-  output.profiles.top = xfoil.boundaryLayerWorkflow.lattice.top.profiles;
-  output.profiles.bottom = xfoil.boundaryLayerWorkflow.lattice.bottom.profiles;
-  output.va = xfoil.va;
-  output.vb = xfoil.vb;
-  output.vdel = xfoil.vdel;
-  output.vm = xfoil.vm;
-  output.vz = xfoil.vz;
-  output.flowRegime = xfoil.boundaryLayerWorkflow.flowRegime;
-  output.blTransition = xfoil.boundaryLayerWorkflow.blTransition;
-  return output;
-}
-
 void SetblOutputView::applyToXFoil(XFoil& xfoil) {
   xfoil.lblini = lblini;
   xfoil.boundaryLayerWorkflow.blCompressibility = blCompressibility;

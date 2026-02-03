@@ -20,6 +20,5 @@ struct SetblOutputView {
   XFoil::VzMatrix vz{};
   FlowRegimeEnum flowRegime = FlowRegimeEnum::Laminar;
 
-  static SetblOutputView fromXFoil(const XFoil& xfoil);
   void applyToXFoil(XFoil& xfoil);
 };
