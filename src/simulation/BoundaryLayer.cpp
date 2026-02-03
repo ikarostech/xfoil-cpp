@@ -357,7 +357,7 @@ bool BoundaryLayerWorkflow::blsys() {
   }
 
   if (flowRegime == FlowRegimeEnum::Transition) {
-    trdif();
+    transitionSolver.trdif();
   } else {
     blc = blDiffSolver.solve(flowRegime, state, skinFriction,
                              blTransition.amcrit);
@@ -488,19 +488,21 @@ void SetblOutputView::applyToXFoil(XFoil& xfoil) {
   xfoil.boundaryLayerWorkflow.blTransition = blTransition;
 }
 
-void XFoil::checkTransitionIfNeeded(int side, int ibl, bool skipCheck,
-                                    int laminarAdvance, double& ami) {
-  FlowRegimeEnum& flowRegime = boundaryLayerWorkflow.flowRegime;
-  if (skipCheck || flowRegime == FlowRegimeEnum::Turbulent || flowRegime == FlowRegimeEnum::Wake) {
+void BoundaryLayerWorkflow::checkTransitionIfNeeded(
+    XFoil& xfoil, int side, int stationIndex, bool skipCheck,
+    int laminarAdvance, double& ami) {
+  if (skipCheck || flowRegime == FlowRegimeEnum::Turbulent ||
+      flowRegime == FlowRegimeEnum::Wake) {
     return;
   }
 
-  boundaryLayerWorkflow.trchek(*this);
-  ami = boundaryLayerWorkflow.state.station2.param.amplz;
+  transitionSolver.trchek(xfoil);
+  ami = state.station2.param.amplz;
   if (flowRegime == FlowRegimeEnum::Transition) {
-    boundaryLayerWorkflow.lattice.get(side).profiles.transitionIndex = ibl;
+    lattice.get(side).profiles.transitionIndex = stationIndex;
   } else {
-    boundaryLayerWorkflow.lattice.get(side).profiles.transitionIndex = ibl + laminarAdvance;
+    lattice.get(side).profiles.transitionIndex =
+        stationIndex + laminarAdvance;
   }
 }
 
@@ -523,7 +525,8 @@ bool XFoil::performMixedModeNewtonIteration(int side, int ibl, int itrold,
     }
     boundaryLayerWorkflow.blkin(boundaryLayerWorkflow.state);
 
-    checkTransitionIfNeeded(side, ibl, ctx.simi, 1, ami);
+    boundaryLayerWorkflow.checkTransitionIfNeeded(
+        *this, side, ibl, ctx.simi, 1, ami);
 
     const bool startOfWake =
         boundaryLayerWorkflow.isStartOfWake(side, ibl);
@@ -578,7 +581,8 @@ void XFoil::handleMixedModeNonConvergence(int side, int ibl,
   }
   boundaryLayerWorkflow.blkin(boundaryLayerWorkflow.state);
 
-  checkTransitionIfNeeded(side, ibl, ctx.simi, 2, ami);
+  boundaryLayerWorkflow.checkTransitionIfNeeded(
+      *this, side, ibl, ctx.simi, 2, ami);
 
   marcher.syncStationRegimeStates(boundaryLayerWorkflow, side, ibl, ctx.wake);
 
@@ -1356,7 +1360,7 @@ SetblOutputView XFoil::setbl(
 
       //---- check for transition and set xt, etc. if found
       if (stationIsTransitionCandidate) {
-        boundaryLayerWorkflow.trchek(*this);
+        boundaryLayerWorkflow.transitionSolver.trchek(*this);
         ami = boundaryLayerWorkflow.state.station2.param.amplz;
       }
       BoundaryLayerWorkflow::TransitionLogResult transition_log =

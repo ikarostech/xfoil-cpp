@@ -638,17 +638,14 @@ bool BoundaryLayerMarcher::performMrchueNewtonLoop(
   workflow.flowRegime = determineRegimeForStation(workflow, side, stationIndex, ctx.simi,
                                                 ctx.wake);
 
-  for (int itbl = 1; itbl <= 25; ++itbl) {
-    {
-      blData updatedCurrent =
-          workflow.blprv(workflow.state.current(), ctx.xsi, ctx.ami, ctx.cti,
-                          ctx.thi, ctx.dsi, ctx.dswaki, ctx.uei);
-      workflow.state.current() = updatedCurrent;
-    }
+  for (int itbl = 1; itbl <= 25; ++itbl) { 
+    workflow.state.current() = workflow.blprv(workflow.state.current(), ctx.xsi, ctx.ami, ctx.cti,
+                        ctx.thi, ctx.dsi, ctx.dswaki, ctx.uei);
+    
     workflow.blkin(workflow.state);
 
     if ((!ctx.simi) && (!(workflow.flowRegime == FlowRegimeEnum::Turbulent || workflow.flowRegime == FlowRegimeEnum::Wake))) {
-      workflow.trchek(xfoil);
+      workflow.transitionSolver.trchek(xfoil);
       ctx.ami = workflow.state.station2.param.amplz;
 
       if (workflow.flowRegime == FlowRegimeEnum::Transition) {
@@ -827,7 +824,8 @@ void BoundaryLayerMarcher::handleMrchueStationFailure(
   }
   workflow.blkin(workflow.state);
 
-  xfoil.checkTransitionIfNeeded(side, stationIndex, ctx.simi, 2, ctx.ami);
+  workflow.checkTransitionIfNeeded(
+      xfoil, side, stationIndex, ctx.simi, 2, ctx.ami);
   syncStationRegimeStates(workflow, side, stationIndex, ctx.wake);
 }
 

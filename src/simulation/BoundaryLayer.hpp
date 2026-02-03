@@ -168,6 +168,9 @@ class BoundaryLayerWorkflow {
   bool applyMixedModeNewtonStep(XFoil& xfoil, int side, int stationIndex,
                                 double deps, double& ami,
                                 MixedModeStationContext& ctx);
+  void checkTransitionIfNeeded(XFoil& xfoil, int side, int stationIndex,
+                               bool skipCheck, int laminarAdvance,
+                               double& ami);
   BlInitializationPlan computeBlInitializationPlan(bool lblini) const;
   SimilarityStationCoefficients resetSimilarityStationCoefficients(
       const Eigen::VectorXd& u_m1, const Eigen::VectorXd& d_m1) const;
@@ -211,7 +214,6 @@ class BoundaryLayerWorkflow {
   blData blprv(blData data, double xsi, double ami, double cti,
                double thi, double dsi, double dswaki, double uei) const;
   bool blsys();
-  bool trdif();
   SidePair<Eigen::VectorXd> ueset(const Eigen::MatrixXd& dij) const;
 
   bool iblpan(int point_count, int wake_point_count,
@@ -227,7 +229,6 @@ class BoundaryLayerWorkflow {
              const BoundaryLayerSideProfiles& bottom_profiles,
              const Edge& edge);
   double calcHtarg(int ibl, int is, bool wake);
-  bool trchek(XFoil& xfoil);
   double xifset(const Foil& foil, const StagnationResult& stagnation,
                 int is) const;
 

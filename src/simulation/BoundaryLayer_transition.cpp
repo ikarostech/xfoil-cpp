@@ -617,11 +617,3 @@ bool BoundaryLayerTransitionSolver::trchek(XFoil& xfoil) {
 
   return true;
 }
-
-bool BoundaryLayerWorkflow::trchek(XFoil& xfoil) {
-  return transitionSolver.trchek(xfoil);
-}
-
-bool BoundaryLayerWorkflow::trdif() {
-  return transitionSolver.trdif();
-}

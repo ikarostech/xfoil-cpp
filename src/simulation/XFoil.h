@@ -247,8 +247,6 @@ class XFoil {
                                        double& sennew, double& ami);
   void handleMixedModeNonConvergence(int side, int ibl,
                                      MixedModeStationContext& ctx, double& ami);
-  void checkTransitionIfNeeded(int side, int ibl, bool skipCheck,
-                               int laminarAdvance, double& ami);
   Matrix2Xd ncalc(Matrix2Xd point, VectorXd spline_length, int n);
 
   bool qdcalc();
