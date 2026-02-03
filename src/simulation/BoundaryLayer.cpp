@@ -723,27 +723,27 @@ BoundaryLayerWorkflow::computeBlInitializationPlan(bool lblini) const {
   return plan;
 }
 
-XFoil::EdgeVelocitySensitivityResult XFoil::prepareEdgeVelocityAndSensitivities(
-    SidePairRef<const BoundaryLayerSideProfiles> profiles) const {
+BoundaryLayerWorkflow::EdgeVelocitySensitivityResult
+BoundaryLayerWorkflow::prepareEdgeVelocityAndSensitivities(
+    SidePairRef<const BoundaryLayerSideProfiles> profiles,
+    const Eigen::MatrixXd& dij, int nsys) const {
   EdgeVelocitySensitivityResult result;
   result.usav.top = profiles.top.edgeVelocity;
   result.usav.bottom = profiles.bottom.edgeVelocity;
 
-  result.edgeVelocity = boundaryLayerWorkflow.ueset(aerodynamicCache.dij);
+  result.edgeVelocity = ueset(dij);
   result.outputEdgeVelocity = result.edgeVelocity;
   for (int is = 1; is <= 2; ++is) {
     for (int ibl = 0;
-         ibl < boundaryLayerWorkflow.lattice.get(is).stationCount - 1; ++ibl) {
+         ibl < lattice.get(is).stationCount - 1; ++ibl) {
       result.usav.get(is)[ibl] = result.edgeVelocity.get(is)[ibl];
       result.outputEdgeVelocity.get(is)[ibl] = profiles.get(is).edgeVelocity[ibl];
     }
   }
-  result.jvte.top = boundaryLayerWorkflow.lattice.top
-                        .stationToSystem
-                            [boundaryLayerWorkflow.lattice.top.trailingEdgeIndex];
-  result.jvte.bottom = boundaryLayerWorkflow.lattice.bottom
-                           .stationToSystem
-                               [boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex];
+  result.jvte.top =
+      lattice.top.stationToSystem[lattice.top.trailingEdgeIndex];
+  result.jvte.bottom =
+      lattice.bottom.stationToSystem[lattice.bottom.trailingEdgeIndex];
 
   result.dule.top = result.outputEdgeVelocity.top[0] - result.usav.top[0];
   result.dule.bottom =
@@ -751,19 +751,16 @@ XFoil::EdgeVelocitySensitivityResult XFoil::prepareEdgeVelocityAndSensitivities(
 
   //---- set le and te ue sensitivities wrt all m values
   const auto le_te_sensitivities = computeLeTeSensitivities(
-      boundaryLayerWorkflow.lattice.get(1).stationToPanel[0],
-      boundaryLayerWorkflow.lattice.get(2).stationToPanel[0],
-      boundaryLayerWorkflow.lattice.get(1).stationToPanel
-          [boundaryLayerWorkflow.lattice.top.trailingEdgeIndex],
-      boundaryLayerWorkflow.lattice.get(2).stationToPanel
-          [boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex]);
+      lattice.get(1).stationToPanel[0],
+      lattice.get(2).stationToPanel[0],
+      lattice.get(1).stationToPanel[lattice.top.trailingEdgeIndex],
+      lattice.get(2).stationToPanel[lattice.bottom.trailingEdgeIndex], nsys,
+      dij);
   result.ule_m = le_te_sensitivities.ule_m;
   result.ute_m = le_te_sensitivities.ute_m;
 
-  result.ule_a.top =
-      boundaryLayerWorkflow.lattice.get(1).inviscidEdgeVelocityMatrix(1, 0);
-  result.ule_a.bottom =
-      boundaryLayerWorkflow.lattice.get(2).inviscidEdgeVelocityMatrix(1, 0);
+  result.ule_a.top = lattice.get(1).inviscidEdgeVelocityMatrix(1, 0);
+  result.ule_a.bottom = lattice.get(2).inviscidEdgeVelocityMatrix(1, 0);
   return result;
 }
 
@@ -1285,8 +1282,9 @@ SetblOutputView XFoil::setbl(
   output.profiles.top = boundaryLayerWorkflow.lattice.top.profiles;
   output.profiles.bottom = boundaryLayerWorkflow.lattice.bottom.profiles;
 
-  EdgeVelocitySensitivityResult edge_result =
-      prepareEdgeVelocityAndSensitivities(profiles);
+  BoundaryLayerWorkflow::EdgeVelocitySensitivityResult edge_result =
+      boundaryLayerWorkflow.prepareEdgeVelocityAndSensitivities(
+          profiles, aerodynamicCache.dij, nsys);
   setblSides.usav = edge_result.usav;
   setblSides.jvte = edge_result.jvte;
   setblSides.dule = edge_result.dule;

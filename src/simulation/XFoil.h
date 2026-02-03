@@ -262,29 +262,10 @@ class XFoil {
     SidePair<VectorXd> restoredUedg;
   };
   EdgeVelocitySwapResult swapEdgeVelocities(const SidePair<VectorXd>& usav) const;
-  struct LeTeSensitivities {
-    SidePair<VectorXd> ule_m;
-    SidePair<VectorXd> ute_m;
-  };
-  LeTeSensitivities computeLeTeSensitivities(int ile1, int ile2, int ite1,
-                                             int ite2) const;
-
   struct BlReferenceParams;
 
  private:
   BlReferenceParams computeBlReferenceParams() const;
-  struct EdgeVelocitySensitivityResult {
-    SidePair<VectorXd> usav;
-    SidePair<VectorXd> edgeVelocity;
-    SidePair<VectorXd> outputEdgeVelocity;
-    SidePair<int> jvte;
-    SidePair<double> dule;
-    SidePair<VectorXd> ule_m;
-    SidePair<VectorXd> ute_m;
-    SidePair<double> ule_a;
-  };
-  EdgeVelocitySensitivityResult prepareEdgeVelocityAndSensitivities(
-      SidePairRef<const BoundaryLayerSideProfiles> profiles) const;
 
  public:
   struct UpdateResult {

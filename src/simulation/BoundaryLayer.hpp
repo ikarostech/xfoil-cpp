@@ -44,6 +44,20 @@ class BoundaryLayerWorkflow {
     SidePair<Eigen::VectorXd> unew;
     SidePair<Eigen::VectorXd> u_ac;
   };
+  struct LeTeSensitivities {
+    SidePair<Eigen::VectorXd> ule_m;
+    SidePair<Eigen::VectorXd> ute_m;
+  };
+  struct EdgeVelocitySensitivityResult {
+    SidePair<Eigen::VectorXd> usav;
+    SidePair<Eigen::VectorXd> edgeVelocity;
+    SidePair<Eigen::VectorXd> outputEdgeVelocity;
+    SidePair<int> jvte;
+    SidePair<double> dule;
+    SidePair<Eigen::VectorXd> ule_m;
+    SidePair<Eigen::VectorXd> ute_m;
+    SidePair<double> ule_a;
+  };
   struct QtanResult {
     Eigen::VectorXd qnew;
     Eigen::VectorXd q_ac;
@@ -195,6 +209,12 @@ class BoundaryLayerWorkflow {
       const Edge& edge) const;
   TeWakeJacobianAdjustments computeTeWakeJacobianAdjustments(
       const TeWakeCoefficients& coeffs) const;
+  EdgeVelocitySensitivityResult prepareEdgeVelocityAndSensitivities(
+      SidePairRef<const BoundaryLayerSideProfiles> profiles,
+      const Eigen::MatrixXd& dij, int nsys) const;
+  LeTeSensitivities computeLeTeSensitivities(int ile1, int ile2, int ite1,
+                                             int ite2, int nsys,
+                                             const Eigen::MatrixXd& dij) const;
   StationArraysAdvanceResult advanceStationArrays(
       const Eigen::VectorXd& u_m2, const Eigen::VectorXd& d_m2, double u_a2,
       double d_a2, double due2, double dds2) const;
