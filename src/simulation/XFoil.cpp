@@ -71,8 +71,6 @@ XFoil::PressureCoefficientResult XFoil::computePressureCoefficient(
 }
 
 XFoil::XFoil() : analysis_state_() {
-  logger_ = &Logger::instance();
-
   // fortran seems to initializes variables to 0
   mvisc = 0.0;
 

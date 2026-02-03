@@ -68,7 +68,6 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 #include "simulation/skin_friction_coefficients.hpp"
 #include "simulation/boundary_layer_state.hpp"
 #include "core/boundary_layer_util.hpp"
-#include "infrastructure/logger.hpp"
 #include "BoundaryLayer.hpp"
 
 struct SetblOutputView;
@@ -136,9 +135,6 @@ class XFoil {
                          double XtrTop, double XtrBot, ReynoldsType reType, MachType maType,
                          bool bViscous);
 
-  void setLogger(Logger* logger) { logger_ = logger; }
-
-
   struct ClComputation {
     double cl = 0.0;
     double cm = 0.0;
@@ -149,7 +145,6 @@ class XFoil {
   ClComputation clcalc(Vector2d ref) const;
   void applyClComputation(const ClComputation& result);
 
-  void writeString(std::string str);
   bool specal();
   bool speccl();
   bool viscal();
@@ -341,7 +336,6 @@ class XFoil {
   const FlowState& analysisState() const { return analysis_state_; }
   // transitional parameters stored inside analysis_state_
 
-  Logger* logger_ = nullptr;
 
   AeroCoefficients aero_coeffs_;
   double acrit;

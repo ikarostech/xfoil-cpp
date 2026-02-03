@@ -153,13 +153,6 @@ void XFoil::resetVariables() {
   stagnation = StagnationResult{};
 }
 
-void XFoil::writeString(std::string str) {
-  if (!logger_) {
-    return;
-  }
-  logger_->write(str);
-}
-
 double XFoil::getActualMach(double cls, MachType mach_control) {
   FlowState& state = analysis_state_;
   const double cla = std::max(cls, 0.000001);

@@ -1,6 +1,7 @@
 #include "simulation/InviscidSolver.hpp"
 
 #include "XFoil.h"
+#include "infrastructure/logger.hpp"
 
 #include <cmath>
 
@@ -68,7 +69,7 @@ bool InviscidSolver::specConverge(XFoil &xfoil, SpecTarget target) {
     }
 
     if (!bConv) {
-      xfoil.writeString("Specal:  MInf convergence failed\n");
+      Logger::instance().write("Specal:  MInf convergence failed\n");
       return false;
     }
 
@@ -122,7 +123,7 @@ bool InviscidSolver::specConverge(XFoil &xfoil, SpecTarget target) {
     }
   }
   if (!bConv) {
-    xfoil.writeString("Speccl:  cl convergence failed");
+    Logger::instance().write("Speccl:  cl convergence failed");
     return false;
   }
 

@@ -11,6 +11,7 @@
 #include "XFoil.h"
 #include "domain/boundary_layer/boundary_layer_builder.hpp"
 #include "domain/coefficient/skin_friction.hpp"
+#include "infrastructure/logger.hpp"
 #include "core/boundary_layer_util.hpp"
 
 using BoundaryContext = BoundaryLayerWorkflow::MixedModeStationContext;
@@ -566,7 +567,7 @@ void XFoil::handleMixedModeNonConvergence(int side, int ibl,
   ss << "     mrchdu: convergence failed at " << ibl << " ,  side " << side
      << ", res=" << std::setw(4) << std::fixed << std::setprecision(3)
      << ctx.dmax << "\n";
-  writeString(ss.str());
+  Logger::instance().write(ss.str());
 
   marcher.resetStationKinematicsAfterFailure(
       boundaryLayerWorkflow, side, ibl, ctx,
@@ -1275,7 +1276,7 @@ SetblOutputView XFoil::setbl(
       boundaryLayerWorkflow.computeBlInitializationPlan(current_lblini);
   if (bl_init.needsInitialization) {
     //----- initialize bl by marching with ue (fudge at separation)
-    writeString(bl_init.message);
+    Logger::instance().write(bl_init.message);
     marcher.mrchue(boundaryLayerWorkflow, *this);
     output.lblini = true;
     lblini = true;
@@ -1367,7 +1368,7 @@ SetblOutputView XFoil::setbl(
           boundaryLayerWorkflow.buildTransitionLog(
               stationIsTransitionCandidate, output.flowRegime);
       if (!transition_log.message.empty()) {
-        writeString(transition_log.message);
+        Logger::instance().write(transition_log.message);
       }
 
       //---- assemble 10x4 linearized system for dskinFrictionCoeff, dth, dds, due, dxi
@@ -1535,7 +1536,9 @@ double BoundaryLayerWorkflow::xifset(const Foil& foil,
   double xiforc = std::min((str - stagnation.sst),
                            lattice.get(is).arcLengthCoordinates[lattice.get(is).trailingEdgeIndex]);
   if (xiforc < 0.0) {
-    std::cout << " ***  stagnation point is past trip on side " << is << std::endl;
+    std::stringstream ss;
+    ss << " ***  stagnation point is past trip on side " << is << "\n";
+    Logger::instance().write(ss.str());
     return lattice.get(is).arcLengthCoordinates[lattice.get(is).trailingEdgeIndex];
   }
 

@@ -6,6 +6,7 @@
 #include <sstream>
 
 #include "XFoil.h"
+#include "infrastructure/logger.hpp"
 
 using BoundaryContext = BoundaryLayerWorkflow::MixedModeStationContext;
 using EdgeVelocityFallbackMode = BoundaryLayerWorkflow::EdgeVelocityFallbackMode;
@@ -544,7 +545,7 @@ bool BoundaryLayerMarcher::marchMrchueSide(BoundaryLayerWorkflow& workflow, Boun
                                             int side, XFoil& xfoil,
                                             std::stringstream& ss) {
   ss << "    Side " << side << " ...\n";
-  xfoil.writeString(ss.str());
+  Logger::instance().write(ss.str());
   ss.str("");
 
   resetSideState(workflow, side, xfoil);
@@ -730,7 +731,7 @@ bool BoundaryLayerMarcher::performMrchueNewtonLoop(
           ss << "     mrchue: inverse mode at " << stationIndex
              << "    hk=" << std::fixed << std::setprecision(3) << htarg
              << "\n";
-          xfoil.writeString(ss.str());
+          Logger::instance().write(ss.str());
           ss.str("");
           continue;
         }
@@ -809,7 +810,7 @@ void BoundaryLayerMarcher::handleMrchueStationFailure(
   ss << "     mrchue: convergence failed at " << stationIndex << ",  side "
      << side << ", res =" << std::fixed << std::setprecision(3) << ctx.dmax
      << "\n";
-  xfoil.writeString(ss.str());
+  Logger::instance().write(ss.str());
   ss.str("");
 
   resetStationKinematicsAfterFailure(

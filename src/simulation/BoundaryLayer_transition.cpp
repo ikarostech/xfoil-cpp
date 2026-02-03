@@ -7,6 +7,7 @@
 
 #include "XFoil.h"
 #include "core/boundary_layer_util.hpp"
+#include "infrastructure/logger.hpp"
 #include "simulation/BoundaryLayer.hpp"
 
 using Eigen::Matrix;
@@ -472,7 +473,7 @@ bool BoundaryLayerTransitionSolver::trchek(XFoil& xfoil) {
 
   if (!iterateAmplification()) {
     // TRACE("trchek2 - n2 convergence failed\n");
-    xfoil.writeString("trchek2 - n2 convergence failed\n");
+    Logger::instance().write("trchek2 - n2 convergence failed\n");
     if (XFoil::isCancelled())
       return false;
   }

@@ -1,5 +1,6 @@
 #include "XFoil.h"
 #include "simulation/InviscidSolver.hpp"
+#include "infrastructure/logger.hpp"
 #include <algorithm>
 #include <cmath>
 using Eigen::FullPivLU;
@@ -135,7 +136,7 @@ bool XFoil::ggcalc() {
   double res;
   auto& cache = aerodynamicCache;
 
-  writeString("   Calculating unit vorticity distributions ...\n");
+  Logger::instance().write("   Calculating unit vorticity distributions ...\n");
   const int point_count = foil.foil_shape.n;
 
   MatrixXd dpsi_dgam = MatrixXd::Zero(point_count + 1, point_count + 1);

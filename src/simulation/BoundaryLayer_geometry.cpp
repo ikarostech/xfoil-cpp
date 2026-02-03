@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include "XFoil.h"
+#include "infrastructure/logger.hpp"
 
 BoundaryLayerGeometry::BoundaryLayerGeometry(
     SidePair<BoundaryLayerLattice>& lattice, Eigen::VectorXd& wgap,
@@ -129,8 +130,8 @@ bool BoundaryLayerGeometry::stmove(XFoil& xfoil) {
   const auto stagnation = stfind(xfoil.surface_vortex,
                                  xfoil.foil.foil_shape.spline_length);
   if (!stagnation.found) {
-    std::cout << "stfind: Stagnation point not found. Continuing ..."
-              << std::endl;
+    Logger::instance().write(
+        "stfind: Stagnation point not found. Continuing ...\n");
   }
   stagnationIndex_ = stagnation.stagnationIndex;
   xfoil.stagnation = stagnation;
@@ -144,7 +145,7 @@ bool BoundaryLayerGeometry::stmove(XFoil& xfoil) {
                &iblpan_error)) {
       xfoil.lipan = true;
     } else if (!iblpan_error.empty()) {
-      xfoil.writeString(iblpan_error);
+      Logger::instance().write(iblpan_error);
     }
     const auto inviscid_edge_velocity = uicalc(xfoil.qinv_matrix);
     lattice_.top.inviscidEdgeVelocityMatrix = inviscid_edge_velocity.top;

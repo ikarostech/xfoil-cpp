@@ -3,6 +3,7 @@
 #include "simulation/Blsolve.hpp"
 #include "simulation/BoundaryLayer_march.hpp"
 #include "domain/boundary_layer/boundary_layer_builder.hpp"
+#include "infrastructure/logger.hpp"
 #include <algorithm>
 #include <cstring>
 #include <cmath>
@@ -33,7 +34,7 @@ bool XFoil::initXFoilGeometry(int fn, const double *fx, const double *fy) {
 
   if (!isValidFoilPointSize(buffer_points) ||
       !isValidFoilAngles(buffer_points)) {
-    writeString("Unrecognized foil format");
+    Logger::instance().write("Unrecognized foil format");
     return false;
   }
 
@@ -87,7 +88,7 @@ bool XFoil::initXFoilAnalysis(double Re, double alpha, double Mach,
  * ------------------------------------------------------ */
 bool XFoil::qdcalc() {
   // TRACE("calculating source influence matrix ...\n");
-  writeString("   Calculating source influence matrix ...\n");
+  Logger::instance().write("   Calculating source influence matrix ...\n");
   const int point_count = foil.foil_shape.n;
 
   if (!ladij) {
@@ -417,7 +418,7 @@ bool XFoil::viscal() {
     const auto stagnation = boundaryLayerWorkflow.stfind(
         surface_vortex, foil.foil_shape.spline_length);
     if (!stagnation.found) {
-      writeString("stfind: Stagnation point not found. Continuing ...\n");
+      Logger::instance().write("stfind: Stagnation point not found. Continuing ...\n");
     }
     boundaryLayerWorkflow.stagnationIndex = stagnation.stagnationIndex;
     this->stagnation = stagnation;
@@ -428,7 +429,7 @@ bool XFoil::viscal() {
     if (boundaryLayerWorkflow.iblpan(point_count, foil.wake_shape.n, &iblpan_error)) {
       lipan = true;
     } else if (!iblpan_error.empty()) {
-      writeString(iblpan_error);
+      Logger::instance().write(iblpan_error);
     }
 
     //	----- calculate surface arc length array for current stagnation point
@@ -549,7 +550,7 @@ bool XFoil::ViscousIter() {
     lvconv = true;
     avisc = analysis_state_.alpha;
     mvisc = analysis_state_.currentMach;
-    writeString("----------CONVERGED----------\n\n");
+    Logger::instance().write("----------CONVERGED----------\n\n");
   }
 
   return true;
