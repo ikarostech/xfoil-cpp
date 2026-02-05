@@ -1218,8 +1218,6 @@ SetblOutputView XFoil::setbl(
   SetblSideData setblSides;
   setblSides.resizeSystem(system_size);
 
-  double msq_clmr = 0.0;
-  double re_clmr = 0.0;
   double cti = 0.0;
   double ami = 0.0;
 
@@ -1228,8 +1226,8 @@ SetblOutputView XFoil::setbl(
   BlReferenceParams reference_params = computeBlReferenceParams();
   analysis_state_.currentMach = reference_params.currentMach;
   analysis_state_.currentRe = reference_params.currentRe;
-  re_clmr = reference_params.re_clmr;
-  msq_clmr = reference_params.msq_clmr;
+  double re_clmr = reference_params.re_clmr;
+  double msq_clmr = reference_params.msq_clmr;
   tklam = reference_params.tklam;
   tkl_msq = reference_params.tkl_msq;
   output.blCompressibility = reference_params.blCompressibility;
@@ -1266,16 +1264,9 @@ SetblOutputView XFoil::setbl(
   setblSides.ule_m = edge_result.ule_m;
   setblSides.ute_m = edge_result.ute_m;
   setblSides.ule_a = edge_result.ule_a;
-  boundaryLayerWorkflow.lattice.top.profiles.edgeVelocity =
-      edge_result.edgeVelocity.top;
-  boundaryLayerWorkflow.lattice.bottom.profiles.edgeVelocity =
-      edge_result.edgeVelocity.bottom;
+
   output.profiles.top.edgeVelocity = edge_result.outputEdgeVelocity.top;
   output.profiles.bottom.edgeVelocity = edge_result.outputEdgeVelocity.bottom;
-  boundaryLayerWorkflow.lattice.top.profiles.edgeVelocity =
-      output.profiles.top.edgeVelocity;
-  boundaryLayerWorkflow.lattice.bottom.profiles.edgeVelocity =
-      output.profiles.bottom.edgeVelocity;
 
   //*** process each boundary layer side
   for (int is = 1; is <= 2; is++) {
