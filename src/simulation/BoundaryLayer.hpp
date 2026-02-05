@@ -49,7 +49,6 @@ class BoundaryLayerWorkflow {
     SidePair<Eigen::VectorXd> ute_m;
   };
   struct EdgeVelocitySensitivityResult {
-    SidePair<Eigen::VectorXd> usav;
     SidePair<Eigen::VectorXd> edgeVelocity;
     SidePair<Eigen::VectorXd> outputEdgeVelocity;
     SidePair<int> jvte;

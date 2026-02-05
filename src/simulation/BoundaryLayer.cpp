@@ -710,26 +710,19 @@ BoundaryLayerWorkflow::prepareEdgeVelocityAndSensitivities(
     SidePairRef<const BoundaryLayerSideProfiles> profiles,
     const Eigen::MatrixXd& dij, int nsys) const {
   EdgeVelocitySensitivityResult result;
-  result.usav.top = profiles.top.edgeVelocity;
-  result.usav.bottom = profiles.bottom.edgeVelocity;
 
   result.edgeVelocity = ueset(dij);
-  result.outputEdgeVelocity = result.edgeVelocity;
-  for (int is = 1; is <= 2; ++is) {
-    for (int ibl = 0;
-         ibl < lattice.get(is).stationCount - 1; ++ibl) {
-      result.usav.get(is)[ibl] = result.edgeVelocity.get(is)[ibl];
-      result.outputEdgeVelocity.get(is)[ibl] = profiles.get(is).edgeVelocity[ibl];
-    }
-  }
+  result.outputEdgeVelocity.top = profiles.top.edgeVelocity;
+  result.outputEdgeVelocity.bottom = profiles.bottom.edgeVelocity;
+
   result.jvte.top =
       lattice.top.stationToSystem[lattice.top.trailingEdgeIndex];
   result.jvte.bottom =
       lattice.bottom.stationToSystem[lattice.bottom.trailingEdgeIndex];
 
-  result.dule.top = result.outputEdgeVelocity.top[0] - result.usav.top[0];
+  result.dule.top = result.outputEdgeVelocity.top[0] - result.edgeVelocity.top[0];
   result.dule.bottom =
-      result.outputEdgeVelocity.bottom[0] - result.usav.bottom[0];
+      result.outputEdgeVelocity.bottom[0] - result.edgeVelocity.bottom[0];
 
   //---- set le and te ue sensitivities wrt all m values
   const auto le_te_sensitivities = computeLeTeSensitivities(
@@ -1267,7 +1260,7 @@ SetblOutputView XFoil::setbl(
   BoundaryLayerWorkflow::EdgeVelocitySensitivityResult edge_result =
       boundaryLayerWorkflow.prepareEdgeVelocityAndSensitivities(
           profiles, aerodynamicCache.dij, nsys);
-  setblSides.usav = edge_result.usav;
+  setblSides.usav = edge_result.edgeVelocity;
   setblSides.jvte = edge_result.jvte;
   setblSides.dule = edge_result.dule;
   setblSides.ule_m = edge_result.ule_m;
