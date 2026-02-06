@@ -534,9 +534,6 @@ bool XFoil::ViscousIter() {
   if (analysis_state_.controlByAlpha) { //	------- set new freestream mach, re from new cl
     minf_cl = getActualMach(aero_coeffs_.cl, analysis_state_.machType);
     reinf_cl = getActualReynolds(aero_coeffs_.cl, analysis_state_.reynoldsType);
-    const auto params = buildCompressibilityParams();
-    tklam = params.karmanTsienFactor;
-    tkl_msq = params.karmanTsienFactor_msq;
   } else { //	------- set new inviscid speeds qinv_matrix and inviscidEdgeVelocityMatrix for new alpha
     qinv_matrix =
         InviscidSolver::qiset(analysis_state_.alpha, aerodynamicCache.qinvu);

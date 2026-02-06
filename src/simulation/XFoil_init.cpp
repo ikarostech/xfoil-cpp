@@ -149,7 +149,6 @@ void XFoil::resetVariables() {
   minf_cl = reinf_cl = 0.0;
   aero_coeffs_.cl_alf = 0.0;
   aero_coeffs_.cl_msq = 0.0;
-  tklam = tkl_msq = 0.0;
   stagnation = StagnationResult{};
 }
 
@@ -198,9 +197,6 @@ double XFoil::getActualReynolds(double cls, ReynoldsType reynolds_control) {
 bool XFoil::setMach() {
   minf_cl = getActualMach(1.0, analysis_state_.machType);
   reinf_cl = getActualReynolds(1.0, analysis_state_.reynoldsType);
-  const auto params = buildCompressibilityParams();
-  tklam = params.karmanTsienFactor;
-  tkl_msq = params.karmanTsienFactor_msq;
   const int point_count = foil.foil_shape.n;
   cpi = InviscidSolver::cpcalc(point_count, qinv_matrix.row(0).transpose(),
                analysis_state_.qinf, analysis_state_.currentMach);

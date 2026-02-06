@@ -21,9 +21,6 @@ bool InviscidSolver::specConverge(XFoil &xfoil, SpecTarget target) {
                                         xfoil.analysis_state_.machType);
     xfoil.reinf_cl = xfoil.getActualReynolds(xfoil.analysis_state_.clspec,
                                              xfoil.analysis_state_.reynoldsType);
-    const auto params = xfoil.buildCompressibilityParams();
-    xfoil.tklam = params.karmanTsienFactor;
-    xfoil.tkl_msq = params.karmanTsienFactor_msq;
   }
 
   xfoil.applyClComputation(xfoil.clcalc(xfoil.cmref));

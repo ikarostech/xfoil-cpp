@@ -634,16 +634,13 @@ XFoil::BlReferenceParams XFoil::computeBlReferenceParams() const {
   const double karmanTsienFactor_msq =
       1.0 / ((1.0 + beta) * (1.0 + beta)) -
       2.0 * karmanTsienFactor / (1.0 + beta) * beta_msq;
-  params.tklam = karmanTsienFactor;
-  params.tkl_msq = karmanTsienFactor_msq;
-
   //---- set gas constant (= cp/cv)
   params.blCompressibility.gm1bl = gamm1;
 
   //---- set parameters for compressibility correction
   params.blCompressibility.qinfbl = analysis_state_.qinf;
-  params.blCompressibility.tkbl = params.tklam;
-  params.blCompressibility.tkbl_ms = params.tkl_msq;
+  params.blCompressibility.tkbl = karmanTsienFactor;
+  params.blCompressibility.tkbl_ms = karmanTsienFactor_msq;
 
   //---- stagnation density and 1/enthalpy
   params.blCompressibility.rstbl =
@@ -1228,8 +1225,6 @@ SetblOutputView XFoil::setbl(
   analysis_state_.currentRe = reference_params.currentRe;
   double re_clmr = reference_params.re_clmr;
   double msq_clmr = reference_params.msq_clmr;
-  tklam = reference_params.tklam;
-  tkl_msq = reference_params.tkl_msq;
   output.blCompressibility = reference_params.blCompressibility;
   output.blReynolds = reference_params.blReynolds;
   output.blTransition.amcrit = reference_params.amcrit;

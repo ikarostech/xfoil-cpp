@@ -303,8 +303,6 @@ class XFoil {
     double currentRe = 0.0;
     double re_clmr = 0.0;
     double msq_clmr = 0.0;
-    double tklam = 0.0;
-    double tkl_msq = 0.0;
     BlCompressibilityParams blCompressibility;
     BlReynoldsParams blReynolds;
     double amcrit = 0.0;
@@ -329,8 +327,6 @@ class XFoil {
   Foil foil;
   BoundaryLayerWorkflow boundaryLayerWorkflow;
   Vector2d cmref;
-  double tklam; // karman-tsien parameter minf^2 / [1 + sqrt[1-minf^2]]^2 <- Prandtl-Glauert-Ackeret rule ?
-  double tkl_msq;
   double dtor;
 
  public: //private:
@@ -490,8 +486,6 @@ class XFoil {
   c   minf1       freestream mach number at cl=1
   c   minf        freestream mach number at current cl
   c   minf_cl     dminf/dcl
-  c   tklam       karman-tsien parameter minf^2 / [1 + sqrt[1-minf^2]]^2
-  c   tkl_msq     d[tklam]/d[minf^2]
   c   cpstar      sonic pressure coefficient
   c   qstar       sonic speed
   c
