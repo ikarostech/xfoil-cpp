@@ -37,11 +37,11 @@ bool InviscidSolver::specConverge(XFoil &xfoil, SpecTarget target) {
                           (1.0 - xfoil.aero_coeffs_.cl_msq * msq_clm);
 
       const double clm1 = clm;
-      xfoil.rlx = 1.0;
+      double rlx = 1.0;
 
       //------ under-relaxation loop to avoid driving m(cl) above 1
       for (int irlx = 1; irlx <= 12; irlx++) {
-        clm = clm1 + xfoil.rlx * dclm;
+        clm = clm1 + rlx * dclm;
 
         //-------- set new freestream mach m(clm)
         minf_clm = xfoil.getActualMach(clm, xfoil.analysis_state_.machType);
@@ -53,7 +53,7 @@ bool InviscidSolver::specConverge(XFoil &xfoil, SpecTarget target) {
             minf_clm != 0.0)
           break;
 
-        xfoil.rlx = 0.5 * xfoil.rlx;
+        rlx *= 0.5;
       }
 
       //------ set new cl(m)
@@ -106,10 +106,10 @@ bool InviscidSolver::specConverge(XFoil &xfoil, SpecTarget target) {
     const double dalfa =
         (xfoil.analysis_state_.clspec - xfoil.aero_coeffs_.cl) /
         xfoil.aero_coeffs_.cl_alf;
-    xfoil.rlx = 1.0;
+    double rlx = 1.0;
 
     xfoil.analysis_state_.alpha =
-        xfoil.analysis_state_.alpha + xfoil.rlx * dalfa;
+        xfoil.analysis_state_.alpha + rlx * dalfa;
 
     //------ set new cl(alpha)
     xfoil.applyClComputation(xfoil.clcalc(xfoil.cmref));

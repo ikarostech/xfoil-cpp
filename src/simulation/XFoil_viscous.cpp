@@ -351,7 +351,6 @@ XFoil::UpdateResult XFoil::update() const {
 }
 
 void XFoil::applyUpdateResult(UpdateResult result) {
-  rlx = result.rlx;
   rmsbl = result.rmsbl;
   rmxbl = result.rmxbl;
   boundaryLayerWorkflow.blCompressibility.hstinv = result.hstinv;

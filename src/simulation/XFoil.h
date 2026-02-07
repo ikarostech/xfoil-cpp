@@ -330,7 +330,6 @@ class XFoil {
   double dtor;
 
  public: //private:
-  double rlx;
 
   double minf_cl, reinf_cl;
 

@@ -227,21 +227,21 @@ bool BoundaryLayerWorkflow::applyMixedModeNewtonStep(
                         std::fabs(blc.rhs[0] / (10.0 * ctx.cti)));
   }
 
-  xfoil.rlx = 1.0;
+  double rlx = 1.0;
   if (ctx.dmax > 0.3) {
-    xfoil.rlx = 0.3 / ctx.dmax;
+    rlx = 0.3 / ctx.dmax;
   }
 
   if (stationIndex < lattice.get(side).profiles.transitionIndex) {
-    ami += xfoil.rlx * blc.rhs[0];
+    ami += rlx * blc.rhs[0];
     ctx.ami = ami;
   }
   if (stationIndex >= lattice.get(side).profiles.transitionIndex) {
-    ctx.cti += xfoil.rlx * blc.rhs[0];
+    ctx.cti += rlx * blc.rhs[0];
   }
-  ctx.thi += xfoil.rlx * blc.rhs[1];
-  ctx.dsi += xfoil.rlx * blc.rhs[2];
-  ctx.uei += xfoil.rlx * blc.rhs[3];
+  ctx.thi += rlx * blc.rhs[1];
+  ctx.dsi += rlx * blc.rhs[2];
+  ctx.uei += rlx * blc.rhs[3];
 
   if (stationIndex >= lattice.get(side).profiles.transitionIndex) {
     ctx.cti = std::clamp(ctx.cti, 0.0000001, 0.30);

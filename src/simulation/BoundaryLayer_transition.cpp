@@ -432,20 +432,20 @@ bool BoundaryLayerTransitionSolver::trchek(XFoil& xfoil) {
 
       da2 = -res / res_a2;
 
-      xfoil.rlx = 1.0;
+      double rlx = 1.0;
       dxt = xt_a2 * da2;
 
-      if (xfoil.rlx *
+      if (rlx *
               fabs(dxt /
                    (state.station2.param.xz - state.station1.param.xz)) >
           0.05) {
-        xfoil.rlx =
+        rlx =
             0.05 * fabs((state.station2.param.xz - state.station1.param.xz) /
                         dxt);
       }
 
-      if (xfoil.rlx * fabs(da2) > 1.0) {
-        xfoil.rlx = 1.0 * fabs(1.0 / da2);
+      if (rlx * fabs(da2) > 1.0) {
+        rlx = 1.0 * fabs(1.0 / da2);
       }
 
       //---- check if converged
@@ -454,18 +454,17 @@ bool BoundaryLayerTransitionSolver::trchek(XFoil& xfoil) {
       }
 
       if ((state.station2.param.amplz > blTransition.amcrit &&
-           state.station2.param.amplz + xfoil.rlx * da2 <
+           state.station2.param.amplz + rlx * da2 <
                blTransition.amcrit) ||
           (state.station2.param.amplz < blTransition.amcrit &&
-           state.station2.param.amplz + xfoil.rlx * da2 >
+           state.station2.param.amplz + rlx * da2 >
                blTransition.amcrit)) {
         //------ limited newton step so ampl2 doesn't step across amcrit either
         // way
         state.station2.param.amplz = blTransition.amcrit;
       } else {
         //------ regular newton step
-        state.station2.param.amplz =
-            state.station2.param.amplz + xfoil.rlx * da2;
+        state.station2.param.amplz = state.station2.param.amplz + rlx * da2;
       }
     }
     return false;

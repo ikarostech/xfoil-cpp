@@ -139,7 +139,7 @@ void XFoil::resetVariables() {
   cache.amax = 0.0;
   analysis_state_.alpha = 0.0;
   analysis_state_.clspec = 0.0;
-  rmxbl = rmsbl = rlx = 0.0;
+  rmxbl = rmsbl = 0.0;
   foil.edge.ante = 0.0;
   foil.edge.aste = 0.0;
   foil.edge.dste = 0.0;
