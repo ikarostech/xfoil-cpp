@@ -691,17 +691,6 @@ XFoil::BlReferenceParams XFoil::computeBlReferenceParams() const {
   return params;
 }
 
-BoundaryLayerWorkflow::BlInitializationPlan
-BoundaryLayerWorkflow::computeBlInitializationPlan(bool lblini) const {
-  BlInitializationPlan plan;
-  if (!lblini) {
-    //----- initialize bl by marching with ue (fudge at separation)
-    plan.needsInitialization = true;
-    plan.message = "   Initializing bl ...\n";
-  }
-  return plan;
-}
-
 BoundaryLayerWorkflow::EdgeVelocitySensitivityResult
 BoundaryLayerWorkflow::prepareEdgeVelocityAndSensitivities(
     SidePairRef<const BoundaryLayerSideProfiles> profiles,
@@ -1235,11 +1224,10 @@ SetblOutputView XFoil::setbl(
   BoundaryLayerMarcher marcher;
   const bool current_lblini = lblini;
   output.lblini = current_lblini;
-  BoundaryLayerWorkflow::BlInitializationPlan bl_init =
-      boundaryLayerWorkflow.computeBlInitializationPlan(current_lblini);
-  if (bl_init.needsInitialization) {
+
+  if (!lblini) {
     //----- initialize bl by marching with ue (fudge at separation)
-    Logger::instance().write(bl_init.message);
+    Logger::instance().write("   Initializing bl ...\n");
     marcher.mrchue(boundaryLayerWorkflow, *this);
     output.lblini = true;
     lblini = true;
