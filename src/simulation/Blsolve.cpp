@@ -95,7 +95,7 @@ Blsolve::Output Blsolve::solve(int nsys,
 
     double rhs[3][6] = {};
     int cols = 0;
-    for (int offset = 0; offset < 3 && iv + offset <= nsys; ++offset, ++cols) {
+    for (int offset = 0; offset < 3 && iv + offset < nsys; ++offset, ++cols) {
       rhs[0][cols] = vm[vmIndex(vm_size, 0, iv + offset, iv)];
       rhs[1][cols] = vm[vmIndex(vm_size, 1, iv + offset, iv)];
       rhs[2][cols] = vm[vmIndex(vm_size, 2, iv + offset, iv)];
@@ -111,7 +111,7 @@ Blsolve::Output Blsolve::solve(int nsys,
     luSolve3x3x6(D, piv, rhs);
 
     int idx = 0;
-    for (int offset = 0; offset < 3 && iv + offset <= nsys; ++offset, ++idx) {
+    for (int offset = 0; offset < 3 && iv + offset < nsys; ++offset, ++idx) {
       vm[vmIndex(vm_size, 0, iv + offset, iv)] = rhs[0][idx];
       vm[vmIndex(vm_size, 1, iv + offset, iv)] = rhs[1][idx];
       vm[vmIndex(vm_size, 2, iv + offset, iv)] = rhs[2][idx];
@@ -124,7 +124,7 @@ Blsolve::Output Blsolve::solve(int nsys,
     vdel[iv](1, 1) = rhs[1][idx];
     vdel[iv](2, 1) = rhs[2][idx];
 
-    for (int l = iv + 3; l <= nsys; ++l) {
+    for (int l = iv + 3; l < nsys; ++l) {
       double col[3] = {vm[vmIndex(vm_size, 0, l, iv)],
                        vm[vmIndex(vm_size, 1, l, iv)],
                        vm[vmIndex(vm_size, 2, l, iv)]};
@@ -141,7 +141,7 @@ Blsolve::Output Blsolve::solve(int nsys,
                       {vb[ivp](2, 0), vb[ivp](2, 1), vm[vmIndex(vm_size, 2, iv, ivp)]}};
 
     double col[3];
-    for (int l = ivp; l <= nsys; ++l) {
+    for (int l = ivp; l < nsys; ++l) {
       col[0] = vm[vmIndex(vm_size, 0, l, iv)];
       col[1] = vm[vmIndex(vm_size, 1, l, iv)];
       col[2] = vm[vmIndex(vm_size, 2, l, iv)];
@@ -167,7 +167,7 @@ Blsolve::Output Blsolve::solve(int nsys,
                          {vz[1][0], vz[1][1]},
                          {vz[2][0], vz[2][1]}};
 
-      for (int l = ivp; l <= nsys; ++l) {
+      for (int l = ivp; l < nsys; ++l) {
         col[0] = vm[vmIndex(vm_size, 0, l, iv)];
         col[1] = vm[vmIndex(vm_size, 1, l, iv)];
         for (int k = 0; k < 3; ++k)
@@ -188,26 +188,26 @@ Blsolve::Output Blsolve::solve(int nsys,
   };
 
   auto eliminateLowerVmColumn = [&](int iv, int ivp) {
-    for (int kv = iv + 2; kv <= nsys; kv++) {
+    for (int kv = iv + 2; kv < nsys; kv++) {
       double vtmp1 = vm[vmIndex(vm_size, 0, iv, kv)];
       double vtmp2 = vm[vmIndex(vm_size, 1, iv, kv)];
       double vtmp3 = vm[vmIndex(vm_size, 2, iv, kv)];
       if (fabs(vtmp1) > vaccel) {
-        for (int l = ivp; l <= nsys; l++)
+        for (int l = ivp; l < nsys; l++)
           vm[vmIndex(vm_size, 0, l, kv)] -=
               vtmp1 * vm[vmIndex(vm_size, 2, l, iv)];
         vdel[kv](0, 0) -= vtmp1 * vdel[iv](2, 0);
         vdel[kv](0, 1) -= vtmp1 * vdel[iv](2, 1);
       }
       if (fabs(vtmp2) > vaccel) {
-        for (int l = ivp; l <= nsys; l++)
+        for (int l = ivp; l < nsys; l++)
           vm[vmIndex(vm_size, 1, l, kv)] -=
               vtmp2 * vm[vmIndex(vm_size, 2, l, iv)];
         vdel[kv](1, 0) -= vtmp2 * vdel[iv](2, 0);
         vdel[kv](1, 1) -= vtmp2 * vdel[iv](2, 1);
       }
       if (fabs(vtmp3) > vaccel) {
-        for (int l = ivp; l <= nsys; l++)
+        for (int l = ivp; l < nsys; l++)
           vm[vmIndex(vm_size, 2, l, kv)] -=
               vtmp3 * vm[vmIndex(vm_size, 2, l, iv)];
         vdel[kv](2, 0) -= vtmp3 * vdel[iv](2, 0);
@@ -217,7 +217,7 @@ Blsolve::Output Blsolve::solve(int nsys,
   };
 
   auto backSubstitute = [&]() {
-    for (int iv = nsys; iv >= 2; iv--) {
+    for (int iv = nsys - 1; iv >= 2; iv--) {
       double vtmp = vdel[iv](2, 0);
       for (int kv = iv - 1; kv >= 1; kv--) {
         vdel[kv](0, 0) -= vm[vmIndex(vm_size, 0, iv, kv)] * vtmp;
@@ -233,12 +233,12 @@ Blsolve::Output Blsolve::solve(int nsys,
     }
   };
 
-  for (int iv = 1; iv <= nsys; iv++) {
+  for (int iv = 1; iv < nsys; iv++) {
     int ivp = iv + 1;
     eliminateVaBlock(iv, ivp);
-    if (iv != nsys) {
+    if (iv != nsys - 1) {
       eliminateVbBlock(iv, ivp);
-      if (ivp != nsys)
+      if (ivp != nsys - 1)
         eliminateLowerVmColumn(iv, ivp);
     }
   }

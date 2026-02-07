@@ -64,8 +64,8 @@ bool BoundaryLayerGeometry::iblsys(XFoil& xfoil) {
     }
   }
 
-  xfoil.nsys = iv;
-  const int system_size = xfoil.nsys + 1;
+  xfoil.nsys = iv + 1;
+  const int system_size = xfoil.nsys;
   xfoil.va.resize(system_size, XFoil::Matrix3x2d::Zero());
   xfoil.vb.resize(system_size, XFoil::Matrix3x2d::Zero());
   xfoil.vdel.resize(system_size, XFoil::Matrix3x2d::Zero());

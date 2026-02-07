@@ -485,8 +485,8 @@ bool XFoil::ViscousIter() {
       boundaryLayerWorkflow.lattice.top.stationToSystem[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex],
       boundaryLayerWorkflow.lattice.bottom.stationToSystem[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex]
   };
-  auto result =
-      solver.solve(nsys, ivte, VAccel(), va, vb, vm.data, vm.size, vdel, vz);
+  auto result = solver.solve(nsys, ivte, VAccel(), va, vb, vm.data, vm.size,
+                             vdel, vz);
   vm.data = std::move(result.vm);
   vdel = std::move(result.vdel);
 

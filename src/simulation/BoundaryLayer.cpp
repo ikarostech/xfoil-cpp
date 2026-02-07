@@ -754,7 +754,7 @@ void BoundaryLayerWorkflow::assembleBlJacobianForStation(
           Eigen::RowVector2d(setblSides.dule.get(2), setblSides.ule_a.get(2));
   output.vdel[iv] = A * B + ax * xi;
 
-  for (int jv = 1; jv <= nsys; jv++) {
+  for (int jv = 1; jv < nsys; jv++) {
     const Eigen::Vector4d m(
         setblStations[0].u_m(jv),
         setblStations[0].d_m(jv),
@@ -1045,18 +1045,18 @@ SetblOutputView XFoil::setbl(
   BlCompressibilityParams& blCompressibility = boundaryLayerWorkflow.blCompressibility;
   BlReynoldsParams& blReynolds = boundaryLayerWorkflow.blReynolds;
   BlTransitionParams& blTransition = boundaryLayerWorkflow.blTransition;
-  const int system_size = nsys + 1;
-  output.vm.resize(system_size);
-  output.va.resize(system_size, Matrix3x2d::Zero());
-  output.vb.resize(system_size, Matrix3x2d::Zero());
-  output.vdel.resize(system_size, Matrix3x2d::Zero());
+
+  output.vm.resize(nsys);
+  output.va.resize(nsys, Matrix3x2d::Zero());
+  output.vb.resize(nsys, Matrix3x2d::Zero());
+  output.vdel.resize(nsys, Matrix3x2d::Zero());
 
   std::array<BoundaryLayerWorkflow::SetblStation, 2> setblStations{};
-  setblStations[0].resizeSystem(system_size);
-  setblStations[1].resizeSystem(system_size);
+  setblStations[0].resizeSystem(nsys);
+  setblStations[1].resizeSystem(nsys);
 
   BoundaryLayerWorkflow::SetblSideData setblSides;
-  setblSides.resizeSystem(system_size);
+  setblSides.resizeSystem(nsys);
 
   double cti = 0.0;
   double ami = 0.0;
@@ -1335,11 +1335,10 @@ BoundaryLayerWorkflow::computeLeTeSensitivities(int ile1, int ile2, int ite1,
                                                 int ite2, int nsys,
                                                 const Eigen::MatrixXd& dij) const {
   LeTeSensitivities sensitivities;
-  const int system_size = nsys + 1;
-  sensitivities.ule_m.top = VectorXd::Zero(system_size);
-  sensitivities.ule_m.bottom = VectorXd::Zero(system_size);
-  sensitivities.ute_m.top = VectorXd::Zero(system_size);
-  sensitivities.ute_m.bottom = VectorXd::Zero(system_size);
+  sensitivities.ule_m.top = VectorXd::Zero(nsys);
+  sensitivities.ule_m.bottom = VectorXd::Zero(nsys);
+  sensitivities.ute_m.top = VectorXd::Zero(nsys);
+  sensitivities.ute_m.bottom = VectorXd::Zero(nsys);
   for (int js = 1; js <= 2; ++js) {
     for (int jbl = 0; jbl < lattice.get(js).stationCount - 1; ++jbl) {
       const int j = lattice.get(js).stationToPanel[jbl];
