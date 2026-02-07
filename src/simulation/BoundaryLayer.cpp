@@ -726,154 +726,54 @@ BoundaryLayerWorkflow::prepareEdgeVelocityAndSensitivities(
 }
 
 void BoundaryLayerWorkflow::assembleBlJacobianForStation(
-    int is, int iv, int nsys, const SidePairRef<const VectorXd>& d_m,
-    const SidePairRef<const VectorXd>& u_m,
-    const SidePairRef<const double>& xi_ule,
-    const SidePairRef<const VectorXd>& ule_m,
-    const SidePairRef<const double>& ule_a,
-    const SidePairRef<const double>& u_a,
-    const SidePairRef<const double>& d_a,
-    const SidePairRef<const double>& due,
-    const SidePairRef<const double>& dds,
-    const SidePairRef<const double>& dule, bool controlByAlpha,
-    double re_clmr, double msq_clmr, SetblOutputView& output) {
-  for (int jv = 1; jv <= nsys; jv++) {
-    output.vm.at(0, jv, iv) =
-        blc.a1(0, 2) * d_m.get(1)[jv] +
-        blc.a1(0, 3) * u_m.get(1)[jv] +
-        blc.a2(0, 2) * d_m.get(2)[jv] +
-        blc.a2(0, 3) * u_m.get(2)[jv] +
-        (blc.a1(0, 4) +
-         blc.a2(0, 4) +
-         blc.d_xi[0]) *
-            (xi_ule.get(1) * ule_m.get(1)[jv] +
-             xi_ule.get(2) * ule_m.get(2)[jv]);
-  }
+    int is, int iv, int nsys,
+    const std::array<SetblStation, 2>& setblStations,
+    const SetblSideData& setblSides, bool controlByAlpha, double re_clmr,
+    double msq_clmr, SetblOutputView& output) {
 
-  output.vb[iv](0, 0) = blc.a1(0, 0);
-  output.vb[iv](0, 1) = blc.a1(0, 1);
+  output.vb[iv] = blc.a1.block(0, 0, 3, 2);
+  output.va[iv] = blc.a2.block(0, 0, 3, 2);
+  
+  Eigen::Matrix<double, 3, 4> A;
+  A.col(0) = blc.a1.col(3).head<3>();
+  A.col(1) = blc.a1.col(2).head<3>();
+  A.col(2) = blc.a2.col(3).head<3>();
+  A.col(3) = blc.a2.col(2).head<3>();
 
-  output.va[iv](0, 0) = blc.a2(0, 0);
-  output.va[iv](0, 1) = blc.a2(0, 1);
-
-  if (controlByAlpha)
-    output.vdel[iv](0, 1) = blc.d_re[0] * re_clmr +
-                            blc.d_msq[0] * msq_clmr;
-  else
-    output.vdel[iv](0, 1) =
-        (blc.a1(0, 3) * u_a.get(1) +
-         blc.a1(0, 2) * d_a.get(1)) +
-        (blc.a2(0, 3) * u_a.get(2) +
-         blc.a2(0, 2) * d_a.get(2)) +
-        (blc.a1(0, 4) +
-         blc.a2(0, 4) +
-         blc.d_xi[0]) *
-            (xi_ule.get(1) * ule_a.get(1) +
-             xi_ule.get(2) * ule_a.get(2));
-
-  output.vdel[iv](0, 0) =
-      blc.rhs[0] +
-      (blc.a1(0, 3) * due.get(1) +
-       blc.a1(0, 2) * dds.get(1)) +
-      (blc.a2(0, 3) * due.get(2) +
-       blc.a2(0, 2) * dds.get(2)) +
-      (blc.a1(0, 4) +
-       blc.a2(0, 4) +
-       blc.d_xi[0]) *
-          (xi_ule.get(1) * dule.get(1) +
-           xi_ule.get(2) * dule.get(2));
+  Eigen::Matrix<double, 4, 2> B;
+  B << setblStations[0].due, setblStations[0].u_a,
+       setblStations[0].dds, setblStations[0].d_a,
+       setblStations[1].due, setblStations[1].u_a,
+       setblStations[1].dds, setblStations[1].d_a;
+  const Eigen::Vector3d ax =
+      (blc.a1.col(4) + blc.a2.col(4) + blc.d_xi).head<3>();
+  const Eigen::RowVector2d xi =
+      setblStations[0].xi_ule *
+          Eigen::RowVector2d(setblSides.dule.get(1), setblSides.ule_a.get(1)) +
+      setblStations[1].xi_ule *
+          Eigen::RowVector2d(setblSides.dule.get(2), setblSides.ule_a.get(2));
+  output.vdel[iv] = A * B + ax * xi;
 
   for (int jv = 1; jv <= nsys; jv++) {
-    output.vm.at(1, jv, iv) =
-        blc.a1(1, 2) * d_m.get(1)[jv] +
-        blc.a1(1, 3) * u_m.get(1)[jv] +
-        blc.a2(1, 2) * d_m.get(2)[jv] +
-        blc.a2(1, 3) * u_m.get(2)[jv] +
-        (blc.a1(1, 4) +
-         blc.a2(1, 4) +
-         blc.d_xi[1]) *
-            (xi_ule.get(1) * ule_m.get(1)[jv] +
-             xi_ule.get(2) * ule_m.get(2)[jv]);
-  }
-  output.vb[iv](1, 0) = blc.a1(1, 0);
-  output.vb[iv](1, 1) = blc.a1(1, 1);
-
-  output.va[iv](1, 0) = blc.a2(1, 0);
-  output.va[iv](1, 1) = blc.a2(1, 1);
-
-  if (controlByAlpha)
-    output.vdel[iv](1, 1) = blc.d_re[1] * re_clmr +
-                            blc.d_msq[1] * msq_clmr;
-  else
-    output.vdel[iv](1, 1) =
-        (blc.a1(1, 3) * u_a.get(1) +
-         blc.a1(1, 2) * d_a.get(1)) +
-        (blc.a2(1, 3) * u_a.get(2) +
-         blc.a2(1, 2) * d_a.get(2)) +
-        (blc.a1(1, 4) +
-         blc.a2(1, 4) +
-         blc.d_xi[1]) *
-            (xi_ule.get(1) * ule_a.get(1) +
-             xi_ule.get(2) * ule_a.get(2));
-
-  output.vdel[iv](1, 0) =
-      blc.rhs[1] +
-      (blc.a1(1, 3) * due.get(1) +
-       blc.a1(1, 2) * dds.get(1)) +
-      (blc.a2(1, 3) * due.get(2) +
-       blc.a2(1, 2) * dds.get(2)) +
-      (blc.a1(1, 4) +
-       blc.a2(1, 4) +
-       blc.d_xi[1]) *
-          (xi_ule.get(1) * dule.get(1) +
-           xi_ule.get(2) * dule.get(2));
-
-  // memory overlap problem
-  for (int jv = 1; jv <= nsys; jv++) {
-    output.vm.at(2, jv, iv) =
-        blc.a1(2, 2) * d_m.get(1)[jv] +
-        blc.a1(2, 3) * u_m.get(1)[jv] +
-        blc.a2(2, 2) * d_m.get(2)[jv] +
-        blc.a2(2, 3) * u_m.get(2)[jv] +
-        (blc.a1(2, 4) +
-         blc.a2(2, 4) +
-         blc.d_xi[2]) *
-            (xi_ule.get(1) * ule_m.get(1)[jv] +
-             xi_ule.get(2) * ule_m.get(2)[jv]);
+    const Eigen::Vector4d m(
+        setblStations[0].u_m(jv),
+        setblStations[0].d_m(jv),
+        setblStations[1].u_m(jv),
+        setblStations[1].d_m(jv));
+    const double xi_m =
+        setblStations[0].xi_ule * setblSides.ule_m.get(1)(jv) +
+        setblStations[1].xi_ule * setblSides.ule_m.get(2)(jv);
+    const Eigen::Vector3d vm = A * m + ax * xi_m;
+    output.vm.at(0, jv, iv) = vm[0];
+    output.vm.at(1, jv, iv) = vm[1];
+    output.vm.at(2, jv, iv) = vm[2];
   }
 
-  output.vb[iv](2, 0) = blc.a1(2, 0);
-  output.vb[iv](2, 1) = blc.a1(2, 1);
-
-  output.va[iv](2, 0) = blc.a2(2, 0);
-  output.va[iv](2, 1) = blc.a2(2, 1);
-
-  if (controlByAlpha)
-    output.vdel[iv](2, 1) = blc.d_re[2] * re_clmr +
-                            blc.d_msq[2] * msq_clmr;
-  else
-    output.vdel[iv](2, 1) =
-        (blc.a1(2, 3) * u_a.get(1) +
-         blc.a1(2, 2) * d_a.get(1)) +
-        (blc.a2(2, 3) * u_a.get(2) +
-         blc.a2(2, 2) * d_a.get(2)) +
-        (blc.a1(2, 4) +
-         blc.a2(2, 4) +
-         blc.d_xi[2]) *
-            (xi_ule.get(1) * ule_a.get(1) +
-             xi_ule.get(2) * ule_a.get(2));
-
-  output.vdel[iv](2, 0) =
-      blc.rhs[2] +
-      (blc.a1(2, 3) * due.get(1) +
-       blc.a1(2, 2) * dds.get(1)) +
-      (blc.a2(2, 3) * due.get(2) +
-       blc.a2(2, 2) * dds.get(2)) +
-      (blc.a1(2, 4) +
-       blc.a2(2, 4) +
-       blc.d_xi[2]) *
-          (xi_ule.get(1) * dule.get(1) +
-           xi_ule.get(2) * dule.get(2));
+  if (controlByAlpha) {
+    output.vdel[iv].col(1).head<3>() =
+      (blc.d_re.head(3)) * re_clmr +
+      (blc.d_msq.head(3)) * msq_clmr;
+  }
 }
 
 BoundaryLayerWorkflow::SimilarityStationCoefficients
@@ -1135,41 +1035,6 @@ BoundaryLayerWorkflow::advanceStationArrays(const VectorXd& u_m2,
   result.dds1 = dds2;
   return result;
 }
-namespace {
-struct SetblStation {
-  VectorXd u_m;
-  VectorXd d_m;
-  double u_a = 0.0;
-  double d_a = 0.0;
-  double due = 0.0;
-  double dds = 0.0;
-  double xi_ule = 0.0;
-
-  void resizeSystem(int system_size) {
-    u_m = VectorXd::Zero(system_size);
-    d_m = VectorXd::Zero(system_size);
-  }
-};
-
-struct SetblSideData {
-  SidePair<int> jvte{0, 0};
-  SidePair<VectorXd> usav;
-  SidePair<VectorXd> ule_m;
-  SidePair<VectorXd> ute_m;
-  SidePair<double> ule_a{0.0, 0.0};
-  SidePair<double> dule{0.0, 0.0};
-
-  void resizeSystem(int system_size) {
-    usav.top = VectorXd::Zero(system_size);
-    usav.bottom = VectorXd::Zero(system_size);
-    ule_m.top = VectorXd::Zero(system_size);
-    ule_m.bottom = VectorXd::Zero(system_size);
-    ute_m.top = VectorXd::Zero(system_size);
-    ute_m.bottom = VectorXd::Zero(system_size);
-  }
-};
-}  // namespace
-
 SetblOutputView XFoil::setbl(
     SidePairRef<const BoundaryLayerSideProfiles> profiles) {
   //-------------------------------------------------
@@ -1189,11 +1054,11 @@ SetblOutputView XFoil::setbl(
   output.vb.resize(system_size, Matrix3x2d::Zero());
   output.vdel.resize(system_size, Matrix3x2d::Zero());
 
-  std::array<SetblStation, 2> setblStations{};
+  std::array<BoundaryLayerWorkflow::SetblStation, 2> setblStations{};
   setblStations[0].resizeSystem(system_size);
   setblStations[1].resizeSystem(system_size);
 
-  SetblSideData setblSides;
+  BoundaryLayerWorkflow::SetblSideData setblSides;
   setblSides.resizeSystem(system_size);
 
   double cti = 0.0;
@@ -1341,17 +1206,7 @@ SetblOutputView XFoil::setbl(
 
       //---- stuff bl system coefficients into main jacobian matrix
       boundaryLayerWorkflow.assembleBlJacobianForStation(
-          is, iv, nsys,
-          SidePairRef<const VectorXd>{setblStations[0].d_m, setblStations[1].d_m},
-          SidePairRef<const VectorXd>{setblStations[0].u_m, setblStations[1].u_m},
-          SidePairRef<const double>{setblStations[0].xi_ule, setblStations[1].xi_ule},
-          SidePairRef<const VectorXd>{setblSides.ule_m.get(1), setblSides.ule_m.get(2)},
-          SidePairRef<const double>{setblSides.ule_a.get(1), setblSides.ule_a.get(2)},
-          SidePairRef<const double>{setblStations[0].u_a, setblStations[1].u_a},
-          SidePairRef<const double>{setblStations[0].d_a, setblStations[1].d_a},
-          SidePairRef<const double>{setblStations[0].due, setblStations[1].due},
-          SidePairRef<const double>{setblStations[0].dds, setblStations[1].dds},
-          SidePairRef<const double>{setblSides.dule.get(1), setblSides.dule.get(2)},
+          is, iv, nsys, setblStations, setblSides,
           analysis_state_.controlByAlpha, re_clmr, msq_clmr, output);
 
       if (te_update.isStartOfWake) {

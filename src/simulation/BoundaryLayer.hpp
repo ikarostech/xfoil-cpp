@@ -77,6 +77,37 @@ class BoundaryLayerWorkflow {
     double rmsContribution = 0.0;
     double maxChange = 0.0;
   };
+  struct SetblStation {
+    Eigen::VectorXd u_m;
+    Eigen::VectorXd d_m;
+    double u_a = 0.0;
+    double d_a = 0.0;
+    double due = 0.0;
+    double dds = 0.0;
+    double xi_ule = 0.0;
+
+    void resizeSystem(int system_size) {
+      u_m = Eigen::VectorXd::Zero(system_size);
+      d_m = Eigen::VectorXd::Zero(system_size);
+    }
+  };
+  struct SetblSideData {
+    SidePair<int> jvte{0, 0};
+    SidePair<Eigen::VectorXd> usav;
+    SidePair<Eigen::VectorXd> ule_m;
+    SidePair<Eigen::VectorXd> ute_m;
+    SidePair<double> ule_a{0.0, 0.0};
+    SidePair<double> dule{0.0, 0.0};
+
+    void resizeSystem(int system_size) {
+      usav.top = Eigen::VectorXd::Zero(system_size);
+      usav.bottom = Eigen::VectorXd::Zero(system_size);
+      ule_m.top = Eigen::VectorXd::Zero(system_size);
+      ule_m.bottom = Eigen::VectorXd::Zero(system_size);
+      ute_m.top = Eigen::VectorXd::Zero(system_size);
+      ute_m.bottom = Eigen::VectorXd::Zero(system_size);
+    }
+  };
   struct MixedModeStationContext {
     bool simi = false;
     bool wake = false;
@@ -218,17 +249,10 @@ class BoundaryLayerWorkflow {
       const Eigen::VectorXd& u_m2, const Eigen::VectorXd& d_m2, double u_a2,
       double d_a2, double due2, double dds2) const;
   void assembleBlJacobianForStation(
-      int is, int iv, int nsys, const SidePairRef<const Eigen::VectorXd>& d_m,
-      const SidePairRef<const Eigen::VectorXd>& u_m,
-      const SidePairRef<const double>& xi_ule,
-      const SidePairRef<const Eigen::VectorXd>& ule_m,
-      const SidePairRef<const double>& ule_a,
-      const SidePairRef<const double>& u_a,
-      const SidePairRef<const double>& d_a,
-      const SidePairRef<const double>& due,
-      const SidePairRef<const double>& dds,
-      const SidePairRef<const double>& dule, bool controlByAlpha,
-      double re_clmr, double msq_clmr, SetblOutputView& output);
+      int is, int iv, int nsys,
+      const std::array<SetblStation, 2>& setblStations,
+      const SetblSideData& setblSides, bool controlByAlpha, double re_clmr,
+      double msq_clmr, SetblOutputView& output);
   SkinFrictionCoefficients blmid(FlowRegimeEnum flowRegimeType);
   blData blprv(blData data, double xsi, double ami, double cti,
                double thi, double dsi, double dswaki, double uei) const;
