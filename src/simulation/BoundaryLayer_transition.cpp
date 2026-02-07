@@ -256,7 +256,7 @@ bool BoundaryLayerTransitionSolver::trdif() {
   return true;
 }
 
-bool BoundaryLayerTransitionSolver::trchek(XFoil& xfoil) {
+bool BoundaryLayerTransitionSolver::trchek() {
   //----------------------------------------------------------------
   //     new second-order version:  december 1994.
   //

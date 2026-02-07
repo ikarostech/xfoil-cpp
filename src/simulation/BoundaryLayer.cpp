@@ -472,14 +472,14 @@ void SetblOutputView::applyToXFoil(XFoil& xfoil) {
 }
 
 void BoundaryLayerWorkflow::checkTransitionIfNeeded(
-    XFoil& xfoil, int side, int stationIndex, bool skipCheck,
+    int side, int stationIndex, bool skipCheck,
     int laminarAdvance, double& ami) {
   if (skipCheck || flowRegime == FlowRegimeEnum::Turbulent ||
       flowRegime == FlowRegimeEnum::Wake) {
     return;
   }
 
-  transitionSolver.trchek(xfoil);
+  transitionSolver.trchek();
   ami = state.station2.param.amplz;
   if (flowRegime == FlowRegimeEnum::Transition) {
     lattice.get(side).profiles.transitionIndex = stationIndex;
@@ -509,7 +509,7 @@ bool XFoil::performMixedModeNewtonIteration(int side, int ibl, int itrold,
     boundaryLayerWorkflow.blkin(boundaryLayerWorkflow.state);
 
     boundaryLayerWorkflow.checkTransitionIfNeeded(
-        *this, side, ibl, ctx.simi, 1, ami);
+        side, ibl, ctx.simi, 1, ami);
 
     const bool startOfWake =
         boundaryLayerWorkflow.isStartOfWake(side, ibl);
@@ -565,7 +565,7 @@ void XFoil::handleMixedModeNonConvergence(int side, int ibl,
   boundaryLayerWorkflow.blkin(boundaryLayerWorkflow.state);
 
   boundaryLayerWorkflow.checkTransitionIfNeeded(
-      *this, side, ibl, ctx.simi, 2, ami);
+      side, ibl, ctx.simi, 2, ami);
 
   marcher.syncStationRegimeStates(boundaryLayerWorkflow, side, ibl, ctx.wake);
 
@@ -1163,7 +1163,7 @@ SetblOutputView XFoil::setbl(
 
       //---- check for transition and set xt, etc. if found
       if (stationIsTransitionCandidate) {
-        boundaryLayerWorkflow.transitionSolver.trchek(*this);
+        boundaryLayerWorkflow.transitionSolver.trchek();
         ami = boundaryLayerWorkflow.state.station2.param.amplz;
       }
       BoundaryLayerWorkflow::TransitionLogResult transition_log =

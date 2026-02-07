@@ -212,7 +212,7 @@ class BoundaryLayerWorkflow {
   bool applyMixedModeNewtonStep(XFoil& xfoil, int side, int stationIndex,
                                 double deps, double& ami,
                                 MixedModeStationContext& ctx);
-  void checkTransitionIfNeeded(XFoil& xfoil, int side, int stationIndex,
+  void checkTransitionIfNeeded(int side, int stationIndex,
                                bool skipCheck, int laminarAdvance,
                                double& ami);
   BlInitializationPlan computeBlInitializationPlan(bool lblini) const;

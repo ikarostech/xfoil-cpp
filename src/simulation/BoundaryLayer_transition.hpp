@@ -11,7 +11,7 @@ class BoundaryLayerTransitionSolver {
  public:
   explicit BoundaryLayerTransitionSolver(BoundaryLayerWorkflow& workflow);
 
-  bool trchek(XFoil& xfoil);
+  bool trchek();
   bool trdif();
 
  private:

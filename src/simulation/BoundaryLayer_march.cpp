@@ -637,7 +637,7 @@ bool BoundaryLayerMarcher::performMrchueNewtonLoop(
     workflow.blkin(workflow.state);
 
     if ((!ctx.simi) && (!(workflow.flowRegime == FlowRegimeEnum::Turbulent || workflow.flowRegime == FlowRegimeEnum::Wake))) {
-      workflow.transitionSolver.trchek(xfoil);
+      workflow.transitionSolver.trchek();
       ctx.ami = workflow.state.station2.param.amplz;
 
       if (workflow.flowRegime == FlowRegimeEnum::Transition) {
@@ -816,8 +816,7 @@ void BoundaryLayerMarcher::handleMrchueStationFailure(
   }
   workflow.blkin(workflow.state);
 
-  workflow.checkTransitionIfNeeded(
-      xfoil, side, stationIndex, ctx.simi, 2, ctx.ami);
+  workflow.checkTransitionIfNeeded(side, stationIndex, ctx.simi, 2, ctx.ami);
   syncStationRegimeStates(workflow, side, stationIndex, ctx.wake);
 }
 
