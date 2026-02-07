@@ -32,6 +32,9 @@ class BoundaryLayerWorkflow {
   BlCompressibilityParams blCompressibility{};
   BlReynoldsParams blReynolds{};
   BlTransitionParams blTransition{};
+  // Grouped BL Newton system coefficients (Proposal A)
+  bool trforc = false;
+  bool trfree = false;
 
   // Sutherland's const./T0 (assumes stagnation conditions are at STP).
   static constexpr double kHvrat = 0.35;

@@ -479,12 +479,12 @@ bool BoundaryLayerTransitionSolver::trchek(XFoil& xfoil) {
   }
 
   //---- test for free or forced transition
-  xfoil.trfree = (state.station2.param.amplz >= blTransition.amcrit);
-  xfoil.trforc = (blTransition.xiforc > state.station1.param.xz) &&
-                 (blTransition.xiforc <= state.station2.param.xz);
+  workflow_->trfree = (state.station2.param.amplz >= blTransition.amcrit);
+  workflow_->trforc = (blTransition.xiforc > state.station1.param.xz) &&
+                      (blTransition.xiforc <= state.station2.param.xz);
 
   //---- set transition interval flag
-  const bool transitionDetected = (xfoil.trforc || xfoil.trfree);
+  const bool transitionDetected = (workflow_->trforc || workflow_->trfree);
   flowRegime =
       transitionDetected ? FlowRegimeEnum::Transition : FlowRegimeEnum::Laminar;
 
@@ -492,12 +492,12 @@ bool BoundaryLayerTransitionSolver::trchek(XFoil& xfoil) {
     return false;
 
   //---- resolve if both forced and free transition
-  if (xfoil.trfree && xfoil.trforc) {
-    xfoil.trforc = blTransition.xiforc < xt.scalar;
-    xfoil.trfree = blTransition.xiforc >= xt.scalar;
+  if (workflow_->trfree && workflow_->trforc) {
+    workflow_->trforc = blTransition.xiforc < xt.scalar;
+    workflow_->trfree = blTransition.xiforc >= xt.scalar;
   }
 
-  if (xfoil.trforc) {
+  if (workflow_->trforc) {
     //----- if forced transition, then xt is prescribed,
     //-     no sense calculating the sensitivities, since we know them...
     xt.scalar = blTransition.xiforc;

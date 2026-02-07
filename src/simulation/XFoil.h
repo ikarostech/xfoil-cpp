@@ -348,10 +348,6 @@ class XFoil {
   Matrix2Xd qinv_matrix;
   VectorXd qvis;
 
-  // Grouped BL Newton system coefficients (Proposal A)
-  bool trforc, trfree;
-
-
   Matrix3x2dVector va, vb, vdel;
   VmMatrix vm;
   VzMatrix vz{};

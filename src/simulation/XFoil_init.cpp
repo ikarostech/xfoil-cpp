@@ -96,7 +96,8 @@ void XFoil::resetFlags() {
   analysis_state_.viscous = false;
   analysis_state_.controlByAlpha = false;
   foil.edge.sharp = false;
-  trforc = trfree = false;
+  boundaryLayerWorkflow.trforc = false;
+  boundaryLayerWorkflow.trfree = false;
   boundaryLayerWorkflow.flowRegime = FlowRegimeEnum::Laminar;
 }
 
