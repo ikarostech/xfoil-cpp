@@ -218,39 +218,6 @@ XFoil::EdgeVelocitySwapResult XFoil::swapEdgeVelocities(
   return result;
 }
 
-
-BoundaryLayerWorkflow::LeTeSensitivities
-BoundaryLayerWorkflow::computeLeTeSensitivities(int ile1, int ile2, int ite1,
-                                                int ite2, int nsys,
-                                                const Eigen::MatrixXd& dij) const {
-  LeTeSensitivities sensitivities;
-  const int system_size = nsys + 1;
-  sensitivities.ule_m.top = VectorXd::Zero(system_size);
-  sensitivities.ule_m.bottom = VectorXd::Zero(system_size);
-  sensitivities.ute_m.top = VectorXd::Zero(system_size);
-  sensitivities.ute_m.bottom = VectorXd::Zero(system_size);
-  for (int js = 1; js <= 2; ++js) {
-    for (int jbl = 0; jbl < lattice.get(js).stationCount - 1; ++jbl) {
-      const int j = lattice.get(js).stationToPanel[jbl];
-      const int jv = lattice.get(js).stationToSystem[jbl];
-      const double panelInfluenceFactor_js = lattice.get(js).panelInfluenceFactor[jbl];
-      sensitivities.ule_m.top[jv] = -lattice.top.panelInfluenceFactor[0] *
-                                    panelInfluenceFactor_js * dij(ile1, j);
-      sensitivities.ule_m.bottom[jv] = -lattice.bottom.panelInfluenceFactor[0] *
-                                       panelInfluenceFactor_js * dij(ile2, j);
-      sensitivities.ute_m.top[jv] =
-          -lattice.top.panelInfluenceFactor[lattice.top.trailingEdgeIndex] *
-          panelInfluenceFactor_js * dij(ite1, j);
-      sensitivities.ute_m.bottom[jv] =
-          -lattice.bottom
-               .panelInfluenceFactor[lattice.bottom.trailingEdgeIndex] *
-          panelInfluenceFactor_js * dij(ite2, j);
-    }
-  }
-  return sensitivities;
-}
-
-
 double XFoil::computeAcChange(double clnew, double cl_current,
                               double cl_target, double cl_ac, double cl_a,
                               double cl_ms) const {
