@@ -123,10 +123,6 @@ class BoundaryLayerWorkflow {
     double tte = 0.0;
     double dmax = 0.0;
   };
-  struct BlInitializationPlan {
-    bool needsInitialization = false;
-    std::string message;
-  };
   struct StationPrimaryVars {
     double xsi = 0.0;
     double uei = 0.0;
@@ -172,9 +168,6 @@ class BoundaryLayerWorkflow {
     double due2 = 0.0;
     double dds2 = 0.0;
   };
-  struct TransitionLogResult {
-    std::string message;
-  };
   struct TeWakeUpdateResult {
     bool isStartOfWake = false;
     Eigen::VectorXd d_m1;
@@ -215,7 +208,6 @@ class BoundaryLayerWorkflow {
   void checkTransitionIfNeeded(int side, int stationIndex,
                                bool skipCheck, int laminarAdvance,
                                double& ami);
-  BlInitializationPlan computeBlInitializationPlan(bool lblini) const;
   SimilarityStationCoefficients resetSimilarityStationCoefficients(
       const Eigen::VectorXd& u_m1, const Eigen::VectorXd& d_m1) const;
   SideSweepInitResult initializeSideSweepState(
@@ -230,7 +222,7 @@ class BoundaryLayerWorkflow {
       const SidePair<Eigen::VectorXd>& usav, const SetblOutputView& output,
       const BoundaryLayerState& base_state, int system_size,
       const Eigen::MatrixXd& dij);
-  TransitionLogResult buildTransitionLog(
+  void buildTransitionLog(
       bool stationIsTransitionCandidate, FlowRegimeEnum flowRegime) const;
   TeWakeUpdateResult computeTeWakeCoefficients(
       int is, int ibl, const SidePair<Eigen::VectorXd>& usav,
@@ -259,8 +251,7 @@ class BoundaryLayerWorkflow {
   bool blsys();
   SidePair<Eigen::VectorXd> ueset(const Eigen::MatrixXd& dij) const;
 
-  bool iblpan(int point_count, int wake_point_count,
-              std::string* error_message);
+  bool iblpan(int point_count, int wake_point_count);
   bool iblsys(XFoil& xfoil);
   StagnationResult stfind(const Eigen::Matrix2Xd& surface_vortex,
                           const Eigen::VectorXd& spline_length) const;

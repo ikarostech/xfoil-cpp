@@ -879,19 +879,16 @@ BoundaryLayerWorkflow::updateStationMatricesAndState(
   return result;
 }
 
-BoundaryLayerWorkflow::TransitionLogResult
-BoundaryLayerWorkflow::buildTransitionLog(bool stationIsTransitionCandidate,
+void BoundaryLayerWorkflow::buildTransitionLog(bool stationIsTransitionCandidate,
                                           FlowRegimeEnum flowRegime) const {
-  TransitionLogResult result;
   if (stationIsTransitionCandidate &&
       flowRegime != FlowRegimeEnum::Transition) {
     std::stringstream ss;
     ss << "setbl: xtr???  n1="
        << state.station1.param.amplz
        << " n2=" << state.station2.param.amplz << ":\n";
-    result.message = ss.str();
+    Logger::instance().write(ss.str());
   }
-  return result;
 }
 
 BoundaryLayerWorkflow::TeWakeUpdateResult
@@ -1166,12 +1163,8 @@ SetblOutputView XFoil::setbl(
         boundaryLayerWorkflow.transitionSolver.trchek();
         ami = boundaryLayerWorkflow.state.station2.param.amplz;
       }
-      BoundaryLayerWorkflow::TransitionLogResult transition_log =
-          boundaryLayerWorkflow.buildTransitionLog(
-              stationIsTransitionCandidate, output.flowRegime);
-      if (!transition_log.message.empty()) {
-        Logger::instance().write(transition_log.message);
-      }
+      boundaryLayerWorkflow.buildTransitionLog(
+          stationIsTransitionCandidate, output.flowRegime);
 
       //---- assemble 10x4 linearized system for dskinFrictionCoeff, dth, dds, due, dxi
       //	   at the previous "1" station and the current "2" station

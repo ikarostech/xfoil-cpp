@@ -14,11 +14,8 @@ BoundaryLayerGeometry::BoundaryLayerGeometry(
       stagnationIndex_(stagnationIndex),
       stagnationSst_(stagnationSst) {}
 
-bool BoundaryLayerGeometry::iblpan(
-    int point_count, int wake_point_count, std::string* error_message) {
-  if (error_message) {
-    error_message->clear();
-  }
+bool BoundaryLayerGeometry::iblpan(int point_count, int wake_point_count) {
+
   const int lattice_size = point_count + wake_point_count;
   lattice_.top.resize(lattice_size);
   lattice_.bottom.resize(lattice_size);
@@ -140,12 +137,8 @@ bool BoundaryLayerGeometry::stmove(XFoil& xfoil) {
   if (previous == stagnationIndex_) {
     xicalc(xfoil.foil);
   } else {
-    std::string iblpan_error;
-    if (iblpan(xfoil.foil.foil_shape.n, xfoil.foil.wake_shape.n,
-               &iblpan_error)) {
+    if (iblpan(xfoil.foil.foil_shape.n, xfoil.foil.wake_shape.n)) {
       xfoil.lipan = true;
-    } else if (!iblpan_error.empty()) {
-      Logger::instance().write(iblpan_error);
     }
     const auto inviscid_edge_velocity = uicalc(xfoil.qinv_matrix);
     lattice_.top.inviscidEdgeVelocityMatrix = inviscid_edge_velocity.top;
@@ -336,9 +329,8 @@ void BoundaryLayerGeometry::copyStationState(
       lattice_.get(side).profiles.edgeVelocity[source];
 }
 
-bool BoundaryLayerWorkflow::iblpan(int point_count, int wake_point_count,
-                                   std::string* error_message) {
-  return geometry.iblpan(point_count, wake_point_count, error_message);
+bool BoundaryLayerWorkflow::iblpan(int point_count, int wake_point_count) {
+  return geometry.iblpan(point_count, wake_point_count);
 }
 
 bool BoundaryLayerWorkflow::iblsys(XFoil& xfoil) {
