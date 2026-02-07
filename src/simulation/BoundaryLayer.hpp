@@ -189,7 +189,7 @@ class BoundaryLayerWorkflow {
   };
 
   bool isStartOfWake(int side, int stationIndex);
-  void updateSystemMatricesForStation(XFoil& xfoil, int side,
+  void updateSystemMatricesForStation(const Edge& edge, int side,
                                       int stationIndex,
                                       MixedModeStationContext& ctx);
   void initializeFirstIterationState(int side, int stationIndex,
@@ -202,7 +202,7 @@ class BoundaryLayerWorkflow {
                            double senswt, bool resetSensitivity,
                            bool averageSensitivity, double& sens,
                            double& sennew);
-  bool applyMixedModeNewtonStep(XFoil& xfoil, int side, int stationIndex,
+  bool applyMixedModeNewtonStep(int side, int stationIndex,
                                 double deps, double& ami,
                                 MixedModeStationContext& ctx);
   void checkTransitionIfNeeded(int side, int stationIndex,

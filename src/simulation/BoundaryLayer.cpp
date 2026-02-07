@@ -110,19 +110,19 @@ bool BoundaryLayerWorkflow::isStartOfWake(int side, int stationIndex) {
 }
 
 void BoundaryLayerWorkflow::updateSystemMatricesForStation(
-    XFoil& xfoil, int side, int stationIndex, BoundaryContext& ctx) {
+    const Edge& edge, int side, int stationIndex, BoundaryContext& ctx) {
   if (isStartOfWake(side, stationIndex)) {
     ctx.tte = lattice.get(1).profiles.momentumThickness[lattice.top.trailingEdgeIndex] +
               lattice.get(2).profiles.momentumThickness[lattice.bottom.trailingEdgeIndex];
     ctx.dte = lattice.get(1).profiles.displacementThickness[lattice.top.trailingEdgeIndex] +
-              lattice.get(2).profiles.displacementThickness[lattice.bottom.trailingEdgeIndex] + xfoil.foil.edge.ante;
+              lattice.get(2).profiles.displacementThickness[lattice.bottom.trailingEdgeIndex] + edge.ante;
     ctx.cte =
         (lattice.get(1).profiles.skinFrictionCoeff[lattice.top.trailingEdgeIndex] *
              lattice.get(1).profiles.momentumThickness[lattice.top.trailingEdgeIndex] +
          lattice.get(2).profiles.skinFrictionCoeff[lattice.bottom.trailingEdgeIndex] *
              lattice.get(2).profiles.momentumThickness[lattice.bottom.trailingEdgeIndex]) /
         ctx.tte;
-    tesys(lattice.top.profiles, lattice.bottom.profiles, xfoil.foil.edge);
+    tesys(lattice.top.profiles, lattice.bottom.profiles, edge);
   } else {
     blsys();
   }
@@ -215,7 +215,7 @@ void BoundaryLayerWorkflow::configureViscousRow(double hkref,
 }
 
 bool BoundaryLayerWorkflow::applyMixedModeNewtonStep(
-    XFoil& xfoil, int side, int stationIndex, double deps, double& ami,
+    int side, int stationIndex, double deps, double& ami,
     BoundaryContext& ctx) {
   blc.rhs =
       blc.a2.block(0, 0, 4, 4).fullPivLu().solve(blc.rhs);
@@ -513,8 +513,8 @@ bool XFoil::performMixedModeNewtonIteration(int side, int ibl, int itrold,
 
     const bool startOfWake =
         boundaryLayerWorkflow.isStartOfWake(side, ibl);
-    boundaryLayerWorkflow.updateSystemMatricesForStation(*this, side, ibl,
-                                                          ctx);
+    boundaryLayerWorkflow.updateSystemMatricesForStation(foil.edge, side, ibl,
+                                                         ctx);
 
     if (itbl == 1) {
       boundaryLayerWorkflow.initializeFirstIterationState(
@@ -531,8 +531,7 @@ bool XFoil::performMixedModeNewtonIteration(int side, int ibl, int itrold,
           sens, sennew);
     }
 
-    if (boundaryLayerWorkflow.applyMixedModeNewtonStep(*this, side, ibl, deps,
-                                                       ami, ctx)) {
+    if (boundaryLayerWorkflow.applyMixedModeNewtonStep(side, ibl, deps, ami, ctx)) {
       converged = true;
       break;
     }
