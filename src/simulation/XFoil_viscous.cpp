@@ -351,8 +351,6 @@ XFoil::UpdateResult XFoil::update() const {
 }
 
 void XFoil::applyUpdateResult(UpdateResult result) {
-  rmsbl = result.rmsbl;
-  rmxbl = result.rmxbl;
   boundaryLayerWorkflow.blCompressibility.hstinv = result.hstinv;
   analysis_state_ = std::move(result.analysis_state);
   aero_coeffs_ = std::move(result.aero_coeffs);
@@ -495,7 +493,9 @@ bool XFoil::ViscousIter() {
   vm.data = std::move(result.vm);
   vdel = std::move(result.vdel);
 
-  applyUpdateResult(update()); //	------ update bl variables
+  const auto update_result = update();
+  applyUpdateResult(update_result); //	------ update bl variables
+  const double rmsbl = update_result.rmsbl;
 
   if (analysis_state_.controlByAlpha) { //	------- set new freestream mach, re from new cl
     minf_cl = getActualMach(aero_coeffs_.cl, analysis_state_.machType);

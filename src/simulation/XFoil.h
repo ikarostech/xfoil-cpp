@@ -317,10 +317,9 @@ class XFoil {
   AeroCoefficients aero_coeffs_;
   double acrit;
   VectorXd cpi, cpv;
-  double avisc, mvisc, rmsbl;
+  double avisc, mvisc;
   bool lvconv, lwake;
   std::vector<double> qgamm;
-  double rmxbl;
 
   bool lblini, lipan;
 
@@ -717,7 +716,6 @@ class XFoil {
   c   vm[...]     mass-influence coefficient vectors in bl newton system
   c   vdel[..]    residual and solution vectors in bl newton system
   c
-  c   rmsbl       rms change from bl newton system solution
   c   rmxbl       max change from bl newton system solution
   c   imxbl       location of max change
   c   ismxbl      index of bl side containing max change
