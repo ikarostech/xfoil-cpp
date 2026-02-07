@@ -22,16 +22,8 @@ bool iterate(XFoil *xfoil, IterationContext &context) {
   }
 
   while (context.iterationCount < context.iterationLimit &&
-         !xfoil->lvconv /*&& !s_bCancel*/) {
+         !xfoil->lvconv) {
     if (xfoil->ViscousIter()) {
-      // if (m_x0 && m_y0) {
-      //  m_x0->append((double)m_Iterations);
-      //  m_y0->append(xfoil->rmsbl);
-      //}
-      // if (m_x1 && m_y1) {
-      //  m_x1->append((double)m_Iterations);
-      //  m_y1->append(xfoil->rmxbl);
-      //}
       context.iterationCount++;
     } else
       context.iterationCount = context.iterationLimit;

@@ -102,11 +102,3 @@ double XFoil::VAccel() {
 void XFoil::setVAccel(double accel) {
   vaccel_ = accel;
 }
-
-bool XFoil::isCancelled() {
-  return cancelFlag_;
-}
-
-void XFoil::setCancel(bool bCancel) {
-  cancelFlag_ = bCancel;
-}

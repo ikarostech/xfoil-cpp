@@ -174,11 +174,8 @@ class XFoil {
   void setClSpec(double cl) { analysis_state_.clspec = cl; }
   double getXcp() const;
 
-  static bool isCancelled();
-  static void setCancel(bool bCancel);
   static double VAccel();
   static void setVAccel(double accel);
-  inline static bool cancelFlag_ = false;
   inline static double vaccel_ = 0.01;
 
   bool setMach();

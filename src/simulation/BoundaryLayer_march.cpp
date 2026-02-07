@@ -519,11 +519,6 @@ bool BoundaryLayerMarcher::processBoundaryLayerStation(
   sens = sennew;
   storeStationStateCommon(workflow, side, stationIndex, ctx.ami, ctx.cti, ctx.thi,
                           ctx.dsi, ctx.uei, ctx.xsi, ctx.dswaki);
-
-  if (XFoil::isCancelled()) {
-    return false;
-  }
-
   return true;
 }
 
@@ -578,10 +573,6 @@ bool BoundaryLayerMarcher::marchMrchueSide(BoundaryLayerWorkflow& workflow, Boun
       dsi = workflow.lattice.get(1).profiles.displacementThickness[workflow.lattice.top.trailingEdgeIndex] +
             workflow.lattice.get(2).profiles.displacementThickness[workflow.lattice.bottom.trailingEdgeIndex] +
             xfoil.foil.edge.ante;
-    }
-
-    if (XFoil::isCancelled()) {
-      return false;
     }
   }
 

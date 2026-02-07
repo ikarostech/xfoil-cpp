@@ -473,8 +473,6 @@ bool BoundaryLayerTransitionSolver::trchek(XFoil& xfoil) {
   if (!iterateAmplification()) {
     // TRACE("trchek2 - n2 convergence failed\n");
     Logger::instance().write("trchek2 - n2 convergence failed\n");
-    if (XFoil::isCancelled())
-      return false;
   }
 
   //---- test for free or forced transition
