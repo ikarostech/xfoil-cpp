@@ -24,7 +24,7 @@ class BoundaryLayerGeometry {
                         double& stagnationSst);
 
   bool iblpan(int point_count, int wake_point_count);
-  bool iblsys(XFoil& xfoil);
+  bool iblsys(int& nsys);
   StagnationResult stfind(const Eigen::Matrix2Xd& surface_vortex,
                           const Eigen::VectorXd& spline_length) const;
   bool stmove(XFoil& xfoil);

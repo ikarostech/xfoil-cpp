@@ -313,8 +313,6 @@ class XFoil {
 
   bool ladij, lwdij;
 
-  int nsys;
-
   double gamma, gamm1;
 
 
@@ -681,7 +679,6 @@ class XFoil {
   c   nbl[.]      max bl array index
   c   ipan[..]    panel index corresponding to bl location
   c   isys[..]    bl newton system line number corresponding to bl location
-  c   nsys        total number of lines in bl newton system
   c   itran[.]    bl array index of transition interval
   c   tforce[.]   .true. if transition is forced due to transition strip
   c

@@ -252,7 +252,7 @@ class BoundaryLayerWorkflow {
   SidePair<Eigen::VectorXd> ueset(const Eigen::MatrixXd& dij) const;
 
   bool iblpan(int point_count, int wake_point_count);
-  bool iblsys(XFoil& xfoil);
+  bool iblsys();
   StagnationResult stfind(const Eigen::Matrix2Xd& surface_vortex,
                           const Eigen::VectorXd& spline_length) const;
   bool stmove(XFoil& xfoil);
@@ -277,6 +277,7 @@ public:
   BlSystemCoeffs blc;
   BoundaryLayerState state;
   blDiff xt;
+  int nsys = 0;
   int stagnationIndex = 0;
   double stagnationSst = 0.0;
   BoundaryLayerGeometry geometry;

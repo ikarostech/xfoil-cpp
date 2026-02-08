@@ -406,7 +406,7 @@ bool XFoil::viscal() {
     boundaryLayerWorkflow.xicalc(foil);
 
     //	----- set  bl position -> system line  pointers
-    boundaryLayerWorkflow.iblsys(*this);
+    boundaryLayerWorkflow.iblsys();
   }
 
   //	---- set inviscid bl edge velocity inviscidEdgeVelocityMatrix from qinv_matrix
@@ -485,7 +485,9 @@ bool XFoil::ViscousIter() {
       boundaryLayerWorkflow.lattice.top.stationToSystem[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex],
       boundaryLayerWorkflow.lattice.bottom.stationToSystem[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex]
   };
-  auto result = solver.solve(nsys, ivte, VAccel(), setbl_output.bl_newton_system);
+  auto result =
+      solver.solve(boundaryLayerWorkflow.nsys, ivte, VAccel(),
+                   setbl_output.bl_newton_system);
 
   const auto update_result = update(result.vdel);
   applyUpdateResult(update_result); //	------ update bl variables

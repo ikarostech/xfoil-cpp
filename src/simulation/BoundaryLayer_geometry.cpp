@@ -55,7 +55,7 @@ bool BoundaryLayerGeometry::iblpan(int point_count, int wake_point_count) {
   return true;
 }
 
-bool BoundaryLayerGeometry::iblsys(XFoil& xfoil) {
+bool BoundaryLayerGeometry::iblsys(int& nsys) {
   int iv = 0;
   for (int is = 1; is <= 2; is++) {
     for (int ibl = 0; ibl < lattice_.get(is).stationCount - 1; ++ibl) {
@@ -64,8 +64,7 @@ bool BoundaryLayerGeometry::iblsys(XFoil& xfoil) {
     }
   }
 
-  xfoil.nsys = iv + 1;
-  const int system_size = xfoil.nsys;
+  nsys = iv + 1;
 
   return true;
 }
@@ -140,7 +139,7 @@ bool BoundaryLayerGeometry::stmove(XFoil& xfoil) {
     lattice_.top.inviscidEdgeVelocityMatrix = inviscid_edge_velocity.top;
     lattice_.bottom.inviscidEdgeVelocityMatrix = inviscid_edge_velocity.bottom;
     xicalc(xfoil.foil);
-    iblsys(xfoil);
+    iblsys(xfoil.boundaryLayerWorkflow.nsys);
 
     if (stagnationIndex_ > previous) {
       const int delta = stagnationIndex_ - previous;
@@ -329,8 +328,8 @@ bool BoundaryLayerWorkflow::iblpan(int point_count, int wake_point_count) {
   return geometry.iblpan(point_count, wake_point_count);
 }
 
-bool BoundaryLayerWorkflow::iblsys(XFoil& xfoil) {
-  return geometry.iblsys(xfoil);
+bool BoundaryLayerWorkflow::iblsys() {
+  return geometry.iblsys(nsys);
 }
 
 StagnationResult BoundaryLayerWorkflow::stfind(

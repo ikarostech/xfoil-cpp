@@ -1041,6 +1041,7 @@ SetblOutputView XFoil::setbl(
   BlReynoldsParams& blReynolds = boundaryLayerWorkflow.blReynolds;
   BlTransitionParams& blTransition = boundaryLayerWorkflow.blTransition;
 
+  const int nsys = boundaryLayerWorkflow.nsys;
   output.bl_newton_system.vm.resize(nsys);
   output.bl_newton_system.va.resize(nsys, Matrix3x2d::Zero());
   output.bl_newton_system.vb.resize(nsys, Matrix3x2d::Zero());
