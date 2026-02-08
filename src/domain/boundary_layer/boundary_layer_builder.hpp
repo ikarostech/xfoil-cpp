@@ -13,7 +13,7 @@ struct SetblOutputView {
   BlReynoldsParams blReynolds{};
   BlTransitionParams blTransition{};
   SidePair<BoundaryLayerSideProfiles> profiles{};
-  XFoil::BlNewtonSystem bl_newton_system{};
+  Blsolve::BlNewtonSystem bl_newton_system{};
   FlowRegimeEnum flowRegime = FlowRegimeEnum::Laminar;
 
   void applyToXFoil(XFoil& xfoil);

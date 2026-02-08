@@ -8,8 +8,6 @@
 #include <utility>
 
 namespace {
-using VmMatrix = XFoil::VmMatrix;
-using VzMatrix = XFoil::VzMatrix;
 
 inline void plu3x3(double m[3][3], int piv[3]) {
   piv[0] = 0;
@@ -78,7 +76,7 @@ inline int vmIndex(int size, int k, int i, int j) {
 Blsolve::Output Blsolve::solve(int nsys,
                                const SidePair<int>& ivte,
                                double vaccel,
-                               const XFoil::BlNewtonSystem& bl_newton_system) const {
+                               const BlNewtonSystem& bl_newton_system) const {
   const Matrix3x2dVector& va = bl_newton_system.va;
   const Matrix3x2dVector& vb = bl_newton_system.vb;
   VmMatrix vm = bl_newton_system.vm;

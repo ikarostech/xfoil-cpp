@@ -67,6 +67,7 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 #include "simulation/psi.hpp"
 #include "simulation/skin_friction_coefficients.hpp"
 #include "simulation/boundary_layer_state.hpp"
+#include "simulation/Blsolve.hpp"
 #include "core/boundary_layer_util.hpp"
 #include "BoundaryLayer.hpp"
 
@@ -100,33 +101,6 @@ class XFoil {
   using EdgeVelocityDistribution = BoundaryLayerWorkflow::EdgeVelocityDistribution;
   using BoundaryLayerDelta = BoundaryLayerWorkflow::BoundaryLayerDelta;
   using BoundaryLayerMetrics = BoundaryLayerWorkflow::BoundaryLayerMetrics;
-  using VzMatrix = std::array<std::array<double, 2>, 3>;
-
-  struct VmMatrix {
-    int size = 0;
-    std::vector<double> data;
-
-    void resize(int new_size) {
-      size = new_size;
-      data.assign(3 * size * size, 0.0);
-    }
-
-    double& at(int k, int i, int j) {
-      return data[(k * size + i) * size + j];
-    }
-
-    const double& at(int k, int i, int j) const {
-      return data[(k * size + i) * size + j];
-    }
-  };
-
-  struct BlNewtonSystem {
-    Matrix3x2dVector va;
-    Matrix3x2dVector vb;
-    Matrix3x2dVector vdel;
-    VmMatrix vm;
-    VzMatrix vz{};
-  };
 
  public:
 
@@ -351,7 +325,7 @@ class XFoil {
   Matrix2Xd qinv_matrix;
   VectorXd qvis;
 
-  BlNewtonSystem bl_newton_system;
+  Blsolve::BlNewtonSystem bl_newton_system;
 
 
   /*
