@@ -462,11 +462,7 @@ void SetblOutputView::applyToXFoil(XFoil& xfoil) {
   xfoil.boundaryLayerWorkflow.lattice.top.profiles = std::move(profiles.top);
   xfoil.boundaryLayerWorkflow.lattice.bottom.profiles =
       std::move(profiles.bottom);
-  xfoil.va = std::move(va);
-  xfoil.vb = std::move(vb);
-  xfoil.vdel = std::move(vdel);
-  xfoil.vm = std::move(vm);
-  xfoil.vz = vz;
+  xfoil.bl_newton_system = std::move(bl_newton_system);
   xfoil.boundaryLayerWorkflow.flowRegime = flowRegime;
   xfoil.boundaryLayerWorkflow.blTransition = blTransition;
 }
@@ -730,8 +726,8 @@ void BoundaryLayerWorkflow::assembleBlJacobianForStation(
     const SetblSideData& setblSides, bool controlByAlpha, double re_clmr,
     double msq_clmr, SetblOutputView& output) {
 
-  output.vb[iv] = blc.a1.block(0, 0, 3, 2);
-  output.va[iv] = blc.a2.block(0, 0, 3, 2);
+  output.bl_newton_system.vb[iv] = blc.a1.block(0, 0, 3, 2);
+  output.bl_newton_system.va[iv] = blc.a2.block(0, 0, 3, 2);
   
   Eigen::Matrix<double, 3, 4> A;
   A.col(0) = blc.a1.col(3).head<3>();
@@ -751,7 +747,7 @@ void BoundaryLayerWorkflow::assembleBlJacobianForStation(
           Eigen::RowVector2d(setblSides.dule.get(1), setblSides.ule_a.get(1)) +
       setblStations[1].xi_ule *
           Eigen::RowVector2d(setblSides.dule.get(2), setblSides.ule_a.get(2));
-  output.vdel[iv] = A * B + ax * xi;
+  output.bl_newton_system.vdel[iv] = A * B + ax * xi;
 
   for (int jv = 1; jv < nsys; jv++) {
     const Eigen::Vector4d m(
@@ -763,13 +759,13 @@ void BoundaryLayerWorkflow::assembleBlJacobianForStation(
         setblStations[0].xi_ule * setblSides.ule_m.get(1)(jv) +
         setblStations[1].xi_ule * setblSides.ule_m.get(2)(jv);
     const Eigen::Vector3d vm = A * m + ax * xi_m;
-    output.vm.at(0, jv, iv) = vm[0];
-    output.vm.at(1, jv, iv) = vm[1];
-    output.vm.at(2, jv, iv) = vm[2];
+    output.bl_newton_system.vm.at(0, jv, iv) = vm[0];
+    output.bl_newton_system.vm.at(1, jv, iv) = vm[1];
+    output.bl_newton_system.vm.at(2, jv, iv) = vm[2];
   }
 
   if (controlByAlpha) {
-    output.vdel[iv].col(1).head<3>() =
+    output.bl_newton_system.vdel[iv].col(1).head<3>() =
       (blc.d_re.head(3)) * re_clmr +
       (blc.d_msq.head(3)) * msq_clmr;
   }
@@ -1045,10 +1041,10 @@ SetblOutputView XFoil::setbl(
   BlReynoldsParams& blReynolds = boundaryLayerWorkflow.blReynolds;
   BlTransitionParams& blTransition = boundaryLayerWorkflow.blTransition;
 
-  output.vm.resize(nsys);
-  output.va.resize(nsys, Matrix3x2d::Zero());
-  output.vb.resize(nsys, Matrix3x2d::Zero());
-  output.vdel.resize(nsys, Matrix3x2d::Zero());
+  output.bl_newton_system.vm.resize(nsys);
+  output.bl_newton_system.va.resize(nsys, Matrix3x2d::Zero());
+  output.bl_newton_system.vb.resize(nsys, Matrix3x2d::Zero());
+  output.bl_newton_system.vdel.resize(nsys, Matrix3x2d::Zero());
 
   std::array<BoundaryLayerWorkflow::SetblStation, 2> setblStations{};
   setblStations[0].resizeSystem(nsys);
@@ -1207,10 +1203,10 @@ SetblOutputView XFoil::setbl(
             boundaryLayerWorkflow.computeTeWakeJacobianAdjustments(
                 te_update.coeffs);
         for (int row = 0; row < 3; ++row) {
-          output.vz[row][0] = te_jacobian.vz[row][0];
-          output.vz[row][1] = te_jacobian.vz[row][1];
+          output.bl_newton_system.vz[row][0] = te_jacobian.vz[row][0];
+          output.bl_newton_system.vz[row][1] = te_jacobian.vz[row][1];
         }
-        output.vb[iv] = te_jacobian.vb;
+        output.bl_newton_system.vb[iv] = te_jacobian.vb;
       }
 
       //---- turbulent intervals will follow if currently at transition interval

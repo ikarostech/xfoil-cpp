@@ -8,8 +8,8 @@
 #include <utility>
 
 namespace {
-using VmVector = std::vector<double>;
-using VzArray = std::array<std::array<double, 2>, 3>;
+using VmMatrix = XFoil::VmMatrix;
+using VzMatrix = XFoil::VzMatrix;
 
 inline void plu3x3(double m[3][3], int piv[3]) {
   piv[0] = 0;
@@ -78,27 +78,25 @@ inline int vmIndex(int size, int k, int i, int j) {
 Blsolve::Output Blsolve::solve(int nsys,
                                const SidePair<int>& ivte,
                                double vaccel,
-                               const Matrix3x2dVector& va,
-                               const Matrix3x2dVector& vb,
-                               const std::vector<double>& vm_raw,
-                               int vm_size,
-                               Matrix3x2dVector vdel,
-                               const std::array<std::array<double, 2>, 3>& vz_raw) const {
-  VmVector vm = vm_raw;
-  VzArray vz = vz_raw;
+                               const XFoil::BlNewtonSystem& bl_newton_system) const {
+  const Matrix3x2dVector& va = bl_newton_system.va;
+  const Matrix3x2dVector& vb = bl_newton_system.vb;
+  VmMatrix vm = bl_newton_system.vm;
+  Matrix3x2dVector vdel = bl_newton_system.vdel;
+  VzMatrix vz = bl_newton_system.vz;
   auto eliminateVaBlock = [&](int iv, int ivp) {
-    double D[3][3] = {{va[iv](0, 0), va[iv](0, 1), vm[vmIndex(vm_size, 0, iv, iv)]},
-                      {va[iv](1, 0), va[iv](1, 1), vm[vmIndex(vm_size, 1, iv, iv)]},
-                      {va[iv](2, 0), va[iv](2, 1), vm[vmIndex(vm_size, 2, iv, iv)]}};
+    double D[3][3] = {{va[iv](0, 0), va[iv](0, 1), vm.data[vmIndex(vm.size, 0, iv, iv)]},
+                      {va[iv](1, 0), va[iv](1, 1), vm.data[vmIndex(vm.size, 1, iv, iv)]},
+                      {va[iv](2, 0), va[iv](2, 1), vm.data[vmIndex(vm.size, 2, iv, iv)]}};
     int piv[3];
     plu3x3(D, piv);
 
     double rhs[3][6] = {};
     int cols = 0;
     for (int offset = 0; offset < 3 && iv + offset < nsys; ++offset, ++cols) {
-      rhs[0][cols] = vm[vmIndex(vm_size, 0, iv + offset, iv)];
-      rhs[1][cols] = vm[vmIndex(vm_size, 1, iv + offset, iv)];
-      rhs[2][cols] = vm[vmIndex(vm_size, 2, iv + offset, iv)];
+      rhs[0][cols] = vm.data[vmIndex(vm.size, 0, iv + offset, iv)];
+      rhs[1][cols] = vm.data[vmIndex(vm.size, 1, iv + offset, iv)];
+      rhs[2][cols] = vm.data[vmIndex(vm.size, 2, iv + offset, iv)];
     }
     rhs[0][cols] = vdel[iv](0, 0);
     rhs[1][cols] = vdel[iv](1, 0);
@@ -112,9 +110,9 @@ Blsolve::Output Blsolve::solve(int nsys,
 
     int idx = 0;
     for (int offset = 0; offset < 3 && iv + offset < nsys; ++offset, ++idx) {
-      vm[vmIndex(vm_size, 0, iv + offset, iv)] = rhs[0][idx];
-      vm[vmIndex(vm_size, 1, iv + offset, iv)] = rhs[1][idx];
-      vm[vmIndex(vm_size, 2, iv + offset, iv)] = rhs[2][idx];
+      vm.data[vmIndex(vm.size, 0, iv + offset, iv)] = rhs[0][idx];
+      vm.data[vmIndex(vm.size, 1, iv + offset, iv)] = rhs[1][idx];
+      vm.data[vmIndex(vm.size, 2, iv + offset, iv)] = rhs[2][idx];
     }
     vdel[iv](0, 0) = rhs[0][idx];
     vdel[iv](1, 0) = rhs[1][idx];
@@ -125,28 +123,28 @@ Blsolve::Output Blsolve::solve(int nsys,
     vdel[iv](2, 1) = rhs[2][idx];
 
     for (int l = iv + 3; l < nsys; ++l) {
-      double col[3] = {vm[vmIndex(vm_size, 0, l, iv)],
-                       vm[vmIndex(vm_size, 1, l, iv)],
-                       vm[vmIndex(vm_size, 2, l, iv)]};
+      double col[3] = {vm.data[vmIndex(vm.size, 0, l, iv)],
+                       vm.data[vmIndex(vm.size, 1, l, iv)],
+                       vm.data[vmIndex(vm.size, 2, l, iv)]};
       luSolve3x3(D, piv, col);
-      vm[vmIndex(vm_size, 0, l, iv)] = col[0];
-      vm[vmIndex(vm_size, 1, l, iv)] = col[1];
-      vm[vmIndex(vm_size, 2, l, iv)] = col[2];
+      vm.data[vmIndex(vm.size, 0, l, iv)] = col[0];
+      vm.data[vmIndex(vm.size, 1, l, iv)] = col[1];
+      vm.data[vmIndex(vm.size, 2, l, iv)] = col[2];
     }
   };
 
   auto eliminateVbBlock = [&](int iv, int ivp) {
-    double D[3][3] = {{vb[ivp](0, 0), vb[ivp](0, 1), vm[vmIndex(vm_size, 0, iv, ivp)]},
-                      {vb[ivp](1, 0), vb[ivp](1, 1), vm[vmIndex(vm_size, 1, iv, ivp)]},
-                      {vb[ivp](2, 0), vb[ivp](2, 1), vm[vmIndex(vm_size, 2, iv, ivp)]}};
+    double D[3][3] = {{vb[ivp](0, 0), vb[ivp](0, 1), vm.data[vmIndex(vm.size, 0, iv, ivp)]},
+                      {vb[ivp](1, 0), vb[ivp](1, 1), vm.data[vmIndex(vm.size, 1, iv, ivp)]},
+                      {vb[ivp](2, 0), vb[ivp](2, 1), vm.data[vmIndex(vm.size, 2, iv, ivp)]}};
 
     double col[3];
     for (int l = ivp; l < nsys; ++l) {
-      col[0] = vm[vmIndex(vm_size, 0, l, iv)];
-      col[1] = vm[vmIndex(vm_size, 1, l, iv)];
-      col[2] = vm[vmIndex(vm_size, 2, l, iv)];
+      col[0] = vm.data[vmIndex(vm.size, 0, l, iv)];
+      col[1] = vm.data[vmIndex(vm.size, 1, l, iv)];
+      col[2] = vm.data[vmIndex(vm.size, 2, l, iv)];
       for (int k = 0; k < 3; ++k)
-        vm[vmIndex(vm_size, k, l, ivp)] -=
+        vm.data[vmIndex(vm.size, k, l, ivp)] -=
             D[k][0] * col[0] + D[k][1] * col[1] + D[k][2] * col[2];
     }
 
@@ -168,10 +166,10 @@ Blsolve::Output Blsolve::solve(int nsys,
                          {vz[2][0], vz[2][1]}};
 
       for (int l = ivp; l < nsys; ++l) {
-        col[0] = vm[vmIndex(vm_size, 0, l, iv)];
-        col[1] = vm[vmIndex(vm_size, 1, l, iv)];
+        col[0] = vm.data[vmIndex(vm.size, 0, l, iv)];
+        col[1] = vm.data[vmIndex(vm.size, 1, l, iv)];
         for (int k = 0; k < 3; ++k)
-          vm[vmIndex(vm_size, k, l, ivte.bottom)] -=
+          vm.data[vmIndex(vm.size, k, l, ivte.bottom)] -=
               Dz[k][0] * col[0] + Dz[k][1] * col[1];
       }
 
@@ -189,27 +187,27 @@ Blsolve::Output Blsolve::solve(int nsys,
 
   auto eliminateLowerVmColumn = [&](int iv, int ivp) {
     for (int kv = iv + 2; kv < nsys; kv++) {
-      double vtmp1 = vm[vmIndex(vm_size, 0, iv, kv)];
-      double vtmp2 = vm[vmIndex(vm_size, 1, iv, kv)];
-      double vtmp3 = vm[vmIndex(vm_size, 2, iv, kv)];
+      double vtmp1 = vm.data[vmIndex(vm.size, 0, iv, kv)];
+      double vtmp2 = vm.data[vmIndex(vm.size, 1, iv, kv)];
+      double vtmp3 = vm.data[vmIndex(vm.size, 2, iv, kv)];
       if (fabs(vtmp1) > vaccel) {
         for (int l = ivp; l < nsys; l++)
-          vm[vmIndex(vm_size, 0, l, kv)] -=
-              vtmp1 * vm[vmIndex(vm_size, 2, l, iv)];
+          vm.data[vmIndex(vm.size, 0, l, kv)] -=
+              vtmp1 * vm.data[vmIndex(vm.size, 2, l, iv)];
         vdel[kv](0, 0) -= vtmp1 * vdel[iv](2, 0);
         vdel[kv](0, 1) -= vtmp1 * vdel[iv](2, 1);
       }
       if (fabs(vtmp2) > vaccel) {
         for (int l = ivp; l < nsys; l++)
-          vm[vmIndex(vm_size, 1, l, kv)] -=
-              vtmp2 * vm[vmIndex(vm_size, 2, l, iv)];
+          vm.data[vmIndex(vm.size, 1, l, kv)] -=
+              vtmp2 * vm.data[vmIndex(vm.size, 2, l, iv)];
         vdel[kv](1, 0) -= vtmp2 * vdel[iv](2, 0);
         vdel[kv](1, 1) -= vtmp2 * vdel[iv](2, 1);
       }
       if (fabs(vtmp3) > vaccel) {
         for (int l = ivp; l < nsys; l++)
-          vm[vmIndex(vm_size, 2, l, kv)] -=
-              vtmp3 * vm[vmIndex(vm_size, 2, l, iv)];
+          vm.data[vmIndex(vm.size, 2, l, kv)] -=
+              vtmp3 * vm.data[vmIndex(vm.size, 2, l, iv)];
         vdel[kv](2, 0) -= vtmp3 * vdel[iv](2, 0);
         vdel[kv](2, 1) -= vtmp3 * vdel[iv](2, 1);
       }
@@ -220,15 +218,15 @@ Blsolve::Output Blsolve::solve(int nsys,
     for (int iv = nsys - 1; iv >= 2; iv--) {
       double vtmp = vdel[iv](2, 0);
       for (int kv = iv - 1; kv >= 1; kv--) {
-        vdel[kv](0, 0) -= vm[vmIndex(vm_size, 0, iv, kv)] * vtmp;
-        vdel[kv](1, 0) -= vm[vmIndex(vm_size, 1, iv, kv)] * vtmp;
-        vdel[kv](2, 0) -= vm[vmIndex(vm_size, 2, iv, kv)] * vtmp;
+        vdel[kv](0, 0) -= vm.data[vmIndex(vm.size, 0, iv, kv)] * vtmp;
+        vdel[kv](1, 0) -= vm.data[vmIndex(vm.size, 1, iv, kv)] * vtmp;
+        vdel[kv](2, 0) -= vm.data[vmIndex(vm.size, 2, iv, kv)] * vtmp;
       }
       vtmp = vdel[iv](2, 1);
       for (int kv = iv - 1; kv >= 1; kv--) {
-        vdel[kv](0, 1) -= vm[vmIndex(vm_size, 0, iv, kv)] * vtmp;
-        vdel[kv](1, 1) -= vm[vmIndex(vm_size, 1, iv, kv)] * vtmp;
-        vdel[kv](2, 1) -= vm[vmIndex(vm_size, 2, iv, kv)] * vtmp;
+        vdel[kv](0, 1) -= vm.data[vmIndex(vm.size, 0, iv, kv)] * vtmp;
+        vdel[kv](1, 1) -= vm.data[vmIndex(vm.size, 1, iv, kv)] * vtmp;
+        vdel[kv](2, 1) -= vm.data[vmIndex(vm.size, 2, iv, kv)] * vtmp;
       }
     }
   };

@@ -66,10 +66,10 @@ bool BoundaryLayerGeometry::iblsys(XFoil& xfoil) {
 
   xfoil.nsys = iv + 1;
   const int system_size = xfoil.nsys;
-  xfoil.va.resize(system_size, XFoil::Matrix3x2d::Zero());
-  xfoil.vb.resize(system_size, XFoil::Matrix3x2d::Zero());
-  xfoil.vdel.resize(system_size, XFoil::Matrix3x2d::Zero());
-  xfoil.vm.resize(system_size);
+  xfoil.bl_newton_system.va.resize(system_size, XFoil::Matrix3x2d::Zero());
+  xfoil.bl_newton_system.vb.resize(system_size, XFoil::Matrix3x2d::Zero());
+  xfoil.bl_newton_system.vdel.resize(system_size, XFoil::Matrix3x2d::Zero());
+  xfoil.bl_newton_system.vm.resize(system_size);
 
   return true;
 }

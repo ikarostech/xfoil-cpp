@@ -120,6 +120,14 @@ class XFoil {
     }
   };
 
+  struct BlNewtonSystem {
+    Matrix3x2dVector va;
+    Matrix3x2dVector vb;
+    Matrix3x2dVector vdel;
+    VmMatrix vm;
+    VzMatrix vz{};
+  };
+
  public:
 
   bool isValidFoilAngles(Matrix2Xd points);
@@ -343,9 +351,7 @@ class XFoil {
   Matrix2Xd qinv_matrix;
   VectorXd qvis;
 
-  Matrix3x2dVector va, vb, vdel;
-  VmMatrix vm;
-  VzMatrix vz{};
+  BlNewtonSystem bl_newton_system;
 
 
   /*
@@ -708,10 +714,10 @@ class XFoil {
   c   itran[.]    bl array index of transition interval
   c   tforce[.]   .true. if transition is forced due to transition strip
   c
-  c   va,vb[...]  diagonal and off-diagonal blocks in bl newton system
-  c   vz[..]      way-off-diagonal block at te station line
-  c   vm[...]     mass-influence coefficient vectors in bl newton system
-  c   vdel[..]    residual and solution vectors in bl newton system
+  c   bl_newton_system.va/vb[...]  diagonal and off-diagonal blocks in bl newton system
+  c   bl_newton_system.vz[..]      way-off-diagonal block at te station line
+  c   bl_newton_system.vm[...]     mass-influence coefficient vectors in bl newton system
+  c   bl_newton_system.vdel[..]    residual and solution vectors in bl newton system
   c
   c   rmxbl       max change from bl newton system solution
   c   imxbl       location of max change

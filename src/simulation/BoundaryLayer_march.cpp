@@ -181,8 +181,8 @@ BoundaryLayerMarcher::computeNewUeDistribution(const BoundaryLayerWorkflow& work
               xfoil.aerodynamicCache.dij(panelIndex, otherPanel);
           dui += influence *
                  (workflow.lattice.get(otherSide).profiles.massFlux[otherStation] +
-                  xfoil.vdel[systemIndex](2, 0));
-          dui_ac += influence * (-xfoil.vdel[systemIndex](2, 1));
+                  xfoil.bl_newton_system.vdel[systemIndex](2, 0));
+          dui_ac += influence * (-xfoil.bl_newton_system.vdel[systemIndex](2, 1));
         }
       }
 
@@ -292,10 +292,10 @@ BoundaryLayerMarcher::buildBoundaryLayerDelta(
   for (int j = 0; j < len; ++j) {
     const int idx = iv[j];
     delta.dskinFrictionCoeff[j] =
-        xfoil.vdel[idx](0, 0) - dac * xfoil.vdel[idx](0, 1);
+        xfoil.bl_newton_system.vdel[idx](0, 0) - dac * xfoil.bl_newton_system.vdel[idx](0, 1);
     delta.dmomentumThickness[j] =
-        xfoil.vdel[idx](1, 0) - dac * xfoil.vdel[idx](1, 1);
-    dmass[j] = xfoil.vdel[idx](2, 0) - dac * xfoil.vdel[idx](2, 1);
+        xfoil.bl_newton_system.vdel[idx](1, 0) - dac * xfoil.bl_newton_system.vdel[idx](1, 1);
+    dmass[j] = xfoil.bl_newton_system.vdel[idx](2, 0) - dac * xfoil.bl_newton_system.vdel[idx](2, 1);
   }
 
   const Eigen::VectorXd edgeVelocity_segment =

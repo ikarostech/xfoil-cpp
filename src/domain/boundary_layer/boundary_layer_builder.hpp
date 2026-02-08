@@ -13,11 +13,7 @@ struct SetblOutputView {
   BlReynoldsParams blReynolds{};
   BlTransitionParams blTransition{};
   SidePair<BoundaryLayerSideProfiles> profiles{};
-  std::vector<Eigen::Matrix<double, 3, 2>> va;
-  std::vector<Eigen::Matrix<double, 3, 2>> vb;
-  std::vector<Eigen::Matrix<double, 3, 2>> vdel;
-  XFoil::VmMatrix vm;
-  XFoil::VzMatrix vz{};
+  XFoil::BlNewtonSystem bl_newton_system{};
   FlowRegimeEnum flowRegime = FlowRegimeEnum::Laminar;
 
   void applyToXFoil(XFoil& xfoil);
