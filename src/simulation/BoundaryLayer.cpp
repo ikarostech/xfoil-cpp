@@ -462,7 +462,7 @@ void SetblOutputView::applyToXFoil(XFoil& xfoil) {
   xfoil.boundaryLayerWorkflow.lattice.top.profiles = std::move(profiles.top);
   xfoil.boundaryLayerWorkflow.lattice.bottom.profiles =
       std::move(profiles.bottom);
-  xfoil.bl_newton_system = std::move(bl_newton_system);
+  //xfoil.bl_newton_system = std::move(bl_newton_system);
   xfoil.boundaryLayerWorkflow.flowRegime = flowRegime;
   xfoil.boundaryLayerWorkflow.blTransition = blTransition;
 }

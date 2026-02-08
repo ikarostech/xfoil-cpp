@@ -258,7 +258,7 @@ class XFoil {
     SidePair<BoundaryLayerSideProfiles> profiles;
     SidePair<Eigen::VectorXd> skinFrictionCoeffHistory;
   };
-  UpdateResult update() const;
+  UpdateResult update(const Matrix3x2dVector& vdel) const;
   void applyUpdateResult(UpdateResult result);
   using QtanResult = BoundaryLayerWorkflow::QtanResult;
   using ClContributions = BoundaryLayerWorkflow::ClContributions;
@@ -324,9 +324,6 @@ class XFoil {
   double gamte, sigte;
   Matrix2Xd qinv_matrix;
   VectorXd qvis;
-
-  Blsolve::BlNewtonSystem bl_newton_system;
-
 
   /*
   c

@@ -78,14 +78,18 @@ void XFoil::initializeDataStructures() {
   qvis = VectorXd::Zero(total_nodes_with_wake);
 
   boundaryLayerWorkflow.wgap = VectorXd::Zero(wake_nodes);
+  /*
   bl_newton_system.va.resize(bl_system_size + 1, Matrix3x2d::Zero());
   bl_newton_system.vb.resize(bl_system_size + 1, Matrix3x2d::Zero());
   bl_newton_system.vdel.resize(bl_system_size + 1, Matrix3x2d::Zero());
   bl_newton_system.vm.resize(bl_system_size + 1);
+  */
   boundaryLayerWorkflow.blc.clear();
+  /*
   for (auto& row : bl_newton_system.vz) {
     row.fill(0.0);
   }
+  */
 
   qgamm.assign(point_count, 0.0);
 }

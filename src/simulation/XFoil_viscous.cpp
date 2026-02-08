@@ -257,7 +257,7 @@ double XFoil::rlxCalc(double dac) const {
   return clampRelaxationForGlobalChange(1.0, dac, dalmin, dalmax);
 }
 
-XFoil::UpdateResult XFoil::update() const {
+XFoil::UpdateResult XFoil::update(const XFoil::Matrix3x2dVector& vdel) const {
   //------------------------------------------------------------------
   //      adds on newton deltas to boundary layer variables.
   //      checks for excessive changes and underrelaxes if necessary.
@@ -282,7 +282,7 @@ XFoil::UpdateResult XFoil::update() const {
 
   //--- calculate new ue distribution and tangential velocities
   const auto ue_distribution =
-      marcher.computeNewUeDistribution(boundaryLayerWorkflow, *this);
+      marcher.computeNewUeDistribution(boundaryLayerWorkflow, *this, vdel);
   const auto cl_contributions =
       marcher.computeClFromEdgeVelocityDistribution(boundaryLayerWorkflow,
                                                     *this, ue_distribution);
@@ -306,7 +306,7 @@ XFoil::UpdateResult XFoil::update() const {
     deltas.get(side) =
         marcher.buildBoundaryLayerDelta(
             boundaryLayerWorkflow, side, ue_distribution.unew.get(side),
-            ue_distribution.u_ac.get(side), dac, *this);
+            ue_distribution.u_ac.get(side), dac, *this, vdel);
     metrics.get(side) =
         marcher.evaluateSegmentRelaxation(
             boundaryLayerWorkflow, side, deltas.get(side), dhi, dlo, rlx);
@@ -485,11 +485,9 @@ bool XFoil::ViscousIter() {
       boundaryLayerWorkflow.lattice.top.stationToSystem[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex],
       boundaryLayerWorkflow.lattice.bottom.stationToSystem[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex]
   };
-  auto result = solver.solve(nsys, ivte, VAccel(), bl_newton_system);
-  bl_newton_system.vm = std::move(result.vm);
-  bl_newton_system.vdel = std::move(result.vdel);
+  auto result = solver.solve(nsys, ivte, VAccel(), setbl_output.bl_newton_system);
 
-  const auto update_result = update();
+  const auto update_result = update(result.vdel);
   applyUpdateResult(update_result); //	------ update bl variables
   const double rmsbl = update_result.rmsbl;
 
