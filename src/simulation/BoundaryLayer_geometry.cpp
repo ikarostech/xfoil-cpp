@@ -117,29 +117,34 @@ StagnationResult BoundaryLayerGeometry::stfind(
   return result;
 }
 
-bool BoundaryLayerGeometry::stmove(XFoil& xfoil) {
+bool BoundaryLayerGeometry::stmove(const Eigen::Matrix2Xd& surface_vortex,
+                                   const Eigen::VectorXd& spline_length,
+                                   const Foil& foil,
+                                   const Eigen::Matrix2Xd& qinv_matrix,
+                                   StagnationResult& stagnation,
+                                   bool& lipan,
+                                   int& nsys) {
   const int previous = stagnationIndex_;
-  const auto stagnation = stfind(xfoil.surface_vortex,
-                                 xfoil.foil.foil_shape.spline_length);
-  if (!stagnation.found) {
+  const auto stagnation_result = stfind(surface_vortex, spline_length);
+  if (!stagnation_result.found) {
     Logger::instance().write(
         "stfind: Stagnation point not found. Continuing ...\n");
   }
-  stagnationIndex_ = stagnation.stagnationIndex;
-  xfoil.stagnation = stagnation;
-  stagnationSst_ = stagnation.sst;
+  stagnationIndex_ = stagnation_result.stagnationIndex;
+  stagnation = stagnation_result;
+  stagnationSst_ = stagnation_result.sst;
 
   if (previous == stagnationIndex_) {
-    xicalc(xfoil.foil);
+    xicalc(foil);
   } else {
-    if (iblpan(xfoil.foil.foil_shape.n, xfoil.foil.wake_shape.n)) {
-      xfoil.lipan = true;
+    if (iblpan(foil.foil_shape.n, foil.wake_shape.n)) {
+      lipan = true;
     }
-    const auto inviscid_edge_velocity = uicalc(xfoil.qinv_matrix);
+    const auto inviscid_edge_velocity = uicalc(qinv_matrix);
     lattice_.top.inviscidEdgeVelocityMatrix = inviscid_edge_velocity.top;
     lattice_.bottom.inviscidEdgeVelocityMatrix = inviscid_edge_velocity.bottom;
-    xicalc(xfoil.foil);
-    iblsys(xfoil.boundaryLayerWorkflow.nsys);
+    xicalc(foil);
+    iblsys(nsys);
 
     if (stagnationIndex_ > previous) {
       const int delta = stagnationIndex_ - previous;
@@ -175,7 +180,7 @@ bool BoundaryLayerGeometry::stmove(XFoil& xfoil) {
       }
 
       const double dudx =
-          lattice_.bottom.profiles.edgeVelocity[delta] /
+      lattice_.bottom.profiles.edgeVelocity[delta] /
           lattice_.bottom.arcLengthCoordinates[delta];
       for (int ibl = delta; ibl >= 1; --ibl) {
         copyStationState(2, ibl - 1, delta);
@@ -322,31 +327,4 @@ void BoundaryLayerGeometry::copyStationState(
       lattice_.get(side).profiles.displacementThickness[source];
   lattice_.get(side).profiles.edgeVelocity[destination] =
       lattice_.get(side).profiles.edgeVelocity[source];
-}
-
-bool BoundaryLayerWorkflow::iblpan(int point_count, int wake_point_count) {
-  return geometry.iblpan(point_count, wake_point_count);
-}
-
-bool BoundaryLayerWorkflow::iblsys() {
-  return geometry.iblsys(nsys);
-}
-
-StagnationResult BoundaryLayerWorkflow::stfind(
-    const Eigen::Matrix2Xd& surface_vortex,
-    const Eigen::VectorXd& spline_length) const {
-  return geometry.stfind(surface_vortex, spline_length);
-}
-
-bool BoundaryLayerWorkflow::stmove(XFoil& xfoil) {
-  return geometry.stmove(xfoil);
-}
-
-bool BoundaryLayerWorkflow::xicalc(const Foil& foil) {
-  return geometry.xicalc(foil);
-}
-
-SidePair<Eigen::Matrix2Xd> BoundaryLayerWorkflow::uicalc(
-    const Eigen::Matrix2Xd& qinv_matrix) const {
-  return geometry.uicalc(qinv_matrix);
 }

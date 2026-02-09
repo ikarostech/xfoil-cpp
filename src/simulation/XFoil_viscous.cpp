@@ -387,7 +387,7 @@ bool XFoil::viscal() {
       surface_vortex = gamqv();
 
     //	----- locate stagnation point arc length position and panel index
-    const auto stagnation = boundaryLayerWorkflow.stfind(
+    const auto stagnation = boundaryLayerWorkflow.geometry.stfind(
         surface_vortex, foil.foil_shape.spline_length);
     if (!stagnation.found) {
       Logger::instance().write("stfind: Stagnation point not found. Continuing ...\n");
@@ -397,21 +397,21 @@ bool XFoil::viscal() {
     boundaryLayerWorkflow.stagnationSst = stagnation.sst;
 
     //	----- set  bl position -> panel position  pointers
-    if (boundaryLayerWorkflow.iblpan(point_count, foil.wake_shape.n)) {
+    if (boundaryLayerWorkflow.geometry.iblpan(point_count, foil.wake_shape.n)) {
       lipan = true;
     }
 
     //	----- calculate surface arc length array for current stagnation point
     // location
-    boundaryLayerWorkflow.xicalc(foil);
+    boundaryLayerWorkflow.geometry.xicalc(foil);
 
     //	----- set  bl position -> system line  pointers
-    boundaryLayerWorkflow.iblsys();
+    boundaryLayerWorkflow.geometry.iblsys(boundaryLayerWorkflow.nsys);
   }
 
   //	---- set inviscid bl edge velocity inviscidEdgeVelocityMatrix from qinv_matrix
   {
-    const auto inviscid_edge_velocity = boundaryLayerWorkflow.uicalc(qinv_matrix);
+    const auto inviscid_edge_velocity = boundaryLayerWorkflow.geometry.uicalc(qinv_matrix);
     boundaryLayerWorkflow.lattice.top.inviscidEdgeVelocityMatrix = inviscid_edge_velocity.top;
     boundaryLayerWorkflow.lattice.bottom.inviscidEdgeVelocityMatrix = inviscid_edge_velocity.bottom;
   }
@@ -499,14 +499,16 @@ bool XFoil::ViscousIter() {
   } else { //	------- set new inviscid speeds qinv_matrix and inviscidEdgeVelocityMatrix for new alpha
     qinv_matrix =
         InviscidSolver::qiset(analysis_state_.alpha, aerodynamicCache.qinvu);
-    const auto inviscid_edge_velocity = boundaryLayerWorkflow.uicalc(qinv_matrix);
+    const auto inviscid_edge_velocity = boundaryLayerWorkflow.geometry.uicalc(qinv_matrix);
     boundaryLayerWorkflow.lattice.top.inviscidEdgeVelocityMatrix = inviscid_edge_velocity.top;
     boundaryLayerWorkflow.lattice.bottom.inviscidEdgeVelocityMatrix = inviscid_edge_velocity.bottom;
   }
 
   qvis = qvfue(qvis, boundaryLayerWorkflow.lattice);  //	------ calculate edge velocities qvis(.) from edgeVelocity(..)
   surface_vortex = gamqv();  //	------ set gam distribution from qvis
-  boundaryLayerWorkflow.stmove(*this); //	------ relocate stagnation point
+  boundaryLayerWorkflow.geometry.stmove(surface_vortex, foil.foil_shape.spline_length,
+                               foil, qinv_matrix, stagnation,
+                               lipan, boundaryLayerWorkflow.nsys); //	------ relocate stagnation point
 
   //	------ set updated cl,cd
   const auto cl_result = clcalc(cmref);

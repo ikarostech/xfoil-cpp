@@ -251,13 +251,6 @@ class BoundaryLayerWorkflow {
   bool blsys();
   SidePair<Eigen::VectorXd> ueset(const Eigen::MatrixXd& dij) const;
 
-  bool iblpan(int point_count, int wake_point_count);
-  bool iblsys();
-  StagnationResult stfind(const Eigen::Matrix2Xd& surface_vortex,
-                          const Eigen::VectorXd& spline_length) const;
-  bool stmove(XFoil& xfoil);
-  bool xicalc(const Foil& foil);
-  SidePair<Eigen::Matrix2Xd> uicalc(const Eigen::Matrix2Xd& qinv_matrix) const;
   bool blkin(BoundaryLayerState& state);
   bool tesys(const BoundaryLayerSideProfiles& top_profiles,
              const BoundaryLayerSideProfiles& bottom_profiles,

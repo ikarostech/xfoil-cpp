@@ -27,7 +27,13 @@ class BoundaryLayerGeometry {
   bool iblsys(int& nsys);
   StagnationResult stfind(const Eigen::Matrix2Xd& surface_vortex,
                           const Eigen::VectorXd& spline_length) const;
-  bool stmove(XFoil& xfoil);
+  bool stmove(const Eigen::Matrix2Xd& surface_vortex,
+              const Eigen::VectorXd& spline_length,
+              const Foil& foil,
+              const Eigen::Matrix2Xd& qinv_matrix,
+              StagnationResult& stagnation,
+              bool& lipan,
+              int& nsys);
   bool xicalc(const Foil& foil);
   SidePair<Eigen::Matrix2Xd> uicalc(
       const Eigen::Matrix2Xd& qinv_matrix) const;
