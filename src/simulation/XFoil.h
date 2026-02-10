@@ -298,7 +298,7 @@ class XFoil {
   VectorXd cpi, cpv;
   double avisc, mvisc;
   bool lvconv, lwake;
-  std::vector<double> qgamm;
+  VectorXd qgamm;
 
   bool lblini, lipan;
 

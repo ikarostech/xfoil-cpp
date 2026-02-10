@@ -9,14 +9,7 @@ using Eigen::Matrix2Xd;
 using Eigen::VectorXd;
 
 bool InviscidSolver::specConverge(XFoil &xfoil, SpecTarget target) {
-  xfoil.surface_vortex = MathUtil::getRotateMatrix(xfoil.analysis_state_.alpha) *
-                         xfoil.aerodynamicCache.gamu;
-
-  if (target == SpecTarget::AngleOfAttack) {
-    xfoil.updateTrailingEdgeState();
-    xfoil.qinv_matrix =
-        qiset(xfoil.analysis_state_.alpha, xfoil.aerodynamicCache.qinvu);
-  } else {
+  if (target == SpecTarget::LiftCoefficient) {
     xfoil.minf_cl = xfoil.getActualMach(xfoil.analysis_state_.clspec,
                                         xfoil.analysis_state_.machType);
     xfoil.reinf_cl = xfoil.getActualReynolds(xfoil.analysis_state_.clspec,
@@ -71,8 +64,6 @@ bool InviscidSolver::specConverge(XFoil &xfoil, SpecTarget target) {
     }
 
     //---- set final mach, cl, cp distributions, and hinge moment
-    xfoil.qinv_matrix =
-        qiset(xfoil.analysis_state_.alpha, xfoil.aerodynamicCache.qinvu);
     xfoil.applyClComputation(xfoil.clcalc(xfoil.cmref));
 
     xfoil.cpi = cpcalc(xfoil.foil.foil_shape.n,
@@ -95,9 +86,9 @@ bool InviscidSolver::specConverge(XFoil &xfoil, SpecTarget target) {
                                xfoil.analysis_state_.qinf,
                                xfoil.analysis_state_.currentMach);
 
-    for (int i = 0; i < xfoil.foil.foil_shape.n; i++) {
-      xfoil.qgamm[i] = xfoil.surface_vortex(0, i);
-    }
+    xfoil.surface_vortex = MathUtil::getRotateMatrix(xfoil.analysis_state_.alpha) *
+      xfoil.aerodynamicCache.gamu;
+    xfoil.qgamm = xfoil.surface_vortex.row(0).transpose();
 
     return true;
   }
@@ -126,8 +117,8 @@ bool InviscidSolver::specConverge(XFoil &xfoil, SpecTarget target) {
 
   //---- set final surface speed and cp distributions
   xfoil.updateTrailingEdgeState();
-  xfoil.qinv_matrix =
-      qiset(xfoil.analysis_state_.alpha, xfoil.aerodynamicCache.qinvu);
+  //xfoil.qinv_matrix =
+  //    qiset(xfoil.analysis_state_.alpha, xfoil.aerodynamicCache.qinvu);
 
   if (xfoil.analysis_state_.viscous) {
     xfoil.cpv =

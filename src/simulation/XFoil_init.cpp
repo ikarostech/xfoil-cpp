@@ -91,7 +91,7 @@ void XFoil::initializeDataStructures() {
   }
   */
 
-  qgamm.assign(point_count, 0.0);
+  qgamm = VectorXd::Zero(point_count);
 }
 
 void XFoil::resetFlags() {
