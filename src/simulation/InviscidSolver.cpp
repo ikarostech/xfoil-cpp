@@ -66,7 +66,7 @@ bool InviscidSolver::specConverge(XFoil &xfoil, SpecTarget target) {
     //---- set final mach, cl, cp distributions, and hinge moment
     xfoil.applyClComputation(xfoil.clcalc(xfoil.cmref));
 
-    xfoil.cpi = cpcalc(xfoil.foil.foil_shape.n,
+    xfoil.cpi = cpcalc(xfoil.foil.foil_shape.n + xfoil.foil.wake_shape.n,
                              xfoil.qinv_matrix.row(0).transpose(),
                              xfoil.analysis_state_.qinf,
                              xfoil.analysis_state_.currentMach);
@@ -75,17 +75,7 @@ bool InviscidSolver::specConverge(XFoil &xfoil, SpecTarget target) {
           cpcalc(xfoil.foil.foil_shape.n + xfoil.foil.wake_shape.n,
                        xfoil.qvis, xfoil.analysis_state_.qinf,
                        xfoil.analysis_state_.currentMach);
-      xfoil.cpi =
-          cpcalc(xfoil.foil.foil_shape.n + xfoil.foil.wake_shape.n,
-                       xfoil.qinv_matrix.row(0).transpose(),
-                       xfoil.analysis_state_.qinf,
-                       xfoil.analysis_state_.currentMach);
-    } else
-      xfoil.cpi = cpcalc(xfoil.foil.foil_shape.n,
-                               xfoil.qinv_matrix.row(0).transpose(),
-                               xfoil.analysis_state_.qinf,
-                               xfoil.analysis_state_.currentMach);
-
+    }
     xfoil.surface_vortex = MathUtil::getRotateMatrix(xfoil.analysis_state_.alpha) *
       xfoil.aerodynamicCache.gamu;
     xfoil.qgamm = xfoil.surface_vortex.row(0).transpose();
