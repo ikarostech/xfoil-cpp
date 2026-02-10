@@ -32,7 +32,6 @@ void ClearInitState(const XFoil& xfoil) {
 }
 
 bool XFoil::initialize() {
-  dtor = std::numbers::pi / 180.0;
 
   // allocate arrays and clear containers
   initializeDataStructures();

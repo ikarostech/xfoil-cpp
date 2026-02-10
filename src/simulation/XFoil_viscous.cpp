@@ -231,6 +231,7 @@ double XFoil::computeAcChange(double clnew, double cl_current,
 
 double XFoil::rlxCalc(double dac) const {
   //---- max allowable alpha changes per iteration
+  const double dtor = std::numbers::pi / 180.0;
   double dalmax = 0.5 * dtor;
   double dalmin = -0.5 * dtor;
   //---- max allowable cl change per iteration

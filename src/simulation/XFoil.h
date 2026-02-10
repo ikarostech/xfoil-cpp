@@ -305,7 +305,6 @@ class XFoil {
   Foil foil;
   BoundaryLayerWorkflow boundaryLayerWorkflow;
   Vector2d cmref;
-  double dtor;
 
  public: //private:
 
