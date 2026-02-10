@@ -132,53 +132,36 @@ Matrix2Xd XFoil::gamqv() const {
  *     in specal or speccl for specified alpha or cl.
  *-------------------------------------------------------------- */
 bool XFoil::ggcalc() {
-
-  double res;
   auto& cache = aerodynamicCache;
 
   Logger::instance().write("   Calculating unit vorticity distributions ...\n");
-  const int point_count = foil.foil_shape.n;
 
-  MatrixXd dpsi_dgam = MatrixXd::Zero(point_count + 1, point_count + 1);
+  MatrixXd dpsi_dgam = MatrixXd::Zero(foil.foil_shape.n + 1, foil.foil_shape.n + 1);
 
-  Matrix2Xd psi = Matrix2Xd::Zero(2, point_count + 1);
+  Matrix2Xd psi = Matrix2Xd::Zero(2, foil.foil_shape.n + 1);
 
   //---- set up matrix system for  psi = psio  on airfoil surface.
   //-    the unknowns are (dgamma)i and dpsio.
-  for (int i = 0; i < point_count; i++) {
+  for (int i = 0; i < foil.foil_shape.n; i++) {
     //------ calculate psi and dpsi/dgamma array for current node
     PsiResult psi_result =
         psilin(foil, i, foil.foil_shape.points.col(i),
                foil.foil_shape.normal_vector.col(i), true, cache.gamu,
                surface_vortex, analysis_state_.alpha, analysis_state_.qinf,
                foil.foil_shape.angle_panel);
-    const Vector2d res = analysis_state_.qinf *
-                         Vector2d{foil.foil_shape.points.col(i).y(),
-                                  -foil.foil_shape.points.col(i).x()};
-
     //------ dres/dgamma
-    dpsi_dgam.row(i).head(point_count) = psi_result.dzdg.head(point_count);
-    cache.bij.row(i).head(point_count) = -psi_result.dzdm.head(point_count);
-
-    //------ dres/dpsio
-    dpsi_dgam(i, point_count) = -1.0;
-
-    psi.col(i) = -res;
+    dpsi_dgam.row(i).head(foil.foil_shape.n) = psi_result.dzdg;
+    cache.bij.row(i).head(foil.foil_shape.n) = -psi_result.dzdm;
   }
-
-  //---- set Kutta condition
-  //-    res = gam(1) + gam[n]
-  res = 0.0;
-
-  dpsi_dgam.row(point_count).head(point_count + 1) = VectorXd::Zero(point_count + 1);
-  dpsi_dgam(point_count, 0) = 1;
-  dpsi_dgam(point_count, point_count - 1) = 1;
-
-  psi.col(point_count).x() = -res;
-  psi.col(point_count).y() = -res;
+  psi.leftCols(foil.foil_shape.n) = -analysis_state_.qinf * Matrix2d{{0.0, 1.0}, {-1.0, 0.0}} * foil.foil_shape.points;
+  //------ dres/dpsio
+  dpsi_dgam.col(foil.foil_shape.n) = - VectorXd::Ones(foil.foil_shape.n);
+  dpsi_dgam.row(foil.foil_shape.n) = VectorXd::Zero(foil.foil_shape.n + 1);
+  dpsi_dgam(foil.foil_shape.n, 0) = 1;
+  dpsi_dgam(foil.foil_shape.n, foil.foil_shape.n - 1) = 1;
 
   //---- set up Kutta condition (no direct source influence)
-  cache.bij.row(point_count).head(point_count) = VectorXd::Zero(point_count);
+  cache.bij.row(foil.foil_shape.n).head(foil.foil_shape.n) = VectorXd::Zero(foil.foil_shape.n);
 
   if (foil.edge.sharp) {
     //----- set zero internal velocity in TE corner
@@ -186,7 +169,7 @@ bool XFoil::ggcalc() {
     //----- set TE bisector angle
     const double ag1 = atan2(-foil.foil_shape.dpoints_ds.col(0).y(), -foil.foil_shape.dpoints_ds.col(0).x());
     const double ag2 =
-        atanc(foil.foil_shape.dpoints_ds.col(point_count - 1).y(), foil.foil_shape.dpoints_ds.col(point_count - 1).x(), ag1);
+        atanc(foil.foil_shape.dpoints_ds.col(foil.foil_shape.n - 1).y(), foil.foil_shape.dpoints_ds.col(foil.foil_shape.n - 1).x(), ag1);
     const double abis = 0.5 * (ag1 + ag2);
 
     Vector2d bis_vector{cos(abis), sin(abis)};
@@ -210,37 +193,24 @@ bool XFoil::ggcalc() {
                foil.foil_shape.angle_panel);
 
     //----- dres/dgamma
-    dpsi_dgam.row(point_count - 1).head(point_count) = psi_result.dzdg.head(point_count);
+    dpsi_dgam.row(foil.foil_shape.n - 1).head(foil.foil_shape.n) = psi_result.dzdg;
     //----- -dres/dmass
-    cache.bij.row(point_count - 1).head(point_count) = -psi_result.dzdm.head(point_count);
+    cache.bij.row(foil.foil_shape.n - 1).head(foil.foil_shape.n) = -psi_result.dzdm;
 
     //----- dres/dpsio
-    dpsi_dgam(point_count - 1, point_count);
 
     //----- -dres/duinf -dres/dvinf
-    psi.col(point_count - 1) = -bis_vector;
+    psi.col(foil.foil_shape.n - 1) = -bis_vector;
   }
 
   //---- lu-factor coefficient matrix aij
   cache.psi_gamma_lu = FullPivLU<MatrixXd>(dpsi_dgam);
-  VectorXd gamu_temp(point_count + 1);
-  //---- solve system for the two vorticity distributions
-
-  gamu_temp = cache.psi_gamma_lu.solve(psi.row(0).transpose());
-
-  for (int iu = 0; iu <= point_count; iu++) {
-    cache.gamu.col(iu).x() = gamu_temp[iu];
-  }
-
-  gamu_temp = cache.psi_gamma_lu.solve(psi.row(1).transpose());
-  for (int iu = 0; iu <= point_count; iu++) {
-    cache.gamu.col(iu).y() = gamu_temp[iu];
-  }
-
+  cache.gamu.resize(2, foil.foil_shape.n + 1);
+  cache.gamu.row(0) = cache.psi_gamma_lu.solve(psi.row(0).transpose()).transpose();
+  cache.gamu.row(1) = cache.psi_gamma_lu.solve(psi.row(1).transpose()).transpose();
+  
   //---- set inviscid alpha=0,90 surface speeds for this geometry
-  for (int i = 0; i <= point_count; i++) {
-    cache.qinvu.col(i) = cache.gamu.col(i);
-  }
+  cache.qinvu.leftCols(foil.foil_shape.n + 1) = cache.gamu;
 
   return true;
 }
