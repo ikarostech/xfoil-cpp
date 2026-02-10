@@ -39,7 +39,7 @@ bool XFoil::initXFoilGeometry(int fn, const double *fx, const double *fy) {
   }
 
   abcopy(buffer_points);
-  ggcalc();
+  aerodynamicCache = ggcalc();
   return true;
 }
 

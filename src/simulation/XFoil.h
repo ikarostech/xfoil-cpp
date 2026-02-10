@@ -213,7 +213,7 @@ class XFoil {
   using MixedModeStationContext =
       BoundaryLayerWorkflow::MixedModeStationContext;
   Matrix2Xd gamqv() const;
-  bool ggcalc();
+  FoilAerodynamicCache ggcalc();
 
   bool performMixedModeNewtonIteration(int side, int ibl, int itrold,
                                        MixedModeStationContext& ctx, double deps,

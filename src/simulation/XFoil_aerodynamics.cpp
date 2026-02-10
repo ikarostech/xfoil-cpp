@@ -131,8 +131,8 @@ Matrix2Xd XFoil::gamqv() const {
  *     for alpha = 0, 90  degrees.  These are superimposed
  *     in specal or speccl for specified alpha or cl.
  *-------------------------------------------------------------- */
-bool XFoil::ggcalc() {
-  auto& cache = aerodynamicCache;
+FoilAerodynamicCache XFoil::ggcalc() {
+  FoilAerodynamicCache cache = aerodynamicCache;
 
   Logger::instance().write("   Calculating unit vorticity distributions ...\n");
 
@@ -212,7 +212,7 @@ bool XFoil::ggcalc() {
   //---- set inviscid alpha=0,90 surface speeds for this geometry
   cache.qinvu.leftCols(foil.foil_shape.n + 1) = cache.gamu;
 
-  return true;
+  return cache;
 }
 
 bool XFoil::specal() {
