@@ -304,7 +304,7 @@ class XFoil {
 
   Foil foil;
   BoundaryLayerWorkflow boundaryLayerWorkflow;
-  Vector2d cmref;
+  const Vector2d cmref = Vector2d{0.25, 0.0};
 
  public: //private:
 

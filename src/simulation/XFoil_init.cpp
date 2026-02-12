@@ -118,7 +118,6 @@ void XFoil::resetVariables() {
   sigte = gamte = 0.0;
   avisc = 0.0;
   resetFlags();
-  cmref = Vector2d{0.25, 0.0};
   boundaryLayerWorkflow.stagnationIndex = 0;
   boundaryLayerWorkflow.stagnationSst = 0.0;
   boundaryLayerWorkflow.blCompressibility.qinfbl =
