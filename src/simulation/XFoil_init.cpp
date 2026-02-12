@@ -64,8 +64,6 @@ void XFoil::initializeDataStructures() {
   aerodynamicCache.bij = MatrixXd::Zero(point_count + 1, total_nodes_with_wake);
   aerodynamicCache.dij =
       MatrixXd::Zero(total_nodes_with_wake, total_nodes_with_wake);
-  cpi = VectorXd::Zero(total_nodes_with_wake);
-  cpv = VectorXd::Zero(point_count);
   aerodynamicCache.gamu = Matrix2Xd::Zero(2, point_count + 1);
   surface_vortex = Matrix2Xd::Zero(2, point_count);
   cache.qf0.assign(surface_buffer_nodes + 1, 0.0);
