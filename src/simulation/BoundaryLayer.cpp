@@ -630,7 +630,7 @@ XFoil::BlReferenceParams XFoil::computeBlReferenceParams() const {
       1.0 / ((1.0 + beta) * (1.0 + beta)) -
       2.0 * karmanTsienFactor / (1.0 + beta) * beta_msq;
   //---- set gas constant (= cp/cv)
-  params.blCompressibility.gm1bl = gamm1;
+  params.blCompressibility.gm1bl = 1.4 - 1;
 
   //---- set parameters for compressibility correction
   params.blCompressibility.qinfbl = analysis_state_.qinf;

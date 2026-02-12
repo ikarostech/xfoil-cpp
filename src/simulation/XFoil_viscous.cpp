@@ -275,11 +275,12 @@ XFoil::UpdateResult XFoil::update(const XFoil::Matrix3x2dVector& vdel) const {
       boundaryLayerWorkflow.lattice.top.profiles.skinFrictionCoeffHistory;
   result.profiles.bottom.skinFrictionCoeffHistory =
       boundaryLayerWorkflow.lattice.bottom.profiles.skinFrictionCoeffHistory;
+  const double gamma = 1.4;
 
   BoundaryLayerMarcher marcher;
   result.hstinv =
-      gamm1 * MathUtil::pow(analysis_state_.currentMach / analysis_state_.qinf, 2) /
-      (1.0 + 0.5 * gamm1 * analysis_state_.currentMach * analysis_state_.currentMach);
+      (gamma - 1) * MathUtil::pow(analysis_state_.currentMach / analysis_state_.qinf, 2) /
+      (1.0 + 0.5 * (gamma - 1) * analysis_state_.currentMach * analysis_state_.currentMach);
 
   //--- calculate new ue distribution and tangential velocities
   const auto ue_distribution =
@@ -316,7 +317,7 @@ XFoil::UpdateResult XFoil::update(const XFoil::Matrix3x2dVector& vdel) const {
     result.profiles.get(side) =
         marcher.applyBoundaryLayerDelta(
             boundaryLayerWorkflow, side, deltas.get(side), rlx, result.hstinv,
-            gamm1);
+            gamma - 1);
   }
 
   rmsbl = sqrt(rmsbl / (4.0 * double(boundaryLayerWorkflow.lattice.top.stationCount + boundaryLayerWorkflow.lattice.bottom.stationCount)));

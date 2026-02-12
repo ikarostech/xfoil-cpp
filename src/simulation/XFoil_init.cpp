@@ -109,9 +109,7 @@ void XFoil::resetVariables() {
   boundaryLayerWorkflow.lattice.bottom.stationCount = 0;
   boundaryLayerWorkflow.lattice.top.trailingEdgeIndex = 0;
   boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex = 0;
-
-  gamma = 1.4;
-  gamm1 = gamma - 1.0;
+  
   analysis_state_.qinf = 1.0;
   aero_coeffs_.cl = 0.0;
   aero_coeffs_.cm = 0.0;

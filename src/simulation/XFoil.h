@@ -312,9 +312,6 @@ class XFoil {
 
   bool ladij, lwdij;
 
-  double gamma, gamm1;
-
-
   Matrix2Xd surface_vortex;
   FoilAerodynamicCache aerodynamicCache;
   StagnationResult stagnation;
