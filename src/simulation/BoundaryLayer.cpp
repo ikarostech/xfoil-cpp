@@ -567,54 +567,57 @@ void XFoil::handleMixedModeNonConvergence(int side, int ibl,
   ctx.ami = ami;
 }
 
-XFoil::BlReferenceParams XFoil::computeBlReferenceParams() const {
+BoundaryLayerWorkflow::BlReferenceParams
+BoundaryLayerWorkflow::computeBlReferenceParams(
+    const FlowState& analysis_state, const AeroCoefficients& aero_coeffs,
+    double acrit) const {
   BlReferenceParams params;
   double clmr = 0.0;
   double ma_clmr = 0.0;
   double herat = 0.0;
   double herat_ms = 0.0;
   //---- set the cl used to define mach, reynolds numbers
-  if (analysis_state_.controlByAlpha)
-    clmr = aero_coeffs_.cl;
+  if (analysis_state.controlByAlpha)
+    clmr = aero_coeffs.cl;
   else
-    clmr = analysis_state_.clspec;
+    clmr = analysis_state.clspec;
 
   //---- set current minf(cl)
   const double cla = std::max(clmr, 0.000001);
-  switch (analysis_state_.machType) {
-  case MachType::CONSTANT:
-    params.currentMach = analysis_state_.referenceMach;
+  switch (analysis_state.machType) {
+  case FlowState::MachType::CONSTANT:
+    params.currentMach = analysis_state.referenceMach;
     ma_clmr = 0.0;
     break;
-  case MachType::FIXED_LIFT:
-    params.currentMach = analysis_state_.referenceMach / std::sqrt(cla);
+  case FlowState::MachType::FIXED_LIFT:
+    params.currentMach = analysis_state.referenceMach / std::sqrt(cla);
     ma_clmr = -0.5 * params.currentMach / cla;
     break;
-  case MachType::FIXED_LIFT_AND_DYNAMIC_PRESSURE:
-    params.currentMach = analysis_state_.referenceMach;
+  case FlowState::MachType::FIXED_LIFT_AND_DYNAMIC_PRESSURE:
+    params.currentMach = analysis_state.referenceMach;
     ma_clmr = 0.0;
     break;
   default:
-    params.currentMach = analysis_state_.currentMach;
+    params.currentMach = analysis_state.currentMach;
     ma_clmr = 0.0;
     break;
   }
 
-  switch (analysis_state_.reynoldsType) {
-  case ReynoldsType::CONSTANT:
-    params.currentRe = analysis_state_.referenceRe;
+  switch (analysis_state.reynoldsType) {
+  case FlowState::ReynoldsType::CONSTANT:
+    params.currentRe = analysis_state.referenceRe;
     params.re_clmr = 0.0;
     break;
-  case ReynoldsType::FIXED_LIFT:
-    params.currentRe = analysis_state_.referenceRe / std::sqrt(cla);
+  case FlowState::ReynoldsType::FIXED_LIFT:
+    params.currentRe = analysis_state.referenceRe / std::sqrt(cla);
     params.re_clmr = -0.5 * params.currentRe / cla;
     break;
-  case ReynoldsType::FIXED_LIFT_AND_DYNAMIC_PRESSURE:
-    params.currentRe = analysis_state_.referenceRe / cla;
+  case FlowState::ReynoldsType::FIXED_LIFT_AND_DYNAMIC_PRESSURE:
+    params.currentRe = analysis_state.referenceRe / cla;
     params.re_clmr = -params.currentRe / cla;
     break;
   default:
-    params.currentRe = analysis_state_.currentRe;
+    params.currentRe = analysis_state.currentRe;
     params.re_clmr = 0.0;
     break;
   }
@@ -633,7 +636,7 @@ XFoil::BlReferenceParams XFoil::computeBlReferenceParams() const {
   params.blCompressibility.gm1bl = 1.4 - 1;
 
   //---- set parameters for compressibility correction
-  params.blCompressibility.qinfbl = analysis_state_.qinf;
+  params.blCompressibility.qinfbl = analysis_state.qinf;
   params.blCompressibility.tkbl = karmanTsienFactor;
   params.blCompressibility.tkbl_ms = karmanTsienFactor_msq;
 
@@ -1059,7 +1062,9 @@ SetblOutputView XFoil::setbl(
 
   cti = 0.0; // techwinder added, otherwise variable is not initialized
 
-  BlReferenceParams reference_params = computeBlReferenceParams();
+  BoundaryLayerWorkflow::BlReferenceParams reference_params =
+      boundaryLayerWorkflow.computeBlReferenceParams(
+          analysis_state_, aero_coeffs_, acrit);
   analysis_state_.currentMach = reference_params.currentMach;
   analysis_state_.currentRe = reference_params.currentRe;
   double re_clmr = reference_params.re_clmr;

@@ -241,11 +241,8 @@ class XFoil {
     SidePair<VectorXd> restoredUedg;
   };
   EdgeVelocitySwapResult swapEdgeVelocities(const SidePair<VectorXd>& usav) const;
-  struct BlReferenceParams;
 
  private:
-  BlReferenceParams computeBlReferenceParams() const;
-
  public:
   struct UpdateResult {
     double rlx = 0.0;
@@ -275,17 +272,6 @@ class XFoil {
   double atanc(double y, double x, double thold);
 
  double sign(double a, double b);
-
- public:
-  struct BlReferenceParams {
-    double currentMach = 0.0;
-    double currentRe = 0.0;
-    double re_clmr = 0.0;
-    double msq_clmr = 0.0;
-    BlCompressibilityParams blCompressibility;
-    BlReynoldsParams blReynolds;
-    double amcrit = 0.0;
-  };
 
   FlowState analysis_state_;
   FlowState& analysisState() { return analysis_state_; }

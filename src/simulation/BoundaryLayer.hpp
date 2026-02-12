@@ -17,6 +17,8 @@
 #include "simulation/boundary_layer_geometry.hpp"
 #include "domain/flow_regime.hpp"
 
+struct FlowState;
+struct AeroCoefficients;
 class XFoil;
 struct SetblOutputView;
 class Foil;
@@ -60,6 +62,15 @@ class BoundaryLayerWorkflow {
   struct QtanResult {
     Eigen::VectorXd qnew;
     Eigen::VectorXd q_ac;
+  };
+  struct BlReferenceParams {
+    double currentMach = 0.0;
+    double currentRe = 0.0;
+    double re_clmr = 0.0;
+    double msq_clmr = 0.0;
+    BlCompressibilityParams blCompressibility;
+    BlReynoldsParams blReynolds;
+    double amcrit = 0.0;
   };
   struct ClContributions {
     double cl = 0.0;
@@ -240,6 +251,9 @@ class BoundaryLayerWorkflow {
   StationArraysAdvanceResult advanceStationArrays(
       const Eigen::VectorXd& u_m2, const Eigen::VectorXd& d_m2, double u_a2,
       double d_a2, double due2, double dds2) const;
+  BlReferenceParams computeBlReferenceParams(
+      const FlowState& analysis_state, const AeroCoefficients& aero_coeffs,
+      double acrit) const;
   void assembleBlJacobianForStation(
       int is, int iv, int nsys,
       const std::array<SetblStation, 2>& setblStations,
