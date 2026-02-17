@@ -124,13 +124,13 @@ bool BoundaryLayerTransitionSolver::trdif() {
     blx[k] = blc.d_xi[k] + blc.a2(k, 1) * tt.xf() + blc.a2(k, 2) * dt.xf() +
              blc.a2(k, 3) * ut.xf() + blc.a2(k, 4) * xt.xf();
   }
-  const Eigen::Matrix<double, 4, 5> bl1_transform{{tt.a(), tt.t1(), tt.d1(),
+  const Eigen::Matrix<double, 4, 5> bl1_transform{{tt.a1(), tt.t1(), tt.d1(),
                                                    tt.u1(), tt.x1()},
-                                                  {dt.a(), dt.t1(), dt.d1(),
+                                                  {dt.a1(), dt.t1(), dt.d1(),
                                                    dt.u1(), dt.x1()},
-                                                  {ut.a(), ut.t1(), ut.d1(),
+                                                  {ut.a1(), ut.t1(), ut.d1(),
                                                    ut.u1(), ut.x1()},
-                                                  {xt.a(), xt.t1(), xt.d1(),
+                                                  {xt.a1(), xt.t1(), xt.d1(),
                                                    xt.u1(), xt.x1()}};
   bl1.block<2, 5>(1, 0) =
       blc.a1.middleRows<2>(1) + blc.a2.block<2, 4>(1, 1) * bl1_transform;
@@ -191,7 +191,7 @@ bool BoundaryLayerTransitionSolver::trdif() {
   //-    wrt "1" and "2" variables as done before for the laminar part
   Eigen::VectorXd common_st = Eigen::Vector3d{st_tt, st_dt, st_ut};
   Eigen::VectorXd st1 =
-      Eigen::Matrix<double, 5, 3>{{tt.a(), dt.a(), ut.a()},
+      Eigen::Matrix<double, 5, 3>{{tt.a1(), dt.a1(), ut.a1()},
                                   {tt.t1(), dt.t1(), ut.t1()},
                                   {tt.d1(), dt.d1(), ut.d1()},
                                   {tt.u1(), dt.u1(), ut.u1()},
@@ -290,18 +290,18 @@ bool BoundaryLayerTransitionSolver::trchek() {
   double sfx_x1, sfx_x2, sfx_xf;
   double tt, dt, ut, amsave;
   double res = 0.0, res_a2 = 0.0;
-  double da2 = 0.0, dxt = 0.0, tt_t1 = 0.0, dt_d1 = 0.0, ut_u1 = 0.0;
-  double tt_t2 = 0.0, dt_d2 = 0.0, ut_u2 = 0.0, tt_a1 = 0.0, dt_a1 = 0.0;
-  double ut_a1 = 0.0, tt_x1 = 0.0, dt_x1 = 0.0, ut_x1 = 0.0, tt_x2 = 0.0,
-         dt_x2 = 0.0, ut_x2 = 0.0;
+  double da2 = 0.0, dxt = 0.0;
+  blDiff tt_sens, dt_sens, ut_sens;
   double amplt_a2, wf, wf_a1, wf_a2, wf_xf, wf_x1, wf_x2;
-  double xt_a2, dt_a2, tt_a2;
-  double ut_a2;
+  double xt_a2;
   double daeps = 0.00005;
 
+  tt_sens.vector.setZero();
+  dt_sens.vector.setZero();
+  ut_sens.vector.setZero();
+  tt_sens.scalar = dt_sens.scalar = ut_sens.scalar = 0.0;
   amplt_a2 = 0.0;
-  xt_a2 = dt_a2 = tt_a2 = 0.0;
-  ut_a2 = 0.0;
+  xt_a2 = 0.0;
 
   //---- save variables and sensitivities at ibl ("2") for future restoration
   boundaryLayerStore.saveblData(state.station2, 2);
@@ -380,9 +380,9 @@ bool BoundaryLayerTransitionSolver::trchek() {
       ut = state.station1.param.uz * (1 - wf) + state.station2.param.uz * wf;
 
       xt_a2 = (state.station2.param.xz - state.station1.param.xz) * wf_a2;
-      tt_a2 = (state.station2.param.tz - state.station1.param.tz) * wf_a2;
-      dt_a2 = (state.station2.param.dz - state.station1.param.dz) * wf_a2;
-      ut_a2 = (state.station2.param.uz - state.station1.param.uz) * wf_a2;
+      tt_sens.a2() = (state.station2.param.tz - state.station1.param.tz) * wf_a2;
+      dt_sens.a2() = (state.station2.param.dz - state.station1.param.dz) * wf_a2;
+      ut_sens.a2() = (state.station2.param.uz - state.station1.param.uz) * wf_a2;
 
       //---- temporarily set "2" variables from "t" for blkin
       state.station2.param.xz = xt.scalar;
@@ -418,10 +418,10 @@ bool BoundaryLayerTransitionSolver::trchek() {
       ax_result.ax_a2 =
           (ax_result.ax_hk2 * hkt.t() + ax_result.ax_t2 +
            ax_result.ax_rt2 * rtt.t()) *
-              tt_a2 +
-          (ax_result.ax_hk2 * hkt.d()) * dt_a2 +
+              tt_sens.a2() +
+          (ax_result.ax_hk2 * hkt.d()) * dt_sens.a2() +
           (ax_result.ax_hk2 * hkt.u() + ax_result.ax_rt2 * rtt.u()) *
-              ut_a2 +
+              ut_sens.a2() +
           ax_result.ax_a2 * amplt_a2;
 
       //---- residual for implicit ampl2 definition (amplification equation)
@@ -498,7 +498,7 @@ bool BoundaryLayerTransitionSolver::trchek() {
     //----- if forced transition, then xt is prescribed,
     //-     no sense calculating the sensitivities, since we know them...
     xt.scalar = blTransition.xiforc;
-    xt.a() = 0.0;
+    xt.a1() = 0.0;
     xt.x1() = 0.0;
     xt.t1() = 0.0;
     xt.d1() = 0.0;
@@ -507,6 +507,7 @@ bool BoundaryLayerTransitionSolver::trchek() {
     xt.t2() = 0.0;
     xt.d2() = 0.0;
     xt.u2() = 0.0;
+    xt.a2() = 0.0;
     xt.ms() = 0.0;
     xt.re() = 0.0;
     xt.xf() = 1.0;
@@ -516,30 +517,31 @@ bool BoundaryLayerTransitionSolver::trchek() {
   //---- free transition ... set sensitivities of xt
 
   xt.x1() = (1 - wf);
-  tt_t1 = (1 - wf);
-  dt_d1 = (1 - wf);
-  ut_u1 = (1 - wf);
+  tt_sens.t1() = (1 - wf);
+  dt_sens.d1() = (1 - wf);
+  ut_sens.u1() = (1 - wf);
 
   xt.x2() = wf;
-  tt_t2 = wf;
-  dt_d2 = wf;
-  ut_u2 = wf;
+  tt_sens.t2() = wf;
+  dt_sens.d2() = wf;
+  ut_sens.u2() = wf;
 
-  xt.a() = (state.station2.param.xz - state.station1.param.xz) * wf_a1;
-  tt_a1 = (state.station2.param.tz - state.station1.param.tz) * wf_a1;
-  dt_a1 = (state.station2.param.dz - state.station1.param.dz) * wf_a1;
-  ut_a1 = (state.station2.param.uz - state.station1.param.uz) * wf_a1;
+  xt.a1() = (state.station2.param.xz - state.station1.param.xz) * wf_a1;
+  tt_sens.a1() = (state.station2.param.tz - state.station1.param.tz) * wf_a1;
+  dt_sens.a1() = (state.station2.param.dz - state.station1.param.dz) * wf_a1;
+  ut_sens.a1() = (state.station2.param.uz - state.station1.param.uz) * wf_a1;
 
   xt.x1() += (state.station2.param.xz - state.station1.param.xz) * wf_x1;
-  tt_x1 = (state.station2.param.tz - state.station1.param.tz) * wf_x1;
-  dt_x1 = (state.station2.param.dz - state.station1.param.dz) * wf_x1;
-  ut_x1 = (state.station2.param.uz - state.station1.param.uz) * wf_x1;
+  tt_sens.x1() = (state.station2.param.tz - state.station1.param.tz) * wf_x1;
+  dt_sens.x1() = (state.station2.param.dz - state.station1.param.dz) * wf_x1;
+  ut_sens.x1() = (state.station2.param.uz - state.station1.param.uz) * wf_x1;
 
   xt.x2() += (state.station2.param.xz - state.station1.param.xz) * wf_x2;
-  tt_x2 = (state.station2.param.tz - state.station1.param.tz) * wf_x2;
-  dt_x2 = (state.station2.param.dz - state.station1.param.dz) * wf_x2;
-  ut_x2 = (state.station2.param.uz - state.station1.param.uz) * wf_x2;
+  tt_sens.x2() = (state.station2.param.tz - state.station1.param.tz) * wf_x2;
+  dt_sens.x2() = (state.station2.param.dz - state.station1.param.dz) * wf_x2;
+  ut_sens.x2() = (state.station2.param.uz - state.station1.param.uz) * wf_x2;
 
+  xt.a2() = xt_a2;
   xt.xf() = (state.station2.param.xz - state.station1.param.xz) * wf_xf;
 
   //---- at this point, ax = ax( hk1, t1, rt1, a1, hkt, tt, rtt, at )
@@ -548,53 +550,58 @@ bool BoundaryLayerTransitionSolver::trchek() {
 
   //---- set sensitivities of ax( t1 d1 u1 a1 t2 d2 u2 a2 ms re )
   blDiff ax;
-  ax.scalar = 0.0;  // store a2 sensitivity in scalar slot to keep ax terms together
+  ax.vector.setZero();
+  ax.scalar = 0.0;
 
   ax.t1() = ax_result.ax_hk1 * state.station1.hkz.t() + ax_result.ax_t1 +
             ax_result.ax_rt1 * state.station1.rtz.t() +
             (ax_result.ax_hk2 * hkt.t() + ax_result.ax_t2 +
              ax_result.ax_rt2 * rtt.t()) *
-                tt_t1;
+                tt_sens.t1();
   ax.d1() =
       ax_result.ax_hk1 * state.station1.hkz.d() +
-      (ax_result.ax_hk2 * hkt.d()) * dt_d1;
+      (ax_result.ax_hk2 * hkt.d()) * dt_sens.d1();
   ax.u1() = ax_result.ax_hk1 * state.station1.hkz.u() +
             ax_result.ax_rt1 * state.station1.rtz.u() +
             (ax_result.ax_hk2 * hkt.u() + ax_result.ax_rt2 * rtt.u()) *
-                ut_u1;
-  ax.a() = ax_result.ax_a1 +
+                ut_sens.u1();
+  ax.a1() = ax_result.ax_a1 +
            (ax_result.ax_hk2 * hkt.t() + ax_result.ax_t2 +
             ax_result.ax_rt2 * rtt.t()) *
-               tt_a1 +
-           (ax_result.ax_hk2 * hkt.d()) * dt_a1 +
+               tt_sens.a1() +
+           (ax_result.ax_hk2 * hkt.d()) * dt_sens.a1() +
            (ax_result.ax_hk2 * hkt.u() + ax_result.ax_rt2 * rtt.u()) *
-               ut_a1;
+               ut_sens.a1();
   ax.x1() =
       (ax_result.ax_hk2 * hkt.t() + ax_result.ax_t2 +
        ax_result.ax_rt2 * rtt.t()) *
-          tt_x1 +
-      (ax_result.ax_hk2 * hkt.d()) * dt_x1 +
-      (ax_result.ax_hk2 * hkt.u() + ax_result.ax_rt2 * rtt.u()) * ut_x1;
+          tt_sens.x1() +
+      (ax_result.ax_hk2 * hkt.d()) * dt_sens.x1() +
+      (ax_result.ax_hk2 * hkt.u() + ax_result.ax_rt2 * rtt.u()) *
+          ut_sens.x1();
 
   ax.t2() =
       (ax_result.ax_hk2 * hkt.t() + ax_result.ax_t2 +
        ax_result.ax_rt2 * rtt.t()) *
-      tt_t2;
-  ax.d2() = (ax_result.ax_hk2 * hkt.d()) * dt_d2;
-  ax.u2() = (ax_result.ax_hk2 * hkt.u() + ax_result.ax_rt2 * rtt.u()) * ut_u2;
-  ax.scalar =
+      tt_sens.t2();
+  ax.d2() = (ax_result.ax_hk2 * hkt.d()) * dt_sens.d2();
+  ax.u2() =
+      (ax_result.ax_hk2 * hkt.u() + ax_result.ax_rt2 * rtt.u()) * ut_sens.u2();
+  ax.a2() =
       ax_result.ax_a2 * amplt_a2 +
       (ax_result.ax_hk2 * hkt.t() + ax_result.ax_t2 +
        ax_result.ax_rt2 * rtt.t()) *
-          tt_a2 +
-      (ax_result.ax_hk2 * hkt.d()) * dt_a2 +
-      (ax_result.ax_hk2 * hkt.u() + ax_result.ax_rt2 * rtt.u()) * ut_a2;
+          tt_sens.a2() +
+      (ax_result.ax_hk2 * hkt.d()) * dt_sens.a2() +
+      (ax_result.ax_hk2 * hkt.u() + ax_result.ax_rt2 * rtt.u()) *
+          ut_sens.a2();
   ax.x2() =
       (ax_result.ax_hk2 * hkt.t() + ax_result.ax_t2 +
        ax_result.ax_rt2 * rtt.t()) *
-          tt_x2 +
-      (ax_result.ax_hk2 * hkt.d()) * dt_x2 +
-      (ax_result.ax_hk2 * hkt.u() + ax_result.ax_rt2 * rtt.u()) * ut_x2;
+          tt_sens.x2() +
+      (ax_result.ax_hk2 * hkt.d()) * dt_sens.x2() +
+      (ax_result.ax_hk2 * hkt.u() + ax_result.ax_rt2 * rtt.u()) *
+          ut_sens.x2();
 
   ax.ms() = ax_result.ax_hk2 * hkt.ms() + ax_result.ax_rt2 * rtt.ms() +
             ax_result.ax_hk1 * state.station1.hkz.ms() +
@@ -604,14 +611,16 @@ bool BoundaryLayerTransitionSolver::trchek() {
 
   //---- set sensitivities of residual res
   blDiff z;
+  z.vector.setZero();
   z.scalar = -(state.station2.param.xz - state.station1.param.xz);
   z.vector = z.scalar * ax.vector;
-  z.a() -= 1.0;
+  z.a1() -= 1.0;
+  z.a2() += 1.0;
   z.x1() += ax_result.ax;
   z.x2() -= ax_result.ax;
 
   //---- set sensitivities of xt, with res being stationary for a2 constraint
-  xt.vector -= (xt_a2 / (z.scalar * ax.scalar + 1.0)) * z.vector;
+  xt.vector -= (xt_a2 / z.a2()) * z.vector;
 
   return true;
 }

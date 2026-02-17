@@ -48,9 +48,9 @@ class blData {
 // TODO blVectorとの関係性を調査
 class blDiff {
   public:
-  Eigen::Vector<double, 12> vector;
+  Eigen::Vector<double, 13> vector;
   double scalar;
-  double& a() {
+  double& a1() {
     return vector[0];
   }
   double& t1() {
@@ -77,14 +77,17 @@ class blDiff {
   double& x2() {
     return vector[8];
   }
-  double& ms() {
+  double& a2() {
     return vector[9];
   }
-  double& re() {
+  double& ms() {
     return vector[10];
   }
-  double& xf() {
+  double& re() {
     return vector[11];
+  }
+  double& xf() {
+    return vector[12];
   }
 };
 class boundary_layer {
