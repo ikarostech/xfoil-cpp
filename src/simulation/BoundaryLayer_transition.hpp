@@ -15,7 +15,15 @@ class BoundaryLayerTransitionSolver {
   bool trdif();
 
  private:
+  struct TrchekData;
+  struct TrdifData;
+
   double computeTransitionLocation(double weightingFactor) const;
+  bool iterateAmplification(TrchekData& data);
+  bool resolveTransitionLocationAndSensitivities(TrchekData& data);
+  void setupLaminarTransitionSystem(TrdifData& data);
+  void setupTurbulentTransitionSystem(TrdifData& data);
+  void mergeTransitionSystems(TrdifData& data);
 
   BoundaryLayerWorkflow* workflow_;
   BoundaryLayerStore boundaryLayerStore;
