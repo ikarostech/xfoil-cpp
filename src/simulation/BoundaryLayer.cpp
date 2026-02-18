@@ -1030,6 +1030,205 @@ BoundaryLayerWorkflow::advanceStationArrays(const VectorXd& u_m2,
   result.dds1 = dds2;
   return result;
 }
+
+namespace {
+
+struct SetblWorkingState {
+  std::array<BoundaryLayerWorkflow::SetblStation, 2> stations{};
+  BoundaryLayerWorkflow::SetblSideData sides;
+  double cti = 0.0;
+  double ami = 0.0;
+  double re_clmr = 0.0;
+  double msq_clmr = 0.0;
+};
+
+void initializeSetblSystemStorage(BoundaryLayerWorkflow& workflow,
+                                  SetblOutputView& output,
+                                  SetblWorkingState& state) {
+  const int nsys = workflow.nsys;
+  output.bl_newton_system.vm.resize(nsys);
+  output.bl_newton_system.va.resize(nsys, XFoil::Matrix3x2d::Zero());
+  output.bl_newton_system.vb.resize(nsys, XFoil::Matrix3x2d::Zero());
+  output.bl_newton_system.vdel.resize(nsys, XFoil::Matrix3x2d::Zero());
+  state.stations[0].resizeSystem(nsys);
+  state.stations[1].resizeSystem(nsys);
+  state.sides.resizeSystem(nsys);
+}
+
+void initializeSetblReferenceParams(XFoil& xfoil, SetblOutputView& output,
+                                    SetblWorkingState& state) {
+  auto& workflow = xfoil.boundaryLayerWorkflow;
+  auto reference_params = workflow.computeBlReferenceParams(
+      xfoil.analysis_state_, xfoil.aero_coeffs_, xfoil.acrit);
+  xfoil.analysis_state_.currentMach = reference_params.currentMach;
+  xfoil.analysis_state_.currentRe = reference_params.currentRe;
+  state.re_clmr = reference_params.re_clmr;
+  state.msq_clmr = reference_params.msq_clmr;
+  output.blCompressibility = reference_params.blCompressibility;
+  output.blReynolds = reference_params.blReynolds;
+  output.blTransition.amcrit = reference_params.amcrit;
+  workflow.blCompressibility = output.blCompressibility;
+  workflow.blReynolds = output.blReynolds;
+  workflow.blTransition.amcrit = output.blTransition.amcrit;
+}
+
+void initializeSetblProfiles(XFoil& xfoil, BoundaryLayerMarcher& marcher,
+                             SetblOutputView& output) {
+  output.lblini = xfoil.lblini;
+  if (!xfoil.lblini) {
+    Logger::instance().write("   Initializing bl ...\n");
+    marcher.mrchue(xfoil.boundaryLayerWorkflow, xfoil);
+    output.lblini = true;
+    xfoil.lblini = true;
+  }
+  marcher.mrchdu(xfoil.boundaryLayerWorkflow, xfoil);
+  output.profiles.top = xfoil.boundaryLayerWorkflow.lattice.top.profiles;
+  output.profiles.bottom = xfoil.boundaryLayerWorkflow.lattice.bottom.profiles;
+}
+
+void initializeSetblEdgeVelocityState(
+    XFoil& xfoil, SidePairRef<const BoundaryLayerSideProfiles> profiles,
+    SetblOutputView& output, SetblWorkingState& state) {
+  auto edge_result = xfoil.boundaryLayerWorkflow.prepareEdgeVelocityAndSensitivities(
+      profiles, xfoil.aerodynamicCache.dij, xfoil.boundaryLayerWorkflow.nsys);
+  state.sides.usav = edge_result.edgeVelocity;
+  state.sides.jvte = edge_result.jvte;
+  state.sides.dule = edge_result.dule;
+  state.sides.ule_m = edge_result.ule_m;
+  state.sides.ute_m = edge_result.ute_m;
+  state.sides.ule_a = edge_result.ule_a;
+  output.profiles.top.edgeVelocity = edge_result.outputEdgeVelocity.top;
+  output.profiles.bottom.edgeVelocity = edge_result.outputEdgeVelocity.bottom;
+}
+
+void processSetblStation(XFoil& xfoil, BoundaryLayerMarcher& marcher, int side,
+                         int station, SetblOutputView& output,
+                         SetblWorkingState& state) {
+  auto& workflow = xfoil.boundaryLayerWorkflow;
+  const int nsys = workflow.nsys;
+  const int iv = workflow.lattice.get(side).stationToSystem[station];
+  const bool station_is_similarity = (station == 0);
+  const bool station_is_wake =
+      (station > workflow.lattice.get(side).trailingEdgeIndex);
+  const bool station_is_transition_candidate =
+      (station == output.profiles.get(side).transitionIndex);
+
+  output.flowRegime = marcher.determineRegimeForStation(
+      workflow, side, station, station_is_similarity, station_is_wake);
+  workflow.flowRegime = output.flowRegime;
+
+  auto vars = workflow.loadStationPrimaryVars(side, station, station_is_wake,
+                                              output, state.ami, state.cti);
+  state.ami = vars.ami;
+  state.cti = vars.cti;
+
+  auto station_update = workflow.updateStationMatricesAndState(
+      side, station, iv, vars, state.sides.usav, output, workflow.state,
+      state.stations[1].u_m.size(), xfoil.aerodynamicCache.dij);
+  state.stations[1].u_m = station_update.u_m2;
+  state.stations[1].d_m = station_update.d_m2;
+  state.stations[1].u_a = station_update.u_a2;
+  state.stations[1].d_a = station_update.d_a2;
+  state.stations[1].due = station_update.due2;
+  state.stations[1].dds = station_update.dds2;
+  workflow.state = station_update.state;
+
+  if (station_is_transition_candidate) {
+    workflow.transitionSolver.trchek();
+    state.ami = workflow.state.station2.param.amplz;
+  }
+  workflow.buildTransitionLog(station_is_transition_candidate, output.flowRegime);
+
+  auto te_update = workflow.computeTeWakeCoefficients(
+      side, station, state.sides.usav, state.sides.ute_m, state.sides.jvte,
+      state.stations[0].d_m, output, xfoil.foil.edge);
+  if (te_update.isStartOfWake) {
+    workflow.tesys(workflow.lattice.top.profiles, workflow.lattice.bottom.profiles,
+                   xfoil.foil.edge);
+    state.stations[0].d_m = te_update.d_m1;
+    state.stations[0].due = te_update.due1;
+    state.stations[0].dds = te_update.dds1;
+  } else {
+    workflow.blsys();
+  }
+
+  output.profiles.get(side).skinFrictionCoeffHistory[station] =
+      workflow.state.station2.cqz.scalar;
+
+  if (side == 1) {
+    state.stations[0].xi_ule = xfoil.stagnation.sst_go;
+    state.stations[1].xi_ule = -xfoil.stagnation.sst_gp;
+  } else {
+    state.stations[0].xi_ule = -xfoil.stagnation.sst_go;
+    state.stations[1].xi_ule = xfoil.stagnation.sst_gp;
+  }
+
+  workflow.assembleBlJacobianForStation(
+      side, iv, nsys, state.stations, state.sides, xfoil.analysis_state_.controlByAlpha,
+      state.re_clmr, state.msq_clmr, output);
+
+  if (te_update.isStartOfWake) {
+    auto te_jacobian =
+        workflow.computeTeWakeJacobianAdjustments(te_update.coeffs);
+    for (int row = 0; row < 3; ++row) {
+      output.bl_newton_system.vz[row][0] = te_jacobian.vz[row][0];
+      output.bl_newton_system.vz[row][1] = te_jacobian.vz[row][1];
+    }
+    output.bl_newton_system.vb[iv] = te_jacobian.vb;
+  }
+
+  if (output.flowRegime == FlowRegimeEnum::Transition) {
+    output.profiles.get(side).transitionIndex = station;
+    workflow.lattice.get(side).profiles.transitionIndex = station;
+    output.flowRegime = FlowRegimeEnum::Turbulent;
+    workflow.flowRegime = output.flowRegime;
+  }
+
+  if (station == workflow.lattice.get(side).trailingEdgeIndex) {
+    output.flowRegime = FlowRegimeEnum::Wake;
+    workflow.flowRegime = output.flowRegime;
+    workflow.state.station2 = workflow.boundaryLayerVariablesSolver.solve(
+        workflow.state.station2, FlowRegimeEnum::Wake);
+    workflow.blmid(FlowRegimeEnum::Wake);
+  }
+
+  auto advance = workflow.advanceStationArrays(
+      state.stations[1].u_m, state.stations[1].d_m, state.stations[1].u_a,
+      state.stations[1].d_a, state.stations[1].due, state.stations[1].dds);
+  state.stations[0].u_m = advance.u_m1;
+  state.stations[0].d_m = advance.d_m1;
+  state.stations[0].u_a = advance.u_a1;
+  state.stations[0].d_a = advance.d_a1;
+  state.stations[0].due = advance.due1;
+  state.stations[0].dds = advance.dds1;
+  workflow.state.stepbl();
+}
+
+void processSetblSide(XFoil& xfoil, BoundaryLayerMarcher& marcher, int side,
+                      SetblOutputView& output, SetblWorkingState& state) {
+  auto& workflow = xfoil.boundaryLayerWorkflow;
+  auto similarity_coeffs = workflow.resetSimilarityStationCoefficients(
+      state.stations[0].u_m, state.stations[0].d_m);
+  state.stations[0].u_m = similarity_coeffs.u_m1;
+  state.stations[0].d_m = similarity_coeffs.d_m1;
+
+  auto sweep_init =
+      workflow.initializeSideSweepState(xfoil.foil, xfoil.stagnation, side);
+  state.stations[0].u_a = sweep_init.u_a1;
+  state.stations[0].d_a = sweep_init.d_a1;
+  state.stations[0].due = sweep_init.due1;
+  state.stations[0].dds = sweep_init.dds1;
+  output.blTransition.xiforc = sweep_init.xiforc;
+  workflow.blTransition.xiforc = output.blTransition.xiforc;
+
+  for (int station = 0;
+       station < workflow.lattice.get(side).stationCount - 1; ++station) {
+    processSetblStation(xfoil, marcher, side, station, output, state);
+  }
+}
+
+}  // namespace
+
 SetblOutputView XFoil::setbl(
     SidePairRef<const BoundaryLayerSideProfiles> profiles) {
   //-------------------------------------------------
@@ -1039,216 +1238,15 @@ SetblOutputView XFoil::setbl(
   //     coefficients are then incorporated into the global newton system.
   //-------------------------------------------------
   SetblOutputView output{};
-  FlowRegimeEnum& flowRegime = boundaryLayerWorkflow.flowRegime;
-  BlCompressibilityParams& blCompressibility = boundaryLayerWorkflow.blCompressibility;
-  BlReynoldsParams& blReynolds = boundaryLayerWorkflow.blReynolds;
-  BlTransitionParams& blTransition = boundaryLayerWorkflow.blTransition;
-
-  const int nsys = boundaryLayerWorkflow.nsys;
-  output.bl_newton_system.vm.resize(nsys);
-  output.bl_newton_system.va.resize(nsys, Matrix3x2d::Zero());
-  output.bl_newton_system.vb.resize(nsys, Matrix3x2d::Zero());
-  output.bl_newton_system.vdel.resize(nsys, Matrix3x2d::Zero());
-
-  std::array<BoundaryLayerWorkflow::SetblStation, 2> setblStations{};
-  setblStations[0].resizeSystem(nsys);
-  setblStations[1].resizeSystem(nsys);
-
-  BoundaryLayerWorkflow::SetblSideData setblSides;
-  setblSides.resizeSystem(nsys);
-
-  double cti = 0.0;
-  double ami = 0.0;
-
-  cti = 0.0; // techwinder added, otherwise variable is not initialized
-
-  BoundaryLayerWorkflow::BlReferenceParams reference_params =
-      boundaryLayerWorkflow.computeBlReferenceParams(
-          analysis_state_, aero_coeffs_, acrit);
-  analysis_state_.currentMach = reference_params.currentMach;
-  analysis_state_.currentRe = reference_params.currentRe;
-  double re_clmr = reference_params.re_clmr;
-  double msq_clmr = reference_params.msq_clmr;
-  output.blCompressibility = reference_params.blCompressibility;
-  output.blReynolds = reference_params.blReynolds;
-  output.blTransition.amcrit = reference_params.amcrit;
-  blCompressibility = output.blCompressibility;
-  blReynolds = output.blReynolds;
-  blTransition.amcrit = output.blTransition.amcrit;
-
   BoundaryLayerMarcher marcher;
-  const bool current_lblini = lblini;
-  output.lblini = current_lblini;
+  SetblWorkingState state;
+  initializeSetblSystemStorage(boundaryLayerWorkflow, output, state);
+  initializeSetblReferenceParams(*this, output, state);
+  initializeSetblProfiles(*this, marcher, output);
+  initializeSetblEdgeVelocityState(*this, profiles, output, state);
 
-  if (!lblini) {
-    //----- initialize bl by marching with ue (fudge at separation)
-    Logger::instance().write("   Initializing bl ...\n");
-    marcher.mrchue(boundaryLayerWorkflow, *this);
-    output.lblini = true;
-    lblini = true;
-  }
-
-  //---- march bl with current ue and ds to establish transition
-  marcher.mrchdu(boundaryLayerWorkflow, *this);
-  output.profiles.top = boundaryLayerWorkflow.lattice.top.profiles;
-  output.profiles.bottom = boundaryLayerWorkflow.lattice.bottom.profiles;
-
-  BoundaryLayerWorkflow::EdgeVelocitySensitivityResult edge_result =
-      boundaryLayerWorkflow.prepareEdgeVelocityAndSensitivities(
-          profiles, aerodynamicCache.dij, nsys);
-  setblSides.usav = edge_result.edgeVelocity;
-  setblSides.jvte = edge_result.jvte;
-  setblSides.dule = edge_result.dule;
-  setblSides.ule_m = edge_result.ule_m;
-  setblSides.ute_m = edge_result.ute_m;
-  setblSides.ule_a = edge_result.ule_a;
-
-  output.profiles.top.edgeVelocity = edge_result.outputEdgeVelocity.top;
-  output.profiles.bottom.edgeVelocity = edge_result.outputEdgeVelocity.bottom;
-
-  //*** process each boundary layer side
-  for (int is = 1; is <= 2; is++) {
-    //---- there is no station "1" at similarity, so zero everything out
-    BoundaryLayerWorkflow::SimilarityStationCoefficients similarity_coeffs =
-        boundaryLayerWorkflow.resetSimilarityStationCoefficients(
-            setblStations[0].u_m, setblStations[0].d_m);
-    setblStations[0].u_m = similarity_coeffs.u_m1;
-    setblStations[0].d_m = similarity_coeffs.d_m1;
-
-    BoundaryLayerWorkflow::SideSweepInitResult sweep_init =
-        boundaryLayerWorkflow.initializeSideSweepState(foil, stagnation, is);
-    setblStations[0].u_a = sweep_init.u_a1;
-    setblStations[0].d_a = sweep_init.d_a1;
-    setblStations[0].due = sweep_init.due1;
-    setblStations[0].dds = sweep_init.dds1;
-    output.blTransition.xiforc = sweep_init.xiforc;
-    blTransition.xiforc = output.blTransition.xiforc;
-
-    //**** sweep downstream setting up bl equation linearizations
-    for (int ibl = 0; ibl < boundaryLayerWorkflow.lattice.get(is).stationCount - 1; ++ibl) {
-      
-      int iv = boundaryLayerWorkflow.lattice.get(is).stationToSystem[ibl];
-
-      const bool stationIsSimilarity = (ibl == 0);
-      const bool stationIsWake = (ibl > boundaryLayerWorkflow.lattice.get(is).trailingEdgeIndex);
-      const bool stationIsTransitionCandidate = (ibl == output.profiles.get(is).transitionIndex);
-      
-      output.flowRegime =
-          marcher.determineRegimeForStation(boundaryLayerWorkflow, is, ibl,
-                                            stationIsSimilarity,
-                                            stationIsWake);
-      flowRegime = output.flowRegime;
-
-      //---- set primary variables for current station
-      BoundaryLayerWorkflow::StationPrimaryVars vars =
-          boundaryLayerWorkflow.loadStationPrimaryVars(
-              is, ibl, stationIsWake, output, ami, cti);
-      ami = vars.ami;
-      cti = vars.cti;
-
-      BoundaryLayerWorkflow::StationUpdateResult station_update =
-          boundaryLayerWorkflow.updateStationMatricesAndState(
-              is, ibl, iv, vars, setblSides.usav, output,
-              boundaryLayerWorkflow.state, setblStations[1].u_m.size(),
-              aerodynamicCache.dij);
-      setblStations[1].u_m = station_update.u_m2;
-      setblStations[1].d_m = station_update.d_m2;
-      setblStations[1].u_a = station_update.u_a2;
-      setblStations[1].d_a = station_update.d_a2;
-      setblStations[1].due = station_update.due2;
-      setblStations[1].dds = station_update.dds2;
-      boundaryLayerWorkflow.state = station_update.state;
-
-      //---- check for transition and set xt, etc. if found
-      if (stationIsTransitionCandidate) {
-        boundaryLayerWorkflow.transitionSolver.trchek();
-        ami = boundaryLayerWorkflow.state.station2.param.amplz;
-      }
-      boundaryLayerWorkflow.buildTransitionLog(
-          stationIsTransitionCandidate, output.flowRegime);
-
-      //---- assemble 10x4 linearized system for dskinFrictionCoeff, dth, dds, due, dxi
-      //	   at the previous "1" station and the current "2" station
-
-      BoundaryLayerWorkflow::TeWakeUpdateResult te_update =
-          boundaryLayerWorkflow.computeTeWakeCoefficients(
-              is, ibl, setblSides.usav, setblSides.ute_m, setblSides.jvte,
-              setblStations[0].d_m, output, foil.edge);
-      if (te_update.isStartOfWake) {
-        boundaryLayerWorkflow.tesys(boundaryLayerWorkflow.lattice.top.profiles,
-                                    boundaryLayerWorkflow.lattice.bottom.profiles,
-                                    foil.edge);
-        setblStations[0].d_m = te_update.d_m1;
-        setblStations[0].due = te_update.due1;
-        setblStations[0].dds = te_update.dds1;
-      } else {
-        boundaryLayerWorkflow.blsys();
-      }
-
-      //---- save wall shear and equil. max shear coefficient for plotting
-      // output
-      output.profiles.get(is).skinFrictionCoeffHistory[ibl] = boundaryLayerWorkflow.state.station2.cqz.scalar;
-
-      //---- set xi sensitivities wrt le ue changes
-      if (is == 1) {
-        setblStations[0].xi_ule = stagnation.sst_go;
-        setblStations[1].xi_ule = -stagnation.sst_gp;
-      } else {
-        setblStations[0].xi_ule = -stagnation.sst_go;
-        setblStations[1].xi_ule = stagnation.sst_gp;
-      }
-
-      //---- stuff bl system coefficients into main jacobian matrix
-      boundaryLayerWorkflow.assembleBlJacobianForStation(
-          is, iv, nsys, setblStations, setblSides,
-          analysis_state_.controlByAlpha, re_clmr, msq_clmr, output);
-
-      if (te_update.isStartOfWake) {
-        //----- redefine coefficients for tte, dte, etc
-        BoundaryLayerWorkflow::TeWakeJacobianAdjustments te_jacobian =
-            boundaryLayerWorkflow.computeTeWakeJacobianAdjustments(
-                te_update.coeffs);
-        for (int row = 0; row < 3; ++row) {
-          output.bl_newton_system.vz[row][0] = te_jacobian.vz[row][0];
-          output.bl_newton_system.vz[row][1] = te_jacobian.vz[row][1];
-        }
-        output.bl_newton_system.vb[iv] = te_jacobian.vb;
-      }
-
-      //---- turbulent intervals will follow if currently at transition interval
-      if (output.flowRegime == FlowRegimeEnum::Transition) {
-        //------ save transition location
-        output.profiles.get(is).transitionIndex = ibl;
-        boundaryLayerWorkflow.lattice.get(is).profiles.transitionIndex = ibl;
-        output.flowRegime = FlowRegimeEnum::Turbulent;
-        flowRegime = output.flowRegime;
-      }
-
-      if (ibl == boundaryLayerWorkflow.lattice.get(is).trailingEdgeIndex) {
-        //----- set "2" variables at te to output.wake correlations for next station
-        output.flowRegime = FlowRegimeEnum::Wake;
-        flowRegime = output.flowRegime;
-        boundaryLayerWorkflow.state.station2 =
-            boundaryLayerWorkflow.boundaryLayerVariablesSolver.solve(
-                boundaryLayerWorkflow.state.station2, FlowRegimeEnum::Wake);
-        boundaryLayerWorkflow.blmid(FlowRegimeEnum::Wake);
-      }
-
-      BoundaryLayerWorkflow::StationArraysAdvanceResult advance =
-          boundaryLayerWorkflow.advanceStationArrays(
-              setblStations[1].u_m, setblStations[1].d_m,
-              setblStations[1].u_a, setblStations[1].d_a,
-              setblStations[1].due, setblStations[1].dds);
-      setblStations[0].u_m = advance.u_m1;
-      setblStations[0].d_m = advance.d_m1;
-      setblStations[0].u_a = advance.u_a1;
-      setblStations[0].d_a = advance.d_a1;
-      setblStations[0].due = advance.due1;
-      setblStations[0].dds = advance.dds1;
-
-      //---- set bl variables for next station
-      boundaryLayerWorkflow.state.stepbl();
-    }
+  for (int side = 1; side <= 2; ++side) {
+    processSetblSide(*this, marcher, side, output, state);
   }
 
   return output;
