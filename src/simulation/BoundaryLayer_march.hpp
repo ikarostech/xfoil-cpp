@@ -1,10 +1,18 @@
 #pragma once
 
+#include <sstream>
+#include <vector>
+
+#include "Eigen/Core"
 #include "simulation/BoundaryLayer.hpp"
-#include "simulation/XFoil.h"
+
+class XFoil;
 
 class BoundaryLayerMarcher {
  public:
+  using Matrix3x2d = Eigen::Matrix<double, 3, 2>;
+  using Matrix3x2dVector = std::vector<Matrix3x2d>;
+
   struct MrchueStationContext {
     bool simi = false;
     bool wake = false;
@@ -76,7 +84,7 @@ class BoundaryLayerMarcher {
   BoundaryLayerWorkflow::EdgeVelocityDistribution computeNewUeDistribution(
       const BoundaryLayerWorkflow& workflow,
       const XFoil& xfoil,
-      const XFoil::Matrix3x2dVector& vdel) const;
+      const Matrix3x2dVector& vdel) const;
   BoundaryLayerWorkflow::QtanResult computeQtan(
       const BoundaryLayerWorkflow& workflow,
       const BoundaryLayerWorkflow::EdgeVelocityDistribution& distribution,
@@ -88,7 +96,7 @@ class BoundaryLayerMarcher {
   BoundaryLayerWorkflow::BoundaryLayerDelta buildBoundaryLayerDelta(
       const BoundaryLayerWorkflow& workflow, int side,
       const Eigen::VectorXd& unew_side, const Eigen::VectorXd& u_ac_side,
-      double dac, const XFoil& xfoil, const XFoil::Matrix3x2dVector& vdel) const;
+      double dac, const XFoil& xfoil, const Matrix3x2dVector& vdel) const;
   BoundaryLayerWorkflow::BoundaryLayerMetrics evaluateSegmentRelaxation(
       const BoundaryLayerWorkflow& workflow, int side,
       const BoundaryLayerWorkflow::BoundaryLayerDelta& delta, double dhi,

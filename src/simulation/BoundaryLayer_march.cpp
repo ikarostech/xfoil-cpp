@@ -273,7 +273,7 @@ void clampAndAdjustMrchueStation(BoundaryLayerWorkflow& workflow, int side,
 BoundaryLayerWorkflow::EdgeVelocityDistribution
 BoundaryLayerMarcher::computeNewUeDistribution(const BoundaryLayerWorkflow& workflow,
                                                const XFoil& xfoil,
-                                               const XFoil::Matrix3x2dVector& vdel) const {
+                                               const Matrix3x2dVector& vdel) const {
   EdgeVelocityDistribution distribution;
   distribution.unew.top =
       Eigen::VectorXd::Zero(workflow.lattice.top.stationCount);
@@ -393,7 +393,7 @@ BoundaryLayerWorkflow::BoundaryLayerDelta
 BoundaryLayerMarcher::buildBoundaryLayerDelta(
     const BoundaryLayerWorkflow& workflow, int side, const Eigen::VectorXd& unew_side,
     const Eigen::VectorXd& u_ac_side, double dac,
-    const XFoil& xfoil, const XFoil::Matrix3x2dVector& vdel) const {
+    const XFoil& xfoil, const Matrix3x2dVector& vdel) const {
   BoundaryLayerDelta delta;
   const int len = workflow.lattice.get(side).stationCount - 1;
   if (len <= 0) {
