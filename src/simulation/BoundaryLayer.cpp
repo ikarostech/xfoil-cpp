@@ -13,6 +13,7 @@
 #include "domain/coefficient/skin_friction.hpp"
 #include "infrastructure/logger.hpp"
 #include "core/boundary_layer_util.hpp"
+#include "core/math_util.hpp"
 
 using BoundaryContext = BoundaryLayerWorkflow::MixedModeStationContext;
 using Eigen::Matrix;

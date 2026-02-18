@@ -34,15 +34,7 @@ This is a translation to C++ of the original Fortran code of Mark Drela and
 Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 */
 
-#include <array>
-#include <complex>
-#include <iostream>
-#include <string>
-#include <iomanip>
 #include <vector>
-#include <iterator>
-#include <numeric>
-#include <optional>
 #include <stdexcept>
 
 #include "Eigen/Core"
@@ -51,24 +43,11 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 
 #include "domain/flow_regime.hpp"
 #include "domain/flow_state.hpp"
-#include "domain/coefficient/bl_newton.hpp"
 #include "domain/coefficient/aero_coefficients.hpp"
-#include "core/math_util.hpp"
-#include "core/spline.hpp"
 #include "core/side_pair.hpp"
 #include "domain/boundary_layer.hpp"
-#include "domain/boundary_layer/boundary_layer_diff_solver.hpp"
-#include "domain/boundary_layer/boundary_layer_variables_solver.hpp"
-#include "domain/boundary_layer/bl_compressibility_params.hpp"
-#include "domain/boundary_layer/bl_reynolds_params.hpp"
-#include "domain/boundary_layer/bl_transition_params.hpp"
 #include "domain/foil/foil.hpp"
 #include "domain/foil/FoilAerodynamicCache.hpp"
-#include "simulation/psi.hpp"
-#include "simulation/skin_friction_coefficients.hpp"
-#include "simulation/boundary_layer_state.hpp"
-#include "simulation/Blsolve.hpp"
-#include "core/boundary_layer_util.hpp"
 #include "BoundaryLayer.hpp"
 
 struct SetblOutputView;

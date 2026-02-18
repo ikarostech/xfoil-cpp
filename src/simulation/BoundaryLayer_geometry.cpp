@@ -4,7 +4,11 @@
 #include <iostream>
 
 #include "XFoil.h"
+#include "core/math_util.hpp"
 #include "infrastructure/logger.hpp"
+
+using Eigen::Matrix2Xd;
+using Eigen::VectorXd;
 
 BoundaryLayerGeometry::BoundaryLayerGeometry(
     SidePair<BoundaryLayerLattice>& lattice, Eigen::VectorXd& wgap,

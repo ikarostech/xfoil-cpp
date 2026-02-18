@@ -2,6 +2,8 @@
 #include <algorithm>
 #include <cmath>
 #include "XFoil.h"
+#include "simulation/psi.hpp"
+#include "core/math_util.hpp"
 
 using Eigen::Array;
 using Eigen::ArrayXd;

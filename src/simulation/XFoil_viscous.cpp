@@ -2,7 +2,9 @@
 #include "simulation/InviscidSolver.hpp"
 #include "simulation/Blsolve.hpp"
 #include "simulation/BoundaryLayer_march.hpp"
+#include "simulation/psi.hpp"
 #include "domain/boundary_layer/boundary_layer_builder.hpp"
+#include "core/math_util.hpp"
 #include "infrastructure/logger.hpp"
 #include <algorithm>
 #include <cstring>

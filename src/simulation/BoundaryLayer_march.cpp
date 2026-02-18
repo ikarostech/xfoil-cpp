@@ -6,6 +6,7 @@
 #include <sstream>
 
 #include "XFoil.h"
+#include "core/math_util.hpp"
 #include "infrastructure/logger.hpp"
 
 using BoundaryContext = BoundaryLayerWorkflow::MixedModeStationContext;

@@ -1,6 +1,7 @@
 #include "simulation/InviscidSolver.hpp"
 
 #include "XFoil.h"
+#include "core/math_util.hpp"
 #include "infrastructure/logger.hpp"
 
 #include <cmath>

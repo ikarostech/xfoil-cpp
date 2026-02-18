@@ -5,6 +5,7 @@
 #include "domain/boundary_layer/bl_compressibility_params.hpp"
 #include "domain/boundary_layer/bl_reynolds_params.hpp"
 #include "domain/boundary_layer/bl_transition_params.hpp"
+#include "simulation/Blsolve.hpp"
 #include "XFoil.h"
 
 struct SetblOutputView {
