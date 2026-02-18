@@ -152,6 +152,121 @@ double adjustDisplacementForHkLimit(double displacementThickness,
   return displacementThickness + dh * momentumThickness;
 }
 
+double computeMrchueDmax(const BoundaryLayerWorkflow& workflow, int side,
+                         int stationIndex, const MrchueStationContext& ctx,
+                         bool includeLaminarAmpTerm) {
+  double dmax_local =
+      std::max(std::fabs(workflow.blc.rhs[1] / ctx.thi),
+               std::fabs(workflow.blc.rhs[2] / ctx.dsi));
+
+  if (includeLaminarAmpTerm &&
+      stationIndex < workflow.lattice.get(side).profiles.transitionIndex) {
+    dmax_local = std::max(dmax_local, std::fabs(workflow.blc.rhs[0] / 10.0));
+  }
+  if (stationIndex >= workflow.lattice.get(side).profiles.transitionIndex) {
+    dmax_local = std::max(dmax_local, std::fabs(workflow.blc.rhs[0] / ctx.cti));
+  }
+  return dmax_local;
+}
+
+double computeMrchueRelaxation(double dmax_local) {
+  if (dmax_local > 0.3) {
+    return 0.3 / dmax_local;
+  }
+  return 1.0;
+}
+
+void applyMrchueStateDelta(const BoundaryLayerWorkflow& workflow, int side,
+                           int stationIndex, MrchueStationContext& ctx,
+                           double relaxation) {
+  if (stationIndex >= workflow.lattice.get(side).profiles.transitionIndex) {
+    ctx.cti += relaxation * workflow.blc.rhs[0];
+  }
+  ctx.thi += relaxation * workflow.blc.rhs[1];
+  ctx.dsi += relaxation * workflow.blc.rhs[2];
+  ctx.uei += relaxation * workflow.blc.rhs[3];
+}
+
+bool maybeSwitchToInverseMode(BoundaryLayerWorkflow& workflow, int side,
+                              int stationIndex, MrchueStationContext& ctx,
+                              double relaxation, double kHlmax, double kHtmax,
+                              double& htarg, bool& direct,
+                              std::stringstream& ss) {
+  if (stationIndex == workflow.lattice.get(side).trailingEdgeIndex + 1) {
+    return false;
+  }
+
+  const double msq =
+      ctx.uei * ctx.uei * workflow.blCompressibility.hstinv /
+      (workflow.blCompressibility.gm1bl *
+       (1.0 - 0.5 * ctx.uei * ctx.uei * workflow.blCompressibility.hstinv));
+  const double htest = (ctx.dsi + relaxation * workflow.blc.rhs[2]) /
+                       (ctx.thi + relaxation * workflow.blc.rhs[1]);
+  const auto hkin_result = boundary_layer::hkin(htest, msq);
+  const double hktest = hkin_result.hk;
+  const double hmax =
+      (stationIndex < workflow.lattice.get(side).profiles.transitionIndex)
+          ? kHlmax
+          : kHtmax;
+
+  direct = (hktest < hmax);
+  if (direct) {
+    return false;
+  }
+
+  htarg = workflow.calcHtarg(stationIndex, side, ctx.wake);
+  if (ctx.wake) {
+    htarg = std::max(htarg, 1.01);
+  } else {
+    htarg = std::max(htarg, hmax);
+  }
+
+  ss << "     mrchue: inverse mode at " << stationIndex << "    hk="
+     << std::fixed << std::setprecision(3) << htarg << "\n";
+  Logger::instance().write(ss.str());
+  ss.str("");
+  return true;
+}
+
+void solveMrchueDirectSystem(BoundaryLayerWorkflow& workflow) {
+  workflow.blc.a2(3, 0) = 0.0;
+  workflow.blc.a2(3, 1) = 0.0;
+  workflow.blc.a2(3, 2) = 0.0;
+  workflow.blc.a2(3, 3) = 1.0;
+  workflow.blc.rhs[3] = 0.0;
+  workflow.blc.rhs =
+      workflow.blc.a2.block(0, 0, 4, 4).fullPivLu().solve(workflow.blc.rhs);
+}
+
+void solveMrchueInverseSystem(BoundaryLayerWorkflow& workflow,
+                              const MrchueStationContext& ctx) {
+  workflow.blc.a2(3, 0) = 0.0;
+  workflow.blc.a2(3, 1) = workflow.state.station2.hkz.t();
+  workflow.blc.a2(3, 2) = workflow.state.station2.hkz.d();
+  workflow.blc.a2(3, 3) = workflow.state.station2.hkz.u();
+  workflow.blc.rhs[3] = ctx.htarg - workflow.state.station2.hkz.scalar;
+  workflow.blc.rhs =
+      workflow.blc.a2.block(0, 0, 4, 4).fullPivLu().solve(workflow.blc.rhs);
+}
+
+void clampAndAdjustMrchueStation(BoundaryLayerWorkflow& workflow, int side,
+                                 int stationIndex, MrchueStationContext& ctx) {
+  if (stationIndex >= workflow.lattice.get(side).profiles.transitionIndex) {
+    ctx.cti = std::clamp(ctx.cti, 0.0000001, 0.30);
+  }
+
+  const double hklim =
+      (stationIndex <= workflow.lattice.get(side).trailingEdgeIndex) ? 1.02
+                                                                      : 1.00005;
+  const double msq =
+      ctx.uei * ctx.uei * workflow.blCompressibility.hstinv /
+      (workflow.blCompressibility.gm1bl *
+       (1.0 - 0.5 * ctx.uei * ctx.uei * workflow.blCompressibility.hstinv));
+  double dsw = ctx.dsi - ctx.dswaki;
+  dsw = adjustDisplacementForHkLimit(dsw, ctx.thi, msq, hklim);
+  ctx.dsi = dsw + ctx.dswaki;
+}
+
 }  // namespace
 
 BoundaryLayerWorkflow::EdgeVelocityDistribution
@@ -672,115 +787,26 @@ bool BoundaryLayerMarcher::performMrchueNewtonLoop(
     }
 
     if (direct) {
-      workflow.blc.a2(3, 0) = 0.0;
-      workflow.blc.a2(3, 1) = 0.0;
-      workflow.blc.a2(3, 2) = 0.0;
-      workflow.blc.a2(3, 3) = 1.0;
-      workflow.blc.rhs[3] = 0.0;
-      workflow.blc.rhs =
-          workflow.blc.a2.block(0, 0, 4, 4).fullPivLu().solve(workflow.blc.rhs);
-
+      solveMrchueDirectSystem(workflow);
       dmax_local =
-          std::max(std::fabs(workflow.blc.rhs[1] / ctx.thi),
-                   std::fabs(workflow.blc.rhs[2] / ctx.dsi));
-      if (stationIndex < workflow.lattice.get(side).profiles.transitionIndex) {
-        dmax_local =
-            std::max(dmax_local, std::fabs(workflow.blc.rhs[0] / 10.0));
-      }
-      if (stationIndex >= workflow.lattice.get(side).profiles.transitionIndex) {
-        dmax_local =
-            std::max(dmax_local, std::fabs(workflow.blc.rhs[0] / ctx.cti));
+          computeMrchueDmax(workflow, side, stationIndex, ctx, true);
+      const double rlx = computeMrchueRelaxation(dmax_local);
+
+      if (maybeSwitchToInverseMode(workflow, side, stationIndex, ctx, rlx,
+                                   kHlmax, kHtmax, htarg, direct, ss)) {
+        continue;
       }
 
-      double rlx = 1.0;
-      if (dmax_local > 0.3) {
-        rlx = 0.3 / dmax_local;
-      }
-
-      if (stationIndex != workflow.lattice.get(side).trailingEdgeIndex + 1) {
-        const double msq =
-            ctx.uei * ctx.uei * workflow.blCompressibility.hstinv /
-            (workflow.blCompressibility.gm1bl *
-             (1.0 - 0.5 * ctx.uei * ctx.uei * workflow.blCompressibility.hstinv));
-        const double htest =
-            (ctx.dsi + rlx * workflow.blc.rhs[2]) /
-            (ctx.thi + rlx * workflow.blc.rhs[1]);
-        const auto hkin_result = boundary_layer::hkin(htest, msq);
-        const double hktest = hkin_result.hk;
-
-        const double hmax =
-            (stationIndex < workflow.lattice.get(side).profiles.transitionIndex)
-                ? kHlmax
-                : kHtmax;
-        direct = (hktest < hmax);
-        if (!direct) {
-          htarg = workflow.calcHtarg(stationIndex, side, ctx.wake);
-          if (ctx.wake) {
-            htarg = std::max(htarg, 1.01);
-          } else {
-            htarg = std::max(htarg, hmax);
-          }
-
-          ss << "     mrchue: inverse mode at " << stationIndex
-             << "    hk=" << std::fixed << std::setprecision(3) << htarg
-             << "\n";
-          Logger::instance().write(ss.str());
-          ss.str("");
-          continue;
-        }
-      }
-
-      if (stationIndex >= workflow.lattice.get(side).profiles.transitionIndex) {
-        ctx.cti += rlx * workflow.blc.rhs[0];
-      }
-      ctx.thi += rlx * workflow.blc.rhs[1];
-      ctx.dsi += rlx * workflow.blc.rhs[2];
-      ctx.uei += rlx * workflow.blc.rhs[3];
+      applyMrchueStateDelta(workflow, side, stationIndex, ctx, rlx);
     } else {
-      workflow.blc.a2(3, 0) = 0.0;
-      workflow.blc.a2(3, 1) = workflow.state.station2.hkz.t();
-      workflow.blc.a2(3, 2) = workflow.state.station2.hkz.d();
-      workflow.blc.a2(3, 3) = workflow.state.station2.hkz.u();
-      workflow.blc.rhs[3] = ctx.htarg - workflow.state.station2.hkz.scalar;
-      workflow.blc.rhs =
-          workflow.blc.a2.block(0, 0, 4, 4).fullPivLu().solve(workflow.blc.rhs);
-
+      solveMrchueInverseSystem(workflow, ctx);
       dmax_local =
-          std::max(std::fabs(workflow.blc.rhs[1] / ctx.thi),
-                   std::fabs(workflow.blc.rhs[2] / ctx.dsi));
-      if (stationIndex >= workflow.lattice.get(side).profiles.transitionIndex) {
-        dmax_local =
-            std::max(dmax_local, std::fabs(workflow.blc.rhs[0] / ctx.cti));
-      }
-
-      double rlx = 1.0;
-      if (dmax_local > 0.3) {
-        rlx = 0.3 / dmax_local;
-      }
-
-      if (stationIndex >= workflow.lattice.get(side).profiles.transitionIndex) {
-        ctx.cti += rlx * workflow.blc.rhs[0];
-      }
-      ctx.thi += rlx * workflow.blc.rhs[1];
-      ctx.dsi += rlx * workflow.blc.rhs[2];
-      ctx.uei += rlx * workflow.blc.rhs[3];
+          computeMrchueDmax(workflow, side, stationIndex, ctx, false);
+      const double rlx = computeMrchueRelaxation(dmax_local);
+      applyMrchueStateDelta(workflow, side, stationIndex, ctx, rlx);
     }
 
-    if (stationIndex >= workflow.lattice.get(side).profiles.transitionIndex) {
-      ctx.cti = std::clamp(ctx.cti, 0.0000001, 0.30);
-    }
-
-    const double hklim =
-        (stationIndex <= workflow.lattice.get(side).trailingEdgeIndex) ? 1.02
-                                                              : 1.00005;
-    const double msq =
-        ctx.uei * ctx.uei * workflow.blCompressibility.hstinv /
-        (workflow.blCompressibility.gm1bl *
-         (1.0 - 0.5 * ctx.uei * ctx.uei * workflow.blCompressibility.hstinv));
-    double dsw = ctx.dsi - ctx.dswaki;
-    dsw = adjustDisplacementForHkLimit(
-        dsw, ctx.thi, msq, hklim);
-    ctx.dsi = dsw + ctx.dswaki;
+    clampAndAdjustMrchueStation(workflow, side, stationIndex, ctx);
 
     if (dmax_local <= 0.00001) {
       converged = true;
