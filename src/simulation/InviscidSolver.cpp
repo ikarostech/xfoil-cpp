@@ -10,6 +10,12 @@ using Eigen::Matrix2Xd;
 using Eigen::VectorXd;
 
 bool InviscidSolver::specConverge(XFoil &xfoil, SpecTarget target) {
+  // Rebuild inviscid baseline from current alpha so viscous leftovers do not
+  // contaminate the operating-point solve.
+  xfoil.qinv_matrix = qiset(xfoil.analysis_state_.alpha, xfoil.aerodynamicCache.qinvu);
+  xfoil.surface_vortex = MathUtil::getRotateMatrix(xfoil.analysis_state_.alpha) *
+                         xfoil.aerodynamicCache.gamu;
+
   if (target == SpecTarget::LiftCoefficient) {
     xfoil.minf_cl = xfoil.getActualMach(xfoil.analysis_state_.clspec,
                                         xfoil.analysis_state_.machType);

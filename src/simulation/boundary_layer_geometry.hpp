@@ -32,7 +32,6 @@ class BoundaryLayerGeometry {
               const Foil& foil,
               const Eigen::Matrix2Xd& qinv_matrix,
               StagnationResult& stagnation,
-              bool& lipan,
               int& nsys);
   bool xicalc(const Foil& foil);
   SidePair<Eigen::Matrix2Xd> uicalc(

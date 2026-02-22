@@ -51,8 +51,10 @@ bool XFoil::initXFoilAnalysis(double Re, double alpha, double Mach,
                               ReynoldsType reType, MachType maType,
                               bool bViscous) {
 
-  lblini = false;
-  lipan = false;
+  setBLInitialized(false);
+  invalidatePanelMap();
+  invalidateWakeGeometry();
+  invalidateConvergedSolution();
 
   FlowState& state = analysis_state_;
   state.referenceRe = Re;
@@ -93,16 +95,14 @@ bool XFoil::qdcalc() {
   Logger::instance().write("   Calculating source influence matrix ...\n");
   const int point_count = foil.foil_shape.n;
 
-  if (!ladij) {
-    //----- calculate source influence matrix for airfoil surface if it doesn't
-    // exist
+  if (!hasAirfoilInfluenceMatrix()) {
+    //----- calculate source influence matrix for airfoil surface
     aerodynamicCache.bij.block(0, 0, point_count + 1, point_count) =
         aerodynamicCache.psi_gamma_lu.solve(aerodynamicCache.bij.block(0, 0, point_count + 1, point_count)).eval();
 
     //------- store resulting dgam/dsig = dqtan/dsig vector
-    aerodynamicCache.dij.block(0, 0, point_count, point_count) = aerodynamicCache.bij.block(0, 0, point_count, point_count);
-
-    ladij = true;
+    aerodynamicCache.dij.block(0, 0, point_count, point_count) =
+        aerodynamicCache.bij.block(0, 0, point_count, point_count);
   }
 
   //---- set up coefficient matrix of dpsi/dm on airfoil surface
@@ -154,7 +154,6 @@ bool XFoil::qdcalc() {
   //---- make sure first wake point has same velocity as trailing edge
   aerodynamicCache.dij.row(point_count) = aerodynamicCache.dij.row(point_count - 1);
 
-  lwdij = true;
   return true;
 }
 
@@ -373,8 +372,7 @@ bool XFoil::viscal() {
   const int total_nodes_with_wake = point_count + foil.wake_shape.n;
 
   //---- calculate wake trajectory from current inviscid solution if necessary
-  if (!lwake)
-    xyWake();
+  xyWake();
 
   //	---- set velocities on wake from airfoil vorticity for alpha=0, 90
   aerodynamicCache.qinvu =
@@ -386,8 +384,8 @@ bool XFoil::viscal() {
       InviscidSolver::qiset(analysis_state_.alpha, aerodynamicCache.qinvu);
   
 
-  if (!lipan) {
-    if (lblini)
+  if (!hasPanelMap()) {
+    if (isBLInitialized())
       surface_vortex = gamqv();
 
     //	----- locate stagnation point arc length position and panel index
@@ -401,9 +399,7 @@ bool XFoil::viscal() {
     boundaryLayerWorkflow.stagnationSst = stagnation.sst;
 
     //	----- set  bl position -> panel position  pointers
-    if (boundaryLayerWorkflow.geometry.iblpan(point_count, foil.wake_shape.n)) {
-      lipan = true;
-    }
+    boundaryLayerWorkflow.geometry.iblpan(point_count, foil.wake_shape.n);
 
     //	----- calculate surface arc length array for current stagnation point
     // location
@@ -420,7 +416,7 @@ bool XFoil::viscal() {
     boundaryLayerWorkflow.lattice.bottom.inviscidEdgeVelocityMatrix = inviscid_edge_velocity.bottom;
   }
 
-  if (!lblini) {
+  if (!isBLInitialized()) {
     //	----- set initial ue from inviscid ue
     for (int ibl = 0; ibl < boundaryLayerWorkflow.lattice.top.stationCount - 1; ibl++) {
       boundaryLayerWorkflow.lattice.top.profiles.edgeVelocity[ibl] =
@@ -432,7 +428,7 @@ bool XFoil::viscal() {
     }
   }
 
-  if (lvconv) {
+  if (hasConvergedSolution()) {
     //	----- set correct cl if converged point exists
     qvis = qvfue(qvis, boundaryLayerWorkflow.lattice);
 
@@ -454,7 +450,7 @@ bool XFoil::viscal() {
   }
 
   //	---- set up source influence matrix if it doesn't exist
-  if (!lwdij || !ladij)
+  if (!hasAirfoilInfluenceMatrix() || !hasWakeInfluenceMatrix())
     qdcalc();
 
   return true;
@@ -512,7 +508,7 @@ bool XFoil::ViscousIter() {
   surface_vortex = gamqv();  //	------ set gam distribution from qvis
   boundaryLayerWorkflow.geometry.stmove(surface_vortex, foil.foil_shape.spline_length,
                                foil, qinv_matrix, stagnation,
-                               lipan, boundaryLayerWorkflow.nsys); //	------ relocate stagnation point
+                               boundaryLayerWorkflow.nsys); //	------ relocate stagnation point
 
   //	------ set updated cl,cd
   const auto cl_result = clcalc(cmref);
@@ -520,7 +516,6 @@ bool XFoil::ViscousIter() {
   aero_coeffs_.cd = cdcalc();
 
   if (rmsbl < eps1) {
-    lvconv = true;
     avisc = analysis_state_.alpha;
     mvisc = analysis_state_.currentMach;
     Logger::instance().write("----------CONVERGED----------\n\n");

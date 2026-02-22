@@ -118,8 +118,8 @@ class XFoil {
   
   bool abcopy(Matrix2Xd copyFrom);
 
-  bool isBLInitialized() const { return lblini; }
-  void setBLInitialized(bool bInitialized) { lblini = bInitialized; }
+  bool isBLInitialized() const;
+  void setBLInitialized(bool bInitialized);
 
   double QInf() const { return analysis_state_.qinf; }
   void setQInf(double v) { analysis_state_.qinf = v; }
@@ -243,6 +243,14 @@ class XFoil {
 
   double rlxCalc(double dac) const;
   bool xyWake();
+  void invalidateConvergedSolution();
+  void invalidateWakeGeometry();
+  void invalidatePanelMap();
+  bool hasWakeGeometry() const;
+  bool hasPanelMap() const;
+  bool hasAirfoilInfluenceMatrix() const;
+  bool hasWakeInfluenceMatrix() const;
+  bool hasConvergedSolution() const;
   // Helper routines used during initialization
   void initializeDataStructures();
   void resetFlags();
@@ -261,10 +269,7 @@ class XFoil {
   double acrit;
   VectorXd cpi, cpv;
   double avisc, mvisc;
-  bool lvconv, lwake;
   VectorXd qgamm;
-
-  bool lblini, lipan;
 
   Foil foil;
   BoundaryLayerWorkflow boundaryLayerWorkflow;
@@ -273,8 +278,6 @@ class XFoil {
  public: //private:
 
   double minf_cl, reinf_cl;
-
-  bool ladij, lwdij;
 
   Matrix2Xd surface_vortex;
   FoilAerodynamicCache aerodynamicCache;
@@ -520,17 +523,15 @@ class XFoil {
   c   lqinu       .true. if qinvu arrays exist for current airfoil geometry
   c   lvisc       .true. if viscous option is invoked
   c   lalfa       .true. if alpha is specifed, .false. if cl is specified
-  c   lwake       .true. if wake geometry has been calculated
+  c   wake cache validity derived from wake_shape arrays
   c   lpacc       .true. if each point calculated is to be saved
-  c   lblini      .true. if bl has been initialized
-  c   lipan       .true. if bl->panel pointers ipan have been calculated
+  c   bl init/panel map validity derived from lattice/profile arrays
   c   lqaij       .true. if dpsi/dgam matrix has been computed and factored
-  c   ladij       .true. if dq/dsig matrix for the airfoil has been computed
-  c   lwdij       .true. if dq/dsig matrix for the wake has been comphd
+  c   influence matrix validity derived from dij matrix shape/finiteness
   c   lqvdes      .true. if viscous ue is to be plotted in qdes routines
   c   lqspec      .true. if qspec has been initialized
   c   lqrefl      .true. if reflected qspec is to be plotted in qdes routines
-  c   lvconv      .true. if converged bl solution exists
+  c   convergence state derived from avisc/mvisc and qvis consistency
   c   lcpref      .true. if reference data is to be plotted on cp vs x/c plots
   c   lclock      .true. if source airfoil coordinates are clockwise
   c   lpfile      .true. if polar file is ready to be appended to

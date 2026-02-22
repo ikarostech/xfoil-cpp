@@ -8,10 +8,7 @@ using Eigen::Vector2d;
 using Eigen::VectorXd;
 
 bool XFoil::abcopy(Matrix2Xd copyFrom) {
-  const int original_point_count = foil.foil_shape.n;
   int point_count = static_cast<int>(copyFrom.cols());
-  if (original_point_count != point_count)
-    lblini = false;
 
   //---- strip out doubled points
   int r = 1;
@@ -39,11 +36,10 @@ bool XFoil::abcopy(Matrix2Xd copyFrom) {
   foil.wake_shape.n = wake_point_count;
   updateTrailingEdgeState();
 
-  lwake = false;
-  ladij = false;
-  lwdij = false;
-  lipan = false;
-  lvconv = false;
+  invalidateWakeGeometry();
+  invalidatePanelMap();
+  setBLInitialized(false);
+  invalidateConvergedSolution();
 
   return true;
 }
@@ -93,8 +89,6 @@ bool XFoil::xyWake() {
                    analysis_state_.qinf)) {
     return false;
   }
-  lwake = true;
-  lwdij = false;
   return true;
 }
 

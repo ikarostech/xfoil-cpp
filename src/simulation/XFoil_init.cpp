@@ -1,5 +1,6 @@
 #include "XFoil.h"
 #include <algorithm>
+#include <limits>
 #include <numbers>
 #include <unordered_map>
 #include "simulation/InviscidSolver.hpp"
@@ -92,8 +93,9 @@ void XFoil::initializeDataStructures() {
 }
 
 void XFoil::resetFlags() {
-  lwake = lblini = lipan = false;
-  ladij = lwdij = lvconv = false;
+  invalidateWakeGeometry();
+  invalidatePanelMap();
+  invalidateConvergedSolution();
   analysis_state_.viscous = false;
   analysis_state_.controlByAlpha = false;
   foil.edge.sharp = false;
@@ -116,7 +118,7 @@ void XFoil::resetVariables() {
   aero_coeffs_.cd = 0.0;
   aero_coeffs_.xcp = 0.0;
   sigte = gamte = 0.0;
-  avisc = 0.0;
+  avisc = std::numeric_limits<double>::quiet_NaN();
   resetFlags();
   boundaryLayerWorkflow.stagnationIndex = 0;
   boundaryLayerWorkflow.stagnationSst = 0.0;
@@ -202,6 +204,6 @@ bool XFoil::setMach() {
   const auto cl_result = clcalc(cmref);
   applyClComputation(cl_result);
   aero_coeffs_.cd = cdcalc();
-  lvconv = false;
+  invalidateConvergedSolution();
   return true;
 }

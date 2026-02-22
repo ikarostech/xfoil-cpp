@@ -11,7 +11,6 @@
 class XFoil;
 
 struct SetblOutputView {
-  bool lblini = false;
   BlCompressibilityParams blCompressibility{};
   BlReynoldsParams blReynolds{};
   BlTransitionParams blTransition{};

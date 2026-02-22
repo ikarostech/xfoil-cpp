@@ -14,7 +14,7 @@ struct IterationContext {
 
 bool iterate(XFoil *xfoil, IterationContext &context) {
   if (!xfoil->viscal()) {
-    xfoil->lvconv = false;
+    xfoil->invalidateConvergedSolution();
     std::cout
         << "CpCalc: local speed too large\nCompressibility corrections invalid"
         << std::endl;
@@ -22,7 +22,7 @@ bool iterate(XFoil *xfoil, IterationContext &context) {
   }
 
   while (context.iterationCount < context.iterationLimit &&
-         !xfoil->lvconv) {
+         !xfoil->hasConvergedSolution()) {
     if (xfoil->ViscousIter()) {
       context.iterationCount++;
     } else
@@ -35,14 +35,15 @@ bool iterate(XFoil *xfoil, IterationContext &context) {
     xfoil->cpv = viscal_end.viscousCp;
   }
 
-  if (context.iterationCount >= context.iterationLimit && !xfoil->lvconv) {
+  if (context.iterationCount >= context.iterationLimit &&
+      !xfoil->hasConvergedSolution()) {
     if (context.autoInitializeBoundaryLayer) {
       xfoil->setBLInitialized(false);
-      xfoil->lipan = false;
+      xfoil->invalidatePanelMap();
     }
     return true;
   }
-  if (!xfoil->lvconv) {
+  if (!xfoil->hasConvergedSolution()) {
     context.encounteredErrors = true;
     return false;
   } else {
@@ -112,7 +113,7 @@ int main() {
     iterationContext.encounteredErrors = false;
 
     foil->setBLInitialized(false);
-    foil->lipan = false;
+    foil->invalidatePanelMap();
 
     foil->setAlpha(alpha * 3.14159 / 180);
     foil->analysisState().controlByAlpha = true;
@@ -123,14 +124,14 @@ int main() {
       std::cout << "Invalid Analysis Settings" << std::endl;
       return 1;
     }
-    foil->lwake = false;
-    foil->lvconv = false;
+    foil->invalidateWakeGeometry();
+    foil->invalidateConvergedSolution();
 
     while (!iterate(foil, iterationContext))
       ;
 
 
-    if (foil->lvconv) {
+    if (foil->hasConvergedSolution()) {
       std::cout << "  converged after " << iterationContext.iterationCount << " iterations"
                 << std::endl;
       std::cout << "  cl : " << foil->Cl() << ", cd : " << foil->Cd()

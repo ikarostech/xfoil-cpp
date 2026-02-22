@@ -126,7 +126,6 @@ bool BoundaryLayerGeometry::stmove(const Eigen::Matrix2Xd& surface_vortex,
                                    const Foil& foil,
                                    const Eigen::Matrix2Xd& qinv_matrix,
                                    StagnationResult& stagnation,
-                                   bool& lipan,
                                    int& nsys) {
   const int previous = stagnationIndex_;
   const auto stagnation_result = stfind(surface_vortex, spline_length);
@@ -141,9 +140,7 @@ bool BoundaryLayerGeometry::stmove(const Eigen::Matrix2Xd& surface_vortex,
   if (previous == stagnationIndex_) {
     xicalc(foil);
   } else {
-    if (iblpan(foil.foil_shape.n, foil.wake_shape.n)) {
-      lipan = true;
-    }
+    iblpan(foil.foil_shape.n, foil.wake_shape.n);
     const auto inviscid_edge_velocity = uicalc(qinv_matrix);
     lattice_.top.inviscidEdgeVelocityMatrix = inviscid_edge_velocity.top;
     lattice_.bottom.inviscidEdgeVelocityMatrix = inviscid_edge_velocity.bottom;

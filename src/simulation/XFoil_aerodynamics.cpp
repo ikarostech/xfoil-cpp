@@ -13,7 +13,7 @@ using Eigen::Vector2d;
 using Eigen::VectorXd;
 
 double XFoil::cdcalc() const {
-  if (!(analysis_state_.viscous && lblini)) {
+  if (!(analysis_state_.viscous && isBLInitialized())) {
     return 0.0;
   }
 

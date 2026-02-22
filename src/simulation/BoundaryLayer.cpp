@@ -457,7 +457,6 @@ bool BoundaryLayerWorkflow::tesys(const BoundaryLayerSideProfiles& top_profiles,
 }
 
 void SetblOutputView::applyToXFoil(XFoil& xfoil) {
-  xfoil.lblini = lblini;
   xfoil.boundaryLayerWorkflow.blCompressibility = blCompressibility;
   xfoil.boundaryLayerWorkflow.blReynolds = blReynolds;
   xfoil.boundaryLayerWorkflow.lattice.top.profiles = std::move(profiles.top);
@@ -1075,12 +1074,10 @@ void initializeSetblReferenceParams(XFoil& xfoil, SetblOutputView& output,
 
 void initializeSetblProfiles(XFoil& xfoil, BoundaryLayerMarcher& marcher,
                              SetblOutputView& output) {
-  output.lblini = xfoil.lblini;
-  if (!xfoil.lblini) {
+  if (!xfoil.isBLInitialized()) {
     Logger::instance().write("   Initializing bl ...\n");
     marcher.mrchue(xfoil.boundaryLayerWorkflow, xfoil);
-    output.lblini = true;
-    xfoil.lblini = true;
+    xfoil.setBLInitialized(true);
   }
   marcher.mrchdu(xfoil.boundaryLayerWorkflow, xfoil);
   output.profiles.top = xfoil.boundaryLayerWorkflow.lattice.top.profiles;
