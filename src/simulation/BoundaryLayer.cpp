@@ -485,88 +485,6 @@ void BoundaryLayerWorkflow::checkTransitionIfNeeded(
   }
 }
 
-bool XFoil::performMixedModeNewtonIteration(int side, int ibl, int itrold,
-                                            MixedModeStationContext& ctx,
-                                            double deps, double senswt,
-                                            double& sens, double& sennew,
-                                            double& ami) {
-  bool converged = false;
-  double ueref = 0.0;
-  double hkref = 0.0;
-
-  for (int itbl = 1; itbl <= 25; ++itbl) {
-    {
-    blData updatedCurrent =
-      boundaryLayerWorkflow.blprv(boundaryLayerWorkflow.state.current(),
-                                  ctx.xsi, ami, ctx.cti, ctx.thi, ctx.dsi,
-                                  ctx.dswaki, ctx.uei);
-      boundaryLayerWorkflow.state.current() = updatedCurrent;
-    }
-    boundaryLayerWorkflow.blkin(boundaryLayerWorkflow.state);
-
-    boundaryLayerWorkflow.checkTransitionIfNeeded(
-        side, ibl, ctx.simi, 1, ami);
-
-    const bool startOfWake =
-        boundaryLayerWorkflow.isStartOfWake(side, ibl);
-    boundaryLayerWorkflow.updateSystemMatricesForStation(foil.edge, side, ibl,
-                                                         ctx);
-
-    if (itbl == 1) {
-      boundaryLayerWorkflow.initializeFirstIterationState(
-          side, ibl, itrold, ctx, ueref, hkref, ami);
-    }
-
-    if (ctx.simi || startOfWake) {
-      boundaryLayerWorkflow.configureSimilarityRow(ueref);
-    } else {
-      const bool resetSensitivity = (itbl <= 5);
-      const bool averageSensitivity = (itbl > 5 && itbl <= 15);
-      boundaryLayerWorkflow.configureViscousRow(
-          hkref, ueref, senswt, resetSensitivity, averageSensitivity,
-          sens, sennew);
-    }
-
-    if (boundaryLayerWorkflow.applyMixedModeNewtonStep(side, ibl, deps, ami, ctx)) {
-      converged = true;
-      break;
-    }
-  }
-
-  return converged;
-}
-
-void XFoil::handleMixedModeNonConvergence(int side, int ibl,
-                                          MixedModeStationContext& ctx,
-                                          double& ami) {
-  BoundaryLayerMarcher marcher;
-  std::stringstream ss;
-  ss << "     mrchdu: convergence failed at " << ibl << " ,  side " << side
-     << ", res=" << std::setw(4) << std::fixed << std::setprecision(3)
-     << ctx.dmax << "\n";
-  Logger::instance().write(ss.str());
-
-  marcher.resetStationKinematicsAfterFailure(
-      boundaryLayerWorkflow, side, ibl, ctx,
-      BoundaryLayerWorkflow::EdgeVelocityFallbackMode::UsePreviousStation);
-
-  {
-    blData updatedCurrent =
-        boundaryLayerWorkflow.blprv(
-            boundaryLayerWorkflow.state.current(), ctx.xsi, ami,
-            ctx.cti, ctx.thi, ctx.dsi, ctx.dswaki, ctx.uei);
-    boundaryLayerWorkflow.state.current() = updatedCurrent;
-  }
-  boundaryLayerWorkflow.blkin(boundaryLayerWorkflow.state);
-
-  boundaryLayerWorkflow.checkTransitionIfNeeded(
-      side, ibl, ctx.simi, 2, ami);
-
-  marcher.syncStationRegimeStates(boundaryLayerWorkflow, side, ibl, ctx.wake);
-
-  ctx.ami = ami;
-}
-
 BoundaryLayerWorkflow::BlReferenceParams
 BoundaryLayerWorkflow::computeBlReferenceParams(
     const FlowState& analysis_state, const AeroCoefficients& aero_coeffs,
@@ -1232,10 +1150,10 @@ SetblOutputView XFoil::setbl(
 
   if (!isBLInitialized()) {
     Logger::instance().write("   Initializing bl ...\n");
-    marcher.mrchue(boundaryLayerWorkflow, *this);
+    marcher.mrchue(boundaryLayerWorkflow, foil, stagnation);
     setBLInitialized(true);
   }
-  marcher.mrchdu(boundaryLayerWorkflow, *this);
+  marcher.mrchdu(boundaryLayerWorkflow, foil, stagnation);
   boundaryLayerWorkflow.initializeSetblProfiles(output);
 
   boundaryLayerWorkflow.initializeSetblEdgeVelocityState(

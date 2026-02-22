@@ -194,12 +194,6 @@ class XFoil {
   Matrix2Xd gamqv() const;
   FoilAerodynamicCache ggcalc();
 
-  bool performMixedModeNewtonIteration(int side, int ibl, int itrold,
-                                       MixedModeStationContext& ctx, double deps,
-                                       double senswt, double& sens,
-                                       double& sennew, double& ami);
-  void handleMixedModeNonConvergence(int side, int ibl,
-                                     MixedModeStationContext& ctx, double& ami);
   Matrix2Xd ncalc(Matrix2Xd point, VectorXd spline_length, int n);
 
   bool qdcalc();

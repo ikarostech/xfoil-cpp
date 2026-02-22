@@ -32,25 +32,38 @@ class BoundaryLayerMarcher {
     double htarg = 0.0;
   };
 
-  bool mrchdu(BoundaryLayerWorkflow& workflow, XFoil& xfoil);
+  bool mrchdu(BoundaryLayerWorkflow& workflow, const Foil& foil,
+              const StagnationResult& stagnation);
   bool mrchdu(BoundaryLayerWorkflow& workflow, BoundaryLayerState& state,
-              XFoil& xfoil);
-  int resetSideState(BoundaryLayerWorkflow& workflow, int side, XFoil& xfoil);
+              const Foil& foil, const StagnationResult& stagnation);
+  int resetSideState(BoundaryLayerWorkflow& workflow, int side, const Foil& foil,
+                     const StagnationResult& stagnation);
   bool marchBoundaryLayerSide(BoundaryLayerWorkflow& workflow,
                               BoundaryLayerState& state, int side,
                               double deps, double senswt, double& sens,
-                              double& sennew, double& ami, XFoil& xfoil);
+                              double& sennew, double& ami, const Foil& foil,
+                              const StagnationResult& stagnation);
   bool processBoundaryLayerStation(BoundaryLayerWorkflow& workflow,
                                    BoundaryLayerState& state, int side,
                                    int stationIndex, int previousTransition,
                                    double deps, double senswt, double& sens,
-                                   double& sennew, double& ami, XFoil& xfoil);
-  bool mrchue(BoundaryLayerWorkflow& workflow, XFoil& xfoil);
+                                   double& sennew, double& ami,
+                                   const Foil& foil);
+  bool performMixedModeNewtonIteration(
+      BoundaryLayerWorkflow& workflow, const Edge& edge, int side, int ibl,
+      int itrold, BoundaryLayerWorkflow::MixedModeStationContext& ctx,
+      double deps, double senswt, double& sens, double& sennew, double& ami);
+  void handleMixedModeNonConvergence(
+      BoundaryLayerWorkflow& workflow, int side, int ibl,
+      BoundaryLayerWorkflow::MixedModeStationContext& ctx, double& ami);
+  bool mrchue(BoundaryLayerWorkflow& workflow, const Foil& foil,
+              const StagnationResult& stagnation);
   bool mrchue(BoundaryLayerWorkflow& workflow, BoundaryLayerState& state,
-              XFoil& xfoil);
+              const Foil& foil, const StagnationResult& stagnation);
   bool marchMrchueSide(BoundaryLayerWorkflow& workflow,
                        BoundaryLayerState& state, int side,
-                       XFoil& xfoil, std::stringstream& ss);
+                       const Foil& foil, const StagnationResult& stagnation,
+                       std::stringstream& ss);
   void initializeMrchueSide(BoundaryLayerWorkflow& workflow, int side,
                             double& thi, double& dsi, double& ami,
                             double& cti);
@@ -60,11 +73,11 @@ class BoundaryLayerMarcher {
       double dsi, double ami, double cti);
   bool performMrchueNewtonLoop(
       BoundaryLayerWorkflow& workflow, int side, int stationIndex,
-      BoundaryLayerMarcher::MrchueStationContext& ctx, XFoil& xfoil,
+      BoundaryLayerMarcher::MrchueStationContext& ctx, const Edge& edge,
       std::stringstream& ss);
   void handleMrchueStationFailure(
       BoundaryLayerWorkflow& workflow, int side, int stationIndex,
-      BoundaryLayerMarcher::MrchueStationContext& ctx, XFoil& xfoil,
+      BoundaryLayerMarcher::MrchueStationContext& ctx,
       std::stringstream& ss);
   void storeMrchueStationState(
       BoundaryLayerWorkflow& workflow, int side, int stationIndex,
