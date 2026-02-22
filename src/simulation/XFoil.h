@@ -240,8 +240,7 @@ class XFoil {
   using ClContributions = BoundaryLayerWorkflow::ClContributions;
   double computeAcChange(double clnew, double cl_current, double cl_target,
                          double cl_ac, double cl_a, double cl_ms) const;
-  double clampRelaxationForGlobalChange(double relaxation, double dac,
-                                        double lower, double upper) const;
+
   double rlxCalc(double dac) const;
   bool xyWake();
   // Helper routines used during initialization
