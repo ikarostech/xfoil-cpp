@@ -1031,6 +1031,58 @@ BoundaryLayerWorkflow::advanceStationArrays(const VectorXd& u_m2,
   return result;
 }
 
+void BoundaryLayerWorkflow::initializeSetblReferenceParams(
+    const FlowState& analysis_state, const AeroCoefficients& aero_coeffs,
+    double acrit, SetblOutputView& output, double& re_clmr, double& msq_clmr,
+    double& currentMach, double& currentRe) {
+  auto reference_params =
+      computeBlReferenceParams(analysis_state, aero_coeffs, acrit);
+  currentMach = reference_params.currentMach;
+  currentRe = reference_params.currentRe;
+  re_clmr = reference_params.re_clmr;
+  msq_clmr = reference_params.msq_clmr;
+  output.blCompressibility = reference_params.blCompressibility;
+  output.blReynolds = reference_params.blReynolds;
+  output.blTransition.amcrit = reference_params.amcrit;
+  blCompressibility = output.blCompressibility;
+  blReynolds = output.blReynolds;
+  blTransition.amcrit = output.blTransition.amcrit;
+}
+
+void BoundaryLayerWorkflow::initializeSetblSystemStorage(
+    SetblOutputView& output, std::array<SetblStation, 2>& stations,
+    SetblSideData& sideData) const {
+  output.bl_newton_system.vm.resize(nsys);
+  output.bl_newton_system.va.resize(nsys, XFoil::Matrix3x2d::Zero());
+  output.bl_newton_system.vb.resize(nsys, XFoil::Matrix3x2d::Zero());
+  output.bl_newton_system.vdel.resize(nsys, XFoil::Matrix3x2d::Zero());
+  stations[0].resizeSystem(nsys);
+  stations[1].resizeSystem(nsys);
+  sideData.resizeSystem(nsys);
+}
+
+void BoundaryLayerWorkflow::initializeSetblProfiles(
+    SetblOutputView& output) const {
+  output.profiles.top = lattice.top.profiles;
+  output.profiles.bottom = lattice.bottom.profiles;
+}
+
+void BoundaryLayerWorkflow::initializeSetblEdgeVelocityState(
+    SidePairRef<const BoundaryLayerSideProfiles> profiles,
+    const Eigen::MatrixXd& dij, SetblOutputView& output,
+    SetblSideData& sideData) const {
+  auto edge_result =
+      prepareEdgeVelocityAndSensitivities(profiles, dij, nsys);
+  sideData.usav = edge_result.edgeVelocity;
+  sideData.jvte = edge_result.jvte;
+  sideData.dule = edge_result.dule;
+  sideData.ule_m = edge_result.ule_m;
+  sideData.ute_m = edge_result.ute_m;
+  sideData.ule_a = edge_result.ule_a;
+  output.profiles.top.edgeVelocity = edge_result.outputEdgeVelocity.top;
+  output.profiles.bottom.edgeVelocity = edge_result.outputEdgeVelocity.bottom;
+}
+
 namespace {
 
 struct SetblWorkingState {
@@ -1041,63 +1093,6 @@ struct SetblWorkingState {
   double re_clmr = 0.0;
   double msq_clmr = 0.0;
 };
-
-void initializeSetblSystemStorage(BoundaryLayerWorkflow& workflow,
-                                  SetblOutputView& output,
-                                  SetblWorkingState& state) {
-  const int nsys = workflow.nsys;
-  output.bl_newton_system.vm.resize(nsys);
-  output.bl_newton_system.va.resize(nsys, XFoil::Matrix3x2d::Zero());
-  output.bl_newton_system.vb.resize(nsys, XFoil::Matrix3x2d::Zero());
-  output.bl_newton_system.vdel.resize(nsys, XFoil::Matrix3x2d::Zero());
-  state.stations[0].resizeSystem(nsys);
-  state.stations[1].resizeSystem(nsys);
-  state.sides.resizeSystem(nsys);
-}
-
-void initializeSetblReferenceParams(XFoil& xfoil, SetblOutputView& output,
-                                    SetblWorkingState& state) {
-  auto& workflow = xfoil.boundaryLayerWorkflow;
-  auto reference_params = workflow.computeBlReferenceParams(
-      xfoil.analysis_state_, xfoil.aero_coeffs_, xfoil.acrit);
-  xfoil.analysis_state_.currentMach = reference_params.currentMach;
-  xfoil.analysis_state_.currentRe = reference_params.currentRe;
-  state.re_clmr = reference_params.re_clmr;
-  state.msq_clmr = reference_params.msq_clmr;
-  output.blCompressibility = reference_params.blCompressibility;
-  output.blReynolds = reference_params.blReynolds;
-  output.blTransition.amcrit = reference_params.amcrit;
-  workflow.blCompressibility = output.blCompressibility;
-  workflow.blReynolds = output.blReynolds;
-  workflow.blTransition.amcrit = output.blTransition.amcrit;
-}
-
-void initializeSetblProfiles(XFoil& xfoil, BoundaryLayerMarcher& marcher,
-                             SetblOutputView& output) {
-  if (!xfoil.isBLInitialized()) {
-    Logger::instance().write("   Initializing bl ...\n");
-    marcher.mrchue(xfoil.boundaryLayerWorkflow, xfoil);
-    xfoil.setBLInitialized(true);
-  }
-  marcher.mrchdu(xfoil.boundaryLayerWorkflow, xfoil);
-  output.profiles.top = xfoil.boundaryLayerWorkflow.lattice.top.profiles;
-  output.profiles.bottom = xfoil.boundaryLayerWorkflow.lattice.bottom.profiles;
-}
-
-void initializeSetblEdgeVelocityState(
-    XFoil& xfoil, SidePairRef<const BoundaryLayerSideProfiles> profiles,
-    SetblOutputView& output, SetblWorkingState& state) {
-  auto edge_result = xfoil.boundaryLayerWorkflow.prepareEdgeVelocityAndSensitivities(
-      profiles, xfoil.aerodynamicCache.dij, xfoil.boundaryLayerWorkflow.nsys);
-  state.sides.usav = edge_result.edgeVelocity;
-  state.sides.jvte = edge_result.jvte;
-  state.sides.dule = edge_result.dule;
-  state.sides.ule_m = edge_result.ule_m;
-  state.sides.ute_m = edge_result.ute_m;
-  state.sides.ule_a = edge_result.ule_a;
-  output.profiles.top.edgeVelocity = edge_result.outputEdgeVelocity.top;
-  output.profiles.bottom.edgeVelocity = edge_result.outputEdgeVelocity.bottom;
-}
 
 void processSetblStation(XFoil& xfoil, BoundaryLayerMarcher& marcher, int side,
                          int station, SetblOutputView& output,
@@ -1238,10 +1233,23 @@ SetblOutputView XFoil::setbl(
   SetblOutputView output{};
   BoundaryLayerMarcher marcher;
   SetblWorkingState state;
-  initializeSetblSystemStorage(boundaryLayerWorkflow, output, state);
-  initializeSetblReferenceParams(*this, output, state);
-  initializeSetblProfiles(*this, marcher, output);
-  initializeSetblEdgeVelocityState(*this, profiles, output, state);
+  boundaryLayerWorkflow.initializeSetblSystemStorage(
+      output, state.stations, state.sides);
+
+  boundaryLayerWorkflow.initializeSetblReferenceParams(
+      analysis_state_, aero_coeffs_, acrit, output, state.re_clmr,
+      state.msq_clmr, analysis_state_.currentMach, analysis_state_.currentRe);
+
+  if (!isBLInitialized()) {
+    Logger::instance().write("   Initializing bl ...\n");
+    marcher.mrchue(boundaryLayerWorkflow, *this);
+    setBLInitialized(true);
+  }
+  marcher.mrchdu(boundaryLayerWorkflow, *this);
+  boundaryLayerWorkflow.initializeSetblProfiles(output);
+
+  boundaryLayerWorkflow.initializeSetblEdgeVelocityState(
+      profiles, aerodynamicCache.dij, output, state.sides);
 
   for (int side = 1; side <= 2; ++side) {
     processSetblSide(*this, marcher, side, output, state);
