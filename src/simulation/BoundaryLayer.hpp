@@ -267,6 +267,12 @@ class BoundaryLayerWorkflow {
       SidePairRef<const BoundaryLayerSideProfiles> profiles,
       const Eigen::MatrixXd& dij, SetblOutputView& output,
       SetblSideData& sideData) const;
+  void processSetblSide(
+      BoundaryLayerMarcher& marcher, int side, const Foil& foil,
+      const StagnationResult& stagnation, bool controlByAlpha,
+      const Eigen::MatrixXd& dij, SetblOutputView& output,
+      std::array<SetblStation, 2>& stations, SetblSideData& sideData,
+      double& cti, double& ami, double re_clmr, double msq_clmr);
   void assembleBlJacobianForStation(
       int is, int iv, int nsys,
       const std::array<SetblStation, 2>& setblStations,
