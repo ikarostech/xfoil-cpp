@@ -273,6 +273,11 @@ class BoundaryLayerWorkflow {
       const Eigen::MatrixXd& dij, SetblOutputView& output,
       std::array<SetblStation, 2>& stations, SetblSideData& sideData,
       double& cti, double& ami, double re_clmr, double msq_clmr);
+  SetblOutputView setbl(
+      SidePairRef<const BoundaryLayerSideProfiles> profiles,
+      const FlowState& analysis_state, const AeroCoefficients& aero_coeffs,
+      double acrit, const Foil& foil, const StagnationResult& stagnation,
+      const Eigen::MatrixXd& dij, bool bl_initialized);
   void assembleBlJacobianForStation(
       int is, int iv, int nsys,
       const std::array<SetblStation, 2>& setblStations,

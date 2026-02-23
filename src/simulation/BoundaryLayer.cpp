@@ -1130,8 +1130,11 @@ struct SetblWorkingState {
 
 }  // namespace
 
-SetblOutputView XFoil::setbl(
-    SidePairRef<const BoundaryLayerSideProfiles> profiles) {
+SetblOutputView BoundaryLayerWorkflow::setbl(
+    SidePairRef<const BoundaryLayerSideProfiles> profiles,
+    const FlowState& analysis_state, const AeroCoefficients& aero_coeffs,
+    double acrit, const Foil& foil, const StagnationResult& stagnation,
+    const Eigen::MatrixXd& dij, bool bl_initialized) {
   //-------------------------------------------------
   //	   sets up the bl newton system coefficients for the current bl
   // variables
@@ -1141,28 +1144,27 @@ SetblOutputView XFoil::setbl(
   SetblOutputView output{};
   BoundaryLayerMarcher marcher;
   SetblWorkingState state;
-  boundaryLayerWorkflow.initializeSetblSystemStorage(
-      output, state.stations, state.sides);
+  initializeSetblSystemStorage(output, state.stations, state.sides);
 
-  boundaryLayerWorkflow.initializeSetblReferenceParams(
-      analysis_state_, aero_coeffs_, acrit, output, state.re_clmr,
-      state.msq_clmr, analysis_state_.currentMach, analysis_state_.currentRe);
+  double current_mach = analysis_state.currentMach;
+  double current_re = analysis_state.currentRe;
+  initializeSetblReferenceParams(analysis_state, aero_coeffs, acrit, output,
+                                 state.re_clmr, state.msq_clmr, current_mach,
+                                 current_re);
 
-  if (!isBLInitialized()) {
+  if (!bl_initialized) {
     Logger::instance().write("   Initializing bl ...\n");
-    marcher.mrchue(boundaryLayerWorkflow, foil, stagnation);
-    setBLInitialized(true);
+    marcher.mrchue(*this, foil, stagnation);
   }
-  marcher.mrchdu(boundaryLayerWorkflow, foil, stagnation);
-  boundaryLayerWorkflow.initializeSetblProfiles(output);
+  marcher.mrchdu(*this, foil, stagnation);
+  initializeSetblProfiles(output);
 
-  boundaryLayerWorkflow.initializeSetblEdgeVelocityState(
-      profiles, aerodynamicCache.dij, output, state.sides);
+  initializeSetblEdgeVelocityState(profiles, dij, output, state.sides);
 
   for (int side = 1; side <= 2; ++side) {
-    boundaryLayerWorkflow.processSetblSide(
-        marcher, side, foil, stagnation, analysis_state_.controlByAlpha,
-        aerodynamicCache.dij, output, state.stations, state.sides, state.cti,
+    processSetblSide(
+        marcher, side, foil, stagnation, analysis_state.controlByAlpha,
+        dij, output, state.stations, state.sides, state.cti,
         state.ami, state.re_clmr, state.msq_clmr);
   }
 

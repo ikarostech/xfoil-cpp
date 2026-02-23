@@ -208,7 +208,6 @@ class XFoil {
                    const Matrix2Xd& surface_vortex, double alpha,
                    double qinf) const;
 
-  SetblOutputView setbl(SidePairRef<const BoundaryLayerSideProfiles> profiles);
   struct EdgeVelocitySwapResult {
     SidePair<VectorXd> swappedUsav;
     SidePair<VectorXd> restoredUedg;

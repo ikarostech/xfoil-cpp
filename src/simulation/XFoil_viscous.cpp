@@ -474,9 +474,12 @@ bool XFoil::ViscousIter() {
   std::stringstream ss;
   double eps1 = 0.0001;
 
-  auto setbl_output = setbl(SidePairRef<const BoundaryLayerSideProfiles>{
-      boundaryLayerWorkflow.lattice.top.profiles,
-      boundaryLayerWorkflow.lattice.bottom.profiles});
+  auto setbl_output = boundaryLayerWorkflow.setbl(
+      SidePairRef<const BoundaryLayerSideProfiles>{
+          boundaryLayerWorkflow.lattice.top.profiles,
+          boundaryLayerWorkflow.lattice.bottom.profiles},
+      analysis_state_, aero_coeffs_, acrit, foil, stagnation,
+      aerodynamicCache.dij, isBLInitialized());
   setbl_output.applyToXFoil(
       *this); //	------ fill newton system for bl variables
 
