@@ -8,8 +8,6 @@
 #include "domain/boundary_layer/bl_transition_params.hpp"
 #include "simulation/Blsolve.hpp"
 
-class XFoil;
-
 struct SetblOutputView {
   BlCompressibilityParams blCompressibility{};
   BlReynoldsParams blReynolds{};
@@ -17,6 +15,4 @@ struct SetblOutputView {
   SidePair<BoundaryLayerSideProfiles> profiles{};
   Blsolve::BlNewtonSystem bl_newton_system{};
   FlowRegimeEnum flowRegime = FlowRegimeEnum::Laminar;
-
-  void applyToXFoil(XFoil& xfoil);
 };

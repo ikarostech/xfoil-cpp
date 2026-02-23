@@ -480,8 +480,8 @@ bool XFoil::ViscousIter() {
           boundaryLayerWorkflow.lattice.bottom.profiles},
       analysis_state_, aero_coeffs_, acrit, foil, stagnation,
       aerodynamicCache.dij, isBLInitialized());
-  setbl_output.applyToXFoil(
-      *this); //	------ fill newton system for bl variables
+  boundaryLayerWorkflow.applySetblOutput(
+      setbl_output); //	------ fill newton system for bl variables
 
   Blsolve solver;
   SidePair<int> ivte{

@@ -19,7 +19,6 @@
 
 struct FlowState;
 struct AeroCoefficients;
-class XFoil;
 class BoundaryLayerMarcher;
 struct SetblOutputView;
 class Foil;
@@ -278,6 +277,7 @@ class BoundaryLayerWorkflow {
       const FlowState& analysis_state, const AeroCoefficients& aero_coeffs,
       double acrit, const Foil& foil, const StagnationResult& stagnation,
       const Eigen::MatrixXd& dij, bool bl_initialized);
+  void applySetblOutput(SetblOutputView& output);
   void assembleBlJacobianForStation(
       int is, int iv, int nsys,
       const std::array<SetblStation, 2>& setblStations,

@@ -8,9 +8,10 @@
 #include <sstream>
 #include <string>
 
-#include "XFoil.h"
 #include "domain/boundary_layer/boundary_layer_builder.hpp"
 #include "domain/coefficient/skin_friction.hpp"
+#include "domain/flow_state.hpp"
+#include "domain/coefficient/aero_coefficients.hpp"
 #include "infrastructure/logger.hpp"
 #include "core/boundary_layer_util.hpp"
 #include "core/math_util.hpp"
@@ -456,15 +457,13 @@ bool BoundaryLayerWorkflow::tesys(const BoundaryLayerSideProfiles& top_profiles,
   return true;
 }
 
-void SetblOutputView::applyToXFoil(XFoil& xfoil) {
-  xfoil.boundaryLayerWorkflow.blCompressibility = blCompressibility;
-  xfoil.boundaryLayerWorkflow.blReynolds = blReynolds;
-  xfoil.boundaryLayerWorkflow.lattice.top.profiles = std::move(profiles.top);
-  xfoil.boundaryLayerWorkflow.lattice.bottom.profiles =
-      std::move(profiles.bottom);
-  //xfoil.bl_newton_system = std::move(bl_newton_system);
-  xfoil.boundaryLayerWorkflow.flowRegime = flowRegime;
-  xfoil.boundaryLayerWorkflow.blTransition = blTransition;
+void BoundaryLayerWorkflow::applySetblOutput(SetblOutputView& output) {
+  blCompressibility = output.blCompressibility;
+  blReynolds = output.blReynolds;
+  lattice.top.profiles = std::move(output.profiles.top);
+  lattice.bottom.profiles = std::move(output.profiles.bottom);
+  flowRegime = output.flowRegime;
+  blTransition = output.blTransition;
 }
 
 void BoundaryLayerWorkflow::checkTransitionIfNeeded(
@@ -970,10 +969,11 @@ void BoundaryLayerWorkflow::initializeSetblReferenceParams(
 void BoundaryLayerWorkflow::initializeSetblSystemStorage(
     SetblOutputView& output, std::array<SetblStation, 2>& stations,
     SetblSideData& sideData) const {
+  const auto zero = Eigen::Matrix<double, 3, 2>::Zero();
   output.bl_newton_system.vm.resize(nsys);
-  output.bl_newton_system.va.resize(nsys, XFoil::Matrix3x2d::Zero());
-  output.bl_newton_system.vb.resize(nsys, XFoil::Matrix3x2d::Zero());
-  output.bl_newton_system.vdel.resize(nsys, XFoil::Matrix3x2d::Zero());
+  output.bl_newton_system.va.resize(nsys, zero);
+  output.bl_newton_system.vb.resize(nsys, zero);
+  output.bl_newton_system.vdel.resize(nsys, zero);
   stations[0].resizeSystem(nsys);
   stations[1].resizeSystem(nsys);
   sideData.resizeSystem(nsys);
