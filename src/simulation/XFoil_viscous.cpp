@@ -272,17 +272,8 @@ XFoil::UpdateResult XFoil::update(const XFoil::Matrix3x2dVector& vdel) const {
   UpdateResult result;
   result.analysis_state = analysis_state_;
   result.aero_coeffs = aero_coeffs_;
-  result.profiles.top.skinFrictionCoeffHistory =
-      boundaryLayerWorkflow.lattice.top.profiles.skinFrictionCoeffHistory;
-  result.profiles.bottom.skinFrictionCoeffHistory =
-      boundaryLayerWorkflow.lattice.bottom.profiles.skinFrictionCoeffHistory;
-  const double gamma = 1.4;
 
   BoundaryLayerMarcher marcher;
-  result.hstinv =
-      (gamma - 1) * MathUtil::pow(analysis_state_.currentMach / analysis_state_.qinf, 2) /
-      (1.0 + 0.5 * (gamma - 1) * analysis_state_.currentMach * analysis_state_.currentMach);
-
   //--- calculate new ue distribution and tangential velocities
   const auto ue_distribution =
       marcher.computeNewUeDistribution(boundaryLayerWorkflow, *this, vdel);
@@ -299,12 +290,12 @@ XFoil::UpdateResult XFoil::update(const XFoil::Matrix3x2dVector& vdel) const {
   double rlx = rlxCalc(dac);
 
   double rmsbl = 0.0;
-  double rmxbl = 0.0;
   const double dhi = 1.5;
   const double dlo = -0.5;
 
   SidePair<BoundaryLayerDelta> deltas;
   SidePair<BoundaryLayerMetrics> metrics;
+  const double gamma = 1.4;
   for (int side = 1; side <= 2; ++side) {
     deltas.get(side) =
         marcher.buildBoundaryLayerDelta(
@@ -314,10 +305,14 @@ XFoil::UpdateResult XFoil::update(const XFoil::Matrix3x2dVector& vdel) const {
         marcher.evaluateSegmentRelaxation(
             boundaryLayerWorkflow, side, deltas.get(side), dhi, dlo, rlx);
     rmsbl += metrics.get(side).rmsContribution;
-    rmxbl = std::max(rmxbl, metrics.get(side).maxChange);
+
+    double hstinv =
+      (gamma - 1) * MathUtil::pow(analysis_state_.currentMach / analysis_state_.qinf, 2) /
+      (1.0 + 0.5 * (gamma - 1) * analysis_state_.currentMach * analysis_state_.currentMach);
+
     result.profiles.get(side) =
         marcher.applyBoundaryLayerDelta(
-            boundaryLayerWorkflow, side, deltas.get(side), rlx, result.hstinv,
+            boundaryLayerWorkflow, side, deltas.get(side), rlx, hstinv,
             gamma - 1);
   }
 
@@ -346,17 +341,11 @@ XFoil::UpdateResult XFoil::update(const XFoil::Matrix3x2dVector& vdel) const {
         result.profiles.bottom.skinFrictionCoeffHistory[bottom_index];
   }
 
-  result.rlx = rlx;
   result.rmsbl = rmsbl;
-  result.rmxbl = rmxbl;
-  result.dac = dac;
   return result;
 }
 
 void XFoil::applyUpdateResult(UpdateResult result) {
-  boundaryLayerWorkflow.blCompressibility.hstinv = result.hstinv;
-  analysis_state_ = std::move(result.analysis_state);
-  aero_coeffs_ = std::move(result.aero_coeffs);
   boundaryLayerWorkflow.lattice.top.profiles =
       std::move(result.profiles.top);
   boundaryLayerWorkflow.lattice.bottom.profiles =
@@ -494,14 +483,13 @@ bool XFoil::ViscousIter() {
 
   const auto update_result = update(result.vdel);
   applyUpdateResult(update_result); //	------ update bl variables
-  const double rmsbl = update_result.rmsbl;
 
-  if (analysis_state_.controlByAlpha) { //	------- set new freestream mach, re from new cl
-    minf_cl = getActualMach(aero_coeffs_.cl, analysis_state_.machType);
-    reinf_cl = getActualReynolds(aero_coeffs_.cl, analysis_state_.reynoldsType);
+  if (update_result.analysis_state.controlByAlpha) { //	------- set new freestream mach, re from new cl
+    minf_cl = getActualMach(update_result.aero_coeffs.cl, update_result.analysis_state.machType);
+    reinf_cl = getActualReynolds(update_result.aero_coeffs.cl, update_result.analysis_state.reynoldsType);
   } else { //	------- set new inviscid speeds qinv_matrix and inviscidEdgeVelocityMatrix for new alpha
     qinv_matrix =
-        InviscidSolver::qiset(analysis_state_.alpha, aerodynamicCache.qinvu);
+        InviscidSolver::qiset(update_result.analysis_state.alpha, aerodynamicCache.qinvu);
     const auto inviscid_edge_velocity = boundaryLayerWorkflow.geometry.uicalc(qinv_matrix);
     boundaryLayerWorkflow.lattice.top.inviscidEdgeVelocityMatrix = inviscid_edge_velocity.top;
     boundaryLayerWorkflow.lattice.bottom.inviscidEdgeVelocityMatrix = inviscid_edge_velocity.bottom;
@@ -518,9 +506,9 @@ bool XFoil::ViscousIter() {
   applyClComputation(cl_result);
   aero_coeffs_.cd = cdcalc();
 
-  if (rmsbl < eps1) {
-    avisc = analysis_state_.alpha;
-    mvisc = analysis_state_.currentMach;
+  if (update_result.rmsbl < eps1) {
+    avisc = update_result.analysis_state.alpha;
+    mvisc = update_result.analysis_state.currentMach;
     Logger::instance().write("----------CONVERGED----------\n\n");
   }
 
