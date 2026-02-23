@@ -366,9 +366,6 @@ bool XFoil::viscal() {
   
 
   if (!hasPanelMap()) {
-    if (isBLInitialized())
-      surface_vortex = gamqv();
-
     //	----- locate stagnation point arc length position and panel index
     const auto stagnation = boundaryLayerWorkflow.geometry.stfind(
         surface_vortex, foil.foil_shape.spline_length);
