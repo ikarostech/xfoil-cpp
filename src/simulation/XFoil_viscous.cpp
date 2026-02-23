@@ -345,14 +345,6 @@ XFoil::UpdateResult XFoil::update(const XFoil::Matrix3x2dVector& vdel) const {
   return result;
 }
 
-void XFoil::applyUpdateResult(UpdateResult result) {
-  boundaryLayerWorkflow.lattice.top.profiles =
-      std::move(result.profiles.top);
-  boundaryLayerWorkflow.lattice.bottom.profiles =
-      std::move(result.profiles.bottom);
-}
-
-
 bool XFoil::viscal() {
   ////--------------------------------------
   //     converges viscous operating point
@@ -477,12 +469,13 @@ bool XFoil::ViscousIter() {
       boundaryLayerWorkflow.lattice.top.stationToSystem[boundaryLayerWorkflow.lattice.top.trailingEdgeIndex],
       boundaryLayerWorkflow.lattice.bottom.stationToSystem[boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex]
   };
-  auto result =
+  auto vdel =
       solver.solve(boundaryLayerWorkflow.nsys, ivte, VAccel(),
                    setbl_output.bl_newton_system);
 
-  const auto update_result = update(result.vdel);
-  applyUpdateResult(update_result); //	------ update bl variables
+  const auto update_result = update(vdel);
+  boundaryLayerWorkflow.lattice.top.profiles = update_result.profiles.top;
+  boundaryLayerWorkflow.lattice.bottom.profiles = update_result.profiles.bottom;
 
   if (update_result.analysis_state.controlByAlpha) { //	------- set new freestream mach, re from new cl
     minf_cl = getActualMach(update_result.aero_coeffs.cl, update_result.analysis_state.machType);

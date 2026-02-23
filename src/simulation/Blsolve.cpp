@@ -73,7 +73,7 @@ inline int vmIndex(int size, int k, int i, int j) {
 }
 } // namespace
 
-Blsolve::Output Blsolve::solve(int nsys,
+std::vector<Eigen::Matrix<double, 3, 2>> Blsolve::solve(int nsys,
                                const SidePair<int>& ivte,
                                double vaccel,
                                const BlNewtonSystem& bl_newton_system) const {
@@ -240,5 +240,5 @@ Blsolve::Output Blsolve::solve(int nsys,
   }
 
   backSubstitute();
-  return {std::move(vm), std::move(vdel)};
+  return vdel;
 }

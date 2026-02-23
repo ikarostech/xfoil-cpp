@@ -28,10 +28,6 @@ class Blsolve {
       return data[(k * size + i) * size + j];
     }
   };
-  struct Output {
-    VmMatrix vm;
-    Matrix3x2dVector vdel;
-  };
 
   struct BlNewtonSystem {
     Matrix3x2dVector va;
@@ -41,7 +37,7 @@ class Blsolve {
     VzMatrix vz{};
   };
 
-  Output solve(int nsys,
+  std::vector<Eigen::Matrix<double, 3, 2>> solve(int nsys,
                const SidePair<int>& ivte,
                double vaccel,
                const BlNewtonSystem& bl_newton_system) const;

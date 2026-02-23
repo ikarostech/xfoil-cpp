@@ -224,7 +224,6 @@ class XFoil {
     SidePair<BoundaryLayerSideProfiles> profiles;
   };
   UpdateResult update(const Matrix3x2dVector& vdel) const;
-  void applyUpdateResult(UpdateResult result);
   using QtanResult = BoundaryLayerWorkflow::QtanResult;
   using ClContributions = BoundaryLayerWorkflow::ClContributions;
   double computeAcChange(double clnew, double cl_current, double cl_target,
