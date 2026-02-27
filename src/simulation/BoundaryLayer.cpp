@@ -22,6 +22,10 @@ using Eigen::Vector;
 using Eigen::Vector2d;
 using Eigen::VectorXd;
 
+namespace {
+constexpr double kMixedModeConvergenceTolerance = 5.0e-6;
+}
+
 double BoundaryLayerWorkflow::adjustDisplacementForHkLimit(
     double displacementThickness, double momentumThickness, double msq,
     double hklim) {
@@ -132,7 +136,7 @@ void BoundaryLayerWorkflow::updateSystemMatricesForStation(
 
 void BoundaryLayerWorkflow::initializeFirstIterationState(
     int side, int stationIndex, int previousTransition,
-    BoundaryContext& ctx, double& ueref, double& hkref, double& ami) {
+    BoundaryContext& ctx, double& ueref, double& hkref) {
   ueref = state.station2.param.uz;
   hkref = state.station2.hkz.scalar;
 
@@ -172,7 +176,8 @@ void BoundaryLayerWorkflow::initializeFirstIterationState(
       lattice.get(side).profiles.skinFrictionCoeff[stationIndex] = prev;
     }
     if (flowRegime == FlowRegimeEnum::Transition || flowRegime == FlowRegimeEnum::Turbulent || flowRegime == FlowRegimeEnum::Wake) {
-      ctx.cti = lattice.get(side).profiles.skinFrictionCoeff[stationIndex - 1];
+      const int ctiIndex = (stationIndex >= 1) ? stationIndex - 1 : stationIndex;
+      ctx.cti = lattice.get(side).profiles.skinFrictionCoeff[ctiIndex];
       state.station2.param.sz = ctx.cti;
     }
   }
@@ -217,7 +222,7 @@ void BoundaryLayerWorkflow::configureViscousRow(double hkref,
 }
 
 bool BoundaryLayerWorkflow::applyMixedModeNewtonStep(
-    int side, int stationIndex, double deps, double& ami,
+    int side, int stationIndex, double& ami,
     BoundaryContext& ctx) {
   blc.rhs =
       blc.a2.block(0, 0, 4, 4).fullPivLu().solve(blc.rhs);
@@ -260,7 +265,7 @@ bool BoundaryLayerWorkflow::applyMixedModeNewtonStep(
   dsw = adjustDisplacementForHkLimit(dsw, ctx.thi, msq, hklim);
   ctx.dsi = dsw + ctx.dswaki;
 
-  return ctx.dmax <= deps;
+  return ctx.dmax <= kMixedModeConvergenceTolerance;
 }
 
 SkinFrictionCoefficients BoundaryLayerWorkflow::blmid(

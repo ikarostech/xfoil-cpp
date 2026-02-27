@@ -311,7 +311,6 @@ bool BoundaryLayerTransitionSolver::resolveTransitionLocationAndSensitivities(
 
   if (trfree && trforc) {
     trforc = data.blTransition.xiforc < data.xt.scalar;
-    trfree = data.blTransition.xiforc >= data.xt.scalar;
   }
 
   if (trforc) {

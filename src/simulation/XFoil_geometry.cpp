@@ -8,13 +8,15 @@ using Eigen::Vector2d;
 using Eigen::VectorXd;
 
 bool XFoil::abcopy(Matrix2Xd copyFrom) {
+  constexpr double kPointMergeTolerance = 1.0e-14;
   int point_count = static_cast<int>(copyFrom.cols());
 
   //---- strip out doubled points
   int r = 1;
   while (r < point_count) {
-    // FIXME double型の==比較
-    if (copyFrom.col(r - 1) == copyFrom.col(r)) {
+    const double delta_norm =
+        (copyFrom.col(r - 1) - copyFrom.col(r)).norm();
+    if (delta_norm <= kPointMergeTolerance) {
       for (int j = r; j < point_count - 1; j++) {
         copyFrom.col(j) = copyFrom.col(j + 1);
       }

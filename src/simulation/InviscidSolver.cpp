@@ -10,6 +10,7 @@ using Eigen::Matrix2Xd;
 using Eigen::VectorXd;
 
 bool InviscidSolver::specConverge(XFoil &xfoil, SpecTarget target) {
+  constexpr double kMachZeroTolerance = 1.0e-12;
   // Rebuild inviscid baseline from current alpha so viscous leftovers do not
   // contaminate the operating-point solve.
   xfoil.qinv_matrix = qiset(xfoil.analysis_state_.alpha, xfoil.aerodynamicCache.qinvu);
@@ -47,10 +48,10 @@ bool InviscidSolver::specConverge(XFoil &xfoil, SpecTarget target) {
         minf_clm = xfoil.getActualMach(clm, xfoil.analysis_state_.machType);
 
         //-------- if mach is ok, go do next newton iteration
-        // FIXME double型の==比較
         if (xfoil.analysis_state_.machType == XFoil::MachType::CONSTANT ||
-            xfoil.analysis_state_.currentMach == 0.0 ||
-            minf_clm != 0.0)
+            std::fabs(xfoil.analysis_state_.currentMach) <=
+                kMachZeroTolerance ||
+            std::fabs(minf_clm) > kMachZeroTolerance)
           break;
 
         rlx *= 0.5;
@@ -59,7 +60,7 @@ bool InviscidSolver::specConverge(XFoil &xfoil, SpecTarget target) {
       //------ set new cl(m)
       xfoil.applyClComputation(xfoil.clcalc(xfoil.cmref));
 
-      if (fabs(dclm) <= 1.0e-6) {
+      if (std::fabs(dclm) <= 1.0e-6) {
         bConv = true;
         break;
       }
@@ -102,7 +103,7 @@ bool InviscidSolver::specConverge(XFoil &xfoil, SpecTarget target) {
     //------ set new cl(alpha)
     xfoil.applyClComputation(xfoil.clcalc(xfoil.cmref));
 
-    if (fabs(dalfa) <= 1.0e-6) {
+    if (std::fabs(dalfa) <= 1.0e-6) {
       bConv = true;
       break;
     }

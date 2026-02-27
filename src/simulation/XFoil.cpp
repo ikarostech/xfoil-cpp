@@ -161,8 +161,8 @@ void XFoil::invalidateConvergedSolution() {
 void XFoil::invalidateWakeGeometry() {
   const int point_count = foil.foil_shape.n;
   const int wake_point_count = foil.wake_shape.n;
-  const int total_nodes = point_count + wake_point_count;
-  if (wake_point_count > 0 && aerodynamicCache.dij.rows() >= total_nodes &&
+  if (const int total_nodes = point_count + wake_point_count;
+      wake_point_count > 0 && aerodynamicCache.dij.rows() >= total_nodes &&
       aerodynamicCache.dij.cols() >= total_nodes) {
     aerodynamicCache.dij.block(point_count, point_count,
                                wake_point_count, wake_point_count)
@@ -229,8 +229,8 @@ bool XFoil::hasPanelMap() const {
 
 bool XFoil::hasAirfoilInfluenceMatrix() const {
   const int point_count = foil.foil_shape.n;
-  const int total_nodes = point_count + foil.wake_shape.n;
-  if (aerodynamicCache.dij.rows() < total_nodes ||
+  if (const int total_nodes = point_count + foil.wake_shape.n;
+      aerodynamicCache.dij.rows() < total_nodes ||
       aerodynamicCache.dij.cols() < total_nodes) {
     return false;
   }
@@ -241,8 +241,8 @@ bool XFoil::hasAirfoilInfluenceMatrix() const {
 bool XFoil::hasWakeInfluenceMatrix() const {
   const int point_count = foil.foil_shape.n;
   const int wake_point_count = foil.wake_shape.n;
-  const int total_nodes = point_count + wake_point_count;
-  if (aerodynamicCache.dij.rows() < total_nodes ||
+  if (const int total_nodes = point_count + wake_point_count;
+      aerodynamicCache.dij.rows() < total_nodes ||
       aerodynamicCache.dij.cols() < total_nodes) {
     return false;
   }
@@ -256,8 +256,8 @@ bool XFoil::hasConvergedSolution() const {
     return false;
   }
   const double alpha_tol = 1.0e-12;
-  const double mach_tol = 1.0e-12;
-  if (std::fabs(analysis_state_.alpha - avisc) > alpha_tol ||
+  if (const double mach_tol = 1.0e-12;
+      std::fabs(analysis_state_.alpha - avisc) > alpha_tol ||
       std::fabs(analysis_state_.currentMach - mvisc) > mach_tol) {
     return false;
   }

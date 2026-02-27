@@ -206,15 +206,14 @@ class BoundaryLayerWorkflow {
   void initializeFirstIterationState(int side, int stationIndex,
                                      int previousTransition,
                                      MixedModeStationContext& ctx,
-                                     double& ueref, double& hkref,
-                                     double& ami);
+                                     double& ueref, double& hkref);
   void configureSimilarityRow(double ueref);
   void configureViscousRow(double hkref, double ueref,
                            double senswt, bool resetSensitivity,
                            bool averageSensitivity, double& sens,
                            double& sennew);
   bool applyMixedModeNewtonStep(int side, int stationIndex,
-                                double deps, double& ami,
+                                double& ami,
                                 MixedModeStationContext& ctx);
   void checkTransitionIfNeeded(int side, int stationIndex,
                                bool skipCheck, int laminarAdvance,

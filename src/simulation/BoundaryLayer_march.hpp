@@ -40,19 +40,19 @@ class BoundaryLayerMarcher {
                      const StagnationResult& stagnation);
   bool marchBoundaryLayerSide(BoundaryLayerWorkflow& workflow,
                               BoundaryLayerState& state, int side,
-                              double deps, double senswt, double& sens,
+                              double senswt, double& sens,
                               double& sennew, double& ami, const Foil& foil,
                               const StagnationResult& stagnation);
   bool processBoundaryLayerStation(BoundaryLayerWorkflow& workflow,
                                    BoundaryLayerState& state, int side,
                                    int stationIndex, int previousTransition,
-                                   double deps, double senswt, double& sens,
+                                   double senswt, double& sens,
                                    double& sennew, double& ami,
                                    const Foil& foil);
   bool performMixedModeNewtonIteration(
       BoundaryLayerWorkflow& workflow, const Edge& edge, int side, int ibl,
       int itrold, BoundaryLayerWorkflow::MixedModeStationContext& ctx,
-      double deps, double senswt, double& sens, double& sennew, double& ami);
+      double senswt, double& sens, double& sennew, double& ami);
   void handleMixedModeNonConvergence(
       BoundaryLayerWorkflow& workflow, int side, int ibl,
       BoundaryLayerWorkflow::MixedModeStationContext& ctx, double& ami);

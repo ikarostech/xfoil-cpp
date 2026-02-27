@@ -1,15 +1,23 @@
 #include <gtest/gtest.h>
-#include <iostream>
 #include <fstream>
+#include <iostream>
+#include <memory>
+#include <sstream>
 #include <string>
 
 #include "XFoil.h"
 #include "domain/flow_regime.hpp"
 
+namespace {
+constexpr int kMaxDatPoints = 604;
+constexpr int kReynolds = 100000;
+}  // namespace
+
 class DatGoogleTest : public ::testing::Test {
 protected:
   // TODO テスト用翼型の読み込みは別途Util化する
-  virtual int loadDatFile(std::string filename, double x[604], double y[604]) {
+  int loadDatFile(const std::string& filename, double x[kMaxDatPoints],
+                  double y[kMaxDatPoints]) {
     std::ifstream fs(filename);
     if (!fs) {
       std::cout << "Failed to open dat file" << std::endl;
@@ -19,36 +27,39 @@ protected:
     std::string line;
     std::getline(fs, line);
     int cnt = 0;
-    while (!fs.eof()) {
-      std::getline(fs, line);
-
-      line.erase(0, line.find_first_not_of(" \t"));
-      int endOfX = line.find_first_of(" \t");
-      if (endOfX == -1) continue;
-
-      std::string sx = line.substr(0, endOfX);
-      std::string sy = line.substr(endOfX);
-
-      x[cnt] = atof(sx.c_str());
-      y[cnt] = atof(sy.c_str());
-      cnt++;
+    while (std::getline(fs, line)) {
+      if (cnt >= kMaxDatPoints) {
+        break;
+      }
+      std::istringstream iss(line);
+      double x_coord = 0.0;
+      double y_coord = 0.0;
+      if (!(iss >> x_coord >> y_coord)) {
+        continue;
+      }
+      x[cnt] = x_coord;
+      y[cnt] = y_coord;
+      ++cnt;
     }
     return cnt;
   }
-  double x[604], y[604], nx[604], ny[604];
+  double x[kMaxDatPoints], y[kMaxDatPoints], nx[kMaxDatPoints], ny[kMaxDatPoints];
   int n;
-  vector<Vector2d> plots;
+  std::vector<Vector2d> plots;
 
-  XFoil *foil;
-  virtual void SetUp() {
+  std::unique_ptr<XFoil> foil;
+
+  void SetUp() override {
     n = loadDatFile("sample/CLARK_Y.dat", x, y);
     
-    foil = new XFoil();
+    foil = std::make_unique<XFoil>();
 
     if (!foil->initXFoilGeometry(n, x, y, nx, ny)) {
       std::cout << "Initialization error!" << std::endl;
     }
-    if (!foil->initXFoilAnalysis(100000, 0, 0.0, 9.0, 1.0, 1.0, XFoil::ReynoldsType::CONSTANT, XFoil::MachType::CONSTANT, true)) {
+    if (!foil->initXFoilAnalysis(kReynolds, 0, 0.0, 9.0, 1.0, 1.0,
+                                 XFoil::ReynoldsType::CONSTANT,
+                                 XFoil::MachType::CONSTANT, true)) {
       std::cout << "Initialization error!" << std::endl;
     }
 
@@ -68,10 +79,10 @@ TEST_F(DatGoogleTest, test_cang) {
 }
 TEST(cfl_test, hk_over_5_5) {
   //given
-  XFoil *foil = new XFoil();
+  XFoil foil;
 
   //when
-  XFoil::C_f actual = foil->cfl(6.0, 1E+5);
+  XFoil::C_f actual = foil.cfl(6.0, 1E+5);
 
   //then
   ASSERT_DOUBLE_EQ(-6.8333333333333339e-07, actual.cf);
@@ -82,9 +93,9 @@ TEST(cfl_test, hk_over_5_5) {
 
 TEST(cfl_test, hk_under_5_5) {
   //given
-  XFoil *foil = new XFoil();
+  XFoil foil;
   //when
-  XFoil::C_f actual = foil->cfl(4.0, 1E+5);
+  XFoil::C_f actual = foil.cfl(4.0, 1E+5);
 
   //then
   ASSERT_DOUBLE_EQ(-2.0927500000000003e-07, actual.cf);
@@ -95,14 +106,10 @@ TEST(cfl_test, hk_under_5_5) {
 
 TEST(cft_test, cal_cft) {
   //given
-  XFoil *foil = new XFoil();
-  double cf;
-  double cf_hk;
-  double cf_rt;
-  double cf_msq;
+  XFoil foil;
                 
   //when
-  XFoil::C_f actual = foil->cft(6.0, 1E+5, 0.01);
+  XFoil::C_f actual = foil.cft(6.0, 1E+5, 0.01);
 
   //then
   ASSERT_DOUBLE_EQ(-0.00021874525090522493, actual.cf);

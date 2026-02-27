@@ -593,7 +593,6 @@ bool BoundaryLayerMarcher::mrchdu(BoundaryLayerWorkflow& workflow,
                                   BoundaryLayerState& state,
                                   const Foil& foil,
                                   const StagnationResult& stagnation) {
-  const double deps = 0.000005;
   const double senswt = 1000.0;
 
   double sens = 0.0;
@@ -601,7 +600,7 @@ bool BoundaryLayerMarcher::mrchdu(BoundaryLayerWorkflow& workflow,
   double ami = 0.0;
 
   for (int side = 1; side <= 2; ++side) {
-    if (!marchBoundaryLayerSide(workflow, state, side, deps, senswt, sens,
+    if (!marchBoundaryLayerSide(workflow, state, side, senswt, sens,
                                 sennew, ami, foil, stagnation)) {
       return false;
     }
@@ -610,7 +609,7 @@ bool BoundaryLayerMarcher::mrchdu(BoundaryLayerWorkflow& workflow,
 }
 
 bool BoundaryLayerMarcher::marchBoundaryLayerSide(
-    BoundaryLayerWorkflow& workflow, BoundaryLayerState& state, int side, double deps, double senswt,
+    BoundaryLayerWorkflow& workflow, BoundaryLayerState& state, int side, double senswt,
     double& sens, double& sennew, double& ami, const Foil& foil,
     const StagnationResult& stagnation) {
   const int previousTransition =
@@ -619,7 +618,7 @@ bool BoundaryLayerMarcher::marchBoundaryLayerSide(
   for (int stationIndex = 0;
        stationIndex < workflow.lattice.get(side).stationCount - 1; ++stationIndex) {
     if (!processBoundaryLayerStation(workflow, state, side, stationIndex,
-                                     previousTransition, deps, senswt, sens,
+                                     previousTransition, senswt, sens,
                                      sennew, ami, foil)) {
       return false;
     }
@@ -630,7 +629,7 @@ bool BoundaryLayerMarcher::marchBoundaryLayerSide(
 
 bool BoundaryLayerMarcher::processBoundaryLayerStation(
     BoundaryLayerWorkflow& workflow, BoundaryLayerState& state, int side, int stationIndex,
-    int previousTransition, double deps, double senswt, double& sens,
+    int previousTransition, double senswt, double& sens,
     double& sennew, double& ami, const Foil& foil) {
   BoundaryContext ctx =
       prepareMixedModeStation(workflow, side, stationIndex, previousTransition, ami);
@@ -638,7 +637,7 @@ bool BoundaryLayerMarcher::processBoundaryLayerStation(
   bool converged =
       performMixedModeNewtonIteration(workflow, foil.edge, side,
                                       stationIndex, previousTransition, ctx,
-                                      deps, senswt, sens, sennew, ami);
+                                      senswt, sens, sennew, ami);
   if (!converged) {
     handleMixedModeNonConvergence(workflow, side, stationIndex, ctx, ami);
   }
@@ -652,7 +651,7 @@ bool BoundaryLayerMarcher::processBoundaryLayerStation(
 bool BoundaryLayerMarcher::performMixedModeNewtonIteration(
     BoundaryLayerWorkflow& workflow, const Edge& edge, int side, int ibl,
     int itrold, BoundaryLayerWorkflow::MixedModeStationContext& ctx,
-    double deps, double senswt, double& sens, double& sennew, double& ami) {
+    double senswt, double& sens, double& sennew, double& ami) {
   bool converged = false;
   double ueref = 0.0;
   double hkref = 0.0;
@@ -671,7 +670,7 @@ bool BoundaryLayerMarcher::performMixedModeNewtonIteration(
 
     if (itbl == 1) {
       workflow.initializeFirstIterationState(side, ibl, itrold, ctx, ueref,
-                                             hkref, ami);
+                                             hkref);
     }
 
     if (ctx.simi || startOfWake) {
@@ -683,7 +682,7 @@ bool BoundaryLayerMarcher::performMixedModeNewtonIteration(
                                    averageSensitivity, sens, sennew);
     }
 
-    if (workflow.applyMixedModeNewtonStep(side, ibl, deps, ami, ctx)) {
+    if (workflow.applyMixedModeNewtonStep(side, ibl, ami, ctx)) {
       converged = true;
       break;
     }

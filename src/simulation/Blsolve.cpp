@@ -8,6 +8,14 @@
 #include <utility>
 
 namespace {
+constexpr double kMinPivot = 1.0e-30;
+
+inline double safePivot(double value) {
+  if (std::abs(value) < kMinPivot) {
+    return (value < 0.0) ? -kMinPivot : kMinPivot;
+  }
+  return value;
+}
 
 inline void plu3x3(double m[3][3], int piv[3]) {
   piv[0] = 0;
@@ -23,7 +31,7 @@ inline void plu3x3(double m[3][3], int piv[3]) {
     std::swap(m[0], m[p]);
     std::swap(piv[0], piv[p]);
   }
-  double inv = 1.0 / m[0][0];
+  double inv = 1.0 / safePivot(m[0][0]);
   m[1][0] *= inv;
   m[2][0] *= inv;
   m[1][1] -= m[1][0] * m[0][1];
@@ -36,7 +44,7 @@ inline void plu3x3(double m[3][3], int piv[3]) {
     std::swap(m[1][2], m[2][2]);
     std::swap(piv[1], piv[2]);
   }
-  inv = 1.0 / m[1][1];
+  inv = 1.0 / safePivot(m[1][1]);
   m[2][1] *= inv;
   m[2][2] -= m[2][1] * m[1][2];
 }
@@ -45,9 +53,9 @@ inline void luSolve3x3(const double m[3][3], const int piv[3], double b[3]) {
   double x0 = b[piv[0]];
   double x1 = b[piv[1]] - m[1][0] * x0;
   double x2 = b[piv[2]] - m[2][0] * x0 - m[2][1] * x1;
-  x2 /= m[2][2];
-  x1 = (x1 - m[1][2] * x2) / m[1][1];
-  x0 = (x0 - m[0][1] * x1 - m[0][2] * x2) / m[0][0];
+  x2 /= safePivot(m[2][2]);
+  x1 = (x1 - m[1][2] * x2) / safePivot(m[1][1]);
+  x0 = (x0 - m[0][1] * x1 - m[0][2] * x2) / safePivot(m[0][0]);
   b[0] = x0;
   b[1] = x1;
   b[2] = x2;
@@ -59,9 +67,9 @@ inline void luSolve3x3x6(const double m[3][3], const int piv[3],
     double x0 = b[piv[0]][j];
     double x1 = b[piv[1]][j] - m[1][0] * x0;
     double x2 = b[piv[2]][j] - m[2][0] * x0 - m[2][1] * x1;
-    x2 /= m[2][2];
-    x1 = (x1 - m[1][2] * x2) / m[1][1];
-    x0 = (x0 - m[0][1] * x1 - m[0][2] * x2) / m[0][0];
+    x2 /= safePivot(m[2][2]);
+    x1 = (x1 - m[1][2] * x2) / safePivot(m[1][1]);
+    x0 = (x0 - m[0][1] * x1 - m[0][2] * x2) / safePivot(m[0][0]);
     b[0][j] = x0;
     b[1][j] = x1;
     b[2][j] = x2;
@@ -82,7 +90,7 @@ std::vector<Eigen::Matrix<double, 3, 2>> Blsolve::solve(int nsys,
   VmMatrix vm = bl_newton_system.vm;
   Matrix3x2dVector vdel = bl_newton_system.vdel;
   VzMatrix vz = bl_newton_system.vz;
-  auto eliminateVaBlock = [&](int iv, int ivp) {
+  auto eliminateVaBlock = [&](int iv) {
     double D[3][3] = {{va[iv](0, 0), va[iv](0, 1), vm.data[vmIndex(vm.size, 0, iv, iv)]},
                       {va[iv](1, 0), va[iv](1, 1), vm.data[vmIndex(vm.size, 1, iv, iv)]},
                       {va[iv](2, 0), va[iv](2, 1), vm.data[vmIndex(vm.size, 2, iv, iv)]}};
@@ -188,21 +196,21 @@ std::vector<Eigen::Matrix<double, 3, 2>> Blsolve::solve(int nsys,
       double vtmp1 = vm.data[vmIndex(vm.size, 0, iv, kv)];
       double vtmp2 = vm.data[vmIndex(vm.size, 1, iv, kv)];
       double vtmp3 = vm.data[vmIndex(vm.size, 2, iv, kv)];
-      if (fabs(vtmp1) > vaccel) {
+      if (std::fabs(vtmp1) > vaccel) {
         for (int l = ivp; l < nsys; l++)
           vm.data[vmIndex(vm.size, 0, l, kv)] -=
               vtmp1 * vm.data[vmIndex(vm.size, 2, l, iv)];
         vdel[kv](0, 0) -= vtmp1 * vdel[iv](2, 0);
         vdel[kv](0, 1) -= vtmp1 * vdel[iv](2, 1);
       }
-      if (fabs(vtmp2) > vaccel) {
+      if (std::fabs(vtmp2) > vaccel) {
         for (int l = ivp; l < nsys; l++)
           vm.data[vmIndex(vm.size, 1, l, kv)] -=
               vtmp2 * vm.data[vmIndex(vm.size, 2, l, iv)];
         vdel[kv](1, 0) -= vtmp2 * vdel[iv](2, 0);
         vdel[kv](1, 1) -= vtmp2 * vdel[iv](2, 1);
       }
-      if (fabs(vtmp3) > vaccel) {
+      if (std::fabs(vtmp3) > vaccel) {
         for (int l = ivp; l < nsys; l++)
           vm.data[vmIndex(vm.size, 2, l, kv)] -=
               vtmp3 * vm.data[vmIndex(vm.size, 2, l, iv)];
@@ -231,7 +239,7 @@ std::vector<Eigen::Matrix<double, 3, 2>> Blsolve::solve(int nsys,
 
   for (int iv = 1; iv < nsys; iv++) {
     int ivp = iv + 1;
-    eliminateVaBlock(iv, ivp);
+    eliminateVaBlock(iv);
     if (iv != nsys - 1) {
       eliminateVbBlock(iv, ivp);
       if (ivp != nsys - 1)
