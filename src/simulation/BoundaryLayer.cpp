@@ -1184,17 +1184,27 @@ SidePair<Eigen::VectorXd> BoundaryLayerWorkflow::ueset(
   SidePair<Eigen::VectorXd> edge_velocity;
   edge_velocity.top = lattice.top.profiles.edgeVelocity;
   edge_velocity.bottom = lattice.bottom.profiles.edgeVelocity;
+  auto computeInducedVelocity = [&](int side, int station) {
+    double dui = 0.0;
+    const double side_panel_factor =
+        lattice.get(side).panelInfluenceFactor[station];
+    const int side_panel_index = lattice.get(side).stationToPanel[station];
+
+    for (int js = 1; js <= 2; ++js) {
+      for (int jbl = 0; jbl < lattice.get(js).stationCount - 1; ++jbl) {
+        const double ue_m =
+            -side_panel_factor *
+            lattice.get(js).panelInfluenceFactor[jbl] *
+            dij(side_panel_index, lattice.get(js).stationToPanel[jbl]);
+        dui += ue_m * lattice.get(js).profiles.massFlux[jbl];
+      }
+    }
+    return dui;
+  };
+
   for (int is = 1; is <= 2; is++) {
     for (int ibl = 0; ibl < lattice.get(is).stationCount - 1; ++ibl) {
-      double dui = 0.0;
-      for (int js = 1; js <= 2; js++) {
-        for (int jbl = 0; jbl < lattice.get(js).stationCount - 1; ++jbl) {
-          double ue_m = -lattice.get(is).panelInfluenceFactor[ibl] * lattice.get(js).panelInfluenceFactor[jbl] *
-                        dij(lattice.get(is).stationToPanel[ibl],
-                            lattice.get(js).stationToPanel[jbl]);
-          dui += ue_m * lattice.get(js).profiles.massFlux[jbl];
-        }
-      }
+      const double dui = computeInducedVelocity(is, ibl);
       edge_velocity.get(is)[ibl] =
           lattice.get(is).inviscidEdgeVelocityMatrix(0, ibl) + dui;
     }
