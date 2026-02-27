@@ -270,7 +270,6 @@ bool BoundaryLayerWorkflow::applyMixedModeNewtonStep(
 
 SkinFrictionCoefficients BoundaryLayerWorkflow::blmid(
     FlowRegimeEnum flowRegimeType) {
-  BoundaryLayerState& state = this->state;
   blData& previous = state.previous();
   blData& current = state.current();
 
