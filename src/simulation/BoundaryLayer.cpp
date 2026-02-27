@@ -140,21 +140,11 @@ void BoundaryLayerWorkflow::initializeFirstIterationState(
   ueref = state.station2.param.uz;
   hkref = state.station2.hkz.scalar;
 
-  const bool inLaminarWindow =
-      stationIndex < lattice.get(side).profiles.transitionIndex && stationIndex >= previousTransition;
-  if (inLaminarWindow) {
-    double uem;
-    double dsm;
-    double thm;
-    if (stationIndex > 0) {
-      uem = lattice.get(side).profiles.edgeVelocity[stationIndex - 1];
-      dsm = lattice.get(side).profiles.displacementThickness[stationIndex - 1];
-      thm = lattice.get(side).profiles.momentumThickness[stationIndex - 1];
-    } else {
-      uem = lattice.get(side).profiles.edgeVelocity[stationIndex];
-      dsm = lattice.get(side).profiles.displacementThickness[stationIndex];
-      thm = lattice.get(side).profiles.momentumThickness[stationIndex];
-    }
+  if (stationIndex < lattice.get(side).profiles.transitionIndex && stationIndex >= previousTransition) {
+    const double uem = lattice.get(side).profiles.edgeVelocity[std::max(0, stationIndex - 1)];
+    const double dsm = lattice.get(side).profiles.displacementThickness[std::max(0, stationIndex - 1)];
+    const double thm = lattice.get(side).profiles.momentumThickness[std::max(0, stationIndex - 1)];
+
     const double uem_sq = uem * uem;
     const double msq =
         uem_sq * blCompressibility.hstinv /
@@ -168,18 +158,11 @@ void BoundaryLayerWorkflow::initializeFirstIterationState(
   if (stationIndex < previousTransition) {
     if (flowRegime == FlowRegimeEnum::Transition) {
       lattice.get(side).profiles.skinFrictionCoeff[stationIndex] = 0.03;
+    } else {
+      lattice.get(side).profiles.skinFrictionCoeff[stationIndex] = lattice.get(side).profiles.skinFrictionCoeff[std::max(0, stationIndex - 1)];
     }
-    if (flowRegime == FlowRegimeEnum::Turbulent || flowRegime == FlowRegimeEnum::Wake) {
-      const double prev =
-          (stationIndex >= 1) ? lattice.get(side).profiles.skinFrictionCoeff[stationIndex - 1]
-                              : lattice.get(side).profiles.skinFrictionCoeff[stationIndex];
-      lattice.get(side).profiles.skinFrictionCoeff[stationIndex] = prev;
-    }
-    if (flowRegime == FlowRegimeEnum::Transition || flowRegime == FlowRegimeEnum::Turbulent || flowRegime == FlowRegimeEnum::Wake) {
-      const int ctiIndex = (stationIndex >= 1) ? stationIndex - 1 : stationIndex;
-      ctx.cti = lattice.get(side).profiles.skinFrictionCoeff[ctiIndex];
-      state.station2.param.sz = ctx.cti;
-    }
+    ctx.cti = lattice.get(side).profiles.skinFrictionCoeff[std::max(0, stationIndex - 1)];
+    state.station2.param.sz = ctx.cti;
   }
 }
 
