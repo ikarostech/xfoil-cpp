@@ -4,6 +4,7 @@
 #include <cmath>
 #include <sstream>
 #include <string>
+#include <vector>
 
 #include "domain/boundary_layer/bl_compressibility_params.hpp"
 #include "domain/boundary_layer/bl_reynolds_params.hpp"
@@ -19,13 +20,15 @@
 
 struct FlowState;
 struct AeroCoefficients;
-class Marcher;
 struct SetblOutputView;
 class Foil;
 class Edge;
+class XFoil;
 class BoundaryLayerWorkflow {
 public:
   BoundaryLayerWorkflow();
+  using Matrix3x2d = Eigen::Matrix<double, 3, 2>;
+  using Matrix3x2dVector = std::vector<Matrix3x2d>;
 
   BoundaryLayerVariablesSolver boundaryLayerVariablesSolver;
   BlDiffSolver blDiffSolver;
@@ -263,9 +266,10 @@ public:
       SidePairRef<const BoundaryLayerSideProfiles> profiles,
       const Eigen::MatrixXd &dij, SetblOutputView &output,
       SetblSideData &sideData) const;
-  void processSetblSide(Marcher &marcher, int side, const Foil &foil,
-                        const StagnationResult &stagnation, bool controlByAlpha,
-                        const Eigen::MatrixXd &dij, SetblOutputView &output,
+  void processSetblSide(int side, const Foil &foil,
+                        const StagnationResult &stagnation,
+                        bool controlByAlpha, const Eigen::MatrixXd &dij,
+                        SetblOutputView &output,
                         std::array<SetblStation, 2> &stations,
                         SetblSideData &sideData, double &cti, double &ami,
                         double re_clmr, double msq_clmr);
@@ -286,6 +290,33 @@ public:
                double dsi, double dswaki, double uei) const;
   bool blsys();
   SidePair<Eigen::VectorXd> ueset(const Eigen::MatrixXd &dij) const;
+  EdgeVelocityDistribution
+  computeNewUeDistribution(const XFoil &xfoil,
+                           const Matrix3x2dVector &vdel) const;
+  ClContributions computeClFromEdgeVelocityDistribution(
+      const XFoil &xfoil, const EdgeVelocityDistribution &distribution) const;
+  int resetSideState(int side, const Foil &foil,
+                     const StagnationResult &stagnation);
+  void storeStationStateCommon(int side, int stationIndex,
+                               const MixedModeStationContext &ctx);
+  void syncStationRegimeStates(int side, int stationIndex, bool wake);
+  FlowRegimeEnum determineRegimeForStation(int side, int stationIndex,
+                                           bool similarity, bool wake) const;
+  double fallbackEdgeVelocity(int side, int stationIndex,
+                              EdgeVelocityFallbackMode edgeMode) const;
+  template <typename StationContext>
+  void resetStationKinematicsAfterFailure(int side, int stationIndex,
+                                          StationContext &ctx,
+                                          EdgeVelocityFallbackMode edgeMode);
+  BoundaryLayerDelta buildBoundaryLayerDelta(
+      int side, const Eigen::VectorXd &unew_side, const Eigen::VectorXd &u_ac_side,
+      double dac, const Matrix3x2dVector &vdel) const;
+  BoundaryLayerMetrics evaluateSegmentRelaxation(
+      int side, const BoundaryLayerDelta &delta, double dhi, double dlo,
+      double &relaxation) const;
+  BoundaryLayerSideProfiles applyBoundaryLayerDelta(
+      int side, const BoundaryLayerDelta &delta, double relaxation,
+      double hstinv, double gamm1) const;
 
   bool blkin(BoundaryLayerState &state);
   bool tesys(const BoundaryLayerSideProfiles &top_profiles,
@@ -311,3 +342,48 @@ public:
   double stagnationSst = 0.0;
   BoundaryLayerGeometry geometry;
 };
+
+template <typename StationContext>
+inline void BoundaryLayerWorkflow::resetStationKinematicsAfterFailure(
+    int side, int stationIndex, StationContext &ctx,
+    EdgeVelocityFallbackMode edgeMode) {
+  if (ctx.dmax <= 0.1 || stationIndex < 2) {
+    return;
+  }
+
+  if (stationIndex <= lattice.get(side).trailingEdgeIndex) {
+    const double ratio = lattice.get(side).arcLengthCoordinates[stationIndex] /
+                         lattice.get(side).arcLengthCoordinates[stationIndex - 1];
+    const double scale = std::sqrt(ratio);
+    ctx.thi = lattice.get(side).profiles.momentumThickness[stationIndex - 1] *
+              scale;
+    ctx.dsi = lattice.get(side)
+                  .profiles.displacementThickness[stationIndex - 1] *
+              scale;
+  } else {
+    if (stationIndex == lattice.get(side).trailingEdgeIndex + 1) {
+      ctx.cti = ctx.cte;
+      ctx.thi = ctx.tte;
+      ctx.dsi = ctx.dte;
+    } else {
+      ctx.thi = lattice.get(side).profiles.momentumThickness[stationIndex - 1];
+      const double ratlen =
+          (lattice.get(side).arcLengthCoordinates[stationIndex] -
+           lattice.get(side).arcLengthCoordinates[stationIndex - 1]) /
+          (10.0 *
+           lattice.get(side).profiles.displacementThickness[stationIndex - 1]);
+      ctx.dsi = (lattice.get(side).profiles.displacementThickness[stationIndex - 1] +
+                 ctx.thi * ratlen) /
+                (1.0 + ratlen);
+    }
+  }
+
+  ctx.uei = fallbackEdgeVelocity(side, stationIndex, edgeMode);
+
+  if (stationIndex == lattice.get(side).profiles.transitionIndex) {
+    ctx.cti = 0.05;
+  }
+  if (stationIndex > lattice.get(side).profiles.transitionIndex) {
+    ctx.cti = lattice.get(side).profiles.skinFrictionCoeff[stationIndex - 1];
+  }
+}

@@ -290,12 +290,12 @@ XFoil::UpdateResult XFoil::update(const XFoil::Matrix3x2dVector &vdel) const {
   result.analysis_state = analysis_state_;
   result.aero_coeffs = aero_coeffs_;
 
-  Marcher marcher;
   //--- calculate new ue distribution and tangential velocities
   const auto ue_distribution =
-      marcher.computeNewUeDistribution(boundaryLayerWorkflow, *this, vdel);
-  const auto cl_contributions = marcher.computeClFromEdgeVelocityDistribution(
-      boundaryLayerWorkflow, *this, ue_distribution);
+      boundaryLayerWorkflow.computeNewUeDistribution(*this, vdel);
+  const auto cl_contributions =
+      boundaryLayerWorkflow.computeClFromEdgeVelocityDistribution(
+          *this, ue_distribution);
 
   const double cl_target =
       analysis_state_.controlByAlpha ? aero_coeffs_.cl : analysis_state_.clspec;
@@ -313,11 +313,11 @@ XFoil::UpdateResult XFoil::update(const XFoil::Matrix3x2dVector &vdel) const {
   SidePair<BoundaryLayerMetrics> metrics;
   const double gamma = 1.4;
   for (int side = 1; side <= 2; ++side) {
-    deltas.get(side) = marcher.buildBoundaryLayerDelta(
-        boundaryLayerWorkflow, side, ue_distribution.unew.get(side),
-        ue_distribution.u_ac.get(side), dac, *this, vdel);
-    metrics.get(side) = marcher.evaluateSegmentRelaxation(
-        boundaryLayerWorkflow, side, deltas.get(side), dhi, dlo, rlx);
+    deltas.get(side) = boundaryLayerWorkflow.buildBoundaryLayerDelta(
+        side, ue_distribution.unew.get(side), ue_distribution.u_ac.get(side),
+        dac, vdel);
+    metrics.get(side) = boundaryLayerWorkflow.evaluateSegmentRelaxation(
+        side, deltas.get(side), dhi, dlo, rlx);
     rmsbl += metrics.get(side).rmsContribution;
 
     double hstinv =
@@ -326,8 +326,8 @@ XFoil::UpdateResult XFoil::update(const XFoil::Matrix3x2dVector &vdel) const {
         (1.0 + 0.5 * (gamma - 1) * analysis_state_.currentMach *
                    analysis_state_.currentMach);
 
-    result.profiles.get(side) = marcher.applyBoundaryLayerDelta(
-        boundaryLayerWorkflow, side, deltas.get(side), rlx, hstinv, gamma - 1);
+    result.profiles.get(side) = boundaryLayerWorkflow.applyBoundaryLayerDelta(
+        side, deltas.get(side), rlx, hstinv, gamma - 1);
   }
 
   rmsbl =

@@ -180,7 +180,7 @@ bool MarcherUe::marchMrchueSide(BoundaryLayerWorkflow &workflow, int side,
   Logger::instance().write(ss.str());
   ss.str("");
 
-  resetSideState(workflow, side, foil, stagnation);
+  workflow.resetSideState(side, foil, stagnation);
 
   initializeMrchueSide(workflow, side);
 
@@ -260,8 +260,8 @@ void MarcherUe::prepareMrchueStationContext(BoundaryLayerWorkflow &workflow,
   {
     ctx.dswaki = 0.0;
   }
-  workflow.flowRegime = determineRegimeForStation(workflow, side, stationIndex,
-                                                  ctx.simi, ctx.wake);
+  workflow.flowRegime =
+      workflow.determineRegimeForStation(side, stationIndex, ctx.simi, ctx.wake);
 }
 
 bool MarcherUe::performMrchueNewtonLoop(BoundaryLayerWorkflow &workflow,
@@ -277,8 +277,8 @@ bool MarcherUe::performMrchueNewtonLoop(BoundaryLayerWorkflow &workflow,
   bool direct = true;
   double htarg = 0.0;
   double dmax_local = 0.0;
-  workflow.flowRegime = determineRegimeForStation(workflow, side, stationIndex,
-                                                  ctx.simi, ctx.wake);
+  workflow.flowRegime =
+      workflow.determineRegimeForStation(side, stationIndex, ctx.simi, ctx.wake);
 
   for (int itbl = 1; itbl <= 25; ++itbl)
   {
@@ -387,8 +387,8 @@ void MarcherUe::handleMrchueStationFailure(BoundaryLayerWorkflow &workflow,
                                            MrchueStationContext &ctx,
                                            std::stringstream &ss)
 {
-  workflow.flowRegime = determineRegimeForStation(workflow, side, stationIndex,
-                                                  ctx.simi, ctx.wake);
+  workflow.flowRegime =
+      workflow.determineRegimeForStation(side, stationIndex, ctx.simi, ctx.wake);
 
   ss << "     mrchue: convergence failed at " << stationIndex << ",  side "
      << side << ", res =" << std::fixed << std::setprecision(3) << ctx.dmax
@@ -396,8 +396,8 @@ void MarcherUe::handleMrchueStationFailure(BoundaryLayerWorkflow &workflow,
   Logger::instance().write(ss.str());
   ss.str("");
 
-  resetStationKinematicsAfterFailure(
-      workflow, side, stationIndex, ctx,
+  workflow.resetStationKinematicsAfterFailure(
+      side, stationIndex, ctx,
       EdgeVelocityFallbackMode::AverageNeighbors);
 
   {
@@ -409,13 +409,12 @@ void MarcherUe::handleMrchueStationFailure(BoundaryLayerWorkflow &workflow,
   workflow.blkin(workflow.state);
 
   workflow.checkTransitionIfNeeded(side, stationIndex, ctx.simi, 2, ctx.ami);
-  syncStationRegimeStates(workflow, side, stationIndex, ctx.wake);
+  workflow.syncStationRegimeStates(side, stationIndex, ctx.wake);
 }
 
 void MarcherUe::storeMrchueStationState(BoundaryLayerWorkflow &workflow,
                                         int side, int stationIndex,
                                         const MrchueStationContext &ctx)
 {
-  storeStationStateCommon(workflow, side, stationIndex, ctx.ami, ctx.cti,
-                          ctx.thi, ctx.dsi, ctx.uei, ctx.xsi, ctx.dswaki);
+  workflow.storeStationStateCommon(side, stationIndex, ctx);
 }

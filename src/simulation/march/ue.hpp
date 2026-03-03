@@ -14,21 +14,9 @@ private:
 
 public:
   struct MrchueStationContext
+      : public BoundaryLayerWorkflow::MixedModeStationContext
   {
-    bool simi = false;
-    bool wake = false;
     bool direct = true;
-    double xsi = 0.0;
-    double uei = 0.0;
-    double thi = 0.0;
-    double dsi = 0.0;
-    double ami = 0.0;
-    double cti = 0.0;
-    double dswaki = 0.0;
-    double cte = 0.0;
-    double dte = 0.0;
-    double tte = 0.0;
-    double dmax = 0.0;
     double hmax = 0.0;
     double htarg = 0.0;
   };

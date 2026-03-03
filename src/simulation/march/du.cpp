@@ -65,8 +65,8 @@ MarcherDu::prepareMixedModeStation(BoundaryLayerWorkflow &workflow, int side,
   ctx.dsi =
       std::max(ctx.dsi - ctx.dswaki, thickness_limit * ctx.thi) + ctx.dswaki;
 
-  workflow.flowRegime = determineRegimeForStation(workflow, side, stationIndex,
-                                                  ctx.simi, ctx.wake);
+  workflow.flowRegime =
+      workflow.determineRegimeForStation(side, stationIndex, ctx.simi, ctx.wake);
 
   return ctx;
 }
@@ -97,8 +97,7 @@ bool MarcherDu::marchBoundaryLayerSide(BoundaryLayerWorkflow &workflow,
                                        const Foil &foil,
                                        const StagnationResult &stagnation)
 {
-  const int previousTransition =
-      resetSideState(workflow, side, foil, stagnation);
+  const int previousTransition = workflow.resetSideState(side, foil, stagnation);
 
   for (int stationIndex = 0;
        stationIndex < workflow.lattice.get(side).stationCount - 1;
@@ -128,8 +127,7 @@ bool MarcherDu::processBoundaryLayerStation(
   }
 
   sens = sennew;
-  storeStationStateCommon(workflow, side, stationIndex, ctx.ami, ctx.cti,
-                          ctx.thi, ctx.dsi, ctx.uei, ctx.xsi, ctx.dswaki);
+  workflow.storeStationStateCommon(side, stationIndex, ctx);
   return true;
 }
 
@@ -192,8 +190,8 @@ void MarcherDu::handleMixedModeNonConvergence(
      << ctx.dmax << "\n";
   Logger::instance().write(ss.str());
 
-  resetStationKinematicsAfterFailure(
-      workflow, side, ibl, ctx,
+  workflow.resetStationKinematicsAfterFailure(
+      side, ibl, ctx,
       BoundaryLayerWorkflow::EdgeVelocityFallbackMode::UsePreviousStation);
 
   blData updatedCurrent =
@@ -204,7 +202,7 @@ void MarcherDu::handleMixedModeNonConvergence(
 
   workflow.checkTransitionIfNeeded(side, ibl, ctx.simi, 2, ami);
 
-  syncStationRegimeStates(workflow, side, ibl, ctx.wake);
+  workflow.syncStationRegimeStates(side, ibl, ctx.wake);
 
   ctx.ami = ami;
 }
