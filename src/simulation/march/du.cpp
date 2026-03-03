@@ -25,8 +25,7 @@ MarcherDu::prepareMixedModeStation(BoundaryLayerWorkflow &workflow, int side,
 {
   BoundaryContext ctx;
 
-  ctx.simi = (stationIndex == 0);
-  ctx.wake = stationIndex > workflow.lattice.get(side).trailingEdgeIndex;
+  ctx.flowRegime = workflow.determineRegimeForStation(side, stationIndex);
   ctx.xsi = workflow.lattice.get(side).arcLengthCoordinates[stationIndex];
   ctx.uei = workflow.lattice.get(side).profiles.edgeVelocity[stationIndex];
   ctx.thi = workflow.lattice.get(side).profiles.momentumThickness[stationIndex];
@@ -49,7 +48,7 @@ MarcherDu::prepareMixedModeStation(BoundaryLayerWorkflow &workflow, int side,
   }
   ctx.ami = ami;
 
-  if (ctx.wake)
+  if (ctx.isWake())
   {
     int iw = stationIndex - workflow.lattice.get(side).trailingEdgeIndex;
     ctx.dswaki = workflow.wgap[iw - 1];
@@ -65,8 +64,7 @@ MarcherDu::prepareMixedModeStation(BoundaryLayerWorkflow &workflow, int side,
   ctx.dsi =
       std::max(ctx.dsi - ctx.dswaki, thickness_limit * ctx.thi) + ctx.dswaki;
 
-  workflow.flowRegime =
-      workflow.determineRegimeForStation(side, stationIndex, ctx.simi, ctx.wake);
+  workflow.flowRegime = ctx.flowRegime;
 
   return ctx;
 }
@@ -147,7 +145,7 @@ bool MarcherDu::performMixedModeNewtonIteration(
     workflow.state.current() = updatedCurrent;
     workflow.blkin(workflow.state);
 
-    workflow.checkTransitionIfNeeded(side, ibl, ctx.simi, 1, ami);
+    workflow.checkTransitionIfNeeded(side, ibl, ctx.isSimilarity(), 1, ami);
 
     const bool startOfWake = workflow.isStartOfWake(side, ibl);
     workflow.updateSystemMatricesForStation(edge, side, ibl, ctx);
@@ -158,7 +156,7 @@ bool MarcherDu::performMixedModeNewtonIteration(
                                              hkref);
     }
 
-    if (ctx.simi || startOfWake)
+    if (ctx.isSimilarity() || startOfWake)
     {
       workflow.configureSimilarityRow(ueref);
     }
@@ -200,9 +198,9 @@ void MarcherDu::handleMixedModeNonConvergence(
   workflow.state.current() = updatedCurrent;
   workflow.blkin(workflow.state);
 
-  workflow.checkTransitionIfNeeded(side, ibl, ctx.simi, 2, ami);
+  workflow.checkTransitionIfNeeded(side, ibl, ctx.isSimilarity(), 2, ami);
 
-  workflow.syncStationRegimeStates(side, ibl, ctx.wake);
+  workflow.syncStationRegimeStates(side, ibl, ctx.flowRegime);
 
   ctx.ami = ami;
 }

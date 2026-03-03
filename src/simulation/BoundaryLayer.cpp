@@ -354,7 +354,7 @@ BoundaryLayerSideProfiles BoundaryLayerWorkflow::applyBoundaryLayerDelta(
 }
 
 void BoundaryLayerWorkflow::syncStationRegimeStates(int side, int stationIndex,
-                                                    bool wake) {
+                                                    FlowRegimeEnum stationRegime) {
   if (stationIndex < lattice.get(side).profiles.transitionIndex) {
     state.station2 =
         boundaryLayerVariablesSolver.solve(state.station2, FlowRegimeEnum::Laminar);
@@ -365,18 +365,17 @@ void BoundaryLayerWorkflow::syncStationRegimeStates(int side, int stationIndex,
         state.station2, FlowRegimeEnum::Turbulent);
     blmid(FlowRegimeEnum::Turbulent);
   }
-  if (wake) {
+  if (stationRegime == FlowRegimeEnum::Wake) {
     state.station2 =
         boundaryLayerVariablesSolver.solve(state.station2, FlowRegimeEnum::Wake);
     blmid(FlowRegimeEnum::Wake);
   }
-  const bool similarity = (stationIndex == 0);
-  flowRegime = determineRegimeForStation(side, stationIndex, similarity, wake);
+  flowRegime = determineRegimeForStation(side, stationIndex);
 }
 
 FlowRegimeEnum BoundaryLayerWorkflow::determineRegimeForStation(
-    int side, int stationIndex, bool similarity, bool wake) const {
-  if (wake) {
+    int side, int stationIndex) const {
+  if (stationIndex > lattice.get(side).trailingEdgeIndex) {
     return FlowRegimeEnum::Wake;
   }
   const int transitionIndex = lattice.get(side).profiles.transitionIndex;
@@ -386,7 +385,7 @@ FlowRegimeEnum BoundaryLayerWorkflow::determineRegimeForStation(
   if (stationIndex > transitionIndex) {
     return FlowRegimeEnum::Turbulent;
   }
-  if (similarity) {
+  if (stationIndex == 0) {
     return FlowRegimeEnum::Similarity;
   }
   return FlowRegimeEnum::Laminar;
@@ -1344,14 +1343,12 @@ void BoundaryLayerWorkflow::processSetblSide(
   for (int station = 0; station < lattice.get(side).stationCount - 1;
        ++station) {
     const int iv = lattice.get(side).stationToSystem[station];
-    const bool station_is_similarity = (station == 0);
     const bool station_is_wake =
         (station > lattice.get(side).trailingEdgeIndex);
     const bool station_is_transition_candidate =
         (station == output.profiles.get(side).transitionIndex);
 
-    output.flowRegime = determineRegimeForStation(
-        side, station, station_is_similarity, station_is_wake);
+    output.flowRegime = determineRegimeForStation(side, station);
     flowRegime = output.flowRegime;
 
     auto vars = loadStationPrimaryVars(side, station, station_is_wake, output,

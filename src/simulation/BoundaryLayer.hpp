@@ -120,8 +120,7 @@ public:
     }
   };
   struct MixedModeStationContext {
-    bool simi = false;
-    bool wake = false;
+    FlowRegimeEnum flowRegime = FlowRegimeEnum::Laminar;
     double xsi = 0.0;
     double uei = 0.0;
     double thi = 0.0;
@@ -133,6 +132,12 @@ public:
     double dte = 0.0;
     double tte = 0.0;
     double dmax = 0.0;
+
+    bool isSimilarity() const {
+      return flowRegime == FlowRegimeEnum::Similarity;
+    }
+
+    bool isWake() const { return flowRegime == FlowRegimeEnum::Wake; }
   };
   struct StationPrimaryVars {
     double xsi = 0.0;
@@ -299,9 +304,9 @@ public:
                      const StagnationResult &stagnation);
   void storeStationStateCommon(int side, int stationIndex,
                                const MixedModeStationContext &ctx);
-  void syncStationRegimeStates(int side, int stationIndex, bool wake);
-  FlowRegimeEnum determineRegimeForStation(int side, int stationIndex,
-                                           bool similarity, bool wake) const;
+  void syncStationRegimeStates(int side, int stationIndex,
+                               FlowRegimeEnum stationRegime);
+  FlowRegimeEnum determineRegimeForStation(int side, int stationIndex) const;
   double fallbackEdgeVelocity(int side, int stationIndex,
                               EdgeVelocityFallbackMode edgeMode) const;
   template <typename StationContext>

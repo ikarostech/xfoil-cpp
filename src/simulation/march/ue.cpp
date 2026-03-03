@@ -96,8 +96,8 @@ namespace
       return false;
     }
 
-    htarg = workflow.calcHtarg(stationIndex, side, ctx.wake);
-    if (ctx.wake)
+    htarg = workflow.calcHtarg(stationIndex, side, ctx.isWake());
+    if (ctx.isWake())
     {
       htarg = std::max(htarg, 1.01);
     }
@@ -239,8 +239,7 @@ void MarcherUe::prepareMrchueStationContext(BoundaryLayerWorkflow &workflow,
                                             int side, int stationIndex,
                                             MrchueStationContext &ctx)
 {
-  ctx.simi = (stationIndex == 0);
-  ctx.wake = stationIndex > workflow.lattice.get(side).trailingEdgeIndex;
+  ctx.flowRegime = workflow.determineRegimeForStation(side, stationIndex);
   ctx.xsi = workflow.lattice.get(side).arcLengthCoordinates[stationIndex];
   ctx.uei = workflow.lattice.get(side).profiles.edgeVelocity[stationIndex];
   ctx.thi = thi;
@@ -251,7 +250,7 @@ void MarcherUe::prepareMrchueStationContext(BoundaryLayerWorkflow &workflow,
   ctx.dmax = 0.0;
   ctx.hmax = 0.0;
   ctx.htarg = 0.0;
-  if (ctx.wake)
+  if (ctx.isWake())
   {
     const int iw = stationIndex - workflow.lattice.get(side).trailingEdgeIndex;
     ctx.dswaki = workflow.wgap[iw - 1];
@@ -260,8 +259,7 @@ void MarcherUe::prepareMrchueStationContext(BoundaryLayerWorkflow &workflow,
   {
     ctx.dswaki = 0.0;
   }
-  workflow.flowRegime =
-      workflow.determineRegimeForStation(side, stationIndex, ctx.simi, ctx.wake);
+  workflow.flowRegime = ctx.flowRegime;
 }
 
 bool MarcherUe::performMrchueNewtonLoop(BoundaryLayerWorkflow &workflow,
@@ -277,8 +275,7 @@ bool MarcherUe::performMrchueNewtonLoop(BoundaryLayerWorkflow &workflow,
   bool direct = true;
   double htarg = 0.0;
   double dmax_local = 0.0;
-  workflow.flowRegime =
-      workflow.determineRegimeForStation(side, stationIndex, ctx.simi, ctx.wake);
+  workflow.flowRegime = ctx.flowRegime;
 
   for (int itbl = 1; itbl <= 25; ++itbl)
   {
@@ -288,7 +285,8 @@ bool MarcherUe::performMrchueNewtonLoop(BoundaryLayerWorkflow &workflow,
 
     workflow.blkin(workflow.state);
 
-    if ((!ctx.simi) && (!(workflow.flowRegime == FlowRegimeEnum::Turbulent ||
+    if ((!ctx.isSimilarity()) &&
+        (!(workflow.flowRegime == FlowRegimeEnum::Turbulent ||
                           workflow.flowRegime == FlowRegimeEnum::Wake)))
     {
       workflow.transitionSolver.trchek();
@@ -387,8 +385,7 @@ void MarcherUe::handleMrchueStationFailure(BoundaryLayerWorkflow &workflow,
                                            MrchueStationContext &ctx,
                                            std::stringstream &ss)
 {
-  workflow.flowRegime =
-      workflow.determineRegimeForStation(side, stationIndex, ctx.simi, ctx.wake);
+  workflow.flowRegime = ctx.flowRegime;
 
   ss << "     mrchue: convergence failed at " << stationIndex << ",  side "
      << side << ", res =" << std::fixed << std::setprecision(3) << ctx.dmax
@@ -408,8 +405,9 @@ void MarcherUe::handleMrchueStationFailure(BoundaryLayerWorkflow &workflow,
   }
   workflow.blkin(workflow.state);
 
-  workflow.checkTransitionIfNeeded(side, stationIndex, ctx.simi, 2, ctx.ami);
-  workflow.syncStationRegimeStates(side, stationIndex, ctx.wake);
+  workflow.checkTransitionIfNeeded(side, stationIndex, ctx.isSimilarity(), 2,
+                                   ctx.ami);
+  workflow.syncStationRegimeStates(side, stationIndex, ctx.flowRegime);
 }
 
 void MarcherUe::storeMrchueStationState(BoundaryLayerWorkflow &workflow,
