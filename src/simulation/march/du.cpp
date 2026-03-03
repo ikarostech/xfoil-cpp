@@ -21,8 +21,8 @@ using BoundaryLayerMetrics = BoundaryLayerWorkflow::BoundaryLayerMetrics;
 
 BoundaryLayerWorkflow::MixedModeStationContext
 MarcherDu::prepareMixedModeStation(BoundaryLayerWorkflow &workflow, int side,
-                                   int stationIndex, int previousTransition,
-                                   double &ami) {
+                                   int stationIndex, int previousTransition)
+{
   BoundaryContext ctx;
 
   ctx.simi = (stationIndex == 0);
@@ -33,22 +33,29 @@ MarcherDu::prepareMixedModeStation(BoundaryLayerWorkflow &workflow, int side,
   ctx.dsi =
       workflow.lattice.get(side).profiles.displacementThickness[stationIndex];
 
-  if (stationIndex < previousTransition) {
+  if (stationIndex < previousTransition)
+  {
     ami = workflow.lattice.get(side).profiles.skinFrictionCoeff[stationIndex];
     ctx.cti = 0.03;
-  } else {
+  }
+  else
+  {
     ctx.cti =
         workflow.lattice.get(side).profiles.skinFrictionCoeff[stationIndex];
-    if (ctx.cti <= 0.0) {
+    if (ctx.cti <= 0.0)
+    {
       ctx.cti = 0.03;
     }
   }
   ctx.ami = ami;
 
-  if (ctx.wake) {
+  if (ctx.wake)
+  {
     int iw = stationIndex - workflow.lattice.get(side).trailingEdgeIndex;
     ctx.dswaki = workflow.wgap[iw - 1];
-  } else {
+  }
+  else
+  {
     ctx.dswaki = 0.0;
   }
 
@@ -65,22 +72,20 @@ MarcherDu::prepareMixedModeStation(BoundaryLayerWorkflow &workflow, int side,
 }
 
 bool MarcherDu::mrchdu(BoundaryLayerWorkflow &workflow, const Foil &foil,
-                       const StagnationResult &stagnation) {
+                       const StagnationResult &stagnation)
+{
   return mrchdu(workflow, workflow.state, foil, stagnation);
 }
 
 bool MarcherDu::mrchdu(BoundaryLayerWorkflow &workflow,
                        BoundaryLayerState &state, const Foil &foil,
-                       const StagnationResult &stagnation) {
-  const double senswt = 1000.0;
+                       const StagnationResult &stagnation)
+{
 
-  double sens = 0.0;
-  double sennew = 0.0;
-  double ami = 0.0;
-
-  for (int side = 1; side <= 2; ++side) {
-    if (!marchBoundaryLayerSide(workflow, state, side, senswt, sens, sennew,
-                                ami, foil, stagnation)) {
+  for (int side = 1; side <= 2; ++side)
+  {
+    if (!marchBoundaryLayerSide(workflow, state, side, foil, stagnation))
+    {
       return false;
     }
   }
@@ -89,19 +94,19 @@ bool MarcherDu::mrchdu(BoundaryLayerWorkflow &workflow,
 
 bool MarcherDu::marchBoundaryLayerSide(BoundaryLayerWorkflow &workflow,
                                        BoundaryLayerState &state, int side,
-                                       double senswt, double &sens,
-                                       double &sennew, double &ami,
                                        const Foil &foil,
-                                       const StagnationResult &stagnation) {
+                                       const StagnationResult &stagnation)
+{
   const int previousTransition =
       resetSideState(workflow, side, foil, stagnation);
 
   for (int stationIndex = 0;
        stationIndex < workflow.lattice.get(side).stationCount - 1;
-       ++stationIndex) {
+       ++stationIndex)
+  {
     if (!processBoundaryLayerStation(workflow, state, side, stationIndex,
-                                     previousTransition, senswt, sens, sennew,
-                                     ami, foil)) {
+                                     previousTransition, foil))
+    {
       return false;
     }
   }
@@ -111,16 +116,15 @@ bool MarcherDu::marchBoundaryLayerSide(BoundaryLayerWorkflow &workflow,
 
 bool MarcherDu::processBoundaryLayerStation(
     BoundaryLayerWorkflow &workflow, BoundaryLayerState &state, int side,
-    int stationIndex, int previousTransition, double senswt, double &sens,
-    double &sennew, double &ami, const Foil &foil) {
+    int stationIndex, int previousTransition, const Foil &foil)
+{
   BoundaryContext ctx = prepareMixedModeStation(workflow, side, stationIndex,
-                                                previousTransition, ami);
-
+                                                previousTransition);
   bool converged = performMixedModeNewtonIteration(
-      workflow, foil.edge, side, stationIndex, previousTransition, ctx, senswt,
-      sens, sennew, ami);
-  if (!converged) {
-    handleMixedModeNonConvergence(workflow, side, stationIndex, ctx, ami);
+      workflow, foil.edge, side, stationIndex, previousTransition, ctx);
+  if (!converged)
+  {
+    handleMixedModeNonConvergence(workflow, side, stationIndex, ctx);
   }
 
   sens = sennew;
@@ -131,13 +135,14 @@ bool MarcherDu::processBoundaryLayerStation(
 
 bool MarcherDu::performMixedModeNewtonIteration(
     BoundaryLayerWorkflow &workflow, const Edge &edge, int side, int ibl,
-    int itrold, BoundaryLayerWorkflow::MixedModeStationContext &ctx,
-    double senswt, double &sens, double &sennew, double &ami) {
+    int itrold, BoundaryLayerWorkflow::MixedModeStationContext &ctx)
+{
   bool converged = false;
   double ueref = 0.0;
   double hkref = 0.0;
 
-  for (int itbl = 1; itbl <= 25; ++itbl) {
+  for (int itbl = 1; itbl <= 25; ++itbl)
+  {
     blData updatedCurrent =
         workflow.blprv(workflow.state.current(), ctx.xsi, ami, ctx.cti, ctx.thi,
                        ctx.dsi, ctx.dswaki, ctx.uei);
@@ -149,21 +154,26 @@ bool MarcherDu::performMixedModeNewtonIteration(
     const bool startOfWake = workflow.isStartOfWake(side, ibl);
     workflow.updateSystemMatricesForStation(edge, side, ibl, ctx);
 
-    if (itbl == 1) {
+    if (itbl == 1)
+    {
       workflow.initializeFirstIterationState(side, ibl, itrold, ctx, ueref,
                                              hkref);
     }
 
-    if (ctx.simi || startOfWake) {
+    if (ctx.simi || startOfWake)
+    {
       workflow.configureSimilarityRow(ueref);
-    } else {
+    }
+    else
+    {
       const bool resetSensitivity = (itbl <= 5);
       const bool averageSensitivity = (itbl > 5 && itbl <= 15);
       workflow.configureViscousRow(hkref, ueref, senswt, resetSensitivity,
                                    averageSensitivity, sens, sennew);
     }
 
-    if (workflow.applyMixedModeNewtonStep(side, ibl, ami, ctx)) {
+    if (workflow.applyMixedModeNewtonStep(side, ibl, ami, ctx))
+    {
       converged = true;
       break;
     }
@@ -174,7 +184,8 @@ bool MarcherDu::performMixedModeNewtonIteration(
 
 void MarcherDu::handleMixedModeNonConvergence(
     BoundaryLayerWorkflow &workflow, int side, int ibl,
-    BoundaryLayerWorkflow::MixedModeStationContext &ctx, double &ami) {
+    BoundaryLayerWorkflow::MixedModeStationContext &ctx)
+{
   std::stringstream ss;
   ss << "     mrchdu: convergence failed at " << ibl << " ,  side " << side
      << ", res=" << std::setw(4) << std::fixed << std::setprecision(3)
