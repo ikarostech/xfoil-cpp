@@ -1,10 +1,10 @@
 #pragma once
 
-#include "domain/flow_regime.hpp"
 #include "domain/boundary_layer.hpp"
+#include "domain/flow_regime.hpp"
 
 class dissipation {
- public:
+public:
   class DissipationResult {
   public:
     double di;

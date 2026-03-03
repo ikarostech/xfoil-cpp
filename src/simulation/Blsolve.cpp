@@ -84,13 +84,12 @@ inline int vmIndex(int size, int k, int i, int j) {
   return (k * size + i) * size + j;
 }
 
-void eliminateVaBlock(int iv, int nsys,
-                      const Matrix3x2dVector& va,
-                      VmMatrix& vm,
-                      Matrix3x2dVector& vdel) {
-  double D[3][3] = {{va[iv](0, 0), va[iv](0, 1), vm.data[vmIndex(vm.size, 0, iv, iv)]},
-                    {va[iv](1, 0), va[iv](1, 1), vm.data[vmIndex(vm.size, 1, iv, iv)]},
-                    {va[iv](2, 0), va[iv](2, 1), vm.data[vmIndex(vm.size, 2, iv, iv)]}};
+void eliminateVaBlock(int iv, int nsys, const Matrix3x2dVector &va,
+                      VmMatrix &vm, Matrix3x2dVector &vdel) {
+  double D[3][3] = {
+      {va[iv](0, 0), va[iv](0, 1), vm.data[vmIndex(vm.size, 0, iv, iv)]},
+      {va[iv](1, 0), va[iv](1, 1), vm.data[vmIndex(vm.size, 1, iv, iv)]},
+      {va[iv](2, 0), va[iv](2, 1), vm.data[vmIndex(vm.size, 2, iv, iv)]}};
   int piv[3];
   plu3x3(D, piv);
 
@@ -136,15 +135,13 @@ void eliminateVaBlock(int iv, int nsys,
   }
 }
 
-void eliminateVbBlock(int iv, int ivp, int nsys,
-                      const Matrix3x2dVector& vb,
-                      const SidePair<int>& ivte,
-                      const VzMatrix& vz,
-                      VmMatrix& vm,
-                      Matrix3x2dVector& vdel) {
-  double D[3][3] = {{vb[ivp](0, 0), vb[ivp](0, 1), vm.data[vmIndex(vm.size, 0, iv, ivp)]},
-                    {vb[ivp](1, 0), vb[ivp](1, 1), vm.data[vmIndex(vm.size, 1, iv, ivp)]},
-                    {vb[ivp](2, 0), vb[ivp](2, 1), vm.data[vmIndex(vm.size, 2, iv, ivp)]}};
+void eliminateVbBlock(int iv, int ivp, int nsys, const Matrix3x2dVector &vb,
+                      const SidePair<int> &ivte, const VzMatrix &vz,
+                      VmMatrix &vm, Matrix3x2dVector &vdel) {
+  double D[3][3] = {
+      {vb[ivp](0, 0), vb[ivp](0, 1), vm.data[vmIndex(vm.size, 0, iv, ivp)]},
+      {vb[ivp](1, 0), vb[ivp](1, 1), vm.data[vmIndex(vm.size, 1, iv, ivp)]},
+      {vb[ivp](2, 0), vb[ivp](2, 1), vm.data[vmIndex(vm.size, 2, iv, ivp)]}};
 
   double col[3];
   for (int l = ivp; l < nsys; ++l) {
@@ -175,9 +172,8 @@ void eliminateVbBlock(int iv, int ivp, int nsys,
     return;
   }
 
-  double Dz[3][2] = {{vz[0][0], vz[0][1]},
-                     {vz[1][0], vz[1][1]},
-                     {vz[2][0], vz[2][1]}};
+  double Dz[3][2] = {
+      {vz[0][0], vz[0][1]}, {vz[1][0], vz[1][1]}, {vz[2][0], vz[2][1]}};
 
   for (int l = ivp; l < nsys; ++l) {
     col[0] = vm.data[vmIndex(vm.size, 0, l, iv)];
@@ -201,10 +197,8 @@ void eliminateVbBlock(int iv, int ivp, int nsys,
   }
 }
 
-void eliminateLowerVmColumn(int iv, int ivp, int nsys,
-                            double vaccel,
-                            VmMatrix& vm,
-                            Matrix3x2dVector& vdel) {
+void eliminateLowerVmColumn(int iv, int ivp, int nsys, double vaccel,
+                            VmMatrix &vm, Matrix3x2dVector &vdel) {
   for (int kv = iv + 2; kv < nsys; ++kv) {
     double vtmp1 = vm.data[vmIndex(vm.size, 0, iv, kv)];
     double vtmp2 = vm.data[vmIndex(vm.size, 1, iv, kv)];
@@ -236,7 +230,7 @@ void eliminateLowerVmColumn(int iv, int ivp, int nsys,
   }
 }
 
-void backSubstitute(int nsys, const VmMatrix& vm, Matrix3x2dVector& vdel) {
+void backSubstitute(int nsys, const VmMatrix &vm, Matrix3x2dVector &vdel) {
   for (int iv = nsys - 1; iv >= 2; --iv) {
     double vtmp = vdel[iv](2, 0);
     for (int kv = iv - 1; kv >= 1; --kv) {
@@ -254,12 +248,11 @@ void backSubstitute(int nsys, const VmMatrix& vm, Matrix3x2dVector& vdel) {
 }
 } // namespace
 
-std::vector<Eigen::Matrix<double, 3, 2>> Blsolve::solve(int nsys,
-                               const SidePair<int>& ivte,
-                               double vaccel,
-                               const BlNewtonSystem& bl_newton_system) const {
-  const Matrix3x2dVector& va = bl_newton_system.va;
-  const Matrix3x2dVector& vb = bl_newton_system.vb;
+std::vector<Eigen::Matrix<double, 3, 2>>
+Blsolve::solve(int nsys, const SidePair<int> &ivte, double vaccel,
+               const BlNewtonSystem &bl_newton_system) const {
+  const Matrix3x2dVector &va = bl_newton_system.va;
+  const Matrix3x2dVector &vb = bl_newton_system.vb;
   VmMatrix vm = bl_newton_system.vm;
   Matrix3x2dVector vdel = bl_newton_system.vdel;
   VzMatrix vz = bl_newton_system.vz;

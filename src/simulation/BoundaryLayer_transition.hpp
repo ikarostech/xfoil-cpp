@@ -8,24 +8,24 @@ class BoundaryLayerWorkflow;
 class XFoil;
 
 class BoundaryLayerTransitionSolver {
- public:
-  explicit BoundaryLayerTransitionSolver(BoundaryLayerWorkflow& workflow);
+public:
+  explicit BoundaryLayerTransitionSolver(BoundaryLayerWorkflow &workflow);
 
   bool trchek();
   bool trdif();
 
- private:
+private:
   struct TrchekData;
   struct TrdifData;
 
   double computeTransitionLocation(double weightingFactor) const;
-  bool iterateAmplification(TrchekData& data);
-  bool resolveTransitionLocationAndSensitivities(TrchekData& data);
-  void setupLaminarTransitionSystem(TrdifData& data);
-  void setupTurbulentTransitionSystem(TrdifData& data);
-  void mergeTransitionSystems(TrdifData& data);
+  bool iterateAmplification(TrchekData &data);
+  bool resolveTransitionLocationAndSensitivities(TrchekData &data);
+  void setupLaminarTransitionSystem(TrdifData &data);
+  void setupTurbulentTransitionSystem(TrdifData &data);
+  void mergeTransitionSystems(TrdifData &data);
 
-  BoundaryLayerWorkflow* workflow_;
+  BoundaryLayerWorkflow *workflow_;
   BoundaryLayerStore boundaryLayerStore;
   BoundaryLayerVariablesSolver boundaryLayerVariablesSolver;
   BlDiffSolver blDiffSolver;

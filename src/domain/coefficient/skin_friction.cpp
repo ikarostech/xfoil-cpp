@@ -1,7 +1,7 @@
 #include "skin_friction.hpp"
-#include <numeric>
 #include <algorithm>
 #include <cmath>
+#include <numeric>
 using namespace std;
 skin_friction::C_f skin_friction::cfl(double hk, double rt) {
   skin_friction::C_f c_f = skin_friction::C_f();
@@ -46,15 +46,17 @@ skin_friction::C_f skin_friction::cft(double hk, double rt, double msq) {
   return c_f;
 }
 
-skin_friction::C_f skin_friction::getSkinFriction(double hk, double rt, double msq, FlowRegimeEnum flowRegimeType) {
+skin_friction::C_f
+skin_friction::getSkinFriction(double hk, double rt, double msq,
+                               FlowRegimeEnum flowRegimeType) {
   switch (flowRegimeType) {
-    case FlowRegimeEnum::Laminar:
-        return skin_friction::cfl(hk, rt);
-    case FlowRegimeEnum::Wake:
-        return C_f(); // Wake flow has no skin friction
-    default:
-        C_f cfl = skin_friction::cfl(hk, rt);
-        C_f cft = skin_friction::cft(hk, rt, msq);
-        return cfl.cf > cft.cf ? cfl : cft;
+  case FlowRegimeEnum::Laminar:
+    return skin_friction::cfl(hk, rt);
+  case FlowRegimeEnum::Wake:
+    return C_f(); // Wake flow has no skin friction
+  default:
+    C_f cfl = skin_friction::cfl(hk, rt);
+    C_f cft = skin_friction::cft(hk, rt, msq);
+    return cfl.cf > cft.cf ? cfl : cft;
   }
 }

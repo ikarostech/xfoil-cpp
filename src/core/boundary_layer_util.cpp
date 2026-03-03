@@ -1,8 +1,10 @@
 #include "boundary_layer_util.hpp"
 #include <cmath>
-BoundaryLayerUtil::AxResult BoundaryLayerUtil::axset(double hk1, double t1, double rt1, double a1,
-                             double hk2, double t2, double rt2, double a2,
-                             double acrit) {
+BoundaryLayerUtil::AxResult BoundaryLayerUtil::axset(double hk1, double t1,
+                                                     double rt1, double a1,
+                                                     double hk2, double t2,
+                                                     double rt2, double a2,
+                                                     double acrit) {
   AxResult result;
   //
   //==========================
@@ -101,7 +103,8 @@ BoundaryLayerUtil::AxResult BoundaryLayerUtil::axset(double hk1, double t1, doub
  *             is below the critical rmomentumThickness.  transition occurs
  *             when n(x) reaches ncrit (ncrit= 9 is "standard").
  * ============================================================== */
-BoundaryLayerUtil::EnvEnResult BoundaryLayerUtil::dampl(double hk, double th, double rt) {
+BoundaryLayerUtil::EnvEnResult BoundaryLayerUtil::dampl(double hk, double th,
+                                                        double rt) {
   BoundaryLayerUtil::EnvEnResult result;
   double dgr = 0.08;
 
@@ -124,7 +127,8 @@ BoundaryLayerUtil::EnvEnResult BoundaryLayerUtil::dampl(double hk, double th, do
     result.ax_th = 0.0;
     result.ax_rt = 0.0;
   } else {
-    //----- set steep cubic ramp used to turn on ax smoothly as rmomentumThickness
+    //----- set steep cubic ramp used to turn on ax smoothly as
+    // rmomentumThickness
     //-     exceeds rcrit (previously, this was done discontinuously).
     //-     the ramp goes between  -dgr < log10(rmomentumThickness/rcrit) < dgr
 

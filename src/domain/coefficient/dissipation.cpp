@@ -24,23 +24,25 @@ dissipation::DissipationResult dissipation::dil(double hk, double rt) {
 
 dissipation::DissipationResult dissipation::dilw(double hk, double rt) {
   DissipationResult result;
-  boundary_layer::ThicknessShapeParameterResult hsl_result = boundary_layer::hsl(hk);
+  boundary_layer::ThicknessShapeParameterResult hsl_result =
+      boundary_layer::hsl(hk);
   double rcd = 1.10 * (1.0 - 1.0 / hk) * (1.0 - 1.0 / hk) / hk;
   double rcd_hk = -1.10 * (1.0 - 1.0 / hk) * 2.0 / hk / hk / hk - rcd / hk;
 
   result.di = 2.0 * rcd / (hsl_result.hs * rt);
   result.di_hk = 2.0 * rcd_hk / (hsl_result.hs * rt) -
                  ((result.di) / hsl_result.hs) * hsl_result.hs_hk;
-  result.di_rt = -(result.di) / rt -
-                 ((result.di) / hsl_result.hs) * hsl_result.hs_rt;
+  result.di_rt =
+      -(result.di) / rt - ((result.di) / hsl_result.hs) * hsl_result.hs_rt;
 
   return result;
 }
 
-dissipation::DissipationResult dissipation::getDissipation(double hk, double rt, FlowRegimeEnum flowRegimeType) {
+dissipation::DissipationResult
+dissipation::getDissipation(double hk, double rt,
+                            FlowRegimeEnum flowRegimeType) {
   if (flowRegimeType == FlowRegimeEnum::Wake) {
     return dilw(hk, rt);
   }
   return dil(hk, rt);
 }
-

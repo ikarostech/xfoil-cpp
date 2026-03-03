@@ -4,6 +4,4 @@ void BoundaryLayerStore::saveblData(blData blData, int icom) {
   blsav[icom] = blData;
 }
 
-blData BoundaryLayerStore::restoreblData(int icom) {
-  return blsav[icom];
-}
+blData BoundaryLayerStore::restoreblData(int icom) { return blsav[icom]; }

@@ -8,42 +8,39 @@
 #include <string>
 
 class Logger {
- public:
+public:
   virtual ~Logger() = default;
-  virtual void write(const std::string& message) = 0;
-  static Logger& instance();
+  virtual void write(const std::string &message) = 0;
+  static Logger &instance();
 };
 
 class NullLogger : public Logger {
- public:
-  void write(const std::string& message) override {
-    (void)message;
-  }
+public:
+  void write(const std::string &message) override { (void)message; }
 };
 
 class StreamLogger : public Logger {
- public:
-  explicit StreamLogger(std::ostream& out) : out_(out) {}
-  void write(const std::string& message) override { out_ << message; }
+public:
+  explicit StreamLogger(std::ostream &out) : out_(out) {}
+  void write(const std::string &message) override { out_ << message; }
 
- private:
-  std::ostream& out_;
+private:
+  std::ostream &out_;
 };
 
 class FileLogger : public Logger {
- public:
-  explicit FileLogger(const std::string& path)
-      : out_(path, std::ios::app) {}
+public:
+  explicit FileLogger(const std::string &path) : out_(path, std::ios::app) {}
   bool isOpen() const { return out_.is_open(); }
-  void write(const std::string& message) override { out_ << message; }
+  void write(const std::string &message) override { out_ << message; }
 
- private:
+private:
   std::ofstream out_;
 };
 
-inline Logger& Logger::instance() {
+inline Logger &Logger::instance() {
   static std::unique_ptr<Logger> logger = []() -> std::unique_ptr<Logger> {
-    const char* env_value = std::getenv("XFOIL_LOG");
+    const char *env_value = std::getenv("XFOIL_LOG");
     if (!env_value || env_value[0] == '\0') {
       return std::make_unique<NullLogger>();
     }

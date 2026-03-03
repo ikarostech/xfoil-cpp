@@ -7,7 +7,7 @@
 #include "core/side_pair.hpp"
 
 class Blsolve {
- public:
+public:
   using Matrix3x2d = Eigen::Matrix<double, 3, 2>;
   using Matrix3x2dVector = std::vector<Matrix3x2d>;
   using VzMatrix = std::array<std::array<double, 2>, 3>;
@@ -20,11 +20,9 @@ class Blsolve {
       data.assign(3 * size * size, 0.0);
     }
 
-    double& at(int k, int i, int j) {
-      return data[(k * size + i) * size + j];
-    }
+    double &at(int k, int i, int j) { return data[(k * size + i) * size + j]; }
 
-    const double& at(int k, int i, int j) const {
+    const double &at(int k, int i, int j) const {
       return data[(k * size + i) * size + j];
     }
   };
@@ -37,8 +35,7 @@ class Blsolve {
     VzMatrix vz{};
   };
 
-  std::vector<Eigen::Matrix<double, 3, 2>> solve(int nsys,
-               const SidePair<int>& ivte,
-               double vaccel,
-               const BlNewtonSystem& bl_newton_system) const;
+  std::vector<Eigen::Matrix<double, 3, 2>>
+  solve(int nsys, const SidePair<int> &ivte, double vaccel,
+        const BlNewtonSystem &bl_newton_system) const;
 };

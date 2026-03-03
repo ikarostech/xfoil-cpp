@@ -15,11 +15,7 @@ struct FlowState {
     FIXED_LIFT,
     FIXED_LIFT_AND_DYNAMIC_PRESSURE
   };
-  enum class MachType {
-    CONSTANT,
-    FIXED_LIFT,
-    FIXED_LIFT_AND_DYNAMIC_PRESSURE
-  };
+  enum class MachType { CONSTANT, FIXED_LIFT, FIXED_LIFT_AND_DYNAMIC_PRESSURE };
   ReynoldsType reynoldsType = ReynoldsType::CONSTANT;
   MachType machType = MachType::CONSTANT;
 };

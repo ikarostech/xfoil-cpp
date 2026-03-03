@@ -5,7 +5,7 @@
 #include "simulation/march/base.hpp"
 
 class MarcherUe : public Marcher {
- public:
+public:
   struct MrchueStationContext {
     bool simi = false;
     bool wake = false;
@@ -25,30 +25,29 @@ class MarcherUe : public Marcher {
     double htarg = 0.0;
   };
 
-  bool mrchue(BoundaryLayerWorkflow& workflow, const Foil& foil,
-              const StagnationResult& stagnation);
-  bool mrchue(BoundaryLayerWorkflow& workflow, BoundaryLayerState& state,
-              const Foil& foil, const StagnationResult& stagnation);
+  bool mrchue(BoundaryLayerWorkflow &workflow, const Foil &foil,
+              const StagnationResult &stagnation);
+  bool mrchue(BoundaryLayerWorkflow &workflow, BoundaryLayerState &state,
+              const Foil &foil, const StagnationResult &stagnation);
 
- private:
-  bool marchMrchueSide(BoundaryLayerWorkflow& workflow,
-                       BoundaryLayerState& state, int side, const Foil& foil,
-                       const StagnationResult& stagnation,
-                       std::stringstream& ss);
-  void initializeMrchueSide(BoundaryLayerWorkflow& workflow, int side,
-                            double& thi, double& dsi, double& ami,
-                            double& cti);
-  void prepareMrchueStationContext(BoundaryLayerWorkflow& workflow, int side,
-                                   int stationIndex, MrchueStationContext& ctx,
+private:
+  bool marchMrchueSide(BoundaryLayerWorkflow &workflow,
+                       BoundaryLayerState &state, int side, const Foil &foil,
+                       const StagnationResult &stagnation,
+                       std::stringstream &ss);
+  void initializeMrchueSide(BoundaryLayerWorkflow &workflow, int side,
+                            double &thi, double &dsi, double &ami, double &cti);
+  void prepareMrchueStationContext(BoundaryLayerWorkflow &workflow, int side,
+                                   int stationIndex, MrchueStationContext &ctx,
                                    double thi, double dsi, double ami,
                                    double cti);
-  bool performMrchueNewtonLoop(BoundaryLayerWorkflow& workflow, int side,
-                               int stationIndex, MrchueStationContext& ctx,
-                               const Edge& edge, std::stringstream& ss);
-  void handleMrchueStationFailure(BoundaryLayerWorkflow& workflow, int side,
-                                  int stationIndex, MrchueStationContext& ctx,
-                                  std::stringstream& ss);
-  void storeMrchueStationState(BoundaryLayerWorkflow& workflow, int side,
+  bool performMrchueNewtonLoop(BoundaryLayerWorkflow &workflow, int side,
+                               int stationIndex, MrchueStationContext &ctx,
+                               const Edge &edge, std::stringstream &ss);
+  void handleMrchueStationFailure(BoundaryLayerWorkflow &workflow, int side,
+                                  int stationIndex, MrchueStationContext &ctx,
+                                  std::stringstream &ss);
+  void storeMrchueStationState(BoundaryLayerWorkflow &workflow, int side,
                                int stationIndex,
-                               const MrchueStationContext& ctx);
+                               const MrchueStationContext &ctx);
 };

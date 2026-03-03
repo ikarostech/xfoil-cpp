@@ -1,5 +1,5 @@
-#include <gtest/gtest.h>
 #include <fstream>
+#include <gtest/gtest.h>
 #include <iostream>
 #include <memory>
 #include <sstream>
@@ -11,12 +11,12 @@
 namespace {
 constexpr int kMaxDatPoints = 604;
 constexpr int kReynolds = 100000;
-}  // namespace
+} // namespace
 
 class DatGoogleTest : public ::testing::Test {
 protected:
   // TODO テスト用翼型の読み込みは別途Util化する
-  int loadDatFile(const std::string& filename, double x[kMaxDatPoints],
+  int loadDatFile(const std::string &filename, double x[kMaxDatPoints],
                   double y[kMaxDatPoints]) {
     std::ifstream fs(filename);
     if (!fs) {
@@ -43,7 +43,8 @@ protected:
     }
     return cnt;
   }
-  double x[kMaxDatPoints], y[kMaxDatPoints], nx[kMaxDatPoints], ny[kMaxDatPoints];
+  double x[kMaxDatPoints], y[kMaxDatPoints], nx[kMaxDatPoints],
+      ny[kMaxDatPoints];
   int n;
   std::vector<Vector2d> plots;
 
@@ -51,7 +52,7 @@ protected:
 
   void SetUp() override {
     n = loadDatFile("sample/CLARK_Y.dat", x, y);
-    
+
     foil = std::make_unique<XFoil>();
 
     if (!foil->initXFoilGeometry(n, x, y, nx, ny)) {
@@ -63,28 +64,28 @@ protected:
       std::cout << "Initialization error!" << std::endl;
     }
 
-    for (int i=1; i<=foil->n; i++) {
+    for (int i = 1; i <= foil->n; i++) {
       Vector2d plot = foil->points.row(i);
       plots.push_back(plot);
     }
-  }  
+  }
 };
 
 TEST_F(DatGoogleTest, test_cang) {
-  //when
+  // when
   double actual = foil->cang(foil->points);
 
-  //then
+  // then
   ASSERT_DOUBLE_EQ(9.9742071999702819, actual);
 }
 TEST(cfl_test, hk_over_5_5) {
-  //given
+  // given
   XFoil foil;
 
-  //when
+  // when
   XFoil::C_f actual = foil.cfl(6.0, 1E+5);
 
-  //then
+  // then
   ASSERT_DOUBLE_EQ(-6.8333333333333339e-07, actual.cf);
   ASSERT_DOUBLE_EQ(4.4444444444444448e-08, actual.hk);
   ASSERT_DOUBLE_EQ(6.833333333333334e-12, actual.rt);
@@ -92,12 +93,12 @@ TEST(cfl_test, hk_over_5_5) {
 }
 
 TEST(cfl_test, hk_under_5_5) {
-  //given
+  // given
   XFoil foil;
-  //when
+  // when
   XFoil::C_f actual = foil.cfl(4.0, 1E+5);
 
-  //then
+  // then
   ASSERT_DOUBLE_EQ(-2.0927500000000003e-07, actual.cf);
   ASSERT_DOUBLE_EQ(-1.0795950000000001e-06, actual.hk);
   ASSERT_DOUBLE_EQ(2.0927500000000003e-12, actual.rt);
@@ -105,31 +106,31 @@ TEST(cfl_test, hk_under_5_5) {
 }
 
 TEST(cft_test, cal_cft) {
-  //given
+  // given
   XFoil foil;
-                
-  //when
+
+  // when
   XFoil::C_f actual = foil.cft(6.0, 1E+5, 0.01);
 
-  //then
+  // then
   ASSERT_DOUBLE_EQ(-0.00021874525090522493, actual.cf);
   ASSERT_DOUBLE_EQ(-2.2177015917117524e-06, actual.hk);
   ASSERT_DOUBLE_EQ(-9.7729505058686228e-13, actual.rt);
   ASSERT_DOUBLE_EQ(2.1840616807413529e-05, actual.msq);
 }
 
-//TODO blmidのリファクタリング
+// TODO blmidのリファクタリング
 TEST_F(DatGoogleTest, test_blmid_turbulent) {
-  //given
+  // given
   foil->blData1.hkz = foil->blData2.hkz = 6.0;
   foil->blData1.rtz = foil->blData2.rtz = 1E+5;
   foil->blData1.mz = foil->blData2.mz = 0.01;
-  
-  //when
+
+  // when
   XFoil::SkinFrictionCoefficients laminarCoeffs =
       foil->boundaryLayerWorkflow.blmid(*foil, FlowRegimeEnum::Laminar);
 
-  //then
+  // then
   ASSERT_DOUBLE_EQ(-6.8333333333333339e-07, laminarCoeffs.cfm);
   ASSERT_DOUBLE_EQ(0, laminarCoeffs.cfm_u1);
   ASSERT_DOUBLE_EQ(0, laminarCoeffs.cfm_t1);
@@ -144,16 +145,16 @@ TEST_F(DatGoogleTest, test_blmid_turbulent) {
 }
 
 TEST_F(DatGoogleTest, test_blmid_laminar) {
-  //given
+  // given
   foil->blData1.hkz = foil->blData2.hkz = 6.0;
   foil->blData1.rtz = foil->blData2.rtz = 1E+5;
   foil->blData1.mz = foil->blData2.mz = 0.01;
-  
-  //when
+
+  // when
   XFoil::SkinFrictionCoefficients turbulentCoeffs =
       foil->boundaryLayerWorkflow.blmid(*foil, FlowRegimeEnum::Turbulent);
 
-  //then
+  // then
   ASSERT_DOUBLE_EQ(-6.8333333333333339e-07, turbulentCoeffs.cfm);
   ASSERT_DOUBLE_EQ(0, turbulentCoeffs.cfm_u1);
   ASSERT_DOUBLE_EQ(0, turbulentCoeffs.cfm_t1);
@@ -168,16 +169,16 @@ TEST_F(DatGoogleTest, test_blmid_laminar) {
 }
 
 TEST_F(DatGoogleTest, test_blmid_turbulent_wake) {
-  //given
+  // given
   foil->blData1.hkz = foil->blData2.hkz = 6.0;
   foil->blData1.rtz = foil->blData2.rtz = 1E+5;
   foil->blData1.mz = foil->blData2.mz = 0.01;
-  
-  //when
+
+  // when
   XFoil::SkinFrictionCoefficients wakeCoeffs =
       foil->boundaryLayerWorkflow.blmid(*foil, FlowRegimeEnum::Wake);
 
-  //then
+  // then
   ASSERT_DOUBLE_EQ(0, wakeCoeffs.cfm);
   ASSERT_DOUBLE_EQ(0, wakeCoeffs.cfm_u1);
   ASSERT_DOUBLE_EQ(0, wakeCoeffs.cfm_t1);
@@ -192,18 +193,18 @@ TEST_F(DatGoogleTest, test_blmid_turbulent_wake) {
 }
 
 TEST_F(DatGoogleTest, test_blvar_cfz_wake) {
-  //given
+  // given
   foil->blData1.hkz = foil->blData2.hkz = 6.0;
   foil->blData1.rtz = foil->blData2.rtz = 1E+5;
   foil->blData1.mz = foil->blData2.mz = 0.01;
   foil->setBLInitialized(false);
   foil->ViscousIter();
 
-  //when
-  foil->blData2 = foil->boundaryLayerWorkflow.blvar(
-      *foil, foil->blData2, FlowRegimeEnum::Laminar);
+  // when
+  foil->blData2 = foil->boundaryLayerWorkflow.blvar(*foil, foil->blData2,
+                                                    FlowRegimeEnum::Laminar);
 
-  //then
+  // then
   ASSERT_EQ(0, foil->blData2.cfz_uz);
   ASSERT_EQ(0, foil->blData2.cfz_tz);
   ASSERT_EQ(0, foil->blData2.cfz_dz);
@@ -212,6 +213,6 @@ TEST_F(DatGoogleTest, test_blvar_cfz_wake) {
 }
 
 int main() {
-    testing::InitGoogleTest();
-    return RUN_ALL_TESTS();
+  testing::InitGoogleTest();
+  return RUN_ALL_TESTS();
 }

@@ -7,7 +7,7 @@
 #include "domain/coefficient/skin_friction.hpp"
 
 blData BoundaryLayerVariablesSolver::computeShapeParameters(
-    const blData& ref, FlowRegimeEnum flowRegimeType) const {
+    const blData &ref, FlowRegimeEnum flowRegimeType) const {
   blData result = ref;
 
   if (flowRegimeType == FlowRegimeEnum::Wake) {
@@ -15,7 +15,7 @@ blData BoundaryLayerVariablesSolver::computeShapeParameters(
   } else {
     result.hkz.scalar = std::max(result.hkz.scalar, 1.05000);
   }
-    
+
   const auto hct_result =
       boundary_layer::hct(result.hkz.scalar, result.param.mz);
   result.hcz.scalar = hct_result.hc;
@@ -39,8 +39,8 @@ blData BoundaryLayerVariablesSolver::computeShapeParameters(
   result.hsz.u() += hs_result.hs_msq * result.param.mz_uz;
   result.hsz.ms() += hs_result.hs_msq * result.param.mz_ms;
 
-  const double us2_hs2 = 0.5 *
-      (1.0 - (result.hkz.scalar - 1.0) / (kGbcon * result.param.hz));
+  const double us2_hs2 =
+      0.5 * (1.0 - (result.hkz.scalar - 1.0) / (kGbcon * result.param.hz));
   const double us2_hk2 =
       0.5 * result.hsz.scalar * (-1.0 / (kGbcon * result.param.hz));
   const double us2_h2 = 0.5 * result.hsz.scalar * (result.hkz.scalar - 1.0) /
@@ -48,15 +48,14 @@ blData BoundaryLayerVariablesSolver::computeShapeParameters(
 
   result.usz.scalar =
       0.5 * result.hsz.scalar *
-      (1.0 -
-       (result.hkz.scalar - 1.0) / (kGbcon * result.param.hz));
-  result.usz.vector =
-      us2_hs2 * result.hsz.vector + us2_hk2 * result.hkz.vector;
+      (1.0 - (result.hkz.scalar - 1.0) / (kGbcon * result.param.hz));
+  result.usz.vector = us2_hs2 * result.hsz.vector + us2_hk2 * result.hkz.vector;
   result.usz.t() += us2_h2 * result.param.hz_tz;
   result.usz.d() += us2_h2 * result.param.hz_dz;
 
   if (flowRegimeType == FlowRegimeEnum::Laminar ||
-      flowRegimeType == FlowRegimeEnum::Turbulent || flowRegimeType == FlowRegimeEnum::Transition) {
+      flowRegimeType == FlowRegimeEnum::Turbulent ||
+      flowRegimeType == FlowRegimeEnum::Transition) {
     if (result.usz.scalar > 0.95) {
       result.usz.scalar = 0.98;
       result.usz.vector = Eigen::Vector<double, 6>::Zero();
@@ -72,13 +71,14 @@ blData BoundaryLayerVariablesSolver::computeShapeParameters(
 }
 
 blData BoundaryLayerVariablesSolver::computeShearCoefficients(
-    const blData& ref, FlowRegimeEnum flowRegimeType) const {
+    const blData &ref, FlowRegimeEnum flowRegimeType) const {
   blData result = ref;
 
   double hkc = result.hkz.scalar - 1.0;
   double hkc_hk2 = 1.0;
   double hkc_rt2 = 0.0;
-  if (flowRegimeType == FlowRegimeEnum::Turbulent || flowRegimeType == FlowRegimeEnum::Transition) {
+  if (flowRegimeType == FlowRegimeEnum::Turbulent ||
+      flowRegimeType == FlowRegimeEnum::Transition) {
     const double gcc = kGccon;
     hkc = result.hkz.scalar - 1.0 - gcc / result.rtz.scalar;
     hkc_hk2 = 1.0;
@@ -94,20 +94,17 @@ blData BoundaryLayerVariablesSolver::computeShearCoefficients(
   double usb = 1.0 - result.usz.scalar;
   result.cqz.scalar =
       hkc / result.hkz.scalar *
-      std::sqrt(kCtcon * result.hsz.scalar * hkb /
-                (usb * result.param.hz));
+      std::sqrt(kCtcon * result.hsz.scalar * hkb / (usb * result.param.hz));
   double cq2_hs2 = result.cqz.scalar / result.hsz.scalar / 2;
   double cq2_us2 = result.cqz.scalar * (0.5 / usb);
   double cq2_hk2 =
-      result.cqz.scalar *
-      (0.5 / hkb - 1.0 / result.hkz.scalar + hkc_hk2 / hkc);
+      result.cqz.scalar * (0.5 / hkb - 1.0 / result.hkz.scalar + hkc_hk2 / hkc);
   double cq2_rt2 = result.cqz.scalar * (hkc_rt2 / hkc);
   double cq2_h2 = result.cqz.scalar * (-0.5 / result.param.hz);
 
   result.cqz.vector = cq2_hs2 * result.hsz.vector +
                       cq2_us2 * result.usz.vector +
-                      cq2_hk2 * result.hkz.vector +
-                      cq2_rt2 * result.rtz.vector;
+                      cq2_hk2 * result.hkz.vector + cq2_rt2 * result.rtz.vector;
   result.cqz.t() += cq2_h2 * result.param.hz_tz;
   result.cqz.d() += cq2_h2 * result.param.hz_dz;
 
@@ -115,17 +112,17 @@ blData BoundaryLayerVariablesSolver::computeShearCoefficients(
 }
 
 blData BoundaryLayerVariablesSolver::computeSkinFrictionCoefficients(
-    const blData& ref, FlowRegimeEnum flowRegimeType) const {
+    const blData &ref, FlowRegimeEnum flowRegimeType) const {
   blData result = ref;
 
-  const skin_friction::C_f c_f = skin_friction::getSkinFriction(result.hkz.scalar, result.rtz.scalar, result.param.mz, flowRegimeType);
+  const skin_friction::C_f c_f = skin_friction::getSkinFriction(
+      result.hkz.scalar, result.rtz.scalar, result.param.mz, flowRegimeType);
   result.cfz.scalar = c_f.cf;
   const double cf2_hk2 = c_f.hk;
   const double cf2_rt2 = c_f.rt;
   const double cf2_m2 = c_f.msq;
 
-  result.cfz.vector =
-      cf2_hk2 * result.hkz.vector + cf2_rt2 * result.rtz.vector;
+  result.cfz.vector = cf2_hk2 * result.hkz.vector + cf2_rt2 * result.rtz.vector;
   result.cfz.u() += cf2_m2 * result.param.mz_uz;
   result.cfz.ms() += cf2_m2 * result.param.mz_ms;
 
@@ -133,10 +130,11 @@ blData BoundaryLayerVariablesSolver::computeSkinFrictionCoefficients(
 }
 
 blData BoundaryLayerVariablesSolver::computeDissipation(
-    const blData& ref, FlowRegimeEnum flowRegimeType) const {
+    const blData &ref, FlowRegimeEnum flowRegimeType) const {
   blData result = ref;
   if (flowRegimeType == FlowRegimeEnum::Laminar) {
-    const auto dissipation_result = dissipation::getDissipation(result.hkz.scalar, result.rtz.scalar, flowRegimeType);
+    const auto dissipation_result = dissipation::getDissipation(
+        result.hkz.scalar, result.rtz.scalar, flowRegimeType);
     result.diz.scalar = dissipation_result.di;
     result.diz.vector = dissipation_result.di_hk * result.hkz.vector +
                         dissipation_result.di_rt * result.rtz.vector;
@@ -147,7 +145,8 @@ blData BoundaryLayerVariablesSolver::computeDissipation(
     result.diz.scalar = 0.0;
     result.diz.vector = Eigen::Vector<double, 6>::Zero();
   } else {
-    const auto c_ft = skin_friction::getSkinFriction(result.hkz.scalar, result.rtz.scalar, result.param.mz, flowRegimeType);
+    const auto c_ft = skin_friction::getSkinFriction(
+        result.hkz.scalar, result.rtz.scalar, result.param.mz, flowRegimeType);
     const double cf2t = c_ft.cf;
     const double cf2t_hk2 = c_ft.hk;
     const double cf2t_rt2 = c_ft.rt;
@@ -155,20 +154,17 @@ blData BoundaryLayerVariablesSolver::computeDissipation(
     Eigen::Vector<double, 6> cf2t_vector =
         cf2t_hk2 * result.hkz.vector + cf2t_rt2 * result.rtz.vector +
         Eigen::Vector<double, 6>{cf2t_m2 * result.param.mz_uz, 0, 0, 0,
-                                  cf2t_m2 * result.param.mz_ms, 0};
+                                 cf2t_m2 * result.param.mz_ms, 0};
 
     result.diz.scalar =
         (0.5 * cf2t * result.usz.scalar) * 2.0 / result.hsz.scalar;
-    double di2_hs2 =
-        -(0.5 * cf2t * result.usz.scalar) * 2.0 / result.hsz.scalar /
-        result.hsz.scalar;
+    double di2_hs2 = -(0.5 * cf2t * result.usz.scalar) * 2.0 /
+                     result.hsz.scalar / result.hsz.scalar;
     double di2_us2 = (0.5 * cf2t) * 2.0 / result.hsz.scalar;
-    const double di2_cf2t =
-        (0.5 * result.usz.scalar) * 2.0 / result.hsz.scalar;
+    const double di2_cf2t = (0.5 * result.usz.scalar) * 2.0 / result.hsz.scalar;
 
     result.diz.vector = di2_hs2 * result.hsz.vector +
-                        di2_us2 * result.usz.vector +
-                        di2_cf2t * cf2t_vector;
+                        di2_us2 * result.usz.vector + di2_cf2t * cf2t_vector;
 
     const double grt = std::log(result.rtz.scalar);
     const double hmin = 1.0 + 2.1 / grt;
@@ -185,46 +181,42 @@ blData BoundaryLayerVariablesSolver::computeDissipation(
     const double df_hk2 = df_fl * fl_hk2;
     const double df_rt2 = df_fl * fl_rt2;
 
-    result.diz.vector =
-        dfac * result.diz.vector +
-        result.diz.scalar *
-            (df_hk2 * result.hkz.vector + df_rt2 * result.rtz.vector);
+    result.diz.vector = dfac * result.diz.vector +
+                        result.diz.scalar * (df_hk2 * result.hkz.vector +
+                                             df_rt2 * result.rtz.vector);
     result.diz.re() -= df_rt2 * result.rtz.re();
 
     result.diz.scalar = result.diz.scalar * dfac;
   }
 
-  double dd = result.param.sz * result.param.sz *
-              (0.995 - result.usz.scalar) * 2.0 / result.hsz.scalar;
+  double dd = result.param.sz * result.param.sz * (0.995 - result.usz.scalar) *
+              2.0 / result.hsz.scalar;
   double dd_hs2 = -result.param.sz * result.param.sz *
-                  (0.995 - result.usz.scalar) * 2.0 /
-                  result.hsz.scalar / result.hsz.scalar;
-  double dd_us2 =
-      -result.param.sz * result.param.sz * 2.0 / result.hsz.scalar;
-  const double dd_s2 =
-      result.param.sz * 2.0 * (0.995 - result.usz.scalar) * 2.0 /
-      result.hsz.scalar;
+                  (0.995 - result.usz.scalar) * 2.0 / result.hsz.scalar /
+                  result.hsz.scalar;
+  double dd_us2 = -result.param.sz * result.param.sz * 2.0 / result.hsz.scalar;
+  const double dd_s2 = result.param.sz * 2.0 * (0.995 - result.usz.scalar) *
+                       2.0 / result.hsz.scalar;
 
   result.diz.scalar = result.diz.scalar + dd;
   result.diz.s() = dd_s2;
-  result.diz.vector =
-      result.diz.vector + dd_hs2 * result.hsz.vector +
-      dd_us2 * result.usz.vector;
+  result.diz.vector = result.diz.vector + dd_hs2 * result.hsz.vector +
+                      dd_us2 * result.usz.vector;
 
   dd = 0.15 * (0.995 - result.usz.scalar) * (0.995 - result.usz.scalar) /
-        result.rtz.scalar * 2.0 / result.hsz.scalar;
-  dd_us2 = -0.15 * (0.995 - result.usz.scalar) * 2.0 /
-            result.rtz.scalar * 2.0 / result.hsz.scalar;
+       result.rtz.scalar * 2.0 / result.hsz.scalar;
+  dd_us2 = -0.15 * (0.995 - result.usz.scalar) * 2.0 / result.rtz.scalar * 2.0 /
+           result.hsz.scalar;
   dd_hs2 = -dd / result.hsz.scalar;
   const double dd_rt2 = -dd / result.rtz.scalar;
 
   result.diz.scalar = result.diz.scalar + dd;
   result.diz.vector = result.diz.vector + dd_hs2 * result.hsz.vector +
-                      dd_us2 * result.usz.vector +
-                      dd_rt2 * result.rtz.vector;
-  
+                      dd_us2 * result.usz.vector + dd_rt2 * result.rtz.vector;
+
   if (flowRegimeType == FlowRegimeEnum::Wake) {
-    const auto dissipation_result = dissipation::getDissipation(result.hkz.scalar, result.rtz.scalar, flowRegimeType);
+    const auto dissipation_result = dissipation::getDissipation(
+        result.hkz.scalar, result.rtz.scalar, flowRegimeType);
     const double di2l = dissipation_result.di;
     if (di2l > result.diz.scalar) {
       result.diz.scalar = dissipation_result.di;
@@ -235,7 +227,8 @@ blData BoundaryLayerVariablesSolver::computeDissipation(
     result.diz.scalar = result.diz.scalar * 2.0;
     result.diz.vector *= 2;
   } else {
-        const auto dissipation_result = dissipation::getDissipation(result.hkz.scalar, result.rtz.scalar, flowRegimeType);
+    const auto dissipation_result = dissipation::getDissipation(
+        result.hkz.scalar, result.rtz.scalar, flowRegimeType);
     if (dissipation_result.di > result.diz.scalar) {
       result.diz.scalar = dissipation_result.di;
       result.diz.vector = dissipation_result.di_hk * result.hkz.vector +
@@ -246,14 +239,15 @@ blData BoundaryLayerVariablesSolver::computeDissipation(
   return result;
 }
 
-blData BoundaryLayerVariablesSolver::computeThickness(const blData& ref) const {
+blData BoundaryLayerVariablesSolver::computeThickness(const blData &ref) const {
   blData result = ref;
 
-  result.dez.scalar = (3.15 + 1.72 / (result.hkz.scalar - 1.0)) *
-                      result.param.tz + result.param.dz;
-  const double de2_hk2 = (-1.72 / (result.hkz.scalar - 1.0) /
-                          (result.hkz.scalar - 1.0)) *
-                         result.param.tz;
+  result.dez.scalar =
+      (3.15 + 1.72 / (result.hkz.scalar - 1.0)) * result.param.tz +
+      result.param.dz;
+  const double de2_hk2 =
+      (-1.72 / (result.hkz.scalar - 1.0) / (result.hkz.scalar - 1.0)) *
+      result.param.tz;
   result.dez.vector = de2_hk2 * result.hkz.vector;
   result.dez.t() += (3.15 + 1.72 / (result.hkz.scalar - 1.0));
   result.dez.d() += 1.0;
@@ -268,7 +262,9 @@ blData BoundaryLayerVariablesSolver::computeThickness(const blData& ref) const {
   return result;
 }
 
-blData BoundaryLayerVariablesSolver::solve(blData data, FlowRegimeEnum flowRegimeType) const {
+blData
+BoundaryLayerVariablesSolver::solve(blData data,
+                                    FlowRegimeEnum flowRegimeType) const {
   data = computeShapeParameters(data, flowRegimeType);
   data = computeShearCoefficients(data, flowRegimeType);
   data = computeSkinFrictionCoefficients(data, flowRegimeType);

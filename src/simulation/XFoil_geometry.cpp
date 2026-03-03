@@ -1,5 +1,5 @@
-#include "XFoil.h"
 #include "Eigen/Core"
+#include "XFoil.h"
 #include <algorithm>
 #include <numbers>
 
@@ -14,8 +14,7 @@ bool XFoil::abcopy(Matrix2Xd copyFrom) {
   //---- strip out doubled points
   int r = 1;
   while (r < point_count) {
-    const double delta_norm =
-        (copyFrom.col(r - 1) - copyFrom.col(r)).norm();
+    const double delta_norm = (copyFrom.col(r - 1) - copyFrom.col(r)).norm();
     if (delta_norm <= kPointMergeTolerance) {
       for (int j = r; j < point_count - 1; j++) {
         copyFrom.col(j) = copyFrom.col(j + 1);
@@ -32,8 +31,8 @@ bool XFoil::abcopy(Matrix2Xd copyFrom) {
   foil_points.leftCols(point_count) = copyFrom.leftCols(point_count);
 
   foil.foil_shape.n = point_count;
-  initialize();  
-  
+  initialize();
+
   foil = Foil(foil_points, point_count);
   foil.wake_shape.n = wake_point_count;
   updateTrailingEdgeState();
@@ -51,7 +50,10 @@ double XFoil::atanc(double y, double x, double thold) {
   tpi = 6.2831853071795864769;
   thnew = atan2(y, x);
   dmomentumThickness = thnew - thold;
-  dtcorr = dmomentumThickness - tpi * int((dmomentumThickness + sign(std::numbers::pi, dmomentumThickness)) / tpi);
+  dtcorr = dmomentumThickness -
+           tpi * int((dmomentumThickness +
+                      sign(std::numbers::pi, dmomentumThickness)) /
+                     tpi);
   return thold + dtcorr;
 }
 
@@ -87,8 +89,8 @@ void XFoil::updateTrailingEdgeState() {
 }
 
 bool XFoil::xyWake() {
-  if (!foil.xyWake(foil.wake_shape.n, aerodynamicCache.gamu, surface_vortex, analysis_state_.alpha,
-                   analysis_state_.qinf)) {
+  if (!foil.xyWake(foil.wake_shape.n, aerodynamicCache.gamu, surface_vortex,
+                   analysis_state_.alpha, analysis_state_.qinf)) {
     return false;
   }
   return true;

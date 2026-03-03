@@ -5,17 +5,17 @@
 #include <sstream>
 #include <string>
 
-#include "simulation/boundary_layer_state.hpp"
-#include "domain/coefficient/bl_newton.hpp"
-#include "domain/boundary_layer/boundary_layer_variables_solver.hpp"
 #include "domain/boundary_layer/bl_compressibility_params.hpp"
 #include "domain/boundary_layer/bl_reynolds_params.hpp"
 #include "domain/boundary_layer/bl_transition_params.hpp"
-#include "simulation/skin_friction_coefficients.hpp"
 #include "domain/boundary_layer/boundary_layer_diff_solver.hpp"
+#include "domain/boundary_layer/boundary_layer_variables_solver.hpp"
+#include "domain/coefficient/bl_newton.hpp"
+#include "domain/flow_regime.hpp"
 #include "simulation/BoundaryLayer_transition.hpp"
 #include "simulation/boundary_layer_geometry.hpp"
-#include "domain/flow_regime.hpp"
+#include "simulation/boundary_layer_state.hpp"
+#include "simulation/skin_friction_coefficients.hpp"
 
 struct FlowState;
 struct AeroCoefficients;
@@ -24,7 +24,7 @@ struct SetblOutputView;
 class Foil;
 class Edge;
 class BoundaryLayerWorkflow {
- public:
+public:
   BoundaryLayerWorkflow();
 
   BoundaryLayerVariablesSolver boundaryLayerVariablesSolver;
@@ -38,10 +38,7 @@ class BoundaryLayerWorkflow {
   // Sutherland's const./T0 (assumes stagnation conditions are at STP).
   static constexpr double kHvrat = 0.35;
 
-  enum class EdgeVelocityFallbackMode {
-    UsePreviousStation,
-    AverageNeighbors
-  };
+  enum class EdgeVelocityFallbackMode { UsePreviousStation, AverageNeighbors };
   struct EdgeVelocityDistribution {
     SidePair<Eigen::VectorXd> unew;
     SidePair<Eigen::VectorXd> u_ac;
@@ -200,100 +197,102 @@ class BoundaryLayerWorkflow {
   };
 
   bool isStartOfWake(int side, int stationIndex);
-  void updateSystemMatricesForStation(const Edge& edge, int side,
+  void updateSystemMatricesForStation(const Edge &edge, int side,
                                       int stationIndex,
-                                      MixedModeStationContext& ctx);
+                                      MixedModeStationContext &ctx);
   void initializeFirstIterationState(int side, int stationIndex,
                                      int previousTransition,
-                                     MixedModeStationContext& ctx,
-                                     double& ueref, double& hkref);
+                                     MixedModeStationContext &ctx,
+                                     double &ueref, double &hkref);
   void configureSimilarityRow(double ueref);
-  void configureViscousRow(double hkref, double ueref,
-                           double senswt, bool resetSensitivity,
-                           bool averageSensitivity, double& sens,
-                           double& sennew);
-  bool applyMixedModeNewtonStep(int side, int stationIndex,
-                                double& ami,
-                                MixedModeStationContext& ctx);
-  void checkTransitionIfNeeded(int side, int stationIndex,
-                               bool skipCheck, int laminarAdvance,
-                               double& ami);
-  SimilarityStationCoefficients resetSimilarityStationCoefficients(
-      const Eigen::VectorXd& u_m1, const Eigen::VectorXd& d_m1) const;
-  SideSweepInitResult initializeSideSweepState(
-      const Foil& foil, const StagnationResult& stagnation, int is) const;
-  StationPrimaryVars loadStationPrimaryVars(int is, int ibl,
-                                            bool stationIsWake,
-                                            const SetblOutputView& output,
-                                            double ami,
-                                            double cti) const;
+  void configureViscousRow(double hkref, double ueref, double senswt,
+                           bool resetSensitivity, bool averageSensitivity,
+                           double &sens, double &sennew);
+  bool applyMixedModeNewtonStep(int side, int stationIndex, double &ami,
+                                MixedModeStationContext &ctx);
+  void checkTransitionIfNeeded(int side, int stationIndex, bool skipCheck,
+                               int laminarAdvance, double &ami);
+  SimilarityStationCoefficients
+  resetSimilarityStationCoefficients(const Eigen::VectorXd &u_m1,
+                                     const Eigen::VectorXd &d_m1) const;
+  SideSweepInitResult
+  initializeSideSweepState(const Foil &foil, const StagnationResult &stagnation,
+                           int is) const;
+  StationPrimaryVars loadStationPrimaryVars(int is, int ibl, bool stationIsWake,
+                                            const SetblOutputView &output,
+                                            double ami, double cti) const;
   StationUpdateResult updateStationMatricesAndState(
-      int is, int ibl, int iv, const StationPrimaryVars& vars,
-      const SidePair<Eigen::VectorXd>& usav, const SetblOutputView& output,
-      const BoundaryLayerState& base_state, int system_size,
-      const Eigen::MatrixXd& dij);
-  void buildTransitionLog(
-      bool stationIsTransitionCandidate, FlowRegimeEnum flowRegime) const;
+      int is, int ibl, int iv, const StationPrimaryVars &vars,
+      const SidePair<Eigen::VectorXd> &usav, const SetblOutputView &output,
+      const BoundaryLayerState &base_state, int system_size,
+      const Eigen::MatrixXd &dij);
+  void buildTransitionLog(bool stationIsTransitionCandidate,
+                          FlowRegimeEnum flowRegime) const;
   TeWakeUpdateResult computeTeWakeCoefficients(
-      int is, int ibl, const SidePair<Eigen::VectorXd>& usav,
-      const SidePair<Eigen::VectorXd>& ute_m, const SidePair<int>& jvte,
-      const Eigen::VectorXd& d_m1_template, const SetblOutputView& output,
-      const Edge& edge) const;
-  TeWakeJacobianAdjustments computeTeWakeJacobianAdjustments(
-      const TeWakeCoefficients& coeffs) const;
+      int is, int ibl, const SidePair<Eigen::VectorXd> &usav,
+      const SidePair<Eigen::VectorXd> &ute_m, const SidePair<int> &jvte,
+      const Eigen::VectorXd &d_m1_template, const SetblOutputView &output,
+      const Edge &edge) const;
+  TeWakeJacobianAdjustments
+  computeTeWakeJacobianAdjustments(const TeWakeCoefficients &coeffs) const;
   EdgeVelocitySensitivityResult prepareEdgeVelocityAndSensitivities(
       SidePairRef<const BoundaryLayerSideProfiles> profiles,
-      const Eigen::MatrixXd& dij, int nsys) const;
+      const Eigen::MatrixXd &dij, int nsys) const;
   LeTeSensitivities computeLeTeSensitivities(int ile1, int ile2, int ite1,
                                              int ite2, int nsys,
-                                             const Eigen::MatrixXd& dij) const;
-  StationArraysAdvanceResult advanceStationArrays(
-      const Eigen::VectorXd& u_m2, const Eigen::VectorXd& d_m2, double u_a2,
-      double d_a2, double due2, double dds2) const;
-  BlReferenceParams computeBlReferenceParams(
-      const FlowState& analysis_state, const AeroCoefficients& aero_coeffs,
-      double acrit) const;
-  void initializeSetblSystemStorage(
-      SetblOutputView& output, std::array<SetblStation, 2>& stations,
-      SetblSideData& sideData) const;
-  void initializeSetblReferenceParams(
-      const FlowState& analysis_state, const AeroCoefficients& aero_coeffs,
-      double acrit, SetblOutputView& output, double& re_clmr,
-      double& msq_clmr, double& currentMach, double& currentRe);
-  void initializeSetblProfiles(SetblOutputView& output) const;
+                                             const Eigen::MatrixXd &dij) const;
+  StationArraysAdvanceResult advanceStationArrays(const Eigen::VectorXd &u_m2,
+                                                  const Eigen::VectorXd &d_m2,
+                                                  double u_a2, double d_a2,
+                                                  double due2,
+                                                  double dds2) const;
+  BlReferenceParams
+  computeBlReferenceParams(const FlowState &analysis_state,
+                           const AeroCoefficients &aero_coeffs,
+                           double acrit) const;
+  void initializeSetblSystemStorage(SetblOutputView &output,
+                                    std::array<SetblStation, 2> &stations,
+                                    SetblSideData &sideData) const;
+  void initializeSetblReferenceParams(const FlowState &analysis_state,
+                                      const AeroCoefficients &aero_coeffs,
+                                      double acrit, SetblOutputView &output,
+                                      double &re_clmr, double &msq_clmr,
+                                      double &currentMach, double &currentRe);
+  void initializeSetblProfiles(SetblOutputView &output) const;
   void initializeSetblEdgeVelocityState(
       SidePairRef<const BoundaryLayerSideProfiles> profiles,
-      const Eigen::MatrixXd& dij, SetblOutputView& output,
-      SetblSideData& sideData) const;
-  void processSetblSide(
-      Marcher& marcher, int side, const Foil& foil,
-      const StagnationResult& stagnation, bool controlByAlpha,
-      const Eigen::MatrixXd& dij, SetblOutputView& output,
-      std::array<SetblStation, 2>& stations, SetblSideData& sideData,
-      double& cti, double& ami, double re_clmr, double msq_clmr);
-  SetblOutputView setbl(
-      SidePairRef<const BoundaryLayerSideProfiles> profiles,
-      const FlowState& analysis_state, const AeroCoefficients& aero_coeffs,
-      double acrit, const Foil& foil, const StagnationResult& stagnation,
-      const Eigen::MatrixXd& dij, bool bl_initialized);
-  void applySetblOutput(SetblOutputView& output);
-  void assembleBlJacobianForStation(
-      int is, int iv, int nsys,
-      const std::array<SetblStation, 2>& setblStations,
-      const SetblSideData& setblSides, bool controlByAlpha, double re_clmr,
-      double msq_clmr, SetblOutputView& output);
+      const Eigen::MatrixXd &dij, SetblOutputView &output,
+      SetblSideData &sideData) const;
+  void processSetblSide(Marcher &marcher, int side, const Foil &foil,
+                        const StagnationResult &stagnation, bool controlByAlpha,
+                        const Eigen::MatrixXd &dij, SetblOutputView &output,
+                        std::array<SetblStation, 2> &stations,
+                        SetblSideData &sideData, double &cti, double &ami,
+                        double re_clmr, double msq_clmr);
+  SetblOutputView setbl(SidePairRef<const BoundaryLayerSideProfiles> profiles,
+                        const FlowState &analysis_state,
+                        const AeroCoefficients &aero_coeffs, double acrit,
+                        const Foil &foil, const StagnationResult &stagnation,
+                        const Eigen::MatrixXd &dij, bool bl_initialized);
+  void applySetblOutput(SetblOutputView &output);
+  void
+  assembleBlJacobianForStation(int is, int iv, int nsys,
+                               const std::array<SetblStation, 2> &setblStations,
+                               const SetblSideData &setblSides,
+                               bool controlByAlpha, double re_clmr,
+                               double msq_clmr, SetblOutputView &output);
   SkinFrictionCoefficients blmid(FlowRegimeEnum flowRegimeType);
-  blData blprv(blData data, double xsi, double ami, double cti,
-               double thi, double dsi, double dswaki, double uei) const;
+  blData blprv(blData data, double xsi, double ami, double cti, double thi,
+               double dsi, double dswaki, double uei) const;
   bool blsys();
-  SidePair<Eigen::VectorXd> ueset(const Eigen::MatrixXd& dij) const;
+  SidePair<Eigen::VectorXd> ueset(const Eigen::MatrixXd &dij) const;
 
-  bool blkin(BoundaryLayerState& state);
-  bool tesys(const BoundaryLayerSideProfiles& top_profiles,
-             const BoundaryLayerSideProfiles& bottom_profiles,
-             const Edge& edge);
+  bool blkin(BoundaryLayerState &state);
+  bool tesys(const BoundaryLayerSideProfiles &top_profiles,
+             const BoundaryLayerSideProfiles &bottom_profiles,
+             const Edge &edge);
   double calcHtarg(int ibl, int is, bool wake);
-  double xifset(const Foil& foil, const StagnationResult& stagnation,
+  double xifset(const Foil &foil, const StagnationResult &stagnation,
                 int is) const;
 
 private:

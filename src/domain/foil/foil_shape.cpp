@@ -21,7 +21,8 @@ Eigen::Matrix2Xd FoilShape::calcDPointsDs() const {
   return result;
 }
 
-Eigen::Matrix2Xd FoilShape::calcNormalVector(const Eigen::Matrix2Xd &dpoints_ds) const {
+Eigen::Matrix2Xd
+FoilShape::calcNormalVector(const Eigen::Matrix2Xd &dpoints_ds) const {
   Eigen::Matrix2Xd normal_vector = Eigen::Matrix2Xd::Zero(2, n);
   if (n == 0) {
     return normal_vector;
@@ -51,11 +52,11 @@ Eigen::VectorXd FoilShape::calcAnglePanel() const {
   }
   return result;
 }
-FoilShape::FoilShape(const Eigen::Matrix2Xd& points, int n) {
+FoilShape::FoilShape(const Eigen::Matrix2Xd &points, int n) {
   setFoilShape(points, n);
 }
 
-void FoilShape::setFoilShape(const Eigen::Matrix2Xd& points, int n) {
+void FoilShape::setFoilShape(const Eigen::Matrix2Xd &points, int n) {
   this->points = points;
   this->n = n;
   this->spline_length = calcSpline();

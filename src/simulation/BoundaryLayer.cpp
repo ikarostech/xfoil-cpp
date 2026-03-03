@@ -8,13 +8,13 @@
 #include <sstream>
 #include <string>
 
-#include "domain/boundary_layer/boundary_layer_builder.hpp"
-#include "domain/coefficient/skin_friction.hpp"
-#include "domain/flow_state.hpp"
-#include "domain/coefficient/aero_coefficients.hpp"
-#include "infrastructure/logger.hpp"
 #include "core/boundary_layer_util.hpp"
 #include "core/math_util.hpp"
+#include "domain/boundary_layer/boundary_layer_builder.hpp"
+#include "domain/coefficient/aero_coefficients.hpp"
+#include "domain/coefficient/skin_friction.hpp"
+#include "domain/flow_state.hpp"
+#include "infrastructure/logger.hpp"
 
 using BoundaryContext = BoundaryLayerWorkflow::MixedModeStationContext;
 using Eigen::Matrix;
@@ -38,35 +38,35 @@ double BoundaryLayerWorkflow::adjustDisplacementForHkLimit(
   return displacementThickness + dh * momentumThickness;
 }
 
-bool BoundaryLayerWorkflow::blkin(BoundaryLayerState& state) {
+bool BoundaryLayerWorkflow::blkin(BoundaryLayerState &state) {
   //----------------------------------------------------------
   //     calculates turbulence-independent secondary "2"
   //     variables from the primary "2" variables.
   //----------------------------------------------------------
-  //BlCompressibilityParams& blCompressibility = this->blCompressibility;
-  //BlReynoldsParams& blReynolds = this->blReynolds;
-  blData& current = state.current();
+  // BlCompressibilityParams& blCompressibility = this->blCompressibility;
+  // BlReynoldsParams& blReynolds = this->blReynolds;
+  blData &current = state.current();
   //---- set edge mach number ** 2
-  current.param.mz =
-      current.param.uz * current.param.uz * blCompressibility.hstinv /
-      (blCompressibility.gm1bl *
-       (1.0 - 0.5 * current.param.uz * current.param.uz * blCompressibility.hstinv));
+  current.param.mz = current.param.uz * current.param.uz *
+                     blCompressibility.hstinv /
+                     (blCompressibility.gm1bl *
+                      (1.0 - 0.5 * current.param.uz * current.param.uz *
+                                 blCompressibility.hstinv));
   double tr2 = 1.0 + 0.5 * blCompressibility.gm1bl * current.param.mz;
   current.param.mz_uz = 2.0 * current.param.mz * tr2 / current.param.uz;
-  current.param.mz_ms =
-      current.param.uz * current.param.uz * tr2 /
-      (blCompressibility.gm1bl *
-       (1.0 - 0.5 * current.param.uz * current.param.uz * blCompressibility.hstinv)) *
-      blCompressibility.hstinv_ms;
+  current.param.mz_ms = current.param.uz * current.param.uz * tr2 /
+                        (blCompressibility.gm1bl *
+                         (1.0 - 0.5 * current.param.uz * current.param.uz *
+                                    blCompressibility.hstinv)) *
+                        blCompressibility.hstinv_ms;
 
   //---- set edge density (isentropic relation)
   current.param.rz =
-      blCompressibility.rstbl *
-      pow(tr2, (-1.0 / blCompressibility.gm1bl));
+      blCompressibility.rstbl * pow(tr2, (-1.0 / blCompressibility.gm1bl));
   current.param.rz_uz = -current.param.rz / tr2 * 0.5 * current.param.mz_uz;
-  current.param.rz_ms = -current.param.rz / tr2 * 0.5 * current.param.mz_ms +
-                        blCompressibility.rstbl_ms *
-                            pow(tr2, (-1.0 / blCompressibility.gm1bl));
+  current.param.rz_ms =
+      -current.param.rz / tr2 * 0.5 * current.param.mz_ms +
+      blCompressibility.rstbl_ms * pow(tr2, (-1.0 / blCompressibility.gm1bl));
 
   //---- set shape parameter
   current.param.hz = current.param.dz / current.param.tz;
@@ -74,8 +74,8 @@ bool BoundaryLayerWorkflow::blkin(BoundaryLayerState& state) {
   current.param.hz_tz = -current.param.hz / current.param.tz;
 
   //---- set edge static/stagnation enthalpy
-  double herat =
-      1.0 - 0.5 * current.param.uz * current.param.uz * blCompressibility.hstinv;
+  double herat = 1.0 - 0.5 * current.param.uz * current.param.uz *
+                           blCompressibility.hstinv;
   double he_u2 = -current.param.uz * blCompressibility.hstinv;
   double he_ms =
       -0.5 * current.param.uz * current.param.uz * blCompressibility.hstinv_ms;
@@ -93,18 +93,17 @@ bool BoundaryLayerWorkflow::blkin(BoundaryLayerState& state) {
   current.hkz.ms() = hkin_result.hk_msq * current.param.mz_ms;
 
   //---- set momentum thickness reynolds number
-  current.rtz.scalar =
-      current.param.rz * current.param.uz * current.param.tz /
-      (sqrt(herat * herat * herat) * (1.0 + kHvrat) / (herat + kHvrat) /
-       blReynolds.reybl);
+  current.rtz.scalar = current.param.rz * current.param.uz * current.param.tz /
+                       (sqrt(herat * herat * herat) * (1.0 + kHvrat) /
+                        (herat + kHvrat) / blReynolds.reybl);
   current.rtz.u() = current.rtz.scalar *
                     (1.0 / current.param.uz +
                      current.param.rz_uz / current.param.rz - v2_he * he_u2);
   current.rtz.t() = current.rtz.scalar / current.param.tz;
   current.rtz.ms() =
-      current.rtz.scalar * (current.param.rz_ms / current.param.rz +
-                            (1 / blReynolds.reybl * blReynolds.reybl_ms -
-                             v2_he * he_ms));
+      current.rtz.scalar *
+      (current.param.rz_ms / current.param.rz +
+       (1 / blReynolds.reybl * blReynolds.reybl_ms - v2_he * he_ms));
   current.rtz.re() =
       current.rtz.scalar * (blReynolds.reybl_re / blReynolds.reybl);
 
@@ -116,17 +115,28 @@ bool BoundaryLayerWorkflow::isStartOfWake(int side, int stationIndex) {
 }
 
 void BoundaryLayerWorkflow::updateSystemMatricesForStation(
-    const Edge& edge, int side, int stationIndex, BoundaryContext& ctx) {
+    const Edge &edge, int side, int stationIndex, BoundaryContext &ctx) {
   if (isStartOfWake(side, stationIndex)) {
-    ctx.tte = lattice.get(1).profiles.momentumThickness[lattice.top.trailingEdgeIndex] +
-              lattice.get(2).profiles.momentumThickness[lattice.bottom.trailingEdgeIndex];
-    ctx.dte = lattice.get(1).profiles.displacementThickness[lattice.top.trailingEdgeIndex] +
-              lattice.get(2).profiles.displacementThickness[lattice.bottom.trailingEdgeIndex] + edge.ante;
+    ctx.tte = lattice.get(1)
+                  .profiles.momentumThickness[lattice.top.trailingEdgeIndex] +
+              lattice.get(2)
+                  .profiles.momentumThickness[lattice.bottom.trailingEdgeIndex];
+    ctx.dte =
+        lattice.get(1)
+            .profiles.displacementThickness[lattice.top.trailingEdgeIndex] +
+        lattice.get(2)
+            .profiles.displacementThickness[lattice.bottom.trailingEdgeIndex] +
+        edge.ante;
     ctx.cte =
-        (lattice.get(1).profiles.skinFrictionCoeff[lattice.top.trailingEdgeIndex] *
-             lattice.get(1).profiles.momentumThickness[lattice.top.trailingEdgeIndex] +
-         lattice.get(2).profiles.skinFrictionCoeff[lattice.bottom.trailingEdgeIndex] *
-             lattice.get(2).profiles.momentumThickness[lattice.bottom.trailingEdgeIndex]) /
+        (lattice.get(1)
+                 .profiles.skinFrictionCoeff[lattice.top.trailingEdgeIndex] *
+             lattice.get(1)
+                 .profiles.momentumThickness[lattice.top.trailingEdgeIndex] +
+         lattice.get(2)
+                 .profiles.skinFrictionCoeff[lattice.bottom.trailingEdgeIndex] *
+             lattice.get(2)
+                 .profiles
+                 .momentumThickness[lattice.bottom.trailingEdgeIndex]) /
         ctx.tte;
     tesys(lattice.top.profiles, lattice.bottom.profiles, edge);
   } else {
@@ -135,23 +145,27 @@ void BoundaryLayerWorkflow::updateSystemMatricesForStation(
 }
 
 void BoundaryLayerWorkflow::initializeFirstIterationState(
-    int side, int stationIndex, int previousTransition,
-    BoundaryContext& ctx, double& ueref, double& hkref) {
+    int side, int stationIndex, int previousTransition, BoundaryContext &ctx,
+    double &ueref, double &hkref) {
   ueref = state.station2.param.uz;
   hkref = state.station2.hkz.scalar;
 
-  if (stationIndex < lattice.get(side).profiles.transitionIndex && stationIndex >= previousTransition) {
-    const double uem = lattice.get(side).profiles.edgeVelocity[std::max(0, stationIndex - 1)];
-    const double dsm = lattice.get(side).profiles.displacementThickness[std::max(0, stationIndex - 1)];
-    const double thm = lattice.get(side).profiles.momentumThickness[std::max(0, stationIndex - 1)];
+  if (stationIndex < lattice.get(side).profiles.transitionIndex &&
+      stationIndex >= previousTransition) {
+    const double uem =
+        lattice.get(side).profiles.edgeVelocity[std::max(0, stationIndex - 1)];
+    const double dsm =
+        lattice.get(side)
+            .profiles.displacementThickness[std::max(0, stationIndex - 1)];
+    const double thm =
+        lattice.get(side)
+            .profiles.momentumThickness[std::max(0, stationIndex - 1)];
 
     const double uem_sq = uem * uem;
-    const double msq =
-        uem_sq * blCompressibility.hstinv /
-        (blCompressibility.gm1bl *
-         (1.0 - 0.5 * uem_sq * blCompressibility.hstinv));
-    const auto hkin_result =
-        boundary_layer::hkin(dsm / thm, msq);
+    const double msq = uem_sq * blCompressibility.hstinv /
+                       (blCompressibility.gm1bl *
+                        (1.0 - 0.5 * uem_sq * blCompressibility.hstinv));
+    const auto hkin_result = boundary_layer::hkin(dsm / thm, msq);
     hkref = hkin_result.hk;
   }
 
@@ -159,9 +173,12 @@ void BoundaryLayerWorkflow::initializeFirstIterationState(
     if (flowRegime == FlowRegimeEnum::Transition) {
       lattice.get(side).profiles.skinFrictionCoeff[stationIndex] = 0.03;
     } else {
-      lattice.get(side).profiles.skinFrictionCoeff[stationIndex] = lattice.get(side).profiles.skinFrictionCoeff[std::max(0, stationIndex - 1)];
+      lattice.get(side).profiles.skinFrictionCoeff[stationIndex] =
+          lattice.get(side)
+              .profiles.skinFrictionCoeff[std::max(0, stationIndex - 1)];
     }
-    ctx.cti = lattice.get(side).profiles.skinFrictionCoeff[std::max(0, stationIndex - 1)];
+    ctx.cti = lattice.get(side)
+                  .profiles.skinFrictionCoeff[std::max(0, stationIndex - 1)];
     state.station2.param.sz = ctx.cti;
   }
 }
@@ -174,11 +191,11 @@ void BoundaryLayerWorkflow::configureSimilarityRow(double ueref) {
   blc.rhs[3] = ueref - state.station2.param.uz;
 }
 
-void BoundaryLayerWorkflow::configureViscousRow(double hkref,
-                                                double ueref, double senswt,
+void BoundaryLayerWorkflow::configureViscousRow(double hkref, double ueref,
+                                                double senswt,
                                                 bool resetSensitivity,
                                                 bool averageSensitivity,
-                                                double& sens, double& sennew) {
+                                                double &sens, double &sennew) {
   blc.a2(3, 0) = 0.0;
   blc.a2(3, 1) = state.station2.hkz.t();
   blc.a2(3, 2) = state.station2.hkz.d();
@@ -197,24 +214,21 @@ void BoundaryLayerWorkflow::configureViscousRow(double hkref,
 
   blc.a2(3, 1) = state.station2.hkz.t() * hkref;
   blc.a2(3, 2) = state.station2.hkz.d() * hkref;
-  blc.a2(3, 3) =
-      (state.station2.hkz.u() * hkref + sens / ueref) * state.station2.param.uz_uei;
-  blc.rhs[3] =
-      -(hkref * hkref) * (state.station2.hkz.scalar / hkref - 1.0) -
-      sens * (state.station2.param.uz / ueref - 1.0);
+  blc.a2(3, 3) = (state.station2.hkz.u() * hkref + sens / ueref) *
+                 state.station2.param.uz_uei;
+  blc.rhs[3] = -(hkref * hkref) * (state.station2.hkz.scalar / hkref - 1.0) -
+               sens * (state.station2.param.uz / ueref - 1.0);
 }
 
-bool BoundaryLayerWorkflow::applyMixedModeNewtonStep(
-    int side, int stationIndex, double& ami,
-    BoundaryContext& ctx) {
-  blc.rhs =
-      blc.a2.block(0, 0, 4, 4).fullPivLu().solve(blc.rhs);
+bool BoundaryLayerWorkflow::applyMixedModeNewtonStep(int side, int stationIndex,
+                                                     double &ami,
+                                                     BoundaryContext &ctx) {
+  blc.rhs = blc.a2.block(0, 0, 4, 4).fullPivLu().solve(blc.rhs);
 
   ctx.dmax = std::max(std::fabs(blc.rhs[1] / ctx.thi),
                       std::fabs(blc.rhs[2] / ctx.dsi));
   if (stationIndex >= lattice.get(side).profiles.transitionIndex) {
-    ctx.dmax = std::max(ctx.dmax,
-                        std::fabs(blc.rhs[0] / (10.0 * ctx.cti)));
+    ctx.dmax = std::max(ctx.dmax, std::fabs(blc.rhs[0] / (10.0 * ctx.cti)));
   }
 
   double rlx = 1.0;
@@ -240,10 +254,9 @@ bool BoundaryLayerWorkflow::applyMixedModeNewtonStep(
   const double hklim =
       (stationIndex <= lattice.get(side).trailingEdgeIndex) ? 1.02 : 1.00005;
   const double uei_sq = ctx.uei * ctx.uei;
-  const double msq =
-      uei_sq * blCompressibility.hstinv /
-      (blCompressibility.gm1bl *
-       (1.0 - 0.5 * uei_sq * blCompressibility.hstinv));
+  const double msq = uei_sq * blCompressibility.hstinv /
+                     (blCompressibility.gm1bl *
+                      (1.0 - 0.5 * uei_sq * blCompressibility.hstinv));
   double dsw = ctx.dsi - ctx.dswaki;
   dsw = adjustDisplacementForHkLimit(dsw, ctx.thi, msq, hklim);
   ctx.dsi = dsw + ctx.dswaki;
@@ -251,10 +264,10 @@ bool BoundaryLayerWorkflow::applyMixedModeNewtonStep(
   return ctx.dmax <= kMixedModeConvergenceTolerance;
 }
 
-SkinFrictionCoefficients BoundaryLayerWorkflow::blmid(
-    FlowRegimeEnum flowRegimeType) {
-  blData& previous = state.previous();
-  blData& current = state.current();
+SkinFrictionCoefficients
+BoundaryLayerWorkflow::blmid(FlowRegimeEnum flowRegimeType) {
+  blData &previous = state.previous();
+  blData &current = state.current();
 
   if (flowRegimeType == FlowRegimeEnum::Similarity) {
     previous.hkz = current.hkz;
@@ -277,34 +290,32 @@ SkinFrictionCoefficients BoundaryLayerWorkflow::blmid(
   const double cfm_rta = cf_res.rt;
   const double cfm_ma = cf_res.msq;
 
-  coeffs.cfm_u1 = 0.5 * (cfm_hka * previous.hkz.u() +
-                         cfm_ma * previous.param.mz_uz +
-                         cfm_rta * previous.rtz.u());
-  coeffs.cfm_t1 = 0.5 * (cfm_hka * previous.hkz.t() +
-                         cfm_rta * previous.rtz.t());
+  coeffs.cfm_u1 =
+      0.5 * (cfm_hka * previous.hkz.u() + cfm_ma * previous.param.mz_uz +
+             cfm_rta * previous.rtz.u());
+  coeffs.cfm_t1 =
+      0.5 * (cfm_hka * previous.hkz.t() + cfm_rta * previous.rtz.t());
   coeffs.cfm_d1 = 0.5 * (cfm_hka * previous.hkz.d());
 
-  coeffs.cfm_u2 = 0.5 * (cfm_hka * current.hkz.u() +
-                         cfm_ma * current.param.mz_uz +
-                         cfm_rta * current.rtz.u());
-  coeffs.cfm_t2 = 0.5 * (cfm_hka * current.hkz.t() +
-                         cfm_rta * current.rtz.t());
+  coeffs.cfm_u2 =
+      0.5 * (cfm_hka * current.hkz.u() + cfm_ma * current.param.mz_uz +
+             cfm_rta * current.rtz.u());
+  coeffs.cfm_t2 = 0.5 * (cfm_hka * current.hkz.t() + cfm_rta * current.rtz.t());
   coeffs.cfm_d2 = 0.5 * (cfm_hka * current.hkz.d());
 
   coeffs.cfm_ms =
       0.5 * (cfm_hka * previous.hkz.ms() + cfm_ma * previous.param.mz_ms +
              cfm_rta * previous.rtz.ms() + cfm_hka * current.hkz.ms() +
              cfm_ma * current.param.mz_ms + cfm_rta * current.rtz.ms());
-  coeffs.cfm_re = 0.5 * (cfm_rta * previous.rtz.re() +
-                         cfm_rta * current.rtz.re());
+  coeffs.cfm_re =
+      0.5 * (cfm_rta * previous.rtz.re() + cfm_rta * current.rtz.re());
 
   return coeffs;
 }
 
-blData BoundaryLayerWorkflow::blprv(blData data, double xsi,
-                                    double ami, double cti, double thi,
-                                    double dsi, double dswaki,
-                                    double uei) const {
+blData BoundaryLayerWorkflow::blprv(blData data, double xsi, double ami,
+                                    double cti, double thi, double dsi,
+                                    double dswaki, double uei) const {
   data.param.xz = xsi;
   data.param.amplz = ami;
   data.param.sz = cti;
@@ -318,26 +329,24 @@ blData BoundaryLayerWorkflow::blprv(blData data, double xsi,
                  (uei / blCompressibility.qinfbl));
   data.param.uz_uei =
       (1.0 + blCompressibility.tkbl *
-                (2.0 * data.param.uz * uei / blCompressibility.qinfbl /
-                     blCompressibility.qinfbl -
-                 1.0)) /
-      (1.0 - blCompressibility.tkbl *
-                 (uei / blCompressibility.qinfbl) *
+                 (2.0 * data.param.uz * uei / blCompressibility.qinfbl /
+                      blCompressibility.qinfbl -
+                  1.0)) /
+      (1.0 - blCompressibility.tkbl * (uei / blCompressibility.qinfbl) *
                  (uei / blCompressibility.qinfbl));
   data.param.uz_ms =
       (data.param.uz * (uei / blCompressibility.qinfbl) *
            (uei / blCompressibility.qinfbl) -
        uei) *
       blCompressibility.tkbl_ms /
-      (1.0 - blCompressibility.tkbl *
-                 (uei / blCompressibility.qinfbl) *
+      (1.0 - blCompressibility.tkbl * (uei / blCompressibility.qinfbl) *
                  (uei / blCompressibility.qinfbl));
   return data;
 }
 
 bool BoundaryLayerWorkflow::blsys() {
-  blData& previous = state.previous();
-  blData& current = state.current();
+  blData &previous = state.previous();
+  blData &current = state.current();
 
   SkinFrictionCoefficients skinFriction = blmid(flowRegime);
   current = boundaryLayerVariablesSolver.solve(current, flowRegime);
@@ -372,11 +381,11 @@ bool BoundaryLayerWorkflow::blsys() {
   return true;
 }
 
-
 double BoundaryLayerWorkflow::calcHtarg(int ibl, int is, bool wake) {
   if (ibl < lattice.get(is).profiles.transitionIndex) {
     return state.station1.hkz.scalar +
-           0.03 * (state.station2.param.xz - state.station1.param.xz) / state.station1.param.tz;
+           0.03 * (state.station2.param.xz - state.station1.param.xz) /
+               state.station1.param.tz;
   }
 
   if (ibl == lattice.get(is).profiles.transitionIndex) {
@@ -387,8 +396,9 @@ double BoundaryLayerWorkflow::calcHtarg(int ibl, int is, bool wake) {
   }
 
   if (wake) {
-    const double cst =
-        0.03 * (state.station2.param.xz - state.station1.param.xz) / state.station1.param.tz;
+    const double cst = 0.03 *
+                       (state.station2.param.xz - state.station1.param.xz) /
+                       state.station1.param.tz;
     auto euler = [](double hk2, double hk1, double cst_local) {
       return hk2 - (hk2 + cst_local * pow(hk2 - 1, 3) - hk1) /
                        (1 + 3 * cst_local * pow(hk2 - 1, 2));
@@ -402,13 +412,13 @@ double BoundaryLayerWorkflow::calcHtarg(int ibl, int is, bool wake) {
   }
 
   return state.station1.hkz.scalar -
-         0.15 * (state.station2.param.xz - state.station1.param.xz) / state.station1.param.tz;
+         0.15 * (state.station2.param.xz - state.station1.param.xz) /
+             state.station1.param.tz;
 }
 
-
-bool BoundaryLayerWorkflow::tesys(const BoundaryLayerSideProfiles& top_profiles,
-                                  const BoundaryLayerSideProfiles& bottom_profiles,
-                                  const Edge& edge) {
+bool BoundaryLayerWorkflow::tesys(
+    const BoundaryLayerSideProfiles &top_profiles,
+    const BoundaryLayerSideProfiles &bottom_profiles, const Edge &edge) {
   blc.clear();
 
   state.station2 =
@@ -416,18 +426,16 @@ bool BoundaryLayerWorkflow::tesys(const BoundaryLayerSideProfiles& top_profiles,
 
   const int top_te = lattice.top.trailingEdgeIndex;
   const int bottom_te = lattice.bottom.trailingEdgeIndex;
-  const double tte =
-      top_profiles.momentumThickness[top_te] +
-      bottom_profiles.momentumThickness[bottom_te];
-  const double dte =
-      top_profiles.displacementThickness[top_te] +
-      bottom_profiles.displacementThickness[bottom_te] + edge.ante;
-  const double cte =
-      (top_profiles.skinFrictionCoeff[top_te] *
-           top_profiles.momentumThickness[top_te] +
-       bottom_profiles.skinFrictionCoeff[bottom_te] *
-           bottom_profiles.momentumThickness[bottom_te]) /
-      tte;
+  const double tte = top_profiles.momentumThickness[top_te] +
+                     bottom_profiles.momentumThickness[bottom_te];
+  const double dte = top_profiles.displacementThickness[top_te] +
+                     bottom_profiles.displacementThickness[bottom_te] +
+                     edge.ante;
+  const double cte = (top_profiles.skinFrictionCoeff[top_te] *
+                          top_profiles.momentumThickness[top_te] +
+                      bottom_profiles.skinFrictionCoeff[bottom_te] *
+                          bottom_profiles.momentumThickness[bottom_te]) /
+                     tte;
 
   blc.a1(0, 0) = -1.0;
   blc.a2(0, 0) = 1.0;
@@ -444,7 +452,7 @@ bool BoundaryLayerWorkflow::tesys(const BoundaryLayerSideProfiles& top_profiles,
   return true;
 }
 
-void BoundaryLayerWorkflow::applySetblOutput(SetblOutputView& output) {
+void BoundaryLayerWorkflow::applySetblOutput(SetblOutputView &output) {
   blCompressibility = output.blCompressibility;
   blReynolds = output.blReynolds;
   lattice.top.profiles = std::move(output.profiles.top);
@@ -453,9 +461,10 @@ void BoundaryLayerWorkflow::applySetblOutput(SetblOutputView& output) {
   blTransition = output.blTransition;
 }
 
-void BoundaryLayerWorkflow::checkTransitionIfNeeded(
-    int side, int stationIndex, bool skipCheck,
-    int laminarAdvance, double& ami) {
+void BoundaryLayerWorkflow::checkTransitionIfNeeded(int side, int stationIndex,
+                                                    bool skipCheck,
+                                                    int laminarAdvance,
+                                                    double &ami) {
   if (skipCheck || flowRegime == FlowRegimeEnum::Turbulent ||
       flowRegime == FlowRegimeEnum::Wake) {
     return;
@@ -466,14 +475,13 @@ void BoundaryLayerWorkflow::checkTransitionIfNeeded(
   if (flowRegime == FlowRegimeEnum::Transition) {
     lattice.get(side).profiles.transitionIndex = stationIndex;
   } else {
-    lattice.get(side).profiles.transitionIndex =
-        stationIndex + laminarAdvance;
+    lattice.get(side).profiles.transitionIndex = stationIndex + laminarAdvance;
   }
 }
 
 BoundaryLayerWorkflow::BlReferenceParams
 BoundaryLayerWorkflow::computeBlReferenceParams(
-    const FlowState& analysis_state, const AeroCoefficients& aero_coeffs,
+    const FlowState &analysis_state, const AeroCoefficients &aero_coeffs,
     double acrit) const {
   BlReferenceParams params;
   double clmr = 0.0;
@@ -546,48 +554,44 @@ BoundaryLayerWorkflow::computeBlReferenceParams(
 
   //---- stagnation density and 1/enthalpy
   params.blCompressibility.rstbl =
-      pow((1.0 + 0.5 * params.blCompressibility.gm1bl *
-                       params.currentMach * params.currentMach),
+      pow((1.0 + 0.5 * params.blCompressibility.gm1bl * params.currentMach *
+                     params.currentMach),
           (1.0 / params.blCompressibility.gm1bl));
   params.blCompressibility.rstbl_ms =
       0.5 * params.blCompressibility.rstbl /
-      (1.0 + 0.5 * params.blCompressibility.gm1bl *
-                 params.currentMach * params.currentMach);
+      (1.0 + 0.5 * params.blCompressibility.gm1bl * params.currentMach *
+                 params.currentMach);
   params.blCompressibility.hstinv =
       params.blCompressibility.gm1bl *
-      MathUtil::pow(params.currentMach / params.blCompressibility.qinfbl,
-                    2) /
-      (1.0 + 0.5 * params.blCompressibility.gm1bl *
-                 params.currentMach * params.currentMach);
+      MathUtil::pow(params.currentMach / params.blCompressibility.qinfbl, 2) /
+      (1.0 + 0.5 * params.blCompressibility.gm1bl * params.currentMach *
+                 params.currentMach);
   params.blCompressibility.hstinv_ms =
       params.blCompressibility.gm1bl *
           MathUtil::pow(1.0 / params.blCompressibility.qinfbl, 2) /
-          (1.0 + 0.5 * params.blCompressibility.gm1bl *
-                     params.currentMach * params.currentMach) -
-      0.5 * params.blCompressibility.gm1bl *
-          params.blCompressibility.hstinv /
-          (1.0 + 0.5 * params.blCompressibility.gm1bl *
-                     params.currentMach * params.currentMach);
+          (1.0 + 0.5 * params.blCompressibility.gm1bl * params.currentMach *
+                     params.currentMach) -
+      0.5 * params.blCompressibility.gm1bl * params.blCompressibility.hstinv /
+          (1.0 + 0.5 * params.blCompressibility.gm1bl * params.currentMach *
+                     params.currentMach);
 
   //---- set reynolds number based on freestream density, velocity, viscosity
   herat = 1.0 - 0.5 * params.blCompressibility.qinfbl *
-                     params.blCompressibility.qinfbl *
-                     params.blCompressibility.hstinv;
+                    params.blCompressibility.qinfbl *
+                    params.blCompressibility.hstinv;
   herat_ms = -0.5 * params.blCompressibility.qinfbl *
              params.blCompressibility.qinfbl *
              params.blCompressibility.hstinv_ms;
 
-  params.blReynolds.reybl =
-      params.currentRe * sqrt(herat * herat * herat) *
-      (1.0 + BoundaryLayerWorkflow::kHvrat) /
-      (herat + BoundaryLayerWorkflow::kHvrat);
+  params.blReynolds.reybl = params.currentRe * sqrt(herat * herat * herat) *
+                            (1.0 + BoundaryLayerWorkflow::kHvrat) /
+                            (herat + BoundaryLayerWorkflow::kHvrat);
   params.blReynolds.reybl_re = sqrt(herat * herat * herat) *
                                (1.0 + BoundaryLayerWorkflow::kHvrat) /
                                (herat + BoundaryLayerWorkflow::kHvrat);
   params.blReynolds.reybl_ms =
       params.blReynolds.reybl *
-      (1.5 / herat - 1.0 / (herat + BoundaryLayerWorkflow::kHvrat)) *
-      herat_ms;
+      (1.5 / herat - 1.0 / (herat + BoundaryLayerWorkflow::kHvrat)) * herat_ms;
 
   params.amcrit = acrit;
   return params;
@@ -596,26 +600,25 @@ BoundaryLayerWorkflow::computeBlReferenceParams(
 BoundaryLayerWorkflow::EdgeVelocitySensitivityResult
 BoundaryLayerWorkflow::prepareEdgeVelocityAndSensitivities(
     SidePairRef<const BoundaryLayerSideProfiles> profiles,
-    const Eigen::MatrixXd& dij, int nsys) const {
+    const Eigen::MatrixXd &dij, int nsys) const {
   EdgeVelocitySensitivityResult result;
 
   result.edgeVelocity = ueset(dij);
   result.outputEdgeVelocity.top = profiles.top.edgeVelocity;
   result.outputEdgeVelocity.bottom = profiles.bottom.edgeVelocity;
 
-  result.jvte.top =
-      lattice.top.stationToSystem[lattice.top.trailingEdgeIndex];
+  result.jvte.top = lattice.top.stationToSystem[lattice.top.trailingEdgeIndex];
   result.jvte.bottom =
       lattice.bottom.stationToSystem[lattice.bottom.trailingEdgeIndex];
 
-  result.dule.top = result.outputEdgeVelocity.top[0] - result.edgeVelocity.top[0];
+  result.dule.top =
+      result.outputEdgeVelocity.top[0] - result.edgeVelocity.top[0];
   result.dule.bottom =
       result.outputEdgeVelocity.bottom[0] - result.edgeVelocity.bottom[0];
 
   //---- set le and te ue sensitivities wrt all m values
   const auto le_te_sensitivities = computeLeTeSensitivities(
-      lattice.get(1).stationToPanel[0],
-      lattice.get(2).stationToPanel[0],
+      lattice.get(1).stationToPanel[0], lattice.get(2).stationToPanel[0],
       lattice.get(1).stationToPanel[lattice.top.trailingEdgeIndex],
       lattice.get(2).stationToPanel[lattice.bottom.trailingEdgeIndex], nsys,
       dij);
@@ -628,14 +631,13 @@ BoundaryLayerWorkflow::prepareEdgeVelocityAndSensitivities(
 }
 
 void BoundaryLayerWorkflow::assembleBlJacobianForStation(
-    int is, int iv, int nsys,
-    const std::array<SetblStation, 2>& setblStations,
-    const SetblSideData& setblSides, bool controlByAlpha, double re_clmr,
-    double msq_clmr, SetblOutputView& output) {
+    int is, int iv, int nsys, const std::array<SetblStation, 2> &setblStations,
+    const SetblSideData &setblSides, bool controlByAlpha, double re_clmr,
+    double msq_clmr, SetblOutputView &output) {
 
   output.bl_newton_system.vb[iv] = blc.a1.block(0, 0, 3, 2);
   output.bl_newton_system.va[iv] = blc.a2.block(0, 0, 3, 2);
-  
+
   Eigen::Matrix<double, 3, 4> A;
   A.col(0) = blc.a1.col(3).head<3>();
   A.col(1) = blc.a1.col(2).head<3>();
@@ -643,10 +645,9 @@ void BoundaryLayerWorkflow::assembleBlJacobianForStation(
   A.col(3) = blc.a2.col(2).head<3>();
 
   Eigen::Matrix<double, 4, 2> B;
-  B << setblStations[0].due, setblStations[0].u_a,
-       setblStations[0].dds, setblStations[0].d_a,
-       setblStations[1].due, setblStations[1].u_a,
-       setblStations[1].dds, setblStations[1].d_a;
+  B << setblStations[0].due, setblStations[0].u_a, setblStations[0].dds,
+      setblStations[0].d_a, setblStations[1].due, setblStations[1].u_a,
+      setblStations[1].dds, setblStations[1].d_a;
   const Eigen::Vector3d ax =
       (blc.a1.col(4) + blc.a2.col(4) + blc.d_xi).head<3>();
   const Eigen::RowVector2d xi =
@@ -657,14 +658,10 @@ void BoundaryLayerWorkflow::assembleBlJacobianForStation(
   output.bl_newton_system.vdel[iv] = A * B + ax * xi;
 
   for (int jv = 1; jv < nsys; jv++) {
-    const Eigen::Vector4d m(
-        setblStations[0].u_m(jv),
-        setblStations[0].d_m(jv),
-        setblStations[1].u_m(jv),
-        setblStations[1].d_m(jv));
-    const double xi_m =
-        setblStations[0].xi_ule * setblSides.ule_m.get(1)(jv) +
-        setblStations[1].xi_ule * setblSides.ule_m.get(2)(jv);
+    const Eigen::Vector4d m(setblStations[0].u_m(jv), setblStations[0].d_m(jv),
+                            setblStations[1].u_m(jv), setblStations[1].d_m(jv));
+    const double xi_m = setblStations[0].xi_ule * setblSides.ule_m.get(1)(jv) +
+                        setblStations[1].xi_ule * setblSides.ule_m.get(2)(jv);
     const Eigen::Vector3d vm = A * m + ax * xi_m;
     output.bl_newton_system.vm.at(0, jv, iv) = vm[0];
     output.bl_newton_system.vm.at(1, jv, iv) = vm[1];
@@ -673,20 +670,18 @@ void BoundaryLayerWorkflow::assembleBlJacobianForStation(
 
   if (controlByAlpha) {
     output.bl_newton_system.vdel[iv].col(1).head<3>() =
-      (blc.d_re.head(3)) * re_clmr +
-      (blc.d_msq.head(3)) * msq_clmr;
+        (blc.d_re.head(3)) * re_clmr + (blc.d_msq.head(3)) * msq_clmr;
   }
 }
 
 BoundaryLayerWorkflow::SimilarityStationCoefficients
 BoundaryLayerWorkflow::resetSimilarityStationCoefficients(
-    const VectorXd& u_m1, const VectorXd& d_m1) const {
+    const VectorXd &u_m1, const VectorXd &d_m1) const {
   SimilarityStationCoefficients result;
   result.u_m1 = u_m1;
   result.d_m1 = d_m1;
   for (int js = 1; js <= 2; ++js) {
-    for (int jbl = 0; jbl < lattice.get(js).stationCount - 1;
-         ++jbl) {
+    for (int jbl = 0; jbl < lattice.get(js).stationCount - 1; ++jbl) {
       const int jv = lattice.get(js).stationToSystem[jbl];
       result.u_m1[jv] = 0.0;
       result.d_m1[jv] = 0.0;
@@ -697,7 +692,7 @@ BoundaryLayerWorkflow::resetSimilarityStationCoefficients(
 
 BoundaryLayerWorkflow::SideSweepInitResult
 BoundaryLayerWorkflow::initializeSideSweepState(
-    const Foil& foil, const StagnationResult& stagnation, int is) const {
+    const Foil &foil, const StagnationResult &stagnation, int is) const {
   SideSweepInitResult result;
   result.u_a1 = 0.0;
   result.d_a1 = 0.0;
@@ -708,9 +703,10 @@ BoundaryLayerWorkflow::initializeSideSweepState(
 }
 
 BoundaryLayerWorkflow::StationPrimaryVars
-BoundaryLayerWorkflow::loadStationPrimaryVars(
-    int is, int ibl, bool stationIsWake, const SetblOutputView& output,
-    double ami, double cti) const {
+BoundaryLayerWorkflow::loadStationPrimaryVars(int is, int ibl,
+                                              bool stationIsWake,
+                                              const SetblOutputView &output,
+                                              double ami, double cti) const {
   StationPrimaryVars vars;
   vars.xsi = lattice.get(is).arcLengthCoordinates[ibl];
 
@@ -741,10 +737,10 @@ BoundaryLayerWorkflow::loadStationPrimaryVars(
 
 BoundaryLayerWorkflow::StationUpdateResult
 BoundaryLayerWorkflow::updateStationMatricesAndState(
-    int is, int ibl, int iv, const StationPrimaryVars& vars,
-    const SidePair<VectorXd>& usav, const SetblOutputView& output,
-    const BoundaryLayerState& base_state, int system_size,
-    const Eigen::MatrixXd& dij) {
+    int is, int ibl, int iv, const StationPrimaryVars &vars,
+    const SidePair<VectorXd> &usav, const SetblOutputView &output,
+    const BoundaryLayerState &base_state, int system_size,
+    const Eigen::MatrixXd &dij) {
   StationUpdateResult result;
   const double d2_m2 = 1.0 / vars.uei;
   const double d2_u2 = -vars.dsi / vars.uei;
@@ -752,21 +748,18 @@ BoundaryLayerWorkflow::updateStationMatricesAndState(
   result.u_m2 = VectorXd::Zero(system_size);
   result.d_m2 = VectorXd::Zero(system_size);
   for (int js = 1; js <= 2; js++) {
-    for (int jbl = 0;
-         jbl < lattice.get(js).stationCount - 1; ++jbl) {
+    for (int jbl = 0; jbl < lattice.get(js).stationCount - 1; ++jbl) {
       int jv = lattice.get(js).stationToSystem[jbl];
-      result.u_m2[jv] =
-          -lattice.get(is).panelInfluenceFactor[ibl] *
-          lattice.get(js).panelInfluenceFactor[jbl] *
-          dij(lattice.get(is).stationToPanel[ibl],
-              lattice.get(js).stationToPanel[jbl]);
+      result.u_m2[jv] = -lattice.get(is).panelInfluenceFactor[ibl] *
+                        lattice.get(js).panelInfluenceFactor[jbl] *
+                        dij(lattice.get(is).stationToPanel[ibl],
+                            lattice.get(js).stationToPanel[jbl]);
       result.d_m2[jv] = d2_u2 * result.u_m2[jv];
     }
   }
   result.d_m2[iv] = result.d_m2[iv] + d2_m2;
 
-  result.u_a2 =
-      lattice.get(is).inviscidEdgeVelocityMatrix(1, ibl);
+  result.u_a2 = lattice.get(is).inviscidEdgeVelocityMatrix(1, ibl);
   result.d_a2 = d2_u2 * result.u_a2;
 
   // "forced" changes from mismatch between edge velocities and usav
@@ -781,13 +774,12 @@ BoundaryLayerWorkflow::updateStationMatricesAndState(
   return result;
 }
 
-void BoundaryLayerWorkflow::buildTransitionLog(bool stationIsTransitionCandidate,
-                                          FlowRegimeEnum flowRegime) const {
+void BoundaryLayerWorkflow::buildTransitionLog(
+    bool stationIsTransitionCandidate, FlowRegimeEnum flowRegime) const {
   if (stationIsTransitionCandidate &&
       flowRegime != FlowRegimeEnum::Transition) {
     std::stringstream ss;
-    ss << "setbl: xtr???  n1="
-       << state.station1.param.amplz
+    ss << "setbl: xtr???  n1=" << state.station1.param.amplz
        << " n2=" << state.station2.param.amplz << ":\n";
     Logger::instance().write(ss.str());
   }
@@ -795,10 +787,10 @@ void BoundaryLayerWorkflow::buildTransitionLog(bool stationIsTransitionCandidate
 
 BoundaryLayerWorkflow::TeWakeUpdateResult
 BoundaryLayerWorkflow::computeTeWakeCoefficients(
-    int is, int ibl, const SidePair<VectorXd>& usav,
-    const SidePair<VectorXd>& ute_m, const SidePair<int>& jvte,
-    const VectorXd& d_m1_template, const SetblOutputView& output,
-    const Edge& edge) const {
+    int is, int ibl, const SidePair<VectorXd> &usav,
+    const SidePair<VectorXd> &ute_m, const SidePair<int> &jvte,
+    const VectorXd &d_m1_template, const SetblOutputView &output,
+    const Edge &edge) const {
   TeWakeUpdateResult result;
   if (ibl != lattice.get(is).trailingEdgeIndex + 1) {
     return result;
@@ -806,88 +798,78 @@ BoundaryLayerWorkflow::computeTeWakeCoefficients(
   result.isStartOfWake = true;
 
   result.coeffs.tte =
-      output.profiles.get(1).momentumThickness[
-          lattice.top.trailingEdgeIndex] +
-      output.profiles.get(2).momentumThickness[
-          lattice.bottom.trailingEdgeIndex];
+      output.profiles.get(1).momentumThickness[lattice.top.trailingEdgeIndex] +
+      output.profiles.get(2)
+          .momentumThickness[lattice.bottom.trailingEdgeIndex];
   result.coeffs.dte =
-      output.profiles.get(1).displacementThickness[
-          lattice.top.trailingEdgeIndex] +
-      output.profiles.get(2).displacementThickness[
-          lattice.bottom.trailingEdgeIndex] +
+      output.profiles.get(1)
+          .displacementThickness[lattice.top.trailingEdgeIndex] +
+      output.profiles.get(2)
+          .displacementThickness[lattice.bottom.trailingEdgeIndex] +
       edge.ante;
   result.coeffs.cte =
-      (output.profiles.get(1).skinFrictionCoeff[
-           lattice.top.trailingEdgeIndex] *
-           output.profiles.get(1).momentumThickness[
-               lattice.top.trailingEdgeIndex] +
-       output.profiles.get(2).skinFrictionCoeff[
-           lattice.bottom.trailingEdgeIndex] *
-           output.profiles.get(2).momentumThickness[
-               lattice.bottom.trailingEdgeIndex]) /
+      (output.profiles.get(1).skinFrictionCoeff[lattice.top.trailingEdgeIndex] *
+           output.profiles.get(1)
+               .momentumThickness[lattice.top.trailingEdgeIndex] +
+       output.profiles.get(2)
+               .skinFrictionCoeff[lattice.bottom.trailingEdgeIndex] *
+           output.profiles.get(2)
+               .momentumThickness[lattice.bottom.trailingEdgeIndex]) /
       result.coeffs.tte;
 
   result.coeffs.tte_tte1 = 1.0;
   result.coeffs.tte_tte2 = 1.0;
   result.coeffs.dte_mte1 =
-      1.0 /
-      output.profiles.top.edgeVelocity[lattice.top.trailingEdgeIndex];
+      1.0 / output.profiles.top.edgeVelocity[lattice.top.trailingEdgeIndex];
   result.coeffs.dte_ute1 =
-      -output.profiles.get(1).displacementThickness[
-           lattice.top.trailingEdgeIndex] /
+      -output.profiles.get(1)
+           .displacementThickness[lattice.top.trailingEdgeIndex] /
       output.profiles.top.edgeVelocity[lattice.top.trailingEdgeIndex];
   result.coeffs.dte_mte2 =
       1.0 /
       output.profiles.bottom.edgeVelocity[lattice.bottom.trailingEdgeIndex];
   result.coeffs.dte_ute2 =
-      -output.profiles.get(2).displacementThickness[
-           lattice.bottom.trailingEdgeIndex] /
+      -output.profiles.get(2)
+           .displacementThickness[lattice.bottom.trailingEdgeIndex] /
       output.profiles.bottom.edgeVelocity[lattice.bottom.trailingEdgeIndex];
   result.coeffs.cte_cte1 =
-      output.profiles.get(1).momentumThickness[
-          lattice.top.trailingEdgeIndex] /
+      output.profiles.get(1).momentumThickness[lattice.top.trailingEdgeIndex] /
       result.coeffs.tte;
   result.coeffs.cte_cte2 =
-      output.profiles.get(2).momentumThickness[
-          lattice.bottom.trailingEdgeIndex] /
+      output.profiles.get(2)
+          .momentumThickness[lattice.bottom.trailingEdgeIndex] /
       result.coeffs.tte;
   result.coeffs.cte_tte1 =
-      (output.profiles.get(1).skinFrictionCoeff[
-           lattice.top.trailingEdgeIndex] -
+      (output.profiles.get(1).skinFrictionCoeff[lattice.top.trailingEdgeIndex] -
        result.coeffs.cte) /
       result.coeffs.tte;
   result.coeffs.cte_tte2 =
-      (output.profiles.get(2).skinFrictionCoeff[
-           lattice.bottom.trailingEdgeIndex] -
+      (output.profiles.get(2)
+           .skinFrictionCoeff[lattice.bottom.trailingEdgeIndex] -
        result.coeffs.cte) /
       result.coeffs.tte;
 
   // Re-define d1 sensitivities wrt m since d1 depends on both te ds values.
   result.d_m1 = d_m1_template;
   for (int js = 1; js <= 2; js++) {
-    for (int jbl = 0;
-         jbl < lattice.get(js).stationCount - 1; ++jbl) {
+    for (int jbl = 0; jbl < lattice.get(js).stationCount - 1; ++jbl) {
       int jv = lattice.get(js).stationToSystem[jbl];
-      result.d_m1[jv] =
-          result.coeffs.dte_ute1 * ute_m.get(1)[jv] +
-          result.coeffs.dte_ute2 * ute_m.get(2)[jv];
+      result.d_m1[jv] = result.coeffs.dte_ute1 * ute_m.get(1)[jv] +
+                        result.coeffs.dte_ute2 * ute_m.get(2)[jv];
     }
   }
-  result.d_m1[jvte.get(1)] =
-      result.d_m1[jvte.get(1)] + result.coeffs.dte_mte1;
-  result.d_m1[jvte.get(2)] =
-      result.d_m1[jvte.get(2)] + result.coeffs.dte_mte2;
+  result.d_m1[jvte.get(1)] = result.d_m1[jvte.get(1)] + result.coeffs.dte_mte1;
+  result.d_m1[jvte.get(2)] = result.d_m1[jvte.get(2)] + result.coeffs.dte_mte2;
 
   // "forced" changes from edge velocity mismatch
   result.due1 = 0.0;
   result.dds1 =
       result.coeffs.dte_ute1 *
-          (output.profiles.top.edgeVelocity[
-               lattice.top.trailingEdgeIndex] -
+          (output.profiles.top.edgeVelocity[lattice.top.trailingEdgeIndex] -
            usav.top[lattice.top.trailingEdgeIndex]) +
       result.coeffs.dte_ute2 *
-          (output.profiles.bottom.edgeVelocity[
-               lattice.bottom.trailingEdgeIndex] -
+          (output.profiles.bottom
+               .edgeVelocity[lattice.bottom.trailingEdgeIndex] -
            usav.bottom[lattice.bottom.trailingEdgeIndex]);
 
   return result;
@@ -895,34 +877,34 @@ BoundaryLayerWorkflow::computeTeWakeCoefficients(
 
 BoundaryLayerWorkflow::TeWakeJacobianAdjustments
 BoundaryLayerWorkflow::computeTeWakeJacobianAdjustments(
-    const TeWakeCoefficients& coeffs) const {
+    const TeWakeCoefficients &coeffs) const {
   TeWakeJacobianAdjustments result;
   result.vz[0][0] = blc.a1(0, 0) * coeffs.cte_cte1;
-  result.vz[0][1] = blc.a1(0, 0) * coeffs.cte_tte1 +
-                    blc.a1(0, 1) * coeffs.tte_tte1;
+  result.vz[0][1] =
+      blc.a1(0, 0) * coeffs.cte_tte1 + blc.a1(0, 1) * coeffs.tte_tte1;
   result.vb(0, 0) = blc.a1(0, 0) * coeffs.cte_cte2;
-  result.vb(0, 1) = blc.a1(0, 0) * coeffs.cte_tte2 +
-                    blc.a1(0, 1) * coeffs.tte_tte2;
+  result.vb(0, 1) =
+      blc.a1(0, 0) * coeffs.cte_tte2 + blc.a1(0, 1) * coeffs.tte_tte2;
 
   result.vz[1][0] = blc.a1(1, 0) * coeffs.cte_cte1;
-  result.vz[1][1] = blc.a1(1, 0) * coeffs.cte_tte1 +
-                    blc.a1(1, 1) * coeffs.tte_tte1;
+  result.vz[1][1] =
+      blc.a1(1, 0) * coeffs.cte_tte1 + blc.a1(1, 1) * coeffs.tte_tte1;
   result.vb(1, 0) = blc.a1(1, 0) * coeffs.cte_cte2;
-  result.vb(1, 1) = blc.a1(1, 0) * coeffs.cte_tte2 +
-                    blc.a1(1, 1) * coeffs.tte_tte2;
+  result.vb(1, 1) =
+      blc.a1(1, 0) * coeffs.cte_tte2 + blc.a1(1, 1) * coeffs.tte_tte2;
 
   result.vz[2][0] = blc.a1(2, 0) * coeffs.cte_cte1;
-  result.vz[2][1] = blc.a1(2, 0) * coeffs.cte_tte1 +
-                    blc.a1(2, 1) * coeffs.tte_tte1;
+  result.vz[2][1] =
+      blc.a1(2, 0) * coeffs.cte_tte1 + blc.a1(2, 1) * coeffs.tte_tte1;
   result.vb(2, 0) = blc.a1(2, 0) * coeffs.cte_cte2;
-  result.vb(2, 1) = blc.a1(2, 0) * coeffs.cte_tte2 +
-                    blc.a1(2, 1) * coeffs.tte_tte2;
+  result.vb(2, 1) =
+      blc.a1(2, 0) * coeffs.cte_tte2 + blc.a1(2, 1) * coeffs.tte_tte2;
   return result;
 }
 
 BoundaryLayerWorkflow::StationArraysAdvanceResult
-BoundaryLayerWorkflow::advanceStationArrays(const VectorXd& u_m2,
-                                            const VectorXd& d_m2, double u_a2,
+BoundaryLayerWorkflow::advanceStationArrays(const VectorXd &u_m2,
+                                            const VectorXd &d_m2, double u_a2,
                                             double d_a2, double due2,
                                             double dds2) const {
   StationArraysAdvanceResult result;
@@ -936,9 +918,9 @@ BoundaryLayerWorkflow::advanceStationArrays(const VectorXd& u_m2,
 }
 
 void BoundaryLayerWorkflow::initializeSetblReferenceParams(
-    const FlowState& analysis_state, const AeroCoefficients& aero_coeffs,
-    double acrit, SetblOutputView& output, double& re_clmr, double& msq_clmr,
-    double& currentMach, double& currentRe) {
+    const FlowState &analysis_state, const AeroCoefficients &aero_coeffs,
+    double acrit, SetblOutputView &output, double &re_clmr, double &msq_clmr,
+    double &currentMach, double &currentRe) {
   auto reference_params =
       computeBlReferenceParams(analysis_state, aero_coeffs, acrit);
   currentMach = reference_params.currentMach;
@@ -954,8 +936,8 @@ void BoundaryLayerWorkflow::initializeSetblReferenceParams(
 }
 
 void BoundaryLayerWorkflow::initializeSetblSystemStorage(
-    SetblOutputView& output, std::array<SetblStation, 2>& stations,
-    SetblSideData& sideData) const {
+    SetblOutputView &output, std::array<SetblStation, 2> &stations,
+    SetblSideData &sideData) const {
   const auto zero = Eigen::Matrix<double, 3, 2>::Zero();
   output.bl_newton_system.vm.resize(nsys);
   output.bl_newton_system.va.resize(nsys, zero);
@@ -967,17 +949,16 @@ void BoundaryLayerWorkflow::initializeSetblSystemStorage(
 }
 
 void BoundaryLayerWorkflow::initializeSetblProfiles(
-    SetblOutputView& output) const {
+    SetblOutputView &output) const {
   output.profiles.top = lattice.top.profiles;
   output.profiles.bottom = lattice.bottom.profiles;
 }
 
 void BoundaryLayerWorkflow::initializeSetblEdgeVelocityState(
     SidePairRef<const BoundaryLayerSideProfiles> profiles,
-    const Eigen::MatrixXd& dij, SetblOutputView& output,
-    SetblSideData& sideData) const {
-  auto edge_result =
-      prepareEdgeVelocityAndSensitivities(profiles, dij, nsys);
+    const Eigen::MatrixXd &dij, SetblOutputView &output,
+    SetblSideData &sideData) const {
+  auto edge_result = prepareEdgeVelocityAndSensitivities(profiles, dij, nsys);
   sideData.usav = edge_result.edgeVelocity;
   sideData.jvte = edge_result.jvte;
   sideData.dule = edge_result.dule;
@@ -989,11 +970,11 @@ void BoundaryLayerWorkflow::initializeSetblEdgeVelocityState(
 }
 
 void BoundaryLayerWorkflow::processSetblSide(
-    Marcher& marcher, int side, const Foil& foil,
-    const StagnationResult& stagnation, bool controlByAlpha,
-    const Eigen::MatrixXd& dij, SetblOutputView& output,
-    std::array<SetblStation, 2>& stations, SetblSideData& sideData,
-    double& cti, double& ami, double re_clmr, double msq_clmr) {
+    Marcher &marcher, int side, const Foil &foil,
+    const StagnationResult &stagnation, bool controlByAlpha,
+    const Eigen::MatrixXd &dij, SetblOutputView &output,
+    std::array<SetblStation, 2> &stations, SetblSideData &sideData, double &cti,
+    double &ami, double re_clmr, double msq_clmr) {
   auto similarity_coeffs =
       resetSimilarityStationCoefficients(stations[0].u_m, stations[0].d_m);
   stations[0].u_m = similarity_coeffs.u_m1;
@@ -1007,10 +988,12 @@ void BoundaryLayerWorkflow::processSetblSide(
   output.blTransition.xiforc = sweep_init.xiforc;
   blTransition.xiforc = output.blTransition.xiforc;
 
-  for (int station = 0; station < lattice.get(side).stationCount - 1; ++station) {
+  for (int station = 0; station < lattice.get(side).stationCount - 1;
+       ++station) {
     const int iv = lattice.get(side).stationToSystem[station];
     const bool station_is_similarity = (station == 0);
-    const bool station_is_wake = (station > lattice.get(side).trailingEdgeIndex);
+    const bool station_is_wake =
+        (station > lattice.get(side).trailingEdgeIndex);
     const bool station_is_transition_candidate =
         (station == output.profiles.get(side).transitionIndex);
 
@@ -1018,8 +1001,8 @@ void BoundaryLayerWorkflow::processSetblSide(
         *this, side, station, station_is_similarity, station_is_wake);
     flowRegime = output.flowRegime;
 
-    auto vars =
-        loadStationPrimaryVars(side, station, station_is_wake, output, ami, cti);
+    auto vars = loadStationPrimaryVars(side, station, station_is_wake, output,
+                                       ami, cti);
     ami = vars.ami;
     cti = vars.cti;
 
@@ -1063,9 +1046,8 @@ void BoundaryLayerWorkflow::processSetblSide(
       stations[1].xi_ule = stagnation.sst_gp;
     }
 
-    assembleBlJacobianForStation(
-        side, iv, nsys, stations, sideData, controlByAlpha, re_clmr, msq_clmr,
-        output);
+    assembleBlJacobianForStation(side, iv, nsys, stations, sideData,
+                                 controlByAlpha, re_clmr, msq_clmr, output);
 
     if (te_update.isStartOfWake) {
       auto te_jacobian = computeTeWakeJacobianAdjustments(te_update.coeffs);
@@ -1086,14 +1068,14 @@ void BoundaryLayerWorkflow::processSetblSide(
     if (station == lattice.get(side).trailingEdgeIndex) {
       output.flowRegime = FlowRegimeEnum::Wake;
       flowRegime = output.flowRegime;
-      state.station2 =
-          boundaryLayerVariablesSolver.solve(state.station2, FlowRegimeEnum::Wake);
+      state.station2 = boundaryLayerVariablesSolver.solve(state.station2,
+                                                          FlowRegimeEnum::Wake);
       blmid(FlowRegimeEnum::Wake);
     }
 
-    auto advance = advanceStationArrays(
-        stations[1].u_m, stations[1].d_m, stations[1].u_a, stations[1].d_a,
-        stations[1].due, stations[1].dds);
+    auto advance =
+        advanceStationArrays(stations[1].u_m, stations[1].d_m, stations[1].u_a,
+                             stations[1].d_a, stations[1].due, stations[1].dds);
     stations[0].u_m = advance.u_m1;
     stations[0].d_m = advance.d_m1;
     stations[0].u_a = advance.u_a1;
@@ -1115,13 +1097,13 @@ struct SetblWorkingState {
   double msq_clmr = 0.0;
 };
 
-}  // namespace
+} // namespace
 
 SetblOutputView BoundaryLayerWorkflow::setbl(
     SidePairRef<const BoundaryLayerSideProfiles> profiles,
-    const FlowState& analysis_state, const AeroCoefficients& aero_coeffs,
-    double acrit, const Foil& foil, const StagnationResult& stagnation,
-    const Eigen::MatrixXd& dij, bool bl_initialized) {
+    const FlowState &analysis_state, const AeroCoefficients &aero_coeffs,
+    double acrit, const Foil &foil, const StagnationResult &stagnation,
+    const Eigen::MatrixXd &dij, bool bl_initialized) {
   //-------------------------------------------------
   //	   sets up the bl newton system coefficients for the current bl
   // variables
@@ -1151,17 +1133,17 @@ SetblOutputView BoundaryLayerWorkflow::setbl(
   initializeSetblEdgeVelocityState(profiles, dij, output, state.sides);
 
   for (int side = 1; side <= 2; ++side) {
-    processSetblSide(
-        marcher, side, foil, stagnation, analysis_state.controlByAlpha,
-        dij, output, state.stations, state.sides, state.cti,
-        state.ami, state.re_clmr, state.msq_clmr);
+    processSetblSide(marcher, side, foil, stagnation,
+                     analysis_state.controlByAlpha, dij, output, state.stations,
+                     state.sides, state.cti, state.ami, state.re_clmr,
+                     state.msq_clmr);
   }
 
   return output;
 }
 
-SidePair<Eigen::VectorXd> BoundaryLayerWorkflow::ueset(
-    const Eigen::MatrixXd& dij) const {
+SidePair<Eigen::VectorXd>
+BoundaryLayerWorkflow::ueset(const Eigen::MatrixXd &dij) const {
   //---------------------------------------------------------
   //     sets ue from inviscid ue plus all source influence
   //---------------------------------------------------------
@@ -1177,8 +1159,7 @@ SidePair<Eigen::VectorXd> BoundaryLayerWorkflow::ueset(
     for (int js = 1; js <= 2; ++js) {
       for (int jbl = 0; jbl < lattice.get(js).stationCount - 1; ++jbl) {
         const double ue_m =
-            -side_panel_factor *
-            lattice.get(js).panelInfluenceFactor[jbl] *
+            -side_panel_factor * lattice.get(js).panelInfluenceFactor[jbl] *
             dij(side_panel_index, lattice.get(js).stationToPanel[jbl]);
         dui += ue_m * lattice.get(js).profiles.massFlux[jbl];
       }
@@ -1196,61 +1177,59 @@ SidePair<Eigen::VectorXd> BoundaryLayerWorkflow::ueset(
   return edge_velocity;
 }
 
-
-
 /** -----------------------------------------------------
  * 	   sets forced-transition bl coordinate locations.
  * ----------------------------------------------------- */
-double BoundaryLayerWorkflow::xifset(const Foil& foil,
-                                     const StagnationResult& stagnation,
+double BoundaryLayerWorkflow::xifset(const Foil &foil,
+                                     const StagnationResult &stagnation,
                                      int is) const {
   std::stringstream ss;
   VectorXd w1 = VectorXd::Zero(foil.foil_shape.n);
   double str;
 
   if (lattice.get(is).transitionLocation >= 1.0) {
-    return lattice.get(is).arcLengthCoordinates[lattice.get(is).trailingEdgeIndex];
+    return lattice.get(is)
+        .arcLengthCoordinates[lattice.get(is).trailingEdgeIndex];
   }
 
   Vector2d point_chord = foil.edge.point_te - foil.edge.point_le;
 
   //---- calculate chord-based x/c, y/c
   for (int i = 0; i < foil.foil_shape.n; i++) {
-    w1[i] =
-        (foil.foil_shape.points.col(i) - foil.edge.point_le)
-            .dot(point_chord.normalized());
+    w1[i] = (foil.foil_shape.points.col(i) - foil.edge.point_le)
+                .dot(point_chord.normalized());
   }
 
   VectorXd w3 = spline::splind(w1, foil.foil_shape.spline_length);
   if (is == 1) {
-    str = foil.edge.sle +
-          (foil.foil_shape.spline_length[0] - foil.edge.sle) *
-              lattice.top.transitionLocation;
+    str = foil.edge.sle + (foil.foil_shape.spline_length[0] - foil.edge.sle) *
+                              lattice.top.transitionLocation;
   } else {
-    str = foil.edge.sle +
-          (foil.foil_shape.spline_length[foil.foil_shape.n - 1] -
-           foil.edge.sle) *
-              lattice.bottom.transitionLocation;
+    str =
+        foil.edge.sle +
+        (foil.foil_shape.spline_length[foil.foil_shape.n - 1] - foil.edge.sle) *
+            lattice.bottom.transitionLocation;
   }
   str = spline::sinvrt(str, lattice.get(is).transitionLocation, w1, w3,
-                       foil.foil_shape.spline_length,
-                       foil.foil_shape.n);
-  double xiforc = std::min((str - stagnation.sst),
-                           lattice.get(is).arcLengthCoordinates[lattice.get(is).trailingEdgeIndex]);
+                       foil.foil_shape.spline_length, foil.foil_shape.n);
+  double xiforc = std::min(
+      (str - stagnation.sst),
+      lattice.get(is).arcLengthCoordinates[lattice.get(is).trailingEdgeIndex]);
   if (xiforc < 0.0) {
     std::stringstream ss;
     ss << " ***  stagnation point is past trip on side " << is << "\n";
     Logger::instance().write(ss.str());
-    return lattice.get(is).arcLengthCoordinates[lattice.get(is).trailingEdgeIndex];
+    return lattice.get(is)
+        .arcLengthCoordinates[lattice.get(is).trailingEdgeIndex];
   }
 
   return xiforc;
 }
 
 BoundaryLayerWorkflow::LeTeSensitivities
-BoundaryLayerWorkflow::computeLeTeSensitivities(int ile1, int ile2, int ite1,
-                                                int ite2, int nsys,
-                                                const Eigen::MatrixXd& dij) const {
+BoundaryLayerWorkflow::computeLeTeSensitivities(
+    int ile1, int ile2, int ite1, int ite2, int nsys,
+    const Eigen::MatrixXd &dij) const {
   LeTeSensitivities sensitivities;
   sensitivities.ule_m.top = VectorXd::Zero(nsys);
   sensitivities.ule_m.bottom = VectorXd::Zero(nsys);
@@ -1260,7 +1239,8 @@ BoundaryLayerWorkflow::computeLeTeSensitivities(int ile1, int ile2, int ite1,
     for (int jbl = 0; jbl < lattice.get(js).stationCount - 1; ++jbl) {
       const int j = lattice.get(js).stationToPanel[jbl];
       const int jv = lattice.get(js).stationToSystem[jbl];
-      const double panelInfluenceFactor_js = lattice.get(js).panelInfluenceFactor[jbl];
+      const double panelInfluenceFactor_js =
+          lattice.get(js).panelInfluenceFactor[jbl];
       sensitivities.ule_m.top[jv] = -lattice.top.panelInfluenceFactor[0] *
                                     panelInfluenceFactor_js * dij(ile1, j);
       sensitivities.ule_m.bottom[jv] = -lattice.bottom.panelInfluenceFactor[0] *

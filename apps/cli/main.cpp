@@ -1,9 +1,9 @@
-#include <iostream>
-#include <fstream>
-#include <string>
 #include <chrono>
+#include <fstream>
+#include <iostream>
 #include <memory>
 #include <sstream>
+#include <string>
 
 #include "XFoil.h"
 
@@ -12,7 +12,7 @@ constexpr int kMaxDatPoints = 604;
 constexpr int kIterationLimit = 100;
 constexpr int kReynolds = 100000;
 constexpr double kPi = 3.14159265358979323846;
-}  // namespace
+} // namespace
 
 struct IterationContext {
   int iterationLimit = kIterationLimit;
@@ -21,7 +21,7 @@ struct IterationContext {
   bool encounteredErrors = false;
 };
 
-bool iterate(XFoil& xfoil, IterationContext& context) {
+bool iterate(XFoil &xfoil, IterationContext &context) {
   if (!xfoil.viscal()) {
     xfoil.invalidateConvergedSolution();
     std::cout
@@ -60,7 +60,7 @@ bool iterate(XFoil& xfoil, IterationContext& context) {
   return true;
 }
 
-int loadDatFile(const std::string& filename, double x[kMaxDatPoints],
+int loadDatFile(const std::string &filename, double x[kMaxDatPoints],
                 double y[kMaxDatPoints]) {
   std::ifstream fs(filename);
   if (!fs) {
@@ -104,7 +104,8 @@ int main() {
   // n = naca->nb;
 
   n = loadDatFile("sample/CLARK_Y.dat", x, y);
-  if (n == -1) return 1;
+  if (n == -1)
+    return 1;
 
   auto foil = std::make_unique<XFoil>();
 
@@ -142,10 +143,9 @@ int main() {
       finished = iterate(*foil, iterationContext);
     }
 
-
     if (foil->hasConvergedSolution()) {
-      std::cout << "  converged after " << iterationContext.iterationCount << " iterations"
-                << std::endl;
+      std::cout << "  converged after " << iterationContext.iterationCount
+                << " iterations" << std::endl;
       std::cout << "  cl : " << foil->Cl() << ", cd : " << foil->Cd()
                 << ", cm : " << foil->Cm() << ", xcp : " << foil->getXcp()
                 << std::endl;
@@ -159,7 +159,8 @@ int main() {
   const auto duration =
       std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
-  std::cout << "Elapsed time: " << duration.count() << " milliseconds." << std::endl;
+  std::cout << "Elapsed time: " << duration.count() << " milliseconds."
+            << std::endl;
 
   return 0;
 }

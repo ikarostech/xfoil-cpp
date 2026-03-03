@@ -1,9 +1,9 @@
 #include "XFoil.h"
+#include "simulation/InviscidSolver.hpp"
 #include <algorithm>
 #include <limits>
 #include <numbers>
 #include <unordered_map>
-#include "simulation/InviscidSolver.hpp"
 
 // Initialization and global state related member functions split from XFoil.cpp
 
@@ -16,21 +16,19 @@ struct InitState {
   std::vector<double> qf3;
 };
 
-using InitStateRegistry = std::unordered_map<const XFoil*, InitState>;
+using InitStateRegistry = std::unordered_map<const XFoil *, InitState>;
 
-InitStateRegistry& initStateRegistry() {
+InitStateRegistry &initStateRegistry() {
   static InitStateRegistry state;
   return state;
 }
 
-InitState& ensureInitState(const XFoil* xfoil) {
+InitState &ensureInitState(const XFoil *xfoil) {
   return initStateRegistry()[xfoil];
 }
-}  // namespace
+} // namespace
 
-void ClearInitState(const XFoil& xfoil) {
-  initStateRegistry().erase(&xfoil);
-}
+void ClearInitState(const XFoil &xfoil) { initStateRegistry().erase(&xfoil); }
 
 bool XFoil::initialize() {
 
@@ -56,7 +54,7 @@ void XFoil::initializeDataStructures() {
   const int total_nodes_with_wake = point_count + wake_nodes;
   const int surface_buffer_nodes = point_count + 6;
   const int bl_node_count = point_count + wake_nodes;
-  auto& cache = ensureInitState(this);
+  auto &cache = ensureInitState(this);
 
   boundaryLayerWorkflow.lattice.top = BoundaryLayerLattice(bl_node_count);
   boundaryLayerWorkflow.lattice.bottom = BoundaryLayerLattice(bl_node_count);
@@ -99,7 +97,7 @@ void XFoil::resetVariables() {
   boundaryLayerWorkflow.lattice.bottom.stationCount = 0;
   boundaryLayerWorkflow.lattice.top.trailingEdgeIndex = 0;
   boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex = 0;
-  
+
   analysis_state_.qinf = 1.0;
   aero_coeffs_.cl = 0.0;
   aero_coeffs_.cm = 0.0;
@@ -123,7 +121,7 @@ void XFoil::resetVariables() {
   boundaryLayerWorkflow.blCompressibility.gm1bl = 0.0;
   boundaryLayerWorkflow.blTransition.xiforc = 0.0;
   boundaryLayerWorkflow.blTransition.amcrit = 0.0;
-  auto& cache = ensureInitState(this);
+  auto &cache = ensureInitState(this);
   cache.amax = 0.0;
   analysis_state_.alpha = 0.0;
   analysis_state_.clspec = 0.0;
@@ -139,7 +137,7 @@ void XFoil::resetVariables() {
 }
 
 double XFoil::getActualMach(double cls, MachType mach_control) {
-  FlowState& state = analysis_state_;
+  FlowState &state = analysis_state_;
   const double cla = std::max(cls, 0.000001);
   switch (mach_control) {
   case MachType::CONSTANT: {
@@ -160,7 +158,7 @@ double XFoil::getActualMach(double cls, MachType mach_control) {
 }
 
 double XFoil::getActualReynolds(double cls, ReynoldsType reynolds_control) {
-  FlowState& state = analysis_state_;
+  FlowState &state = analysis_state_;
   const double cla = std::max(cls, 0.000001);
   switch (reynolds_control) {
   case ReynoldsType::CONSTANT: {
@@ -184,10 +182,13 @@ bool XFoil::setMach() {
   minf_cl = getActualMach(1.0, analysis_state_.machType);
   reinf_cl = getActualReynolds(1.0, analysis_state_.reynoldsType);
   const int point_count = foil.foil_shape.n;
-  cpi = InviscidSolver::cpcalc(point_count, qinv_matrix.row(0).transpose(),
-               analysis_state_.qinf, analysis_state_.currentMach);
+  cpi =
+      InviscidSolver::cpcalc(point_count, qinv_matrix.row(0).transpose(),
+                             analysis_state_.qinf, analysis_state_.currentMach);
   if (analysis_state_.viscous) {
-    cpv = InviscidSolver::cpcalc(point_count + foil.wake_shape.n, qvis, analysis_state_.qinf, analysis_state_.currentMach);
+    cpv = InviscidSolver::cpcalc(point_count + foil.wake_shape.n, qvis,
+                                 analysis_state_.qinf,
+                                 analysis_state_.currentMach);
   }
   const auto cl_result = clcalc(cmref);
   applyClComputation(cl_result);

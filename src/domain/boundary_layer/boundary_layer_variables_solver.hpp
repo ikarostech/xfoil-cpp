@@ -4,21 +4,21 @@
 #include "domain/flow_regime.hpp"
 
 class BoundaryLayerVariablesSolver {
- public:
+public:
   BoundaryLayerVariablesSolver() = default;
 
   blData solve(blData data, FlowRegimeEnum flowRegimeType) const;
 
- private:
-  blData computeShapeParameters(const blData& ref,
+private:
+  blData computeShapeParameters(const blData &ref,
                                 FlowRegimeEnum flowRegimeType) const;
-  blData computeShearCoefficients(const blData& ref,
+  blData computeShearCoefficients(const blData &ref,
                                   FlowRegimeEnum flowRegimeType) const;
-  blData computeSkinFrictionCoefficients(const blData& ref,
+  blData computeSkinFrictionCoefficients(const blData &ref,
                                          FlowRegimeEnum flowRegimeType) const;
-  blData computeDissipation(const blData& ref,
+  blData computeDissipation(const blData &ref,
                             FlowRegimeEnum flowRegimeType) const;
-  blData computeThickness(const blData& ref) const;
+  blData computeThickness(const blData &ref) const;
 
   static constexpr double kGbcon = 0.75;
   static constexpr double kGccon = 18.0;

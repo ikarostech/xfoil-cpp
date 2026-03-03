@@ -11,11 +11,9 @@ using Eigen::Matrix2Xd;
 using Eigen::VectorXd;
 
 BoundaryLayerGeometry::BoundaryLayerGeometry(
-    SidePair<BoundaryLayerLattice>& lattice, Eigen::VectorXd& wgap,
-    int& stagnationIndex, double& stagnationSst)
-    : lattice_(lattice),
-      wgap_(wgap),
-      stagnationIndex_(stagnationIndex),
+    SidePair<BoundaryLayerLattice> &lattice, Eigen::VectorXd &wgap,
+    int &stagnationIndex, double &stagnationSst)
+    : lattice_(lattice), wgap_(wgap), stagnationIndex_(stagnationIndex),
       stagnationSst_(stagnationSst) {}
 
 bool BoundaryLayerGeometry::iblpan(int point_count, int wake_point_count) {
@@ -51,7 +49,8 @@ bool BoundaryLayerGeometry::iblpan(int point_count, int wake_point_count) {
 
   for (int iw = 0; iw < wake_point_count; iw++) {
     lattice_.top.stationToPanel[lattice_.top.trailingEdgeIndex + iw + 1] =
-        lattice_.bottom.stationToPanel[lattice_.bottom.trailingEdgeIndex + iw + 1];
+        lattice_.bottom
+            .stationToPanel[lattice_.bottom.trailingEdgeIndex + iw + 1];
     lattice_.top.panelInfluenceFactor[lattice_.top.trailingEdgeIndex + iw + 1] =
         1.0;
   }
@@ -59,7 +58,7 @@ bool BoundaryLayerGeometry::iblpan(int point_count, int wake_point_count) {
   return true;
 }
 
-bool BoundaryLayerGeometry::iblsys(int& nsys) {
+bool BoundaryLayerGeometry::iblsys(int &nsys) {
   int iv = 0;
   for (int is = 1; is <= 2; is++) {
     for (int ibl = 0; ibl < lattice_.get(is).stationCount - 1; ++ibl) {
@@ -73,9 +72,9 @@ bool BoundaryLayerGeometry::iblsys(int& nsys) {
   return true;
 }
 
-StagnationResult BoundaryLayerGeometry::stfind(
-    const Eigen::Matrix2Xd& surface_vortex,
-    const Eigen::VectorXd& spline_length) const {
+StagnationResult
+BoundaryLayerGeometry::stfind(const Eigen::Matrix2Xd &surface_vortex,
+                              const Eigen::VectorXd &spline_length) const {
   int stagnation_index = 0;
   bool found = false;
   const int point_count = static_cast<int>(surface_vortex.cols());
@@ -96,17 +95,16 @@ StagnationResult BoundaryLayerGeometry::stfind(
   result.found = found;
   const double dgam = surface_vortex(0, stagnation_index + 1) -
                       surface_vortex(0, stagnation_index);
-  const double ds = spline_length[stagnation_index + 1] -
-                    spline_length[stagnation_index];
+  const double ds =
+      spline_length[stagnation_index + 1] - spline_length[stagnation_index];
 
   if (surface_vortex(0, stagnation_index) <
       -surface_vortex(0, stagnation_index + 1)) {
     result.sst = spline_length[stagnation_index] -
                  ds * (surface_vortex(0, stagnation_index) / dgam);
   } else {
-    result.sst =
-        spline_length[stagnation_index + 1] -
-        ds * (surface_vortex(0, stagnation_index + 1) / dgam);
+    result.sst = spline_length[stagnation_index + 1] -
+                 ds * (surface_vortex(0, stagnation_index + 1) / dgam);
   }
 
   if (result.sst <= spline_length[stagnation_index])
@@ -114,19 +112,17 @@ StagnationResult BoundaryLayerGeometry::stfind(
   if (result.sst >= spline_length[stagnation_index + 1])
     result.sst = spline_length[stagnation_index + 1] - 0.0000001;
 
-  result.sst_go =
-      (result.sst - spline_length[stagnation_index + 1]) / dgam;
+  result.sst_go = (result.sst - spline_length[stagnation_index + 1]) / dgam;
   result.sst_gp = (spline_length[stagnation_index] - result.sst) / dgam;
 
   return result;
 }
 
-bool BoundaryLayerGeometry::stmove(const Eigen::Matrix2Xd& surface_vortex,
-                                   const Eigen::VectorXd& spline_length,
-                                   const Foil& foil,
-                                   const Eigen::Matrix2Xd& qinv_matrix,
-                                   StagnationResult& stagnation,
-                                   int& nsys) {
+bool BoundaryLayerGeometry::stmove(const Eigen::Matrix2Xd &surface_vortex,
+                                   const Eigen::VectorXd &spline_length,
+                                   const Foil &foil,
+                                   const Eigen::Matrix2Xd &qinv_matrix,
+                                   StagnationResult &stagnation, int &nsys) {
   const int previous = stagnationIndex_;
   const auto stagnation_result = stfind(surface_vortex, spline_length);
   if (!stagnation_result.found) {
@@ -157,9 +153,8 @@ bool BoundaryLayerGeometry::stmove(const Eigen::Matrix2Xd& surface_vortex,
         copyStationState(1, ibl, ibl - delta);
       }
 
-      const double dudx =
-          lattice_.top.profiles.edgeVelocity[delta] /
-          lattice_.top.arcLengthCoordinates[delta];
+      const double dudx = lattice_.top.profiles.edgeVelocity[delta] /
+                          lattice_.top.arcLengthCoordinates[delta];
       for (int ibl = delta; ibl >= 1; --ibl) {
         copyStationState(1, ibl - 1, delta);
         lattice_.top.profiles.edgeVelocity[ibl - 1] =
@@ -180,9 +175,8 @@ bool BoundaryLayerGeometry::stmove(const Eigen::Matrix2Xd& surface_vortex,
         copyStationState(2, ibl - 1, (ibl - delta) - 1);
       }
 
-      const double dudx =
-      lattice_.bottom.profiles.edgeVelocity[delta] /
-          lattice_.bottom.arcLengthCoordinates[delta];
+      const double dudx = lattice_.bottom.profiles.edgeVelocity[delta] /
+                          lattice_.bottom.arcLengthCoordinates[delta];
       for (int ibl = delta; ibl >= 1; --ibl) {
         copyStationState(2, ibl - 1, delta);
         lattice_.bottom.profiles.edgeVelocity[ibl - 1] =
@@ -206,8 +200,8 @@ bool BoundaryLayerGeometry::stmove(const Eigen::Matrix2Xd& surface_vortex,
   return true;
 }
 
-SidePair<Eigen::Matrix2Xd> BoundaryLayerGeometry::uicalc(
-    const Eigen::Matrix2Xd& qinv_matrix) const {
+SidePair<Eigen::Matrix2Xd>
+BoundaryLayerGeometry::uicalc(const Eigen::Matrix2Xd &qinv_matrix) const {
   //--------------------------------------------------------------
   //     sets inviscid ue from panel inviscid tangential velocity
   //--------------------------------------------------------------
@@ -215,8 +209,8 @@ SidePair<Eigen::Matrix2Xd> BoundaryLayerGeometry::uicalc(
   for (int side = 1; side <= 2; ++side) {
     inviscid_matrix.get(side) =
         Matrix2Xd::Zero(2, lattice_.get(side).stationCount);
-    for (int stationIndex = 0; stationIndex < lattice_.get(side).stationCount - 1;
-         ++stationIndex) {
+    for (int stationIndex = 0;
+         stationIndex < lattice_.get(side).stationCount - 1; ++stationIndex) {
       const int panelIndex = lattice_.get(side).stationToPanel[stationIndex];
       inviscid_matrix.get(side)(0, stationIndex) =
           lattice_.get(side).panelInfluenceFactor[stationIndex] *
@@ -230,7 +224,7 @@ SidePair<Eigen::Matrix2Xd> BoundaryLayerGeometry::uicalc(
   return inviscid_matrix;
 }
 
-bool BoundaryLayerGeometry::xicalc(const Foil& foil) {
+bool BoundaryLayerGeometry::xicalc(const Foil &foil) {
   //-------------------------------------------------------------
   //     sets bl arc length array on each airfoil side and wake
   //-------------------------------------------------------------
@@ -244,8 +238,8 @@ bool BoundaryLayerGeometry::xicalc(const Foil& foil) {
 }
 
 SidePair<VectorXd> BoundaryLayerGeometry::computeArcLengthCoordinates(
-    const Foil& foil, double stagnationSst,
-    const SidePair<BoundaryLayerLattice>& lattice) {
+    const Foil &foil, double stagnationSst,
+    const SidePair<BoundaryLayerLattice> &lattice) {
   SidePair<VectorXd> arc_lengths;
   arc_lengths.top = lattice.top.arcLengthCoordinates;
   arc_lengths.bottom = lattice.bottom.arcLengthCoordinates;
@@ -276,9 +270,10 @@ SidePair<VectorXd> BoundaryLayerGeometry::computeArcLengthCoordinates(
   return arc_lengths;
 }
 
-VectorXd BoundaryLayerGeometry::computeWakeGap(
-    const Foil& foil, const BoundaryLayerLattice& bottom,
-    const VectorXd& bottomArcLengths) {
+VectorXd
+BoundaryLayerGeometry::computeWakeGap(const Foil &foil,
+                                      const BoundaryLayerLattice &bottom,
+                                      const VectorXd &bottomArcLengths) {
   //---- trailing edge flap length to te gap ratio
   const double telrat = 2.50;
 
@@ -306,11 +301,10 @@ VectorXd BoundaryLayerGeometry::computeWakeGap(
     //----- set te flap (wake gap) array (0-based: iw0=0..foil.wake_shape.n-1)
     for (int iw0 = 0; iw0 < foil.wake_shape.n; iw0++) {
       const int te_bot_0b =
-          bottom.trailingEdgeIndex;  // 0-based TE for array indexing
-      const double zn =
-          1.0 -
-          (bottomArcLengths[te_bot_0b + (iw0 + 1)] - bottomArcLengths[te_bot_0b]) /
-              (telrat * foil.edge.ante);
+          bottom.trailingEdgeIndex; // 0-based TE for array indexing
+      const double zn = 1.0 - (bottomArcLengths[te_bot_0b + (iw0 + 1)] -
+                               bottomArcLengths[te_bot_0b]) /
+                                  (telrat * foil.edge.ante);
       if (zn >= 0.0)
         wgap_result[iw0] = foil.edge.ante * (aa + bb * zn) * zn * zn;
     }
@@ -318,8 +312,8 @@ VectorXd BoundaryLayerGeometry::computeWakeGap(
   return wgap_result;
 }
 
-void BoundaryLayerGeometry::copyStationState(
-    int side, int destination, int source) {
+void BoundaryLayerGeometry::copyStationState(int side, int destination,
+                                             int source) {
   lattice_.get(side).profiles.skinFrictionCoeff[destination] =
       lattice_.get(side).profiles.skinFrictionCoeff[source];
   lattice_.get(side).profiles.momentumThickness[destination] =

@@ -21,13 +21,13 @@
 *****************************************************************************/
 
 #include "XFoil.h"
-#include "domain/boundary_layer/boundary_layer_diff_solver.hpp"
 #include "Eigen/Core"
+#include "domain/boundary_layer/boundary_layer_diff_solver.hpp"
 #include <cmath>
 #include <limits>
 using namespace Eigen;
 
-void ClearInitState(const XFoil& xfoil);
+void ClearInitState(const XFoil &xfoil);
 
 XFoil::CompressibilityParams XFoil::buildCompressibilityParams() const {
   const double current_mach = analysis_state_.currentMach;
@@ -36,20 +36,24 @@ XFoil::CompressibilityParams XFoil::buildCompressibilityParams() const {
   const double prandtlGlauertFactor =
       0.5 * current_mach * current_mach / (1.0 + beta);
   const double prandtlGlauertFactor_msq =
-      0.5 / (1.0 + beta) -
-      prandtlGlauertFactor / (1.0 + beta) * beta_msq;
+      0.5 / (1.0 + beta) - prandtlGlauertFactor / (1.0 + beta) * beta_msq;
   const double karmanTsienFactor =
       (current_mach / (1.0 + beta)) * (current_mach / (1.0 + beta));
   const double karmanTsienFactor_msq =
       1.0 / ((1.0 + beta) * (1.0 + beta)) -
       2.0 * karmanTsienFactor / (1.0 + beta) * beta_msq;
-  return {beta, beta_msq, karmanTsienFactor, karmanTsienFactor_msq,
-          prandtlGlauertFactor, prandtlGlauertFactor_msq};
+  return {beta,
+          beta_msq,
+          karmanTsienFactor,
+          karmanTsienFactor_msq,
+          prandtlGlauertFactor,
+          prandtlGlauertFactor_msq};
 }
 
-XFoil::PressureCoefficientResult XFoil::computePressureCoefficient(
-    double tangential_velocity, double velocity_derivative,
-    const CompressibilityParams &params) const {
+XFoil::PressureCoefficientResult
+XFoil::computePressureCoefficient(double tangential_velocity,
+                                  double velocity_derivative,
+                                  const CompressibilityParams &params) const {
   const double velocity_ratio = tangential_velocity / analysis_state_.qinf;
   const double cginc = 1.0 - velocity_ratio * velocity_ratio;
   const double denom = params.beta + params.prandtlGlauertFactor * cginc;
@@ -77,7 +81,7 @@ XFoil::XFoil() : analysis_state_() {
 
   // initialize transition parameters until user changes them
   acrit = 9.0;
-  auto& boundary_layer_lattice = boundaryLayerWorkflow.lattice;
+  auto &boundary_layer_lattice = boundaryLayerWorkflow.lattice;
   boundary_layer_lattice.top.transitionLocation = 1.0;
   boundary_layer_lattice.bottom.transitionLocation = 1.0;
 
@@ -92,16 +96,14 @@ XFoil::XFoil() : analysis_state_() {
   analysis_state_.referenceRe = 0.0;
 }
 
-XFoil::~XFoil() {
-  ClearInitState(*this);
-}
+XFoil::~XFoil() { ClearInitState(*this); }
 
 bool XFoil::isBLInitialized() const {
   if (!hasPanelMap()) {
     return false;
   }
-  const auto& top = boundaryLayerWorkflow.lattice.top;
-  const auto& bottom = boundaryLayerWorkflow.lattice.bottom;
+  const auto &top = boundaryLayerWorkflow.lattice.top;
+  const auto &bottom = boundaryLayerWorkflow.lattice.bottom;
   if (top.stationCount <= 1 || bottom.stationCount <= 1) {
     return false;
   }
@@ -119,9 +121,11 @@ bool XFoil::isBLInitialized() const {
   const int top_count = top.stationCount - 1;
   const int bottom_count = bottom.stationCount - 1;
   const auto top_theta = top.profiles.momentumThickness.head(top_count);
-  const auto bottom_theta = bottom.profiles.momentumThickness.head(bottom_count);
+  const auto bottom_theta =
+      bottom.profiles.momentumThickness.head(bottom_count);
   const auto top_delta = top.profiles.displacementThickness.head(top_count);
-  const auto bottom_delta = bottom.profiles.displacementThickness.head(bottom_count);
+  const auto bottom_delta =
+      bottom.profiles.displacementThickness.head(bottom_count);
 
   if (!top_theta.allFinite() || !bottom_theta.allFinite() ||
       !top_delta.allFinite() || !bottom_delta.allFinite()) {
@@ -136,7 +140,7 @@ void XFoil::setBLInitialized(bool bInitialized) {
   if (bInitialized) {
     return;
   }
-  auto invalidateSide = [](BoundaryLayerLattice& lattice) {
+  auto invalidateSide = [](BoundaryLayerLattice &lattice) {
     if (lattice.profiles.edgeVelocity.size() > 0)
       lattice.profiles.edgeVelocity.setZero();
     if (lattice.profiles.skinFrictionCoeff.size() > 0)
@@ -164,8 +168,8 @@ void XFoil::invalidateWakeGeometry() {
   if (const int total_nodes = point_count + wake_point_count;
       wake_point_count > 0 && aerodynamicCache.dij.rows() >= total_nodes &&
       aerodynamicCache.dij.cols() >= total_nodes) {
-    aerodynamicCache.dij.block(point_count, point_count,
-                               wake_point_count, wake_point_count)
+    aerodynamicCache.dij
+        .block(point_count, point_count, wake_point_count, wake_point_count)
         .setConstant(std::numeric_limits<double>::quiet_NaN());
   }
   foil.wake_shape.points.resize(0, 0);
@@ -193,16 +197,17 @@ bool XFoil::hasWakeGeometry() const {
     return false;
   }
 
-  return foil.wake_shape.points.block(0, point_count, 2, wake_point_count).allFinite();
+  return foil.wake_shape.points.block(0, point_count, 2, wake_point_count)
+      .allFinite();
 }
 
 bool XFoil::hasPanelMap() const {
-  const auto& top = boundaryLayerWorkflow.lattice.top;
-  const auto& bottom = boundaryLayerWorkflow.lattice.bottom;
+  const auto &top = boundaryLayerWorkflow.lattice.top;
+  const auto &bottom = boundaryLayerWorkflow.lattice.bottom;
   const int point_count = foil.foil_shape.n;
   const int total_nodes = point_count + foil.wake_shape.n;
 
-  auto isValidSide = [total_nodes](const BoundaryLayerLattice& lattice) {
+  auto isValidSide = [total_nodes](const BoundaryLayerLattice &lattice) {
     if (lattice.stationCount <= 1 ||
         lattice.stationToPanel.size() < lattice.stationCount ||
         lattice.panelInfluenceFactor.size() < lattice.stationCount) {
@@ -246,8 +251,8 @@ bool XFoil::hasWakeInfluenceMatrix() const {
       aerodynamicCache.dij.cols() < total_nodes) {
     return false;
   }
-  const auto block = aerodynamicCache.dij.block(point_count, point_count,
-                                                wake_point_count, wake_point_count);
+  const auto block = aerodynamicCache.dij.block(
+      point_count, point_count, wake_point_count, wake_point_count);
   return block.allFinite() && block.cwiseAbs().maxCoeff() > 0.0;
 }
 
@@ -267,10 +272,6 @@ bool XFoil::hasConvergedSolution() const {
          qvis.head(total_nodes_with_wake).allFinite();
 }
 
-double XFoil::VAccel() {
-  return vaccel_;
-}
+double XFoil::VAccel() { return vaccel_; }
 
-void XFoil::setVAccel(double accel) {
-  vaccel_ = accel;
-}
+void XFoil::setVAccel(double accel) { vaccel_ = accel; }

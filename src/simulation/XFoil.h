@@ -34,21 +34,21 @@ This is a translation to C++ of the original Fortran code of Mark Drela and
 Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 */
 
-#include <vector>
 #include <stdexcept>
+#include <vector>
 
 #include "Eigen/Core"
 #include "Eigen/Dense"
 #include "Eigen/StdVector"
 
-#include "domain/flow_regime.hpp"
-#include "domain/flow_state.hpp"
-#include "domain/coefficient/aero_coefficients.hpp"
+#include "BoundaryLayer.hpp"
 #include "core/side_pair.hpp"
 #include "domain/boundary_layer.hpp"
-#include "domain/foil/foil.hpp"
+#include "domain/coefficient/aero_coefficients.hpp"
+#include "domain/flow_regime.hpp"
+#include "domain/flow_state.hpp"
 #include "domain/foil/FoilAerodynamicCache.hpp"
-#include "BoundaryLayer.hpp"
+#include "domain/foil/foil.hpp"
 
 struct SetblOutputView;
 class InviscidSolver;
@@ -56,13 +56,13 @@ class InviscidSolver;
 //------ derived dimensioning limit parameters
 
 class XFoil {
- public:
+public:
   XFoil();
   virtual ~XFoil();
-  XFoil(const XFoil&) = delete;
-  XFoil& operator=(const XFoil&) = delete;
-  XFoil(XFoil&&) = delete;
-  XFoil& operator=(XFoil&&) = delete;
+  XFoil(const XFoil &) = delete;
+  XFoil &operator=(const XFoil &) = delete;
+  XFoil(XFoil &&) = delete;
+  XFoil &operator=(XFoil &&) = delete;
 
   friend class InviscidSolver;
   friend class BoundaryLayerWorkflow;
@@ -73,19 +73,18 @@ class XFoil {
   using MatrixXd = Eigen::MatrixXd;
   using Matrix2Xd = Eigen::Matrix2Xd;
   using Matrix2d = Eigen::Matrix2d;
-  template <typename T>
-  using FullPivLU = Eigen::FullPivLU<T>;
+  template <typename T> using FullPivLU = Eigen::FullPivLU<T>;
   using Matrix3x2d = Eigen::Matrix<double, 3, 2>;
   using Matrix3x2dVector = std::vector<Matrix3x2d>;
-  using EdgeVelocityDistribution = BoundaryLayerWorkflow::EdgeVelocityDistribution;
+  using EdgeVelocityDistribution =
+      BoundaryLayerWorkflow::EdgeVelocityDistribution;
   using BoundaryLayerDelta = BoundaryLayerWorkflow::BoundaryLayerDelta;
   using BoundaryLayerMetrics = BoundaryLayerWorkflow::BoundaryLayerMetrics;
 
- public:
-
+public:
   bool isValidFoilAngles(Matrix2Xd points);
   bool isValidFoilPointSize(Matrix2Xd points);
-  
+
   bool initialize();
   bool initXFoilGeometry(int fn, const double *fx, const double *fy);
 
@@ -93,8 +92,8 @@ class XFoil {
   using MachType = FlowState::MachType;
 
   bool initXFoilAnalysis(double Re, double alpha, double Mach, double NCrit,
-                         double XtrTop, double XtrBot, ReynoldsType reType, MachType maType,
-                         bool bViscous);
+                         double XtrTop, double XtrBot, ReynoldsType reType,
+                         MachType maType, bool bViscous);
 
   struct ClComputation {
     double cl = 0.0;
@@ -104,7 +103,7 @@ class XFoil {
     double xcp = 0.0;
   };
   ClComputation clcalc(Vector2d ref) const;
-  void applyClComputation(const ClComputation& result);
+  void applyClComputation(const ClComputation &result);
 
   bool specal();
   bool speccl();
@@ -115,7 +114,7 @@ class XFoil {
   };
   ViscalEndResult ViscalEnd();
   bool ViscousIter();
-  
+
   bool abcopy(Matrix2Xd copyFrom);
 
   bool isBLInitialized() const;
@@ -164,25 +163,21 @@ class XFoil {
   };
 
   CompressibilityParams buildCompressibilityParams() const;
-  PressureCoefficientResult computePressureCoefficient(double tangential_velocity,
-                                                       double velocity_derivative,
-                                                       const CompressibilityParams &params) const;
+  PressureCoefficientResult
+  computePressureCoefficient(double tangential_velocity,
+                             double velocity_derivative,
+                             const CompressibilityParams &params) const;
 
-  enum class SideType {
-    TOP = 1,
-    BOTTOM = 2
-  };
-  template <class T>
-  class IterPair {
-    public:
+  enum class SideType { TOP = 1, BOTTOM = 2 };
+  template <class T> class IterPair {
+  public:
     T before;
     T after;
-    //FIXME deprecated
-    T& get(int phase) {
+    // FIXME deprecated
+    T &get(int phase) {
       if (phase == 0) {
         return before;
-      }
-      else if (phase == 1) {
+      } else if (phase == 1) {
         return after;
       }
       throw std::invalid_argument("invalid phase type");
@@ -201,21 +196,21 @@ class XFoil {
     Matrix2Xd qinv_matrix;
   };
 
-  VectorXd qvfue(const VectorXd& base_qvis,
-                 const SidePair<BoundaryLayerLattice>& lattice) const;
-  Matrix2Xd qwcalc(const Foil& foil, const Matrix2Xd& base_qinvu,
-                   const Matrix2Xd& gamu,
-                   const Matrix2Xd& surface_vortex, double alpha,
-                   double qinf) const;
+  VectorXd qvfue(const VectorXd &base_qvis,
+                 const SidePair<BoundaryLayerLattice> &lattice) const;
+  Matrix2Xd qwcalc(const Foil &foil, const Matrix2Xd &base_qinvu,
+                   const Matrix2Xd &gamu, const Matrix2Xd &surface_vortex,
+                   double alpha, double qinf) const;
 
   struct EdgeVelocitySwapResult {
     SidePair<VectorXd> swappedUsav;
     SidePair<VectorXd> restoredUedg;
   };
-  EdgeVelocitySwapResult swapEdgeVelocities(const SidePair<VectorXd>& usav) const;
+  EdgeVelocitySwapResult
+  swapEdgeVelocities(const SidePair<VectorXd> &usav) const;
 
- private:
- public:
+private:
+public:
   struct UpdateResult {
     double rmsbl = 0.0;
 
@@ -223,7 +218,7 @@ class XFoil {
     AeroCoefficients aero_coeffs;
     SidePair<BoundaryLayerSideProfiles> profiles;
   };
-  UpdateResult update(const Matrix3x2dVector& vdel) const;
+  UpdateResult update(const Matrix3x2dVector &vdel) const;
   using QtanResult = BoundaryLayerWorkflow::QtanResult;
   using ClContributions = BoundaryLayerWorkflow::ClContributions;
   double computeAcChange(double clnew, double cl_current, double cl_target,
@@ -245,13 +240,12 @@ class XFoil {
   void resetVariables();
   double atanc(double y, double x, double thold);
 
- double sign(double a, double b);
+  double sign(double a, double b);
 
   FlowState analysis_state_;
-  FlowState& analysisState() { return analysis_state_; }
-  const FlowState& analysisState() const { return analysis_state_; }
+  FlowState &analysisState() { return analysis_state_; }
+  const FlowState &analysisState() const { return analysis_state_; }
   // transitional parameters stored inside analysis_state_
-
 
   AeroCoefficients aero_coeffs_;
   double acrit;
@@ -263,8 +257,7 @@ class XFoil {
   BoundaryLayerWorkflow boundaryLayerWorkflow;
   const Vector2d cmref = Vector2d{0.25, 0.0};
 
- public: //private:
-
+public: // private:
   double minf_cl, reinf_cl;
 
   Matrix2Xd surface_vortex;
@@ -279,9 +272,9 @@ class XFoil {
   c-    sccon  =  shear coefficient lag constant
   c-    gacon  =  g-beta locus constants...
   c-    gbcon  =  g = gacon * sqrt(1.0 + gbcon*beta)
-  c-    gccon  =         + gccon / [h*rmomentumThickness*sqrt(cf/2)]   <-- wall term
-  c-    dlcon  =  wall/wake dissipation length ratio  lo/l
-  c-    ctcon  =  skinFrictionCoeff weighting coefficient (implied by g-beta constants)
+  c-    gccon  =         + gccon / [h*rmomentumThickness*sqrt(cf/2)]   <-- wall
+  term c-    dlcon  =  wall/wake dissipation length ratio  lo/l c-    ctcon  =
+  skinFrictionCoeff weighting coefficient (implied by g-beta constants)
 
   c   version     version number of this xfoil implementation
   c
@@ -322,13 +315,11 @@ class XFoil {
   c   qinvu[..]   qinv for alpha = 0, 90 deg.
   c   qinv_matrix row(1) dqinv/dalpha
   c
-  c   x[.],y[.]   airfoil [1<i<n] and wake [n+1<i<n+foil.wake_shape.n] coordinate arrays
-  c   xp[.],yp[.] dx/ds, dy/ds arrays for spline evaluation
-  c   s[.]        arc length along airfoil [spline parameter]
-  c   sle         value of s at leading edge
-  c   xle,yle     leading  edge coordinates
-  c   xte,yte     trailing edge coordinates
-  c   waklen      wake length to chord ratio
+  c   x[.],y[.]   airfoil [1<i<n] and wake [n+1<i<n+foil.wake_shape.n]
+  coordinate arrays c   xp[.],yp[.] dx/ds, dy/ds arrays for spline evaluation c
+  s[.]        arc length along airfoil [spline parameter] c   sle         value
+  of s at leading edge c   xle,yle     leading  edge coordinates c   xte,yte
+  trailing edge coordinates c   waklen      wake length to chord ratio
   c
   c   gam[.]      surface vortex panel strength array
   c   gamu[.2]    surface vortex panel strength arrays for alpha = 0, 90 deg.
@@ -602,16 +593,17 @@ class XFoil {
   c
   c   arcLengthCoordinates[..]    bl arc length coordinate array on each surface
   c   edgeVelocity[..]    bl edge velocity array
-  c   inviscidEdgeVelocityMatrix[.,.] bl edge velocity array without mass defect influence
-  c   mass[..]    bl mass defect array  [ = edgeVelocity*displacementThickness ]
-  c   momentumThickness[..]    bl momentum thickness array
-  c   displacementThickness[..]    bl displacement thickness array
-  c   skinFrictionCoeff[..]    sqrt[max shear coefficient] array
-  c               [in laminar regions, log of amplification ratio]
+  c   inviscidEdgeVelocityMatrix[.,.] bl edge velocity array without mass defect
+  influence c   mass[..]    bl mass defect array  [ =
+  edgeVelocity*displacementThickness ] c   momentumThickness[..]    bl momentum
+  thickness array c   displacementThickness[..]    bl displacement thickness
+  array c   skinFrictionCoeff[..]    sqrt[max shear coefficient] array c [in
+  laminar regions, log of amplification ratio]
   c
-  c   skinFrictionCoeffHistory[..]     sqrt[equilibrium max shear coefficient] array [  "  ]
-  c   panelInfluenceFactor[..]     +/-1 conversion factor between panel and bl variables
-  c   inviscidEdgeVelocityMatrix row(1) dinviscidEdgeVelocity/dalfa array
+  c   skinFrictionCoeffHistory[..]     sqrt[equilibrium max shear coefficient]
+  array [  "  ] c   panelInfluenceFactor[..]     +/-1 conversion factor between
+  panel and bl variables c   inviscidEdgeVelocityMatrix row(1)
+  dinviscidEdgeVelocity/dalfa array
   c
   c   reinf1      reynolds number  vinf c / ve  for cl=1
   c   reinf       reynolds number for current cl
@@ -631,10 +623,11 @@ class XFoil {
   c   itran[.]    bl array index of transition interval
   c   tforce[.]   .true. if transition is forced due to transition strip
   c
-  c   bl_newton_system.va/vb[...]  diagonal and off-diagonal blocks in bl newton system
-  c   bl_newton_system.vz[..]      way-off-diagonal block at te station line
-  c   bl_newton_system.vm[...]     mass-influence coefficient vectors in bl newton system
-  c   bl_newton_system.vdel[..]    residual and solution vectors in bl newton system
+  c   bl_newton_system.va/vb[...]  diagonal and off-diagonal blocks in bl newton
+  system c   bl_newton_system.vz[..]      way-off-diagonal block at te station
+  line c   bl_newton_system.vm[...]     mass-influence coefficient vectors in bl
+  newton system c   bl_newton_system.vdel[..]    residual and solution vectors
+  in bl newton system
   c
   c   rmxbl       max change from bl newton system solution
   c   imxbl       location of max change
@@ -688,5 +681,4 @@ class XFoil {
   //   EIW(..)    complex number  exp(inw)  array on the unit circle
 
   //-----End Specific Inverse MDES-------------------------------
-
 };

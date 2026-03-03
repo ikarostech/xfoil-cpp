@@ -14,7 +14,7 @@ using Eigen::Matrix;
 using Eigen::Vector;
 
 BoundaryLayerTransitionSolver::BoundaryLayerTransitionSolver(
-    BoundaryLayerWorkflow& workflow)
+    BoundaryLayerWorkflow &workflow)
     : workflow_(&workflow) {}
 
 BoundaryLayerWorkflow::BoundaryLayerWorkflow()
@@ -22,11 +22,9 @@ BoundaryLayerWorkflow::BoundaryLayerWorkflow()
       geometry(lattice, wgap, stagnationIndex, stagnationSst) {}
 
 struct BoundaryLayerTransitionSolver::TrchekData {
-  explicit TrchekData(BoundaryLayerWorkflow& workflow)
-      : state(workflow.state),
-        blTransition(workflow.blTransition),
-        flowRegime(workflow.flowRegime),
-        xt(workflow.xt) {
+  explicit TrchekData(BoundaryLayerWorkflow &workflow)
+      : state(workflow.state), blTransition(workflow.blTransition),
+        flowRegime(workflow.flowRegime), xt(workflow.xt) {
     tt_sens.vector.setZero();
     dt_sens.vector.setZero();
     ut_sens.vector.setZero();
@@ -35,10 +33,10 @@ struct BoundaryLayerTransitionSolver::TrchekData {
     ut_sens.scalar = 0.0;
   }
 
-  BoundaryLayerState& state;
-  BlTransitionParams& blTransition;
-  FlowRegimeEnum& flowRegime;
-  blDiff& xt;
+  BoundaryLayerState &state;
+  BlTransitionParams &blTransition;
+  FlowRegimeEnum &flowRegime;
+  blDiff &xt;
 
   double amplt = 0.0;
   double sfa = 0.0;
@@ -71,16 +69,14 @@ struct BoundaryLayerTransitionSolver::TrchekData {
 };
 
 struct BoundaryLayerTransitionSolver::TrdifData {
-  explicit TrdifData(BoundaryLayerWorkflow& workflow)
-      : state(workflow.state),
-        blTransition(workflow.blTransition),
-        blc(workflow.blc),
-        xt(workflow.xt) {}
+  explicit TrdifData(BoundaryLayerWorkflow &workflow)
+      : state(workflow.state), blTransition(workflow.blTransition),
+        blc(workflow.blc), xt(workflow.xt) {}
 
-  BoundaryLayerState& state;
-  BlTransitionParams& blTransition;
-  BlSystemCoeffs& blc;
-  blDiff& xt;
+  BoundaryLayerState &state;
+  BlTransitionParams &blTransition;
+  BlSystemCoeffs &blc;
+  blDiff &xt;
 
   Matrix<double, 4, 5> bl1;
   Matrix<double, 4, 5> bl2;
@@ -126,7 +122,7 @@ double BoundaryLayerTransitionSolver::computeTransitionLocation(
          downstreamLocation * weightingFactor;
 }
 
-bool BoundaryLayerTransitionSolver::iterateAmplification(TrchekData& data) {
+bool BoundaryLayerTransitionSolver::iterateAmplification(TrchekData &data) {
   static constexpr double kAmplificationEps = 0.00005;
 
   data.ax_result = BoundaryLayerUtil::axset(
@@ -151,26 +147,22 @@ bool BoundaryLayerTransitionSolver::iterateAmplification(TrchekData& data) {
     } else {
       data.amplt = data.blTransition.amcrit;
       data.amplt_a2 = 0.0;
-      data.sfa = (data.amplt - data.state.station1.param.amplz) /
-                 (data.state.station2.param.amplz -
-                  data.state.station1.param.amplz);
-      data.sfa_a1 =
-          (data.sfa - 1.0) /
+      data.sfa =
+          (data.amplt - data.state.station1.param.amplz) /
           (data.state.station2.param.amplz - data.state.station1.param.amplz);
-      data.sfa_a2 =
-          (-data.sfa) /
-          (data.state.station2.param.amplz - data.state.station1.param.amplz);
+      data.sfa_a1 = (data.sfa - 1.0) / (data.state.station2.param.amplz -
+                                        data.state.station1.param.amplz);
+      data.sfa_a2 = (-data.sfa) / (data.state.station2.param.amplz -
+                                   data.state.station1.param.amplz);
     }
 
     if (data.blTransition.xiforc < data.state.station2.param.xz) {
       data.sfx = (data.blTransition.xiforc - data.state.station1.param.xz) /
                  (data.state.station2.param.xz - data.state.station1.param.xz);
-      data.sfx_x1 =
-          (data.sfx - 1.0) /
-          (data.state.station2.param.xz - data.state.station1.param.xz);
-      data.sfx_x2 =
-          (-data.sfx) /
-          (data.state.station2.param.xz - data.state.station1.param.xz);
+      data.sfx_x1 = (data.sfx - 1.0) / (data.state.station2.param.xz -
+                                        data.state.station1.param.xz);
+      data.sfx_x2 = (-data.sfx) / (data.state.station2.param.xz -
+                                   data.state.station1.param.xz);
       data.sfx_xf =
           1.0 / (data.state.station2.param.xz - data.state.station1.param.xz);
     } else {
@@ -204,9 +196,8 @@ bool BoundaryLayerTransitionSolver::iterateAmplification(TrchekData& data) {
     data.ut = data.state.station1.param.uz * (1.0 - data.wf) +
               data.state.station2.param.uz * data.wf;
 
-    data.xt_a2 =
-        (data.state.station2.param.xz - data.state.station1.param.xz) *
-        data.wf_a2;
+    data.xt_a2 = (data.state.station2.param.xz - data.state.station1.param.xz) *
+                 data.wf_a2;
     data.tt_sens.a2() =
         (data.state.station2.param.tz - data.state.station1.param.tz) *
         data.wf_a2;
@@ -249,27 +240,24 @@ bool BoundaryLayerTransitionSolver::iterateAmplification(TrchekData& data) {
             data.ut_sens.a2() +
         data.ax_result.ax_a2 * data.amplt_a2;
 
-    data.res = data.state.station2.param.amplz - data.state.station1.param.amplz -
-               data.ax_result.ax *
-                   (data.state.station2.param.xz - data.state.station1.param.xz);
-    data.res_a2 =
-        1.0 -
-        data.ax_result.ax_a2 *
+    data.res =
+        data.state.station2.param.amplz - data.state.station1.param.amplz -
+        data.ax_result.ax *
             (data.state.station2.param.xz - data.state.station1.param.xz);
+    data.res_a2 = 1.0 - data.ax_result.ax_a2 * (data.state.station2.param.xz -
+                                                data.state.station1.param.xz);
 
     data.da2 = -data.res / data.res_a2;
 
     double rlx = 1.0;
     data.dxt = data.xt_a2 * data.da2;
 
-    if (rlx * std::fabs(data.dxt /
-                        (data.state.station2.param.xz -
-                         data.state.station1.param.xz)) >
+    if (rlx * std::fabs(data.dxt / (data.state.station2.param.xz -
+                                    data.state.station1.param.xz)) >
         0.05) {
-      rlx =
-          0.05 *
-          std::fabs((data.state.station2.param.xz - data.state.station1.param.xz) /
-                    data.dxt);
+      rlx = 0.05 * std::fabs((data.state.station2.param.xz -
+                              data.state.station1.param.xz) /
+                             data.dxt);
     }
 
     if (rlx * std::fabs(data.da2) > 1.0) {
@@ -296,7 +284,7 @@ bool BoundaryLayerTransitionSolver::iterateAmplification(TrchekData& data) {
 }
 
 bool BoundaryLayerTransitionSolver::resolveTransitionLocationAndSensitivities(
-    TrchekData& data) {
+    TrchekData &data) {
   bool trfree = (data.state.station2.param.amplz >= data.blTransition.amcrit);
   bool trforc = (data.blTransition.xiforc > data.state.station1.param.xz) &&
                 (data.blTransition.xiforc <= data.state.station2.param.xz);
@@ -353,8 +341,9 @@ bool BoundaryLayerTransitionSolver::resolveTransitionLocationAndSensitivities(
       (data.state.station2.param.uz - data.state.station1.param.uz) *
       data.wf_a1;
 
-  data.xt.x1() += (data.state.station2.param.xz - data.state.station1.param.xz) *
-                  data.wf_x1;
+  data.xt.x1() +=
+      (data.state.station2.param.xz - data.state.station1.param.xz) *
+      data.wf_x1;
   data.tt_sens.x1() =
       (data.state.station2.param.tz - data.state.station1.param.tz) *
       data.wf_x1;
@@ -365,8 +354,9 @@ bool BoundaryLayerTransitionSolver::resolveTransitionLocationAndSensitivities(
       (data.state.station2.param.uz - data.state.station1.param.uz) *
       data.wf_x1;
 
-  data.xt.x2() += (data.state.station2.param.xz - data.state.station1.param.xz) *
-                  data.wf_x2;
+  data.xt.x2() +=
+      (data.state.station2.param.xz - data.state.station1.param.xz) *
+      data.wf_x2;
   data.tt_sens.x2() =
       (data.state.station2.param.tz - data.state.station1.param.tz) *
       data.wf_x2;
@@ -396,17 +386,19 @@ bool BoundaryLayerTransitionSolver::resolveTransitionLocationAndSensitivities(
                 data.tt_sens.t1();
   ax.d1() = data.ax_result.ax_hk1 * data.state.station1.hkz.d() +
             (data.ax_result.ax_hk2 * hkt.d()) * data.dt_sens.d1();
-  ax.u1() = data.ax_result.ax_hk1 * data.state.station1.hkz.u() +
-            data.ax_result.ax_rt1 * data.state.station1.rtz.u() +
-            (data.ax_result.ax_hk2 * hkt.u() + data.ax_result.ax_rt2 * rtt.u()) *
-                data.ut_sens.u1();
-  ax.a1() = data.ax_result.ax_a1 +
-            (data.ax_result.ax_hk2 * hkt.t() + data.ax_result.ax_t2 +
-             data.ax_result.ax_rt2 * rtt.t()) *
-                data.tt_sens.a1() +
-            (data.ax_result.ax_hk2 * hkt.d()) * data.dt_sens.a1() +
-            (data.ax_result.ax_hk2 * hkt.u() + data.ax_result.ax_rt2 * rtt.u()) *
-                data.ut_sens.a1();
+  ax.u1() =
+      data.ax_result.ax_hk1 * data.state.station1.hkz.u() +
+      data.ax_result.ax_rt1 * data.state.station1.rtz.u() +
+      (data.ax_result.ax_hk2 * hkt.u() + data.ax_result.ax_rt2 * rtt.u()) *
+          data.ut_sens.u1();
+  ax.a1() =
+      data.ax_result.ax_a1 +
+      (data.ax_result.ax_hk2 * hkt.t() + data.ax_result.ax_t2 +
+       data.ax_result.ax_rt2 * rtt.t()) *
+          data.tt_sens.a1() +
+      (data.ax_result.ax_hk2 * hkt.d()) * data.dt_sens.a1() +
+      (data.ax_result.ax_hk2 * hkt.u() + data.ax_result.ax_rt2 * rtt.u()) *
+          data.ut_sens.a1();
   ax.x1() =
       (data.ax_result.ax_hk2 * hkt.t() + data.ax_result.ax_t2 +
        data.ax_result.ax_rt2 * rtt.t()) *
@@ -415,21 +407,21 @@ bool BoundaryLayerTransitionSolver::resolveTransitionLocationAndSensitivities(
       (data.ax_result.ax_hk2 * hkt.u() + data.ax_result.ax_rt2 * rtt.u()) *
           data.ut_sens.x1();
 
-  ax.t2() =
-      (data.ax_result.ax_hk2 * hkt.t() + data.ax_result.ax_t2 +
-       data.ax_result.ax_rt2 * rtt.t()) *
-      data.tt_sens.t2();
+  ax.t2() = (data.ax_result.ax_hk2 * hkt.t() + data.ax_result.ax_t2 +
+             data.ax_result.ax_rt2 * rtt.t()) *
+            data.tt_sens.t2();
   ax.d2() = (data.ax_result.ax_hk2 * hkt.d()) * data.dt_sens.d2();
   ax.u2() =
       (data.ax_result.ax_hk2 * hkt.u() + data.ax_result.ax_rt2 * rtt.u()) *
       data.ut_sens.u2();
-  ax.a2() = data.ax_result.ax_a2 * data.amplt_a2 +
-            (data.ax_result.ax_hk2 * hkt.t() + data.ax_result.ax_t2 +
-             data.ax_result.ax_rt2 * rtt.t()) *
-                data.tt_sens.a2() +
-            (data.ax_result.ax_hk2 * hkt.d()) * data.dt_sens.a2() +
-            (data.ax_result.ax_hk2 * hkt.u() + data.ax_result.ax_rt2 * rtt.u()) *
-                data.ut_sens.a2();
+  ax.a2() =
+      data.ax_result.ax_a2 * data.amplt_a2 +
+      (data.ax_result.ax_hk2 * hkt.t() + data.ax_result.ax_t2 +
+       data.ax_result.ax_rt2 * rtt.t()) *
+          data.tt_sens.a2() +
+      (data.ax_result.ax_hk2 * hkt.d()) * data.dt_sens.a2() +
+      (data.ax_result.ax_hk2 * hkt.u() + data.ax_result.ax_rt2 * rtt.u()) *
+          data.ut_sens.a2();
   ax.x2() =
       (data.ax_result.ax_hk2 * hkt.t() + data.ax_result.ax_t2 +
        data.ax_result.ax_rt2 * rtt.t()) *
@@ -438,11 +430,12 @@ bool BoundaryLayerTransitionSolver::resolveTransitionLocationAndSensitivities(
       (data.ax_result.ax_hk2 * hkt.u() + data.ax_result.ax_rt2 * rtt.u()) *
           data.ut_sens.x2();
 
-  ax.ms() = data.ax_result.ax_hk2 * hkt.ms() + data.ax_result.ax_rt2 * rtt.ms() +
+  ax.ms() = data.ax_result.ax_hk2 * hkt.ms() +
+            data.ax_result.ax_rt2 * rtt.ms() +
             data.ax_result.ax_hk1 * data.state.station1.hkz.ms() +
             data.ax_result.ax_rt1 * data.state.station1.rtz.ms();
-  ax.re() =
-      data.ax_result.ax_rt2 * rtt.re() + data.ax_result.ax_rt1 * data.state.station1.rtz.re();
+  ax.re() = data.ax_result.ax_rt2 * rtt.re() +
+            data.ax_result.ax_rt1 * data.state.station1.rtz.re();
 
   blDiff z;
   z.vector.setZero();
@@ -458,39 +451,45 @@ bool BoundaryLayerTransitionSolver::resolveTransitionLocationAndSensitivities(
   return true;
 }
 
-void BoundaryLayerTransitionSolver::setupLaminarTransitionSystem(TrdifData& data) {
-  data.wf.scalar = (data.xt.scalar - data.state.station1.param.xz) /
-                   (data.state.station2.param.xz - data.state.station1.param.xz);
+void BoundaryLayerTransitionSolver::setupLaminarTransitionSystem(
+    TrdifData &data) {
+  data.wf.scalar =
+      (data.xt.scalar - data.state.station1.param.xz) /
+      (data.state.station2.param.xz - data.state.station1.param.xz);
 
   data.wf2 = (data.xt.scalar - data.state.station1.param.xz) /
              (data.state.station2.param.xz - data.state.station1.param.xz);
-  data.wf_xt = 1.0 / (data.state.station2.param.xz - data.state.station1.param.xz);
+  data.wf_xt =
+      1.0 / (data.state.station2.param.xz - data.state.station1.param.xz);
   data.wf.vector = data.xt.vector * data.wf_xt;
-  data.wf.x1() +=
-      (data.wf2 - 1.0) / (data.state.station2.param.xz - data.state.station1.param.xz);
+  data.wf.x1() += (data.wf2 - 1.0) /
+                  (data.state.station2.param.xz - data.state.station1.param.xz);
   data.wf.x2() -=
       data.wf2 / (data.state.station2.param.xz - data.state.station1.param.xz);
 
   data.wf1 = 1.0 - data.wf2;
 
-  data.tt.scalar =
-      data.state.station1.param.tz * data.wf1 + data.state.station2.param.tz * data.wf2;
+  data.tt.scalar = data.state.station1.param.tz * data.wf1 +
+                   data.state.station2.param.tz * data.wf2;
   data.tt.vector =
-      (data.state.station2.param.tz - data.state.station1.param.tz) * data.wf.vector;
+      (data.state.station2.param.tz - data.state.station1.param.tz) *
+      data.wf.vector;
   data.tt.t1() += data.wf1;
   data.tt.t2() += data.wf2;
 
-  data.dt.scalar =
-      data.state.station1.param.dz * data.wf1 + data.state.station2.param.dz * data.wf2;
+  data.dt.scalar = data.state.station1.param.dz * data.wf1 +
+                   data.state.station2.param.dz * data.wf2;
   data.dt.vector =
-      (data.state.station2.param.dz - data.state.station1.param.dz) * data.wf.vector;
+      (data.state.station2.param.dz - data.state.station1.param.dz) *
+      data.wf.vector;
   data.dt.d1() += data.wf1;
   data.dt.d2() += data.wf2;
 
-  data.ut.scalar =
-      data.state.station1.param.uz * data.wf1 + data.state.station2.param.uz * data.wf2;
+  data.ut.scalar = data.state.station1.param.uz * data.wf1 +
+                   data.state.station2.param.uz * data.wf2;
   data.ut.vector =
-      (data.state.station2.param.uz - data.state.station1.param.uz) * data.wf.vector;
+      (data.state.station2.param.uz - data.state.station1.param.uz) *
+      data.wf.vector;
   data.ut.u1() += data.wf1;
   data.ut.u2() += data.wf2;
 
@@ -503,8 +502,8 @@ void BoundaryLayerTransitionSolver::setupLaminarTransitionSystem(TrdifData& data
   data.state.station2.param.sz = 0.0;
 
   workflow_->blkin(data.state);
-  data.state.station2 =
-      boundaryLayerVariablesSolver.solve(data.state.station2, FlowRegimeEnum::Laminar);
+  data.state.station2 = boundaryLayerVariablesSolver.solve(
+      data.state.station2, FlowRegimeEnum::Laminar);
 
   const SkinFrictionCoefficients laminarSkinFriction =
       workflow_->blmid(FlowRegimeEnum::Laminar);
@@ -535,7 +534,8 @@ void BoundaryLayerTransitionSolver::setupLaminarTransitionSystem(TrdifData& data
       {data.xt.a1(), data.xt.t1(), data.xt.d1(), data.xt.u1(), data.xt.x1()}};
 
   data.bl1.block<2, 5>(1, 0) =
-      data.blc.a1.middleRows<2>(1) + data.blc.a2.block<2, 4>(1, 1) * data.bl1_transform;
+      data.blc.a1.middleRows<2>(1) +
+      data.blc.a2.block<2, 4>(1, 1) * data.bl1_transform;
 
   data.bl2_transform = Eigen::Matrix<double, 4, 4>{
       {data.tt.t2(), data.tt.d2(), data.tt.u2(), data.tt.x2()},
@@ -548,9 +548,10 @@ void BoundaryLayerTransitionSolver::setupLaminarTransitionSystem(TrdifData& data
       data.blc.a2.block<2, 4>(1, 1) * data.bl2_transform;
 }
 
-void BoundaryLayerTransitionSolver::setupTurbulentTransitionSystem(TrdifData& data) {
-  data.state.station2 =
-      boundaryLayerVariablesSolver.solve(data.state.station2, FlowRegimeEnum::Turbulent);
+void BoundaryLayerTransitionSolver::setupTurbulentTransitionSystem(
+    TrdifData &data) {
+  data.state.station2 = boundaryLayerVariablesSolver.solve(
+      data.state.station2, FlowRegimeEnum::Turbulent);
 
   data.ctr = 1.8 * std::exp(-3.3 / (data.state.station2.hkz.scalar - 1.0));
   data.ctr_hk2 = data.ctr * 3.3 / (data.state.station2.hkz.scalar - 1.0) /
@@ -574,8 +575,8 @@ void BoundaryLayerTransitionSolver::setupTurbulentTransitionSystem(TrdifData& da
   data.state.station2.param.amplz = 0.0;
   data.state.station2.param.sz = data.st;
 
-  data.state.station2 =
-      boundaryLayerVariablesSolver.solve(data.state.station2, FlowRegimeEnum::Turbulent);
+  data.state.station2 = boundaryLayerVariablesSolver.solve(
+      data.state.station2, FlowRegimeEnum::Turbulent);
 
   data.state.stepbl();
   data.state.station2 = boundaryLayerStore.restoreblData(2);
@@ -583,10 +584,12 @@ void BoundaryLayerTransitionSolver::setupTurbulentTransitionSystem(TrdifData& da
   const SkinFrictionCoefficients turbulentSkinFriction =
       workflow_->blmid(FlowRegimeEnum::Turbulent);
 
-  data.blc = blDiffSolver.solve(FlowRegimeEnum::Turbulent, data.state,
-                                turbulentSkinFriction, data.blTransition.amcrit);
+  data.blc =
+      blDiffSolver.solve(FlowRegimeEnum::Turbulent, data.state,
+                         turbulentSkinFriction, data.blTransition.amcrit);
 
-  const Eigen::VectorXd common_st = Eigen::Vector3d{data.st_tt, data.st_dt, data.st_ut};
+  const Eigen::VectorXd common_st =
+      Eigen::Vector3d{data.st_tt, data.st_dt, data.st_ut};
   const Eigen::VectorXd st1 =
       Eigen::Matrix<double, 5, 3>{{data.tt.a1(), data.dt.a1(), data.ut.a1()},
                                   {data.tt.t1(), data.dt.t1(), data.ut.t1()},
@@ -623,25 +626,22 @@ void BoundaryLayerTransitionSolver::setupTurbulentTransitionSystem(TrdifData& da
 
   for (int k = 0; k < 3; ++k) {
     data.btrez[k] = data.blc.rhs[k];
-    data.btm[k] = data.blc.d_msq[k] + data.blc.a1(k, 0) * data.st_ms +
-                  data.blc.a1(k, 1) * data.tt.ms() +
-                  data.blc.a1(k, 2) * data.dt.ms() +
-                  data.blc.a1(k, 3) * data.ut.ms() +
-                  data.blc.a1(k, 4) * data.xt.ms();
-    data.btr[k] = data.blc.d_re[k] + data.blc.a1(k, 0) * data.st_re +
-                  data.blc.a1(k, 1) * data.tt.re() +
-                  data.blc.a1(k, 2) * data.dt.re() +
-                  data.blc.a1(k, 3) * data.ut.re() +
-                  data.blc.a1(k, 4) * data.xt.re();
-    data.btx[k] = data.blc.d_xi[k] + data.blc.a1(k, 0) * data.st_xf +
-                  data.blc.a1(k, 1) * data.tt.xf() +
-                  data.blc.a1(k, 2) * data.dt.xf() +
-                  data.blc.a1(k, 3) * data.ut.xf() +
-                  data.blc.a1(k, 4) * data.xt.xf();
+    data.btm[k] =
+        data.blc.d_msq[k] + data.blc.a1(k, 0) * data.st_ms +
+        data.blc.a1(k, 1) * data.tt.ms() + data.blc.a1(k, 2) * data.dt.ms() +
+        data.blc.a1(k, 3) * data.ut.ms() + data.blc.a1(k, 4) * data.xt.ms();
+    data.btr[k] =
+        data.blc.d_re[k] + data.blc.a1(k, 0) * data.st_re +
+        data.blc.a1(k, 1) * data.tt.re() + data.blc.a1(k, 2) * data.dt.re() +
+        data.blc.a1(k, 3) * data.ut.re() + data.blc.a1(k, 4) * data.xt.re();
+    data.btx[k] =
+        data.blc.d_xi[k] + data.blc.a1(k, 0) * data.st_xf +
+        data.blc.a1(k, 1) * data.tt.xf() + data.blc.a1(k, 2) * data.dt.xf() +
+        data.blc.a1(k, 3) * data.ut.xf() + data.blc.a1(k, 4) * data.xt.xf();
   }
 }
 
-void BoundaryLayerTransitionSolver::mergeTransitionSystems(TrdifData& data) {
+void BoundaryLayerTransitionSolver::mergeTransitionSystems(TrdifData &data) {
   data.blc.rhs[0] = data.btrez[0];
   data.blc.rhs[1] = data.blrez[1] + data.btrez[1];
   data.blc.rhs[2] = data.blrez[2] + data.btrez[2];

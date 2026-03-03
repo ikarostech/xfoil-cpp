@@ -4,48 +4,55 @@
 
 /**	  Calculates x(ss)
  *	   xs array must have been calculated by spline */
-double spline::seval(double ss, Eigen::VectorXd x, Eigen::VectorXd xs, Eigen::VectorXd s, int n) {
+double spline::seval(double ss, Eigen::VectorXd x, Eigen::VectorXd xs,
+                     Eigen::VectorXd s, int n) {
 
-    int index = std::distance(s.begin(), std::lower_bound(s.begin(), s.begin() + n, ss));
+  int index =
+      std::distance(s.begin(), std::lower_bound(s.begin(), s.begin() + n, ss));
 
-    double ds = s[index] - s[index - 1];
-    double t = (ss - s[index - 1]) / ds;
-    double cx_former = ds * xs[index - 1] - x[index] + x[index - 1];
-    double cx_later = ds * xs[index] - x[index] + x[index - 1];
-    return t * x[index] + (1.0 - t) * x[index - 1] +
-            (t - t * t) * ((1.0 - t) * cx_former - t * cx_later);
+  double ds = s[index] - s[index - 1];
+  double t = (ss - s[index - 1]) / ds;
+  double cx_former = ds * xs[index - 1] - x[index] + x[index - 1];
+  double cx_later = ds * xs[index] - x[index] + x[index - 1];
+  return t * x[index] + (1.0 - t) * x[index - 1] +
+         (t - t * t) * ((1.0 - t) * cx_former - t * cx_later);
 }
 
 /** --------------------------------------------------
-*	   calculates dx/ds(ss)                         |
-*	   xs array must have been calculated by spline |
-* -------------------------------------------------- */
-double spline::deval(double ss, Eigen::VectorXd x, Eigen::VectorXd xs, Eigen::VectorXd s, int n) {
+ *	   calculates dx/ds(ss)                         |
+ *	   xs array must have been calculated by spline |
+ * -------------------------------------------------- */
+double spline::deval(double ss, Eigen::VectorXd x, Eigen::VectorXd xs,
+                     Eigen::VectorXd s, int n) {
 
-    int i = std::distance(s.begin(), std::lower_bound(s.begin(), s.begin() + n, ss));
-    
-    const double ds = s[i] - s[i - 1];
-    const double dx = x[i] - x[i - 1];
-    const double t = (ss - s[i - 1]) / ds;
-    const double cx1 = ds * xs[i - 1] - dx;
-    const double cx2 = ds * xs[i] - dx;
-    return (dx + (1.0 - 4.0 * t + 3.0 * t * t) * cx1 +
-            t * (3.0 * t - 2.0) * cx2) / ds;
+  int i =
+      std::distance(s.begin(), std::lower_bound(s.begin(), s.begin() + n, ss));
+
+  const double ds = s[i] - s[i - 1];
+  const double dx = x[i] - x[i - 1];
+  const double t = (ss - s[i - 1]) / ds;
+  const double cx1 = ds * xs[i - 1] - dx;
+  const double cx2 = ds * xs[i] - dx;
+  return (dx + (1.0 - 4.0 * t + 3.0 * t * t) * cx1 +
+          t * (3.0 * t - 2.0) * cx2) /
+         ds;
 }
 
 /** --------------------------------------------------
  *      calculates d2x/ds2(ss)                          /
  *      xs array must have been calculated by spline    /
  * --------------------------------------------------- */
-double spline::d2val(double ss, Eigen::VectorXd x, Eigen::VectorXd xs, Eigen::VectorXd s, int n) {
+double spline::d2val(double ss, Eigen::VectorXd x, Eigen::VectorXd xs,
+                     Eigen::VectorXd s, int n) {
 
-    int i = std::distance(s.begin(), std::lower_bound(s.begin(), s.begin() + n, ss));
-    
-    const double ds = s[i] - s[i - 1];
-    const double t = (ss - s[i - 1]) / ds;
-    const double cx1 = ds * xs[i - 1] - x[i] + x[i - 1];
-    const double cx2 = ds * xs[i] - x[i] + x[i - 1];
-    return ((6.0 * t - 4.0) * cx1 + (6.0 * t - 2.0) * cx2) / pow(ds, 2.0);
+  int i =
+      std::distance(s.begin(), std::lower_bound(s.begin(), s.begin() + n, ss));
+
+  const double ds = s[i] - s[i - 1];
+  const double t = (ss - s[i - 1]) / ds;
+  const double cx1 = ds * xs[i - 1] - x[i] + x[i - 1];
+  const double cx2 = ds * xs[i] - x[i] + x[i - 1];
+  return ((6.0 * t - 4.0) * cx1 + (6.0 * t - 2.0) * cx2) / pow(ds, 2.0);
 }
 
 /**
@@ -59,7 +66,9 @@ double spline::d2val(double ss, Eigen::VectorXd x, Eigen::VectorXd xs, Eigen::Ve
  * 	   si	   calculated s(xi) value  (input,output)
  * 	   x,xs,s  usual spline arrays	   (input)
  */
-double spline::sinvrt(double si, double xi, Eigen::VectorXd x, Eigen::VectorXd xs, Eigen::VectorXd spline_length, int n) {
+double spline::sinvrt(double si, double xi, Eigen::VectorXd x,
+                      Eigen::VectorXd xs, Eigen::VectorXd spline_length,
+                      int n) {
   int iter;
   double sisav;
   sisav = si;
@@ -69,7 +78,8 @@ double spline::sinvrt(double si, double xi, Eigen::VectorXd x, Eigen::VectorXd x
     const double resp = spline::deval(si, x, xs, spline_length, n);
     const double ds = -res / resp;
     si = si + ds;
-    if (fabs(ds / (spline_length[n] - spline_length[1])) < 1.0e-5) return si;
+    if (fabs(ds / (spline_length[n] - spline_length[1])) < 1.0e-5)
+      return si;
   }
 
   si = sisav;
