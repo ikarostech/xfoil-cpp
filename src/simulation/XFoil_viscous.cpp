@@ -1,7 +1,7 @@
 #include "XFoil.h"
 #include "simulation/InviscidSolver.hpp"
 #include "simulation/Blsolve.hpp"
-#include "simulation/BoundaryLayer_march.hpp"
+#include "simulation/march/march.hpp"
 #include "simulation/psi.hpp"
 #include "domain/boundary_layer/boundary_layer_builder.hpp"
 #include "core/math_util.hpp"
@@ -273,7 +273,7 @@ XFoil::UpdateResult XFoil::update(const XFoil::Matrix3x2dVector& vdel) const {
   result.analysis_state = analysis_state_;
   result.aero_coeffs = aero_coeffs_;
 
-  BoundaryLayerMarcher marcher;
+  Marcher marcher;
   //--- calculate new ue distribution and tangential velocities
   const auto ue_distribution =
       marcher.computeNewUeDistribution(boundaryLayerWorkflow, *this, vdel);

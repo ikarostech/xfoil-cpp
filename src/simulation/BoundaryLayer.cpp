@@ -1,5 +1,5 @@
 #include "BoundaryLayer.hpp"
-#include "BoundaryLayer_march.hpp"
+#include "simulation/march/march.hpp"
 
 #include <algorithm>
 #include <array>
@@ -989,7 +989,7 @@ void BoundaryLayerWorkflow::initializeSetblEdgeVelocityState(
 }
 
 void BoundaryLayerWorkflow::processSetblSide(
-    BoundaryLayerMarcher& marcher, int side, const Foil& foil,
+    Marcher& marcher, int side, const Foil& foil,
     const StagnationResult& stagnation, bool controlByAlpha,
     const Eigen::MatrixXd& dij, SetblOutputView& output,
     std::array<SetblStation, 2>& stations, SetblSideData& sideData,
@@ -1129,7 +1129,9 @@ SetblOutputView BoundaryLayerWorkflow::setbl(
   //     coefficients are then incorporated into the global newton system.
   //-------------------------------------------------
   SetblOutputView output{};
-  BoundaryLayerMarcher marcher;
+  Marcher marcher;
+  MarcherUe marcher_ue;
+  MarcherDu marcher_du;
   SetblWorkingState state;
   initializeSetblSystemStorage(output, state.stations, state.sides);
 
@@ -1141,9 +1143,9 @@ SetblOutputView BoundaryLayerWorkflow::setbl(
 
   if (!bl_initialized) {
     Logger::instance().write("   Initializing bl ...\n");
-    marcher.mrchue(*this, foil, stagnation);
+    marcher_ue.mrchue(*this, foil, stagnation);
   }
-  marcher.mrchdu(*this, foil, stagnation);
+  marcher_du.mrchdu(*this, foil, stagnation);
   initializeSetblProfiles(output);
 
   initializeSetblEdgeVelocityState(profiles, dij, output, state.sides);

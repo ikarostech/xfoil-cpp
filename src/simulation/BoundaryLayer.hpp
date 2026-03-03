@@ -19,7 +19,7 @@
 
 struct FlowState;
 struct AeroCoefficients;
-class BoundaryLayerMarcher;
+class Marcher;
 struct SetblOutputView;
 class Foil;
 class Edge;
@@ -266,7 +266,7 @@ class BoundaryLayerWorkflow {
       const Eigen::MatrixXd& dij, SetblOutputView& output,
       SetblSideData& sideData) const;
   void processSetblSide(
-      BoundaryLayerMarcher& marcher, int side, const Foil& foil,
+      Marcher& marcher, int side, const Foil& foil,
       const StagnationResult& stagnation, bool controlByAlpha,
       const Eigen::MatrixXd& dij, SetblOutputView& output,
       std::array<SetblStation, 2>& stations, SetblSideData& sideData,
