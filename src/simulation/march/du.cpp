@@ -2,12 +2,9 @@
 
 #include <algorithm>
 #include <cmath>
-#include <iomanip>
-#include <sstream>
 
 #include "XFoil.h"
 #include "core/math_util.hpp"
-#include "infrastructure/logger.hpp"
 
 using BoundaryContext = BoundaryLayerWorkflow::MixedModeStationContext;
 using EdgeVelocityFallbackMode =
@@ -24,23 +21,22 @@ MarcherDu::prepareMixedModeStation(BoundaryLayerWorkflow &workflow, int side,
                                    int stationIndex, int previousTransition)
 {
   BoundaryContext ctx;
+  const auto station = workflow.readStationModel(side, stationIndex);
 
   ctx.flowRegime = workflow.determineRegimeForStation(side, stationIndex);
-  ctx.xsi = workflow.lattice.get(side).arcLengthCoordinates[stationIndex];
-  ctx.uei = workflow.lattice.get(side).profiles.edgeVelocity[stationIndex];
-  ctx.thi = workflow.lattice.get(side).profiles.momentumThickness[stationIndex];
-  ctx.dsi =
-      workflow.lattice.get(side).profiles.displacementThickness[stationIndex];
+  ctx.xsi = station.arcLength;
+  ctx.uei = station.edgeVelocity;
+  ctx.thi = station.momentumThickness;
+  ctx.dsi = station.displacementThickness;
 
   if (stationIndex < previousTransition)
   {
-    ami = workflow.lattice.get(side).profiles.skinFrictionCoeff[stationIndex];
+    ami = station.skinFrictionCoeff;
     ctx.cti = 0.03;
   }
   else
   {
-    ctx.cti =
-        workflow.lattice.get(side).profiles.skinFrictionCoeff[stationIndex];
+    ctx.cti = station.skinFrictionCoeff;
     if (ctx.cti <= 0.0)
     {
       ctx.cti = 0.03;
@@ -50,8 +46,7 @@ MarcherDu::prepareMixedModeStation(BoundaryLayerWorkflow &workflow, int side,
 
   if (ctx.isWake())
   {
-    int iw = stationIndex - workflow.lattice.get(side).trailingEdgeIndex;
-    ctx.dswaki = workflow.wgap[iw - 1];
+    ctx.dswaki = station.wakeGap;
   }
   else
   {
@@ -59,12 +54,11 @@ MarcherDu::prepareMixedModeStation(BoundaryLayerWorkflow &workflow, int side,
   }
 
   double thickness_limit =
-      (stationIndex <= workflow.lattice.get(side).trailingEdgeIndex) ? 1.02
-                                                                     : 1.00005;
+      (stationIndex <= station.trailingEdgeIndex) ? 1.02 : 1.00005;
   ctx.dsi =
       std::max(ctx.dsi - ctx.dswaki, thickness_limit * ctx.thi) + ctx.dswaki;
 
-  workflow.flowRegime = ctx.flowRegime;
+  ctx.flowRegime = workflow.applyFlowRegimeCandidate(ctx.flowRegime);
 
   return ctx;
 }
@@ -96,9 +90,10 @@ bool MarcherDu::marchBoundaryLayerSide(BoundaryLayerWorkflow &workflow,
                                        const StagnationResult &stagnation)
 {
   const int previousTransition = workflow.resetSideState(side, foil, stagnation);
+  const int stationCount = workflow.readSideStationCount(side);
 
   for (int stationIndex = 0;
-       stationIndex < workflow.lattice.get(side).stationCount - 1;
+       stationIndex < stationCount - 1;
        ++stationIndex)
   {
     if (!processBoundaryLayerStation(workflow, state, side, stationIndex,
@@ -136,6 +131,7 @@ bool MarcherDu::performMixedModeNewtonIteration(
   bool converged = false;
   double ueref = 0.0;
   double hkref = 0.0;
+  ctx.flowRegime = workflow.applyFlowRegimeCandidate(ctx.flowRegime);
 
   for (int itbl = 1; itbl <= 25; ++itbl)
   {
@@ -144,8 +140,10 @@ bool MarcherDu::performMixedModeNewtonIteration(
                        ctx.dsi, ctx.dswaki, ctx.uei);
     workflow.state.current() = updatedCurrent;
     workflow.blkin(workflow.state);
+    ctx.flowRegime = workflow.currentFlowRegime();
 
     workflow.checkTransitionIfNeeded(side, ibl, ctx.isSimilarity(), 1, ami);
+    ctx.flowRegime = workflow.currentFlowRegime();
 
     const bool startOfWake = workflow.isStartOfWake(side, ibl);
     workflow.updateSystemMatricesForStation(edge, side, ibl, ctx);
@@ -182,25 +180,8 @@ void MarcherDu::handleMixedModeNonConvergence(
     BoundaryLayerWorkflow &workflow, int side, int ibl,
     BoundaryLayerWorkflow::MixedModeStationContext &ctx)
 {
-  std::stringstream ss;
-  ss << "     mrchdu: convergence failed at " << ibl << " ,  side " << side
-     << ", res=" << std::setw(4) << std::fixed << std::setprecision(3)
-     << ctx.dmax << "\n";
-  Logger::instance().write(ss.str());
-
-  workflow.resetStationKinematicsAfterFailure(
-      side, ibl, ctx,
-      BoundaryLayerWorkflow::EdgeVelocityFallbackMode::UsePreviousStation);
-
-  blData updatedCurrent =
-      workflow.blprv(workflow.state.current(), ctx.xsi, ami, ctx.cti, ctx.thi,
-                     ctx.dsi, ctx.dswaki, ctx.uei);
-  workflow.state.current() = updatedCurrent;
-  workflow.blkin(workflow.state);
-
-  workflow.checkTransitionIfNeeded(side, ibl, ctx.isSimilarity(), 2, ami);
-
-  workflow.syncStationRegimeStates(side, ibl, ctx.flowRegime);
-
-  ctx.ami = ami;
+  workflow.emitMarchFailureLog("mrchdu", side, ibl, ctx.dmax);
+  workflow.recoverStationAfterFailure(
+      side, ibl, ctx, ami,
+      BoundaryLayerWorkflow::EdgeVelocityFallbackMode::UsePreviousStation, 2);
 }

@@ -4,6 +4,7 @@
 #include <cmath>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "domain/boundary_layer/bl_compressibility_params.hpp"
@@ -55,6 +56,8 @@ class BoundaryLayerWorkflow {
         SidePair<Eigen::VectorXd> outputEdgeVelocity;
         SidePair<int> jvte;
         SidePair<double> dule;
+        SidePair<Eigen::VectorXd> ule_m;
+        SidePair<Eigen::VectorXd> ute_m;
         LeTeSensitivities leTeSensitivities;
         SidePair<double> ule_a;
     };
@@ -204,8 +207,41 @@ class BoundaryLayerWorkflow {
         double due1 = 0.0;
         double dds1 = 0.0;
     };
+    struct StationReadModel {
+        int stationCount      = 0;
+        int trailingEdgeIndex = 0;
+        int transitionIndex   = 0;
+        double arcLength      = 0.0;
+        double edgeVelocity   = 0.0;
+        double momentumThickness = 0.0;
+        double displacementThickness = 0.0;
+        double skinFrictionCoeff    = 0.0;
+        double wakeGap              = 0.0;
+    };
+    struct TrailingEdgeReadModel {
+        int topTrailingEdgeIndex    = 0;
+        int bottomTrailingEdgeIndex = 0;
+        double topMomentumThickness    = 0.0;
+        double bottomMomentumThickness = 0.0;
+        double topDisplacementThickness    = 0.0;
+        double bottomDisplacementThickness = 0.0;
+        double topSkinFrictionCoeff    = 0.0;
+        double bottomSkinFrictionCoeff = 0.0;
+    };
 
+    int readSideStationCount(int side) const;
+    StationReadModel readStationModel(int side, int stationIndex) const;
+    TrailingEdgeReadModel readTrailingEdgeModel() const;
+    void emitMarchInfoLog(std::string_view message) const;
+    void emitMarchFailureLog(std::string_view phase, int side, int stationIndex, double residual) const;
+    double readNewtonRhs(int row) const;
+    void solveMrchueDirectNewtonSystem();
+    void solveMrchueInverseNewtonSystem(double htarg);
+    void runTransitionCheckForMrchue(int side, int stationIndex, double &ami, double &cti);
+    bool solveTeSystemForCurrentProfiles(const Edge &edge);
     bool isStartOfWake(int side, int stationIndex);
+    FlowRegimeEnum applyFlowRegimeCandidate(FlowRegimeEnum candidate);
+    FlowRegimeEnum currentFlowRegime() const;
     void updateSystemMatricesForStation(const Edge &edge, int side, int stationIndex, MixedModeStationContext &ctx);
     void initializeFirstIterationState(int side, int stationIndex, int previousTransition, MixedModeStationContext &ctx,
                                        double &ueref, double &hkref);
@@ -274,6 +310,9 @@ class BoundaryLayerWorkflow {
     template <typename StationContext>
     void resetStationKinematicsAfterFailure(int side, int stationIndex, StationContext &ctx,
                                             EdgeVelocityFallbackMode edgeMode);
+    template <typename StationContext>
+    void recoverStationAfterFailure(int side, int stationIndex, StationContext &ctx, double &ami,
+                                    EdgeVelocityFallbackMode edgeMode, int laminarAdvance);
     BoundaryLayerDelta buildBoundaryLayerDelta(int side, const Eigen::VectorXd &unew_side,
                                                const Eigen::VectorXd &u_ac_side, double dac,
                                                const Matrix3x2dVector &vdel) const;
@@ -340,4 +379,25 @@ inline void BoundaryLayerWorkflow::resetStationKinematicsAfterFailure(int side, 
     if (stationIndex > lattice.get(side).profiles.transitionIndex) {
         ctx.cti = lattice.get(side).profiles.skinFrictionCoeff[stationIndex - 1];
     }
+}
+
+template <typename StationContext>
+inline void BoundaryLayerWorkflow::recoverStationAfterFailure(int side, int stationIndex, StationContext &ctx,
+                                                              double &ami, EdgeVelocityFallbackMode edgeMode,
+                                                              int laminarAdvance) {
+    ctx.flowRegime = applyFlowRegimeCandidate(ctx.flowRegime);
+
+    resetStationKinematicsAfterFailure(side, stationIndex, ctx, edgeMode);
+
+    blData updatedCurrent = blprv(state.current(), ctx.xsi, ctx.ami, ctx.cti, ctx.thi, ctx.dsi, ctx.dswaki, ctx.uei);
+    state.current()       = updatedCurrent;
+    blkin(state);
+    ctx.flowRegime = currentFlowRegime();
+
+    checkTransitionIfNeeded(side, stationIndex, ctx.isSimilarity(), laminarAdvance, ami);
+    ctx.flowRegime = currentFlowRegime();
+
+    syncStationRegimeStates(side, stationIndex, ctx.flowRegime);
+    ctx.flowRegime = currentFlowRegime();
+    ctx.ami        = ami;
 }

@@ -176,6 +176,120 @@ int BoundaryLayerWorkflow::resetSideState(int side, const Foil &foil,
   return previousTransition;
 }
 
+BoundaryLayerWorkflow::StationReadModel
+BoundaryLayerWorkflow::readStationModel(int side, int stationIndex) const {
+  const auto &sideLattice = lattice.get(side);
+
+  StationReadModel model;
+  model.stationCount = sideLattice.stationCount;
+  model.trailingEdgeIndex = sideLattice.trailingEdgeIndex;
+  model.transitionIndex = sideLattice.profiles.transitionIndex;
+  model.arcLength = sideLattice.arcLengthCoordinates[stationIndex];
+  model.edgeVelocity = sideLattice.profiles.edgeVelocity[stationIndex];
+  model.momentumThickness = sideLattice.profiles.momentumThickness[stationIndex];
+  model.displacementThickness =
+      sideLattice.profiles.displacementThickness[stationIndex];
+  model.skinFrictionCoeff = sideLattice.profiles.skinFrictionCoeff[stationIndex];
+
+  if (stationIndex > sideLattice.trailingEdgeIndex) {
+    const int wakeIndex = stationIndex - sideLattice.trailingEdgeIndex;
+    model.wakeGap = wgap[wakeIndex - 1];
+  }
+
+  return model;
+}
+
+int BoundaryLayerWorkflow::readSideStationCount(int side) const {
+  return lattice.get(side).stationCount;
+}
+
+BoundaryLayerWorkflow::TrailingEdgeReadModel
+BoundaryLayerWorkflow::readTrailingEdgeModel() const {
+  TrailingEdgeReadModel model;
+  model.topTrailingEdgeIndex = lattice.top.trailingEdgeIndex;
+  model.bottomTrailingEdgeIndex = lattice.bottom.trailingEdgeIndex;
+
+  model.topMomentumThickness =
+      lattice.top.profiles.momentumThickness[model.topTrailingEdgeIndex];
+  model.bottomMomentumThickness =
+      lattice.bottom.profiles.momentumThickness[model.bottomTrailingEdgeIndex];
+  model.topDisplacementThickness =
+      lattice.top.profiles.displacementThickness[model.topTrailingEdgeIndex];
+  model.bottomDisplacementThickness =
+      lattice.bottom.profiles.displacementThickness[model.bottomTrailingEdgeIndex];
+  model.topSkinFrictionCoeff =
+      lattice.top.profiles.skinFrictionCoeff[model.topTrailingEdgeIndex];
+  model.bottomSkinFrictionCoeff =
+      lattice.bottom.profiles.skinFrictionCoeff[model.bottomTrailingEdgeIndex];
+  return model;
+}
+
+FlowRegimeEnum
+BoundaryLayerWorkflow::applyFlowRegimeCandidate(FlowRegimeEnum candidate) {
+  flowRegime = candidate;
+  return flowRegime;
+}
+
+FlowRegimeEnum BoundaryLayerWorkflow::currentFlowRegime() const {
+  return flowRegime;
+}
+
+void BoundaryLayerWorkflow::emitMarchInfoLog(std::string_view message) const {
+  Logger::instance().write(std::string(message));
+}
+
+void BoundaryLayerWorkflow::emitMarchFailureLog(std::string_view phase, int side,
+                                                int stationIndex,
+                                                double residual) const {
+  std::stringstream ss;
+  ss << "     " << phase << ": convergence failed at " << stationIndex
+     << ",  side " << side << ", res =" << std::fixed << std::setprecision(3)
+     << residual << "\n";
+  Logger::instance().write(ss.str());
+}
+
+double BoundaryLayerWorkflow::readNewtonRhs(int row) const {
+  return blc.rhs[row];
+}
+
+void BoundaryLayerWorkflow::solveMrchueDirectNewtonSystem() {
+  blc.a2(3, 0) = 0.0;
+  blc.a2(3, 1) = 0.0;
+  blc.a2(3, 2) = 0.0;
+  blc.a2(3, 3) = 1.0;
+  blc.rhs[3] = 0.0;
+  blc.rhs = blc.a2.block(0, 0, 4, 4).fullPivLu().solve(blc.rhs);
+}
+
+void BoundaryLayerWorkflow::solveMrchueInverseNewtonSystem(double htarg) {
+  blc.a2(3, 0) = 0.0;
+  blc.a2(3, 1) = state.station2.hkz.t();
+  blc.a2(3, 2) = state.station2.hkz.d();
+  blc.a2(3, 3) = state.station2.hkz.u();
+  blc.rhs[3] = htarg - state.station2.hkz.scalar;
+  blc.rhs = blc.a2.block(0, 0, 4, 4).fullPivLu().solve(blc.rhs);
+}
+
+void BoundaryLayerWorkflow::runTransitionCheckForMrchue(int side, int stationIndex,
+                                                        double &ami,
+                                                        double &cti) {
+  transitionSolver.trchek();
+  ami = state.station2.param.amplz;
+  if (flowRegime == FlowRegimeEnum::Transition) {
+    lattice.get(side).profiles.transitionIndex = stationIndex;
+    if (cti <= 0.0) {
+      cti = 0.03;
+      state.station2.param.sz = cti;
+    }
+  } else {
+    lattice.get(side).profiles.transitionIndex = stationIndex + 2;
+  }
+}
+
+bool BoundaryLayerWorkflow::solveTeSystemForCurrentProfiles(const Edge &edge) {
+  return tesys(lattice.top.profiles, lattice.bottom.profiles, edge);
+}
+
 void BoundaryLayerWorkflow::storeStationStateCommon(
     int side, int stationIndex, const MixedModeStationContext &ctx) {
   if (stationIndex < lattice.get(side).profiles.transitionIndex) {

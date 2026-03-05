@@ -7,7 +7,6 @@
 
 #include "XFoil.h"
 #include "core/math_util.hpp"
-#include "infrastructure/logger.hpp"
 
 using EdgeVelocityFallbackMode =
     BoundaryLayerWorkflow::EdgeVelocityFallbackMode;
@@ -29,17 +28,18 @@ namespace
                            int stationIndex, const MrchueStationContext &ctx,
                            bool includeLaminarAmpTerm)
   {
-    double dmax_local = std::max(std::fabs(workflow.blc.rhs[1] / ctx.thi),
-                                 std::fabs(workflow.blc.rhs[2] / ctx.dsi));
+    const auto station = workflow.readStationModel(side, stationIndex);
+    double dmax_local = std::max(std::fabs(workflow.readNewtonRhs(1) / ctx.thi),
+                                 std::fabs(workflow.readNewtonRhs(2) / ctx.dsi));
 
-    if (includeLaminarAmpTerm &&
-        stationIndex < workflow.lattice.get(side).profiles.transitionIndex)
+    if (includeLaminarAmpTerm && stationIndex < station.transitionIndex)
     {
-      dmax_local = std::max(dmax_local, std::fabs(workflow.blc.rhs[0] / 10.0));
+      dmax_local = std::max(dmax_local, std::fabs(workflow.readNewtonRhs(0) / 10.0));
     }
-    if (stationIndex >= workflow.lattice.get(side).profiles.transitionIndex)
+    if (stationIndex >= station.transitionIndex)
     {
-      dmax_local = std::max(dmax_local, std::fabs(workflow.blc.rhs[0] / ctx.cti));
+      dmax_local =
+          std::max(dmax_local, std::fabs(workflow.readNewtonRhs(0) / ctx.cti));
     }
     return dmax_local;
   }
@@ -57,13 +57,14 @@ namespace
                              int stationIndex, MrchueStationContext &ctx,
                              double relaxation)
   {
-    if (stationIndex >= workflow.lattice.get(side).profiles.transitionIndex)
+    const auto station = workflow.readStationModel(side, stationIndex);
+    if (stationIndex >= station.transitionIndex)
     {
-      ctx.cti += relaxation * workflow.blc.rhs[0];
+      ctx.cti += relaxation * workflow.readNewtonRhs(0);
     }
-    ctx.thi += relaxation * workflow.blc.rhs[1];
-    ctx.dsi += relaxation * workflow.blc.rhs[2];
-    ctx.uei += relaxation * workflow.blc.rhs[3];
+    ctx.thi += relaxation * workflow.readNewtonRhs(1);
+    ctx.dsi += relaxation * workflow.readNewtonRhs(2);
+    ctx.uei += relaxation * workflow.readNewtonRhs(3);
   }
 
   bool maybeSwitchToInverseMode(BoundaryLayerWorkflow &workflow, int side,
@@ -72,7 +73,8 @@ namespace
                                 double &htarg, bool &direct,
                                 std::stringstream &ss)
   {
-    if (stationIndex == workflow.lattice.get(side).trailingEdgeIndex + 1)
+    const auto station = workflow.readStationModel(side, stationIndex);
+    if (stationIndex == station.trailingEdgeIndex + 1)
     {
       return false;
     }
@@ -81,14 +83,11 @@ namespace
         ctx.uei * ctx.uei * workflow.blCompressibility.hstinv /
         (workflow.blCompressibility.gm1bl *
          (1.0 - 0.5 * ctx.uei * ctx.uei * workflow.blCompressibility.hstinv));
-    const double htest = (ctx.dsi + relaxation * workflow.blc.rhs[2]) /
-                         (ctx.thi + relaxation * workflow.blc.rhs[1]);
+    const double htest = (ctx.dsi + relaxation * workflow.readNewtonRhs(2)) /
+                         (ctx.thi + relaxation * workflow.readNewtonRhs(1));
     const auto hkin_result = boundary_layer::hkin(htest, msq);
     const double hktest = hkin_result.hk;
-    const double hmax =
-        (stationIndex < workflow.lattice.get(side).profiles.transitionIndex)
-            ? kHlmax
-            : kHtmax;
+    const double hmax = (stationIndex < station.transitionIndex) ? kHlmax : kHtmax;
 
     direct = (hktest < hmax);
     if (direct)
@@ -108,45 +107,21 @@ namespace
 
     ss << "     mrchue: inverse mode at " << stationIndex
        << "    hk=" << std::fixed << std::setprecision(3) << htarg << "\n";
-    Logger::instance().write(ss.str());
+    workflow.emitMarchInfoLog(ss.str());
     ss.str("");
     return true;
-  }
-
-  void solveMrchueDirectSystem(BoundaryLayerWorkflow &workflow)
-  {
-    workflow.blc.a2(3, 0) = 0.0;
-    workflow.blc.a2(3, 1) = 0.0;
-    workflow.blc.a2(3, 2) = 0.0;
-    workflow.blc.a2(3, 3) = 1.0;
-    workflow.blc.rhs[3] = 0.0;
-    workflow.blc.rhs =
-        workflow.blc.a2.block(0, 0, 4, 4).fullPivLu().solve(workflow.blc.rhs);
-  }
-
-  void solveMrchueInverseSystem(BoundaryLayerWorkflow &workflow,
-                                const MrchueStationContext &ctx)
-  {
-    workflow.blc.a2(3, 0) = 0.0;
-    workflow.blc.a2(3, 1) = workflow.state.station2.hkz.t();
-    workflow.blc.a2(3, 2) = workflow.state.station2.hkz.d();
-    workflow.blc.a2(3, 3) = workflow.state.station2.hkz.u();
-    workflow.blc.rhs[3] = ctx.htarg - workflow.state.station2.hkz.scalar;
-    workflow.blc.rhs =
-        workflow.blc.a2.block(0, 0, 4, 4).fullPivLu().solve(workflow.blc.rhs);
   }
 
   void clampAndAdjustMrchueStation(BoundaryLayerWorkflow &workflow, int side,
                                    int stationIndex, MrchueStationContext &ctx)
   {
-    if (stationIndex >= workflow.lattice.get(side).profiles.transitionIndex)
+    const auto station = workflow.readStationModel(side, stationIndex);
+    if (stationIndex >= station.transitionIndex)
     {
       ctx.cti = std::clamp(ctx.cti, 0.0000001, 0.30);
     }
 
-    const double hklim =
-        (stationIndex <= workflow.lattice.get(side).trailingEdgeIndex) ? 1.02
-                                                                       : 1.00005;
+    const double hklim = (stationIndex <= station.trailingEdgeIndex) ? 1.02 : 1.00005;
     const double msq =
         ctx.uei * ctx.uei * workflow.blCompressibility.hstinv /
         (workflow.blCompressibility.gm1bl *
@@ -177,15 +152,16 @@ bool MarcherUe::marchMrchueSide(BoundaryLayerWorkflow &workflow, int side,
                                 std::stringstream &ss)
 {
   ss << "    Side " << side << " ...\n";
-  Logger::instance().write(ss.str());
+  workflow.emitMarchInfoLog(ss.str());
   ss.str("");
 
   workflow.resetSideState(side, foil, stagnation);
 
   initializeMrchueSide(workflow, side);
 
+  const int stationCount = workflow.readSideStationCount(side);
   for (int stationIndex = 0;
-       stationIndex < workflow.lattice.get(side).stationCount - 1;
+       stationIndex < stationCount - 1;
        ++stationIndex)
   {
     MrchueStationContext ctx;
@@ -194,7 +170,7 @@ bool MarcherUe::marchMrchueSide(BoundaryLayerWorkflow &workflow, int side,
                                              foil.edge, ss);
     if (!converged)
     {
-      handleMrchueStationFailure(workflow, side, stationIndex, ctx, ss);
+      handleMrchueStationFailure(workflow, side, stationIndex, ctx);
     }
     storeMrchueStationState(workflow, side, stationIndex, ctx);
 
@@ -203,20 +179,13 @@ bool MarcherUe::marchMrchueSide(BoundaryLayerWorkflow &workflow, int side,
     thi = ctx.thi;
     dsi = ctx.dsi;
 
-    if (stationIndex == workflow.lattice.get(side).trailingEdgeIndex)
+    const auto station = workflow.readStationModel(side, stationIndex);
+    if (stationIndex == station.trailingEdgeIndex)
     {
-      thi = workflow.lattice.get(1)
-                .profiles
-                .momentumThickness[workflow.lattice.top.trailingEdgeIndex] +
-            workflow.lattice.get(2)
-                .profiles
-                .momentumThickness[workflow.lattice.bottom.trailingEdgeIndex];
-      dsi = workflow.lattice.get(1)
-                .profiles
-                .displacementThickness[workflow.lattice.top.trailingEdgeIndex] +
-            workflow.lattice.get(2).profiles.displacementThickness
-                [workflow.lattice.bottom.trailingEdgeIndex] +
-            foil.edge.ante;
+      const auto trailingEdge = workflow.readTrailingEdgeModel();
+      thi = trailingEdge.topMomentumThickness + trailingEdge.bottomMomentumThickness;
+      dsi = trailingEdge.topDisplacementThickness +
+            trailingEdge.bottomDisplacementThickness + foil.edge.ante;
     }
   }
 
@@ -225,8 +194,9 @@ bool MarcherUe::marchMrchueSide(BoundaryLayerWorkflow &workflow, int side,
 
 void MarcherUe::initializeMrchueSide(BoundaryLayerWorkflow &workflow, int side)
 {
-  const double xsi = workflow.lattice.get(side).arcLengthCoordinates[0];
-  const double uei = workflow.lattice.get(side).profiles.edgeVelocity[0];
+  const auto station = workflow.readStationModel(side, 0);
+  const double xsi = station.arcLength;
+  const double uei = station.edgeVelocity;
   const double ucon = uei / xsi;
   const double tsq = 0.45 / (ucon * 6.0 * workflow.blReynolds.reybl);
   thi = std::sqrt(tsq);
@@ -239,9 +209,10 @@ void MarcherUe::prepareMrchueStationContext(BoundaryLayerWorkflow &workflow,
                                             int side, int stationIndex,
                                             MrchueStationContext &ctx)
 {
+  const auto station = workflow.readStationModel(side, stationIndex);
   ctx.flowRegime = workflow.determineRegimeForStation(side, stationIndex);
-  ctx.xsi = workflow.lattice.get(side).arcLengthCoordinates[stationIndex];
-  ctx.uei = workflow.lattice.get(side).profiles.edgeVelocity[stationIndex];
+  ctx.xsi = station.arcLength;
+  ctx.uei = station.edgeVelocity;
   ctx.thi = thi;
   ctx.dsi = dsi;
   ctx.ami = ami;
@@ -252,14 +223,13 @@ void MarcherUe::prepareMrchueStationContext(BoundaryLayerWorkflow &workflow,
   ctx.htarg = 0.0;
   if (ctx.isWake())
   {
-    const int iw = stationIndex - workflow.lattice.get(side).trailingEdgeIndex;
-    ctx.dswaki = workflow.wgap[iw - 1];
+    ctx.dswaki = station.wakeGap;
   }
   else
   {
     ctx.dswaki = 0.0;
   }
-  workflow.flowRegime = ctx.flowRegime;
+  ctx.flowRegime = workflow.applyFlowRegimeCandidate(ctx.flowRegime);
 }
 
 bool MarcherUe::performMrchueNewtonLoop(BoundaryLayerWorkflow &workflow,
@@ -275,7 +245,7 @@ bool MarcherUe::performMrchueNewtonLoop(BoundaryLayerWorkflow &workflow,
   bool direct = true;
   double htarg = 0.0;
   double dmax_local = 0.0;
-  workflow.flowRegime = ctx.flowRegime;
+  ctx.flowRegime = workflow.applyFlowRegimeCandidate(ctx.flowRegime);
 
   for (int itbl = 1; itbl <= 25; ++itbl)
   {
@@ -284,59 +254,30 @@ bool MarcherUe::performMrchueNewtonLoop(BoundaryLayerWorkflow &workflow,
                        ctx.thi, ctx.dsi, ctx.dswaki, ctx.uei);
 
     workflow.blkin(workflow.state);
+    ctx.flowRegime = workflow.currentFlowRegime();
 
     if ((!ctx.isSimilarity()) &&
-        (!(workflow.flowRegime == FlowRegimeEnum::Turbulent ||
-                          workflow.flowRegime == FlowRegimeEnum::Wake)))
+        (!(ctx.flowRegime == FlowRegimeEnum::Turbulent ||
+           ctx.flowRegime == FlowRegimeEnum::Wake)))
     {
-      workflow.transitionSolver.trchek();
-      ctx.ami = workflow.state.station2.param.amplz;
-
-      if (workflow.flowRegime == FlowRegimeEnum::Transition)
-      {
-        workflow.lattice.get(side).profiles.transitionIndex = stationIndex;
-        if (ctx.cti <= 0.0)
-        {
-          ctx.cti = 0.03;
-          workflow.state.station2.param.sz = ctx.cti;
-        }
-      }
-      else
-      {
-        workflow.lattice.get(side).profiles.transitionIndex = stationIndex + 2;
-      }
+      workflow.runTransitionCheckForMrchue(side, stationIndex, ctx.ami, ctx.cti);
+      ctx.flowRegime = workflow.currentFlowRegime();
     }
 
-    if (stationIndex == workflow.lattice.get(side).trailingEdgeIndex + 1)
+    const auto station = workflow.readStationModel(side, stationIndex);
+    if (stationIndex == station.trailingEdgeIndex + 1)
     {
+      const auto trailingEdge = workflow.readTrailingEdgeModel();
       ctx.tte =
-          workflow.lattice.get(1)
-              .profiles
-              .momentumThickness[workflow.lattice.top.trailingEdgeIndex] +
-          workflow.lattice.get(2)
-              .profiles
-              .momentumThickness[workflow.lattice.bottom.trailingEdgeIndex];
-      ctx.dte =
-          workflow.lattice.get(1)
-              .profiles
-              .displacementThickness[workflow.lattice.top.trailingEdgeIndex] +
-          workflow.lattice.get(2).profiles.displacementThickness
-              [workflow.lattice.bottom.trailingEdgeIndex] +
-          edge.ante;
-      ctx.cte =
-          (workflow.lattice.get(1)
-                   .profiles
-                   .skinFrictionCoeff[workflow.lattice.top.trailingEdgeIndex] *
-               workflow.lattice.get(1)
-                   .profiles
-                   .momentumThickness[workflow.lattice.top.trailingEdgeIndex] +
-           workflow.lattice.get(2).profiles.skinFrictionCoeff
-                   [workflow.lattice.bottom.trailingEdgeIndex] *
-               workflow.lattice.get(2).profiles.momentumThickness
-                   [workflow.lattice.bottom.trailingEdgeIndex]) /
-          ctx.tte;
-      workflow.tesys(workflow.lattice.top.profiles,
-                     workflow.lattice.bottom.profiles, edge);
+          trailingEdge.topMomentumThickness + trailingEdge.bottomMomentumThickness;
+      ctx.dte = trailingEdge.topDisplacementThickness +
+                trailingEdge.bottomDisplacementThickness + edge.ante;
+      ctx.cte = (trailingEdge.topSkinFrictionCoeff *
+                     trailingEdge.topMomentumThickness +
+                 trailingEdge.bottomSkinFrictionCoeff *
+                     trailingEdge.bottomMomentumThickness) /
+                ctx.tte;
+      workflow.solveTeSystemForCurrentProfiles(edge);
     }
     else
     {
@@ -345,7 +286,7 @@ bool MarcherUe::performMrchueNewtonLoop(BoundaryLayerWorkflow &workflow,
 
     if (direct)
     {
-      solveMrchueDirectSystem(workflow);
+      workflow.solveMrchueDirectNewtonSystem();
       dmax_local = computeMrchueDmax(workflow, side, stationIndex, ctx, true);
       const double rlx = computeMrchueRelaxation(dmax_local);
 
@@ -359,7 +300,7 @@ bool MarcherUe::performMrchueNewtonLoop(BoundaryLayerWorkflow &workflow,
     }
     else
     {
-      solveMrchueInverseSystem(workflow, ctx);
+      workflow.solveMrchueInverseNewtonSystem(ctx.htarg);
       dmax_local = computeMrchueDmax(workflow, side, stationIndex, ctx, false);
       const double rlx = computeMrchueRelaxation(dmax_local);
       applyMrchueStateDelta(workflow, side, stationIndex, ctx, rlx);
@@ -377,37 +318,19 @@ bool MarcherUe::performMrchueNewtonLoop(BoundaryLayerWorkflow &workflow,
   ctx.dmax = dmax_local;
   ctx.htarg = htarg;
   ctx.direct = direct;
+  ctx.flowRegime = workflow.currentFlowRegime();
   return converged;
 }
 
 void MarcherUe::handleMrchueStationFailure(BoundaryLayerWorkflow &workflow,
                                            int side, int stationIndex,
-                                           MrchueStationContext &ctx,
-                                           std::stringstream &ss)
+                                           MrchueStationContext &ctx)
 {
-  workflow.flowRegime = ctx.flowRegime;
+  workflow.emitMarchFailureLog("mrchue", side, stationIndex, ctx.dmax);
 
-  ss << "     mrchue: convergence failed at " << stationIndex << ",  side "
-     << side << ", res =" << std::fixed << std::setprecision(3) << ctx.dmax
-     << "\n";
-  Logger::instance().write(ss.str());
-  ss.str("");
-
-  workflow.resetStationKinematicsAfterFailure(
-      side, stationIndex, ctx,
-      EdgeVelocityFallbackMode::AverageNeighbors);
-
-  {
-    blData updatedCurrent =
-        workflow.blprv(workflow.state.current(), ctx.xsi, ctx.ami, ctx.cti,
-                       ctx.thi, ctx.dsi, ctx.dswaki, ctx.uei);
-    workflow.state.current() = updatedCurrent;
-  }
-  workflow.blkin(workflow.state);
-
-  workflow.checkTransitionIfNeeded(side, stationIndex, ctx.isSimilarity(), 2,
-                                   ctx.ami);
-  workflow.syncStationRegimeStates(side, stationIndex, ctx.flowRegime);
+  workflow.recoverStationAfterFailure(side, stationIndex, ctx, ctx.ami,
+                                      EdgeVelocityFallbackMode::AverageNeighbors,
+                                      2);
 }
 
 void MarcherUe::storeMrchueStationState(BoundaryLayerWorkflow &workflow,

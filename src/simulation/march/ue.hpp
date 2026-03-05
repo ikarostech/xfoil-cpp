@@ -35,8 +35,7 @@ private:
                                int stationIndex, MrchueStationContext &ctx,
                                const Edge &edge, std::stringstream &ss);
   void handleMrchueStationFailure(BoundaryLayerWorkflow &workflow, int side,
-                                  int stationIndex, MrchueStationContext &ctx,
-                                  std::stringstream &ss);
+                                  int stationIndex, MrchueStationContext &ctx);
   void storeMrchueStationState(BoundaryLayerWorkflow &workflow, int side,
                                int stationIndex,
                                const MrchueStationContext &ctx);
