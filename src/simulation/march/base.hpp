@@ -3,7 +3,7 @@
 #include <vector>
 
 #include "Eigen/Core"
-#include "simulation/BoundaryLayer.hpp"
+#include "simulation/march/context.hpp"
 
 class XFoil;
 

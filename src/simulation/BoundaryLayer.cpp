@@ -16,6 +16,7 @@
 #include "domain/coefficient/skin_friction.hpp"
 #include "domain/flow_state.hpp"
 #include "infrastructure/logger.hpp"
+#include "simulation/march/workflow_context.hpp"
 
 using BoundaryContext = BoundaryLayerWorkflow::MixedModeStationContext;
 using Eigen::Matrix;
@@ -1585,12 +1586,12 @@ SetblOutputView BoundaryLayerWorkflow::setbl(
   initializeSetblReferenceParams(analysis_state, aero_coeffs, acrit, output,
                                  state.re_clmr, state.msq_clmr, current_mach,
                                  current_re);
-
+  WorkflowMarchContext marchContext(*this);
   if (!bl_initialized) {
     Logger::instance().write("   Initializing bl ...\n");
-    marcher_ue.mrchue(*this, foil, stagnation);
+    marcher_ue.mrchue(marchContext, foil, stagnation);
   }
-  marcher_du.mrchdu(*this, foil, stagnation);
+  marcher_du.mrchdu(marchContext, foil, stagnation);
   initializeSetblProfiles(output);
 
   initializeSetblEdgeVelocityState(profiles, dij, output, state.sides);
