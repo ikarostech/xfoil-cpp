@@ -24,10 +24,6 @@ public:
   void emitMarchInfoLog(std::string_view message) const override {
     workflow_.emitMarchInfoLog(message);
   }
-  void emitMarchFailureLog(std::string_view phase, int side, int stationIndex,
-                           double residual) const override {
-    workflow_.emitMarchFailureLog(phase, side, stationIndex, residual);
-  }
 
   double readNewtonRhs(int row) const override {
     return workflow_.readNewtonRhs(row);

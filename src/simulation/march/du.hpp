@@ -17,6 +17,8 @@ private:
     double sennew = 0.0;
     double ami = 0.0;
   };
+  using StationMarchResult =
+      Marcher::StationMarchResult<MrchduContext::MixedModeStationContext>;
 
   const double senswt = 1000.0;
   bool marchBoundaryLayerSide(MrchduContext &context,
@@ -29,13 +31,10 @@ private:
                                    SideMarchState &sideState, int side,
                                    int stationIndex, int previousTransition,
                                    const Foil &foil);
-  bool performMixedModeNewtonIteration(
+  StationMarchResult performMixedModeNewtonIteration(
       MrchduContext &context, SideMarchState &sideState, const Edge &edge,
       int side, int ibl, int itrold,
-      MrchduContext::MixedModeStationContext &ctx);
-  void handleMixedModeNonConvergence(
-      MrchduContext &context, SideMarchState &sideState, int side, int ibl,
-      MrchduContext::MixedModeStationContext &ctx);
+      MrchduContext::MixedModeStationContext station);
   MrchduContext::MixedModeStationContext
   prepareMixedModeStation(MrchduContext &context, SideMarchState &sideState,
                           int side,

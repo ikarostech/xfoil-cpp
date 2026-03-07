@@ -1,7 +1,5 @@
 #pragma once
 
-#include <sstream>
-
 #include "simulation/march/base.hpp"
 
 class MarcherUe : public Marcher
@@ -23,29 +21,28 @@ public:
     double hmax = 0.0;
     double htarg = 0.0;
   };
+  using StationMarchResult = Marcher::StationMarchResult<MrchueStationContext>;
 
   bool mrchue(MrchueContext &context, const Foil &foil,
               const StagnationResult &stagnation);
 
 private:
   bool marchMrchueSide(MrchueContext &context, int side,
-                       const Foil &foil, const StagnationResult &stagnation,
-                       std::stringstream &ss);
+                       const Foil &foil, const StagnationResult &stagnation);
   SideMarchState initializeMrchueSide(MrchueContext &context, int side);
   void prepareMrchueStationContext(MrchueContext &context, int side,
                                    int stationIndex,
                                    const SideMarchState &sideState,
                                    MrchueStationContext &ctx);
-  bool performMrchueNewtonLoop(MrchueContext &context, int side,
-                               int stationIndex, MrchueStationContext &ctx,
-                               const Edge &edge, std::stringstream &ss);
+  StationMarchResult performMrchueNewtonLoop(MrchueContext &context, int side,
+                                             int stationIndex,
+                                             MrchueStationContext station,
+                                             const Edge &edge);
   void updateSideStateFromStation(const MrchueStationContext &ctx,
                                   SideMarchState &sideState);
   void updateSideStateForTrailingEdge(MrchueContext &context, int side,
                                       const Foil &foil, int stationIndex,
                                       SideMarchState &sideState);
-  void handleMrchueStationFailure(MrchueContext &context, int side,
-                                  int stationIndex, MrchueStationContext &ctx);
   void storeMrchueStationState(MrchueContext &context, int side,
                                int stationIndex,
                                const MrchueStationContext &ctx);

@@ -48,6 +48,13 @@ public:
   virtual TrailingEdgeReadModel readTrailingEdgeModel() const = 0;
 };
 
+class MarchEventSink : public virtual MarchCoreContext {
+public:
+  virtual ~MarchEventSink() = default;
+
+  virtual void emitMarchInfoLog(std::string_view message) const = 0;
+};
+
 class MarchLifecycleContext : public virtual MarchCoreContext {
 public:
   virtual ~MarchLifecycleContext() = default;
@@ -56,8 +63,6 @@ public:
   determineRegimeForStation(int side, int stationIndex) const = 0;
   virtual int resetSideState(int side, const Foil &foil,
                              const StagnationResult &stagnation) = 0;
-  virtual void emitMarchFailureLog(std::string_view phase, int side,
-                                   int stationIndex, double residual) const = 0;
   virtual void storeStationStateCommon(int side, int stationIndex,
                                        const MixedModeStationContext &ctx) = 0;
 };
@@ -74,12 +79,12 @@ public:
 class MrchueContext : public MarchStateContext,
                       public MarchStationDataAccess,
                       public MarchTrailingEdgeAccess,
+                      public MarchEventSink,
                       public MarchLifecycleContext,
                       public MarchRecoveryContext {
 public:
   virtual ~MrchueContext() = default;
 
-  virtual void emitMarchInfoLog(std::string_view message) const = 0;
   virtual double readNewtonRhs(int row) const = 0;
   virtual void solveMrchueDirectNewtonSystem() = 0;
   virtual void solveMrchueInverseNewtonSystem(double htarg) = 0;
@@ -95,6 +100,7 @@ public:
 
 class MrchduContext : public MarchStateContext,
                       public MarchStationDataAccess,
+                      public MarchEventSink,
                       public MarchLifecycleContext,
                       public MarchRecoveryContext {
 public:

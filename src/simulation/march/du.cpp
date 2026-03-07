@@ -108,55 +108,66 @@ bool MarcherDu::processBoundaryLayerStation(
     SideMarchState &sideState, int side,
     int stationIndex, int previousTransition, const Foil &foil)
 {
-  BoundaryContext ctx = prepareMixedModeStation(context, sideState, side,
-                                                stationIndex,
-                                                previousTransition);
-  bool converged = performMixedModeNewtonIteration(
-      context, sideState, foil.edge, side, stationIndex, previousTransition,
-      ctx);
-  if (!converged)
-  {
-    handleMixedModeNonConvergence(context, sideState, side, stationIndex, ctx);
-  }
+  const auto publishEvent = [&](const MarchEvent &event) {
+    context.emitMarchInfoLog(event.message);
+  };
+  BoundaryContext station = prepareMixedModeStation(
+      context, sideState, side, stationIndex, previousTransition);
+  const BoundaryContext resolvedStation = finalizeStationResult(
+      performMixedModeNewtonIteration(context, sideState, foil.edge, side,
+                                      stationIndex, previousTransition,
+                                      station),
+      [&](StationMarchResult &result) {
+        publishEvent(makeFailureEvent(result.recovery.phase, side, stationIndex,
+                                      result.station.dmax));
+        context.recoverStationAfterFailure(
+            side, stationIndex, result.station, sideState.ami,
+            result.recovery.edgeMode, result.recovery.laminarAdvance);
+      },
+      publishEvent,
+      [&](const BoundaryContext &resultStation) {
+        context.storeStationStateCommon(side, stationIndex, resultStation);
+      });
 
   sideState.sens = sideState.sennew;
-  context.storeStationStateCommon(side, stationIndex, ctx);
+  (void)resolvedStation;
   return true;
 }
 
-bool MarcherDu::performMixedModeNewtonIteration(
+MarcherDu::StationMarchResult MarcherDu::performMixedModeNewtonIteration(
     MrchduContext &context, SideMarchState &sideState, const Edge &edge,
     int side, int ibl, int itrold,
-    MrchduContext::MixedModeStationContext &ctx)
+    MrchduContext::MixedModeStationContext station)
 {
-  bool converged = false;
   double ueref = 0.0;
   double hkref = 0.0;
-  ctx.flowRegime = context.applyFlowRegimeCandidate(ctx.flowRegime);
+  station.flowRegime = context.applyFlowRegimeCandidate(station.flowRegime);
   auto &state = context.mutableState();
 
   for (int itbl = 1; itbl <= 25; ++itbl)
   {
     blData updatedCurrent =
-        context.blprv(state.current(), ctx.xsi, sideState.ami, ctx.cti, ctx.thi,
-                      ctx.dsi, ctx.dswaki, ctx.uei);
+        context.blprv(state.current(), station.xsi, sideState.ami,
+                      station.cti, station.thi, station.dsi, station.dswaki,
+                      station.uei);
     state.current() = updatedCurrent;
     context.blkin(state);
-    ctx.flowRegime = context.currentFlowRegime();
+    station.flowRegime = context.currentFlowRegime();
 
-    context.checkTransitionIfNeeded(side, ibl, ctx.isSimilarity(), 1,
+    context.checkTransitionIfNeeded(side, ibl, station.isSimilarity(), 1,
                                     sideState.ami);
-    ctx.flowRegime = context.currentFlowRegime();
+    station.flowRegime = context.currentFlowRegime();
 
     const bool startOfWake = context.isStartOfWake(side, ibl);
-    context.updateSystemMatricesForStation(edge, side, ibl, ctx);
+    context.updateSystemMatricesForStation(edge, side, ibl, station);
 
     if (itbl == 1)
     {
-      context.initializeFirstIterationState(side, ibl, itrold, ctx, ueref, hkref);
+      context.initializeFirstIterationState(side, ibl, itrold, station, ueref,
+                                            hkref);
     }
 
-    if (ctx.isSimilarity() || startOfWake)
+    if (station.isSimilarity() || startOfWake)
     {
       context.configureSimilarityRow(ueref);
     }
@@ -168,22 +179,15 @@ bool MarcherDu::performMixedModeNewtonIteration(
                                   sideState.sennew);
     }
 
-    if (context.applyMixedModeNewtonStep(side, ibl, sideState.ami, ctx))
+    if (context.applyMixedModeNewtonStep(side, ibl, sideState.ami, station))
     {
-      converged = true;
-      break;
+      return {station, true, {}, {}};
     }
   }
 
-  return converged;
-}
-
-void MarcherDu::handleMixedModeNonConvergence(
-    MrchduContext &context, SideMarchState &sideState, int side, int ibl,
-    MrchduContext::MixedModeStationContext &ctx)
-{
-  context.emitMarchFailureLog("mrchdu", side, ibl, ctx.dmax);
-  context.recoverStationAfterFailure(
-      side, ibl, ctx, sideState.ami,
-      MrchduContext::EdgeVelocityFallbackMode::UsePreviousStation, 2);
+  return {station,
+          false,
+          {true, "mrchdu",
+           MrchduContext::EdgeVelocityFallbackMode::UsePreviousStation, 2},
+          {}};
 }
