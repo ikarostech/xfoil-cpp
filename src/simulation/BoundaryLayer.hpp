@@ -115,7 +115,6 @@ class BoundaryLayerWorkflow {
     StationReadModel readStationModel(int side, int stationIndex) const;
     TrailingEdgeReadModel readTrailingEdgeModel() const;
     void emitMarchInfoLog(std::string_view message) const;
-    void emitMarchFailureLog(std::string_view phase, int side, int stationIndex, double residual) const;
     double readNewtonRhs(int row) const;
     void solveMrchueDirectNewtonSystem();
     void solveMrchueInverseNewtonSystem(double htarg);

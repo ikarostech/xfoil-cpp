@@ -202,8 +202,6 @@ class XFoil {
     Matrix2Xd gamqv() const;
     FoilAerodynamicCache ggcalc();
 
-    Matrix2Xd ncalc(Matrix2Xd point, VectorXd spline_length, int n);
-
     bool qdcalc();
     struct TangentialVelocityResult {
         Matrix2Xd qinv_matrix;
@@ -212,12 +210,6 @@ class XFoil {
     VectorXd qvfue(const VectorXd &base_qvis, const SidePair<BoundaryLayerLattice> &lattice) const;
     Matrix2Xd qwcalc(const Foil &foil, const Matrix2Xd &base_qinvu, const Matrix2Xd &gamu,
                      const Matrix2Xd &surface_vortex, double alpha, double qinf) const;
-
-    struct EdgeVelocitySwapResult {
-        SidePair<VectorXd> swappedUsav;
-        SidePair<VectorXd> restoredUedg;
-    };
-    EdgeVelocitySwapResult swapEdgeVelocities(const SidePair<VectorXd> &usav) const;
 
   private:
   public:
@@ -238,7 +230,6 @@ class XFoil {
     void invalidateConvergedSolution();
     void invalidateWakeGeometry();
     void invalidatePanelMap();
-    bool hasWakeGeometry() const;
     bool hasPanelMap() const;
     bool hasAirfoilInfluenceMatrix() const;
     bool hasWakeInfluenceMatrix() const;

@@ -183,24 +183,6 @@ void XFoil::invalidatePanelMap() {
   boundaryLayerWorkflow.lattice.bottom.stationCount = 0;
 }
 
-bool XFoil::hasWakeGeometry() const {
-  const int point_count = foil.foil_shape.n;
-  const int wake_point_count = foil.wake_shape.n;
-  const int total_nodes = point_count + wake_point_count;
-  if (wake_point_count < 2) {
-    return false;
-  }
-  if (foil.wake_shape.points.cols() < total_nodes ||
-      foil.wake_shape.normal_vector.cols() < total_nodes ||
-      foil.wake_shape.spline_length.size() < total_nodes ||
-      foil.wake_shape.angle_panel.size() < total_nodes) {
-    return false;
-  }
-
-  return foil.wake_shape.points.block(0, point_count, 2, wake_point_count)
-      .allFinite();
-}
-
 bool XFoil::hasPanelMap() const {
   const auto &top = boundaryLayerWorkflow.lattice.top;
   const auto &bottom = boundaryLayerWorkflow.lattice.bottom;

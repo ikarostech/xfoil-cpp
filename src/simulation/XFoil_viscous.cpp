@@ -219,25 +219,6 @@ Matrix2Xd XFoil::qwcalc(const Foil &foil, const Matrix2Xd &base_qinvu,
   return updated_qinvu;
 }
 
-XFoil::EdgeVelocitySwapResult
-XFoil::swapEdgeVelocities(const SidePair<VectorXd> &usav) const {
-  EdgeVelocitySwapResult result;
-  result.swappedUsav = usav;
-  result.restoredUedg.top =
-      boundaryLayerWorkflow.lattice.top.profiles.edgeVelocity;
-  result.restoredUedg.bottom =
-      boundaryLayerWorkflow.lattice.bottom.profiles.edgeVelocity;
-  for (int is = 1; is <= 2; ++is) {
-    for (int ibl = 0;
-         ibl < boundaryLayerWorkflow.lattice.get(is).stationCount - 1; ++ibl) {
-      result.swappedUsav.get(is)[ibl] =
-          boundaryLayerWorkflow.lattice.get(is).profiles.edgeVelocity[ibl];
-      result.restoredUedg.get(is)[ibl] = usav.get(is)[ibl];
-    }
-  }
-  return result;
-}
-
 double XFoil::computeAcChange(double clnew, double cl_current, double cl_target,
                               double cl_ac, double cl_a, double cl_ms) const {
   if (analysis_state_.controlByAlpha) {

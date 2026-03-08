@@ -1,7 +1,6 @@
 #include "BoundaryLayer.hpp"
 
 #include <algorithm>
-#include <iomanip>
 #include <sstream>
 #include <string>
 
@@ -103,16 +102,6 @@ FlowRegimeEnum BoundaryLayerWorkflow::currentFlowRegime() const {
 
 void BoundaryLayerWorkflow::emitMarchInfoLog(std::string_view message) const {
   Logger::instance().write(std::string(message));
-}
-
-void BoundaryLayerWorkflow::emitMarchFailureLog(std::string_view phase, int side,
-                                                int stationIndex,
-                                                double residual) const {
-  std::stringstream ss;
-  ss << "     " << phase << ": convergence failed at " << stationIndex
-     << ",  side " << side << ", res =" << std::fixed << std::setprecision(3)
-     << residual << "\n";
-  Logger::instance().write(ss.str());
 }
 
 double BoundaryLayerWorkflow::readNewtonRhs(int row) const {
