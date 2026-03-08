@@ -1,19 +1,20 @@
 #pragma once
 
-#include "simulation/BoundaryLayer.hpp"
+#include "simulation/boundary_layer_state.hpp"
+#include "simulation/viscous_types.hpp"
 
 class XFoil;
 
 class BoundaryLayerAerodynamicsOps {
  public:
-  static BoundaryLayerWorkflow::EdgeVelocityDistribution computeNewUeDistribution(
+  static BoundaryLayerEdgeVelocityDistribution computeNewUeDistribution(
       const SidePair<BoundaryLayerLattice> &lattice,
       const XFoil &xfoil,
-      const BoundaryLayerWorkflow::Matrix3x2dVector &vdel);
-  static BoundaryLayerWorkflow::ClContributions computeClFromEdgeVelocityDistribution(
+      const BoundaryLayerMatrix3x2dVector &vdel);
+  static BoundaryLayerClContributions computeClFromEdgeVelocityDistribution(
       const SidePair<BoundaryLayerLattice> &lattice,
       const XFoil &xfoil,
-      const BoundaryLayerWorkflow::EdgeVelocityDistribution &distribution);
+      const BoundaryLayerEdgeVelocityDistribution &distribution);
   static SidePair<Eigen::VectorXd> ueset(
       const SidePair<BoundaryLayerLattice> &lattice, const Eigen::MatrixXd &dij);
 };

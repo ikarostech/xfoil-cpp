@@ -2,15 +2,18 @@
 
 #include <string_view>
 
-#include "simulation/BoundaryLayer.hpp"
+#include "domain/foil/edge.hpp"
+#include "domain/foil/foil.hpp"
+#include "simulation/boundary_layer_geometry.hpp"
+#include "simulation/boundary_layer_state.hpp"
+#include "simulation/viscous_types.hpp"
 
 struct MarchContextTypes {
 public:
-  using MixedModeStationContext = BoundaryLayerWorkflow::MixedModeStationContext;
-  using StationReadModel = BoundaryLayerWorkflow::StationReadModel;
-  using TrailingEdgeReadModel = BoundaryLayerWorkflow::TrailingEdgeReadModel;
-  using EdgeVelocityFallbackMode =
-      BoundaryLayerWorkflow::EdgeVelocityFallbackMode;
+  using MixedModeStationContext = BoundaryLayerMixedModeStationContext;
+  using StationReadModel = BoundaryLayerStationReadModel;
+  using TrailingEdgeReadModel = BoundaryLayerTrailingEdgeReadModel;
+  using EdgeVelocityFallbackMode = BoundaryLayerEdgeVelocityFallbackMode;
 };
 
 class MarchCoreContext : public MarchContextTypes {

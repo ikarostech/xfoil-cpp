@@ -2,6 +2,8 @@
 
 #include "simulation/boundary_layer_state.hpp"
 #include "domain/boundary_layer/boundary_layer_builder.hpp"
+#include "domain/coefficient/aero_coefficients.hpp"
+#include "domain/flow_state.hpp"
 #include "simulation/BoundaryLayer.hpp"
 
 SetblOutputView runBoundaryLayerSetbl(

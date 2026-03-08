@@ -8,6 +8,7 @@
 #include "simulation/boundary_layer_mixed_mode.hpp"
 #include "simulation/boundary_layer_runtime_state.hpp"
 #include "simulation/boundary_layer_solver_ops.hpp"
+#include "simulation/march/mrchue_linear_system.hpp"
 
 class BoundaryLayerWorkflowAccess {
  public:
@@ -52,12 +53,12 @@ class BoundaryLayerWorkflowAccess {
     return BoundaryLayerRuntimeStateOps::readSideStationCount(context_.lattice,
                                                               side);
   }
-  BoundaryLayerWorkflow::StationReadModel readStationModel(
+  BoundaryLayerStationReadModel readStationModel(
       int side, int stationIndex) const {
     return BoundaryLayerRuntimeStateOps::readStationModel(
         context_.lattice, context_.wgap, side, stationIndex);
   }
-  BoundaryLayerWorkflow::TrailingEdgeReadModel readTrailingEdgeModel() const {
+  BoundaryLayerTrailingEdgeReadModel readTrailingEdgeModel() const {
     return BoundaryLayerRuntimeStateOps::readTrailingEdgeModel(context_.lattice);
   }
 
@@ -65,24 +66,14 @@ class BoundaryLayerWorkflowAccess {
     Logger::instance().write(std::string(message));
   }
 
-  double readNewtonRhs(int row) const { return context_.blc.rhs[row]; }
+  double readNewtonRhs(int row) const {
+    return MrchueLinearSystemOps::readNewtonRhs(context_.blc, row);
+  }
   void solveMrchueDirectNewtonSystem() const {
-    context_.blc.a2(3, 0) = 0.0;
-    context_.blc.a2(3, 1) = 0.0;
-    context_.blc.a2(3, 2) = 0.0;
-    context_.blc.a2(3, 3) = 1.0;
-    context_.blc.rhs[3] = 0.0;
-    context_.blc.rhs =
-        context_.blc.a2.block(0, 0, 4, 4).fullPivLu().solve(context_.blc.rhs);
+    MrchueLinearSystemOps::solveDirect(context_.blc);
   }
   void solveMrchueInverseNewtonSystem(double htarg) const {
-    context_.blc.a2(3, 0) = 0.0;
-    context_.blc.a2(3, 1) = context_.state.station2.hkz.t();
-    context_.blc.a2(3, 2) = context_.state.station2.hkz.d();
-    context_.blc.a2(3, 3) = context_.state.station2.hkz.u();
-    context_.blc.rhs[3] = htarg - context_.state.station2.hkz.scalar;
-    context_.blc.rhs =
-        context_.blc.a2.block(0, 0, 4, 4).fullPivLu().solve(context_.blc.rhs);
+    MrchueLinearSystemOps::solveInverse(context_.blc, context_.state, htarg);
   }
 
   bool isStartOfWake(int side, int stationIndex) const {
@@ -128,13 +119,13 @@ class BoundaryLayerWorkflowAccess {
 
   void updateSystemMatricesForStation(
       const Edge &edge, int side, int stationIndex,
-      BoundaryLayerWorkflow::MixedModeStationContext &ctx) const {
+      BoundaryLayerMixedModeStationContext &ctx) const {
     makeMixedModeOps().updateSystemMatricesForStation(edge, side, stationIndex,
                                                       ctx);
   }
   void initializeFirstIterationState(
       int side, int stationIndex, int previousTransition,
-      BoundaryLayerWorkflow::MixedModeStationContext &ctx, double &ueref,
+      BoundaryLayerMixedModeStationContext &ctx, double &ueref,
       double &hkref) const {
     makeMixedModeOps().initializeFirstIterationState(side, stationIndex,
                                                      previousTransition, ctx,
@@ -152,7 +143,7 @@ class BoundaryLayerWorkflowAccess {
   }
   bool applyMixedModeNewtonStep(
       int side, int stationIndex, double &ami,
-      BoundaryLayerWorkflow::MixedModeStationContext &ctx) const {
+      BoundaryLayerMixedModeStationContext &ctx) const {
     return makeMixedModeOps().applyMixedModeNewtonStep(side, stationIndex, ami,
                                                        ctx);
   }
@@ -163,13 +154,13 @@ class BoundaryLayerWorkflowAccess {
   }
   void storeStationStateCommon(
       int side, int stationIndex,
-      const BoundaryLayerWorkflow::MixedModeStationContext &ctx) const {
+      const BoundaryLayerMixedModeStationContext &ctx) const {
     makeMixedModeOps().storeStationStateCommon(side, stationIndex, ctx);
   }
   void recoverStationAfterFailure(
       int side, int stationIndex,
-      BoundaryLayerWorkflow::MixedModeStationContext &ctx, double &ami,
-      BoundaryLayerWorkflow::EdgeVelocityFallbackMode edgeMode,
+      BoundaryLayerMixedModeStationContext &ctx, double &ami,
+      BoundaryLayerEdgeVelocityFallbackMode edgeMode,
       int laminarAdvance) const {
     makeMixedModeOps().recoverStationAfterFailure(side, stationIndex, ctx, ami,
                                                   edgeMode, laminarAdvance);

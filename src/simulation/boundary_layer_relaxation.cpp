@@ -35,12 +35,12 @@ double adjustDisplacementForHkLimit(double displacementThickness,
 
 } // namespace
 
-BoundaryLayerWorkflow::BoundaryLayerDelta
+BoundaryLayerDelta
 BoundaryLayerRelaxationOps::buildBoundaryLayerDelta(
     const BoundaryLayerLattice &lattice_side, const Eigen::VectorXd &unew_side,
     const Eigen::VectorXd &u_ac_side, double dac,
-    const BoundaryLayerWorkflow::Matrix3x2dVector &vdel) {
-  BoundaryLayerWorkflow::BoundaryLayerDelta delta;
+    const BoundaryLayerMatrix3x2dVector &vdel) {
+  BoundaryLayerDelta delta;
   const int len = lattice_side.stationCount - 1;
   if (len <= 0) {
     return delta;
@@ -73,12 +73,12 @@ BoundaryLayerRelaxationOps::buildBoundaryLayerDelta(
   return delta;
 }
 
-BoundaryLayerWorkflow::BoundaryLayerMetrics
+BoundaryLayerMetrics
 BoundaryLayerRelaxationOps::evaluateSegmentRelaxation(
     const BoundaryLayerSideProfiles &profiles,
-    const BoundaryLayerWorkflow::BoundaryLayerDelta &delta, double dhi,
+    const BoundaryLayerDelta &delta, double dhi,
     double dlo, double &relaxation) {
-  BoundaryLayerWorkflow::BoundaryLayerMetrics metrics;
+  BoundaryLayerMetrics metrics;
   const int len = delta.dskinFrictionCoeff.size();
   if (len <= 0) {
     return metrics;
@@ -121,7 +121,7 @@ BoundaryLayerRelaxationOps::evaluateSegmentRelaxation(
 
 BoundaryLayerSideProfiles BoundaryLayerRelaxationOps::applyBoundaryLayerDelta(
     const BoundaryLayerLattice &lattice_side, const Eigen::VectorXd &wgap,
-    const BoundaryLayerWorkflow::BoundaryLayerDelta &delta, double relaxation,
+    const BoundaryLayerDelta &delta, double relaxation,
     double hstinv, double gamm1) {
   BoundaryLayerSideProfiles updated = lattice_side.profiles;
   const int len = delta.dskinFrictionCoeff.size();

@@ -74,11 +74,11 @@ class XFoil {
     using Matrix2Xd                       = Eigen::Matrix2Xd;
     using Matrix2d                        = Eigen::Matrix2d;
     template <typename T> using FullPivLU = Eigen::FullPivLU<T>;
-    using Matrix3x2d                      = Eigen::Matrix<double, 3, 2>;
-    using Matrix3x2dVector                = std::vector<Matrix3x2d>;
-    using EdgeVelocityDistribution        = BoundaryLayerWorkflow::EdgeVelocityDistribution;
-    using BoundaryLayerDelta              = BoundaryLayerWorkflow::BoundaryLayerDelta;
-    using BoundaryLayerMetrics            = BoundaryLayerWorkflow::BoundaryLayerMetrics;
+    using Matrix3x2d                      = BoundaryLayerMatrix3x2d;
+    using Matrix3x2dVector                = BoundaryLayerMatrix3x2dVector;
+    using EdgeVelocityDistribution        = BoundaryLayerEdgeVelocityDistribution;
+    using BoundaryLayerDelta              = ::BoundaryLayerDelta;
+    using BoundaryLayerMetrics            = ::BoundaryLayerMetrics;
 
   public:
     bool isValidFoilAngles(Matrix2Xd points);
@@ -198,7 +198,7 @@ class XFoil {
         }
     };
 
-    using MixedModeStationContext = BoundaryLayerWorkflow::MixedModeStationContext;
+    using MixedModeStationContext = BoundaryLayerMixedModeStationContext;
     Matrix2Xd gamqv() const;
     FoilAerodynamicCache ggcalc();
 
@@ -221,7 +221,7 @@ class XFoil {
         SidePair<BoundaryLayerSideProfiles> profiles;
     };
     UpdateResult update(const Matrix3x2dVector &vdel) const;
-    using ClContributions = BoundaryLayerWorkflow::ClContributions;
+    using ClContributions = BoundaryLayerClContributions;
     double computeAcChange(double clnew, double cl_current, double cl_target, double cl_ac, double cl_a,
                            double cl_ms) const;
 

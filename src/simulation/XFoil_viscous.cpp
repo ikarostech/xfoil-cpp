@@ -4,6 +4,8 @@
 #include "infrastructure/logger.hpp"
 #include "simulation/Blsolve.hpp"
 #include "simulation/InviscidSolver.hpp"
+#include "simulation/viscous_aerodynamic_coupling.hpp"
+#include "simulation/viscous_initializer.hpp"
 #include "simulation/march/march.hpp"
 #include "simulation/psi.hpp"
 #include <algorithm>
@@ -273,10 +275,11 @@ XFoil::UpdateResult XFoil::update(const XFoil::Matrix3x2dVector &vdel) const {
 
   //--- calculate new ue distribution and tangential velocities
   const auto ue_distribution =
-      boundaryLayerWorkflow.computeNewUeDistribution(*this, vdel);
+      BoundaryLayerAerodynamicCoupling::computeNewUeDistribution(
+          boundaryLayerWorkflow, *this, vdel);
   const auto cl_contributions =
-      boundaryLayerWorkflow.computeClFromEdgeVelocityDistribution(
-          *this, ue_distribution);
+      BoundaryLayerAerodynamicCoupling::computeClFromEdgeVelocityDistribution(
+          boundaryLayerWorkflow, *this, ue_distribution);
 
   const double cl_target =
       analysis_state_.controlByAlpha ? aero_coeffs_.cl : analysis_state_.clspec;
@@ -460,13 +463,15 @@ bool XFoil::ViscousIter() {
   std::stringstream ss;
   double eps1 = 0.0001;
 
-  auto setbl_output = boundaryLayerWorkflow.setbl(
+  auto setbl_output = BoundaryLayerInitializer::run(
+      boundaryLayerWorkflow,
       SidePairRef<const BoundaryLayerSideProfiles>{
           boundaryLayerWorkflow.lattice.top.profiles,
           boundaryLayerWorkflow.lattice.bottom.profiles},
       analysis_state_, aero_coeffs_, acrit, foil, stagnation,
       aerodynamicCache.dij, isBLInitialized());
-  boundaryLayerWorkflow.applySetblOutput(
+  BoundaryLayerInitializer::applyOutput(
+      boundaryLayerWorkflow,
       setbl_output); //	------ fill newton system for bl variables
 
   Blsolve solver;

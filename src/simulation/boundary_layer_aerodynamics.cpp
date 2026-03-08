@@ -3,11 +3,11 @@
 #include "XFoil.h"
 #include "core/math_util.hpp"
 
-BoundaryLayerWorkflow::EdgeVelocityDistribution
+BoundaryLayerEdgeVelocityDistribution
 BoundaryLayerAerodynamicsOps::computeNewUeDistribution(
     const SidePair<BoundaryLayerLattice> &lattice, const XFoil &xfoil,
-    const BoundaryLayerWorkflow::Matrix3x2dVector &vdel) {
-  BoundaryLayerWorkflow::EdgeVelocityDistribution distribution;
+    const BoundaryLayerMatrix3x2dVector &vdel) {
+  BoundaryLayerEdgeVelocityDistribution distribution;
   distribution.unew.top = Eigen::VectorXd::Zero(lattice.top.stationCount);
   distribution.unew.bottom = Eigen::VectorXd::Zero(lattice.bottom.stationCount);
   distribution.u_ac.top = Eigen::VectorXd::Zero(lattice.top.stationCount);
@@ -46,11 +46,11 @@ BoundaryLayerAerodynamicsOps::computeNewUeDistribution(
   return distribution;
 }
 
-BoundaryLayerWorkflow::ClContributions
+BoundaryLayerClContributions
 BoundaryLayerAerodynamicsOps::computeClFromEdgeVelocityDistribution(
     const SidePair<BoundaryLayerLattice> &lattice, const XFoil &xfoil,
-    const BoundaryLayerWorkflow::EdgeVelocityDistribution &distribution) {
-  BoundaryLayerWorkflow::ClContributions contributions;
+    const BoundaryLayerEdgeVelocityDistribution &distribution) {
+  BoundaryLayerClContributions contributions;
   const int point_count = xfoil.foil.foil_shape.n;
   if (point_count == 0) {
     return contributions;

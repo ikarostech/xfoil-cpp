@@ -26,13 +26,13 @@ int BoundaryLayerRuntimeStateOps::readSideStationCount(
   return lattice.get(side).stationCount;
 }
 
-BoundaryLayerWorkflow::StationReadModel
+BoundaryLayerStationReadModel
 BoundaryLayerRuntimeStateOps::readStationModel(
     const SidePair<BoundaryLayerLattice> &lattice, const Eigen::VectorXd &wgap,
     int side, int stationIndex) {
   const auto &sideLattice = lattice.get(side);
 
-  BoundaryLayerWorkflow::StationReadModel model;
+  BoundaryLayerStationReadModel model;
   model.stationCount = sideLattice.stationCount;
   model.trailingEdgeIndex = sideLattice.trailingEdgeIndex;
   model.transitionIndex = sideLattice.profiles.transitionIndex;
@@ -52,10 +52,10 @@ BoundaryLayerRuntimeStateOps::readStationModel(
   return model;
 }
 
-BoundaryLayerWorkflow::TrailingEdgeReadModel
+BoundaryLayerTrailingEdgeReadModel
 BoundaryLayerRuntimeStateOps::readTrailingEdgeModel(
     const SidePair<BoundaryLayerLattice> &lattice) {
-  BoundaryLayerWorkflow::TrailingEdgeReadModel model;
+  BoundaryLayerTrailingEdgeReadModel model;
   model.topTrailingEdgeIndex = lattice.top.trailingEdgeIndex;
   model.bottomTrailingEdgeIndex = lattice.bottom.trailingEdgeIndex;
 

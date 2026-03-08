@@ -2,7 +2,7 @@
 
 #include <cmath>
 
-#include "simulation/boundary_layer_workflow_access.hpp"
+#include "simulation/viscous_workflow_access.hpp"
 #include "simulation/march/context.hpp"
 
 class WorkflowMarchContext final : public MarchContext {

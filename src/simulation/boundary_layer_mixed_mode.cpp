@@ -7,7 +7,7 @@
 
 namespace {
 constexpr double kMixedModeConvergenceTolerance = 5.0e-6;
-using BoundaryContext = BoundaryLayerWorkflow::MixedModeStationContext;
+using BoundaryContext = BoundaryLayerMixedModeStationContext;
 
 double adjustDisplacementForHkLimit(double displacementThickness,
                                     double momentumThickness, double msq,
@@ -52,11 +52,11 @@ void BoundaryLayerMixedModeOps::storeStationStateCommon(
 
 double BoundaryLayerMixedModeOps::fallbackEdgeVelocity(
     int side, int stationIndex,
-    BoundaryLayerWorkflow::EdgeVelocityFallbackMode edgeMode) const {
+    BoundaryLayerEdgeVelocityFallbackMode edgeMode) const {
   switch (edgeMode) {
-  case BoundaryLayerWorkflow::EdgeVelocityFallbackMode::UsePreviousStation:
+  case BoundaryLayerEdgeVelocityFallbackMode::UsePreviousStation:
     return context_.lattice.get(side).profiles.edgeVelocity[stationIndex - 1];
-  case BoundaryLayerWorkflow::EdgeVelocityFallbackMode::AverageNeighbors: {
+  case BoundaryLayerEdgeVelocityFallbackMode::AverageNeighbors: {
     double uei = context_.lattice.get(side).profiles.edgeVelocity[stationIndex];
     if (stationIndex < context_.lattice.get(side).stationCount - 1) {
       uei = 0.5 * (context_.lattice.get(side).profiles.edgeVelocity[stationIndex - 1] +
@@ -271,7 +271,7 @@ void BoundaryLayerMixedModeOps::checkTransitionIfNeeded(
 
 void BoundaryLayerMixedModeOps::resetStationKinematicsAfterFailure(
     int side, int stationIndex, BoundaryContext &ctx,
-    BoundaryLayerWorkflow::EdgeVelocityFallbackMode edgeMode) {
+    BoundaryLayerEdgeVelocityFallbackMode edgeMode) {
   if (ctx.dmax <= 0.1 || stationIndex < 2) {
     return;
   }
@@ -310,7 +310,7 @@ void BoundaryLayerMixedModeOps::resetStationKinematicsAfterFailure(
 
 void BoundaryLayerMixedModeOps::recoverStationAfterFailure(
     int side, int stationIndex, BoundaryContext &ctx, double &ami,
-    BoundaryLayerWorkflow::EdgeVelocityFallbackMode edgeMode,
+    BoundaryLayerEdgeVelocityFallbackMode edgeMode,
     int laminarAdvance) {
   context_.flowRegime = ctx.flowRegime;
   resetStationKinematicsAfterFailure(side, stationIndex, ctx, edgeMode);

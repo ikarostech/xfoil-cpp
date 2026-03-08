@@ -7,7 +7,7 @@
 #include "XFoil.h"
 #include "core/math_util.hpp"
 #include "infrastructure/logger.hpp"
-#include "simulation/boundary_layer_workflow_access.hpp"
+#include "simulation/viscous_workflow_access.hpp"
 #include "simulation/march/march.hpp"
 #include "simulation/march/workflow_context.hpp"
 

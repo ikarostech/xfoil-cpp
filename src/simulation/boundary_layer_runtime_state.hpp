@@ -1,6 +1,10 @@
 #pragma once
 
-#include "simulation/BoundaryLayer.hpp"
+#include "domain/boundary_layer/bl_transition_params.hpp"
+#include "domain/foil/foil.hpp"
+#include "simulation/boundary_layer_geometry.hpp"
+#include "simulation/boundary_layer_state.hpp"
+#include "simulation/viscous_types.hpp"
 
 class BoundaryLayerRuntimeStateOps {
  public:
@@ -11,10 +15,10 @@ class BoundaryLayerRuntimeStateOps {
                             const StagnationResult &stagnation);
   static int readSideStationCount(const SidePair<BoundaryLayerLattice> &lattice,
                                   int side);
-  static BoundaryLayerWorkflow::StationReadModel readStationModel(
+  static BoundaryLayerStationReadModel readStationModel(
       const SidePair<BoundaryLayerLattice> &lattice, const Eigen::VectorXd &wgap,
       int side, int stationIndex);
-  static BoundaryLayerWorkflow::TrailingEdgeReadModel readTrailingEdgeModel(
+  static BoundaryLayerTrailingEdgeReadModel readTrailingEdgeModel(
       const SidePair<BoundaryLayerLattice> &lattice);
   static double xifset(const SidePair<BoundaryLayerLattice> &lattice,
                        const Foil &foil, const StagnationResult &stagnation,
