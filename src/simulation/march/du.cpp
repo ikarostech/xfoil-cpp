@@ -13,19 +13,20 @@ namespace du_numerics = march::du_numerics;
 
 MrchduContext::MixedModeStationContext
 MarcherDu::prepareMixedModeStation(MrchduContext &context,
-                                   SideMarchState &sideState, int side,
-                                   int stationIndex, int previousTransition)
+                                   SideMarchState &sideState,
+                                   const StationInput &input)
 {
   BoundaryContext ctx;
-  const auto station = context.readStationModel(side, stationIndex);
+  const auto &station = input.stationModel;
 
-  ctx.flowRegime = context.determineRegimeForStation(side, stationIndex);
+  ctx.flowRegime =
+      context.determineRegimeForStation(input.side, input.stationIndex);
   ctx.xsi = station.arcLength;
   ctx.uei = station.edgeVelocity;
   ctx.thi = station.momentumThickness;
   ctx.dsi = station.displacementThickness;
 
-  if (stationIndex < previousTransition)
+  if (input.stationIndex < input.previousTransition)
   {
     sideState.ami = station.skinFrictionCoeff;
     ctx.cti = 0.03;
@@ -50,7 +51,8 @@ MarcherDu::prepareMixedModeStation(MrchduContext &context,
   }
 
   ctx.dsi = du_numerics::computeInitialDisplacement(
-      ctx.dsi, ctx.dswaki, ctx.thi, stationIndex, station.trailingEdgeIndex);
+      ctx.dsi, ctx.dswaki, ctx.thi, input.stationIndex,
+      station.trailingEdgeIndex);
 
   ctx.flowRegime = context.applyFlowRegimeCandidate(ctx.flowRegime);
 
@@ -79,22 +81,30 @@ bool MarcherDu::mrchdu(MrchduContext &context,
   return true;
 }
 
+MarcherDu::SideInput MarcherDu::makeSideInput(MrchduContext &context, int side,
+                                              const Foil &foil,
+                                              const StagnationResult &stagnation) const
+{
+  return {side, context.readSideStationCount(side),
+          context.resetSideState(side, foil, stagnation)};
+}
+
 bool MarcherDu::marchBoundaryLayerSide(MrchduContext &context,
                                        BoundaryLayerState &state, int side,
                                        SideMarchState &sideState,
                                        const Foil &foil,
                                        const StagnationResult &stagnation)
 {
-  const int previousTransition = context.resetSideState(side, foil, stagnation);
-  const int stationCount = context.readSideStationCount(side);
+  const SideInput sideInput =
+      makeSideInput(context, side, foil, stagnation);
 
   for (int stationIndex = 0;
-       stationIndex < stationCount - 1;
+       stationIndex < sideInput.stationCount - 1;
        ++stationIndex)
   {
     if (!processBoundaryLayerStation(context, state, sideState, side,
                                      stationIndex,
-                                     previousTransition, foil))
+                                     sideInput.previousTransition, foil))
     {
       return false;
     }
@@ -108,25 +118,26 @@ bool MarcherDu::processBoundaryLayerStation(
     SideMarchState &sideState, int side,
     int stationIndex, int previousTransition, const Foil &foil)
 {
+  const StationInput input = makeStationInput(
+      context, side, stationIndex, previousTransition, foil);
   const auto publishEvent = [&](const MarchEvent &event) {
     context.emitMarchInfoLog(event.message);
   };
-  BoundaryContext station = prepareMixedModeStation(
-      context, sideState, side, stationIndex, previousTransition);
+  BoundaryContext station = prepareMixedModeStation(context, sideState, input);
   const BoundaryContext resolvedStation = finalizeStationResult(
-      performMixedModeNewtonIteration(context, sideState, foil.edge, side,
-                                      stationIndex, previousTransition,
-                                      station),
+      performMixedModeNewtonIteration(context, sideState, input, station),
       [&](StationMarchResult &result) {
-        publishEvent(makeFailureEvent(result.recovery.phase, side, stationIndex,
+        publishEvent(makeFailureEvent(result.recovery.phase, input.side,
+                                      input.stationIndex,
                                       result.station.dmax));
         context.recoverStationAfterFailure(
-            side, stationIndex, result.station, sideState.ami,
+            input.side, input.stationIndex, result.station, sideState.ami,
             result.recovery.edgeMode, result.recovery.laminarAdvance);
       },
       publishEvent,
       [&](const BoundaryContext &resultStation) {
-        context.storeStationStateCommon(side, stationIndex, resultStation);
+        context.storeStationStateCommon(input.side, input.stationIndex,
+                                        resultStation);
       });
 
   sideState.sens = sideState.sennew;
@@ -134,9 +145,17 @@ bool MarcherDu::processBoundaryLayerStation(
   return true;
 }
 
+MarcherDu::StationInput MarcherDu::makeStationInput(
+    MrchduContext &context, int side, int stationIndex, int previousTransition,
+    const Foil &foil) const
+{
+  return {side,       stationIndex, previousTransition, foil.edge,
+          context.readStationModel(side, stationIndex),
+          context.isStartOfWake(side, stationIndex)};
+}
+
 MarcherDu::StationMarchResult MarcherDu::performMixedModeNewtonIteration(
-    MrchduContext &context, SideMarchState &sideState, const Edge &edge,
-    int side, int ibl, int itrold,
+    MrchduContext &context, SideMarchState &sideState, const StationInput &input,
     MrchduContext::MixedModeStationContext station)
 {
   double ueref = 0.0;
@@ -154,20 +173,22 @@ MarcherDu::StationMarchResult MarcherDu::performMixedModeNewtonIteration(
     context.blkin(state);
     station.flowRegime = context.currentFlowRegime();
 
-    context.checkTransitionIfNeeded(side, ibl, station.isSimilarity(), 1,
+    context.checkTransitionIfNeeded(input.side, input.stationIndex,
+                                    station.isSimilarity(), 1,
                                     sideState.ami);
     station.flowRegime = context.currentFlowRegime();
 
-    const bool startOfWake = context.isStartOfWake(side, ibl);
-    context.updateSystemMatricesForStation(edge, side, ibl, station);
+    context.updateSystemMatricesForStation(input.edge, input.side,
+                                           input.stationIndex, station);
 
     if (itbl == 1)
     {
-      context.initializeFirstIterationState(side, ibl, itrold, station, ueref,
-                                            hkref);
+      context.initializeFirstIterationState(input.side, input.stationIndex,
+                                            input.previousTransition, station,
+                                            ueref, hkref);
     }
 
-    if (station.isSimilarity() || startOfWake)
+    if (station.isSimilarity() || input.startOfWake)
     {
       context.configureSimilarityRow(ueref);
     }
@@ -179,7 +200,8 @@ MarcherDu::StationMarchResult MarcherDu::performMixedModeNewtonIteration(
                                   sideState.sennew);
     }
 
-    if (context.applyMixedModeNewtonStep(side, ibl, sideState.ami, station))
+    if (context.applyMixedModeNewtonStep(input.side, input.stationIndex,
+                                         sideState.ami, station))
     {
       return {station, true, {}, {}};
     }

@@ -5,6 +5,13 @@
 class MarcherUe : public Marcher
 {
 private:
+  struct SideInput
+  {
+    int side = 0;
+    int stationCount = 0;
+    MarchContextTypes::StationReadModel leadingStationModel;
+    double reybl = 0.0;
+  };
   struct SideMarchState
   {
     double thi = 0.0;
@@ -14,6 +21,16 @@ private:
   };
 
 public:
+  struct StationInput
+  {
+    int side = 0;
+    int stationIndex = 0;
+    Edge edge;
+    MarchContextTypes::StationReadModel stationModel;
+    MarchContextTypes::TrailingEdgeReadModel trailingEdgeModel;
+    double hstinv = 0.0;
+    double gm1bl = 0.0;
+  };
   struct MrchueStationContext
       : public MrchueContext::MixedModeStationContext
   {
@@ -27,21 +44,25 @@ public:
               const StagnationResult &stagnation);
 
 private:
-  bool marchMrchueSide(MrchueContext &context, int side,
-                       const Foil &foil, const StagnationResult &stagnation);
-  SideMarchState initializeMrchueSide(MrchueContext &context, int side);
-  void prepareMrchueStationContext(MrchueContext &context, int side,
-                                   int stationIndex,
+  bool marchMrchueSide(MrchueContext &context, int side, const Foil &foil,
+                       const StagnationResult &stagnation);
+  SideInput makeSideInput(MrchueContext &context, int side, const Foil &foil,
+                          const StagnationResult &stagnation) const;
+  SideMarchState initializeMrchueSide(const SideInput &input);
+  void prepareMrchueStationContext(MrchueContext &context,
+                                   const StationInput &input,
                                    const SideMarchState &sideState,
                                    MrchueStationContext &ctx);
-  StationMarchResult performMrchueNewtonLoop(MrchueContext &context, int side,
-                                             int stationIndex,
+  StationInput makeStationInput(MrchueContext &context, int side,
+                                int stationIndex, const Foil &foil) const;
+  StationMarchResult performMrchueNewtonLoop(MrchueContext &context,
+                                             const StationInput &input,
                                              MrchueStationContext station,
                                              const Edge &edge);
   void updateSideStateFromStation(const MrchueStationContext &ctx,
                                   SideMarchState &sideState);
-  void updateSideStateForTrailingEdge(MrchueContext &context, int side,
-                                      const Foil &foil, int stationIndex,
+  void updateSideStateForTrailingEdge(const StationInput &input,
+                                      const Foil &foil,
                                       SideMarchState &sideState);
   void storeMrchueStationState(MrchueContext &context, int side,
                                int stationIndex,

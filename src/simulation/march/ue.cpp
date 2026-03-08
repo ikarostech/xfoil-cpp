@@ -14,23 +14,24 @@ namespace ue_numerics = march::ue_numerics;
 
 namespace
 {
-  double computeMrchueDmax(const MrchueContext &context, int side,
-                           int stationIndex, const MrchueStationContext &ctx,
+  double computeMrchueDmax(const MrchueContext &context,
+                           const MarcherUe::StationInput &input,
+                           const MrchueStationContext &ctx,
                            bool includeLaminarAmpTerm)
   {
-    const auto station = context.readStationModel(side, stationIndex);
     return ue_numerics::computeDmax(
         context.readNewtonRhs(0), context.readNewtonRhs(1),
         context.readNewtonRhs(2), ctx.thi, ctx.dsi, ctx.cti,
-        includeLaminarAmpTerm, stationIndex >= station.transitionIndex);
+        includeLaminarAmpTerm,
+        input.stationIndex >= input.stationModel.transitionIndex);
   }
 
-  void applyMrchueStateDelta(const MrchueContext &context, int side,
-                             int stationIndex, MrchueStationContext &ctx,
+  void applyMrchueStateDelta(const MrchueContext &context,
+                             const MarcherUe::StationInput &input,
+                             MrchueStationContext &ctx,
                              double relaxation)
   {
-    const auto station = context.readStationModel(side, stationIndex);
-    if (stationIndex >= station.transitionIndex)
+    if (input.stationIndex >= input.stationModel.transitionIndex)
     {
       ctx.cti += relaxation * context.readNewtonRhs(0);
     }
@@ -39,25 +40,26 @@ namespace
     ctx.uei += relaxation * context.readNewtonRhs(3);
   }
 
-  bool maybeSwitchToInverseMode(
-      MrchueContext &context, int side, int stationIndex,
-      MrchueStationContext &ctx, double relaxation, double kHlmax,
-      double kHtmax, double &htarg, bool &direct,
-      std::vector<Marcher::MarchEvent> &events)
+  bool maybeSwitchToInverseMode(const MarcherUe::StationInput &input,
+                                MrchueContext &context,
+                                MrchueStationContext &ctx,
+                                double relaxation, double kHlmax,
+                                double kHtmax, double &htarg, bool &direct,
+                                std::vector<Marcher::MarchEvent> &events)
   {
-    const auto station = context.readStationModel(side, stationIndex);
-    if (stationIndex == station.trailingEdgeIndex + 1)
+    if (input.stationIndex == input.stationModel.trailingEdgeIndex + 1)
     {
       return false;
     }
 
     const double msq = ue_numerics::computeMachSquared(
-        ctx.uei, context.readBlCompressibilityHstinv(),
-        context.readBlCompressibilityGm1bl());
+        ctx.uei, input.hstinv, input.gm1bl);
     const double hktest = ue_numerics::computeProposedHk(
         ctx.dsi, ctx.thi, relaxation, context.readNewtonRhs(2),
         context.readNewtonRhs(1), msq);
-    const double hmax = (stationIndex < station.transitionIndex) ? kHlmax : kHtmax;
+    const double hmax =
+        (input.stationIndex < input.stationModel.transitionIndex) ? kHlmax
+                                                                  : kHtmax;
 
     ctx.hmax = hmax;
     direct = (hktest < hmax);
@@ -66,7 +68,7 @@ namespace
       return false;
     }
 
-    htarg = context.calcHtarg(stationIndex, side, ctx.isWake());
+    htarg = context.calcHtarg(input.stationIndex, input.side, ctx.isWake());
     if (ctx.isWake())
     {
       htarg = std::max(htarg, 1.01);
@@ -77,26 +79,26 @@ namespace
     }
 
     std::ostringstream message;
-    message << "     mrchue: inverse mode at " << stationIndex
+    message << "     mrchue: inverse mode at " << input.stationIndex
             << "    hk=" << std::fixed << std::setprecision(3) << htarg
             << "\n";
     events.push_back({Marcher::MarchEvent::Kind::Info, message.str()});
     return true;
   }
 
-  void clampAndAdjustMrchueStation(MrchueContext &context, int side,
-                                   int stationIndex, MrchueStationContext &ctx)
+  void clampAndAdjustMrchueStation(const MarcherUe::StationInput &input,
+                                   MrchueStationContext &ctx)
   {
-    const auto station = context.readStationModel(side, stationIndex);
-    if (stationIndex >= station.transitionIndex)
+    if (input.stationIndex >= input.stationModel.transitionIndex)
     {
       ctx.cti = std::clamp(ctx.cti, 0.0000001, 0.30);
     }
 
-    const double hklim = (stationIndex <= station.trailingEdgeIndex) ? 1.02 : 1.00005;
-    const double msq = ue_numerics::computeMachSquared(
-        ctx.uei, context.readBlCompressibilityHstinv(),
-        context.readBlCompressibilityGm1bl());
+    const double hklim =
+        (input.stationIndex <= input.stationModel.trailingEdgeIndex) ? 1.02
+                                                                     : 1.00005;
+    const double msq =
+        ue_numerics::computeMachSquared(ctx.uei, input.hstinv, input.gm1bl);
     double dsw = ctx.dsi - ctx.dswaki;
     dsw = ue_numerics::adjustDisplacementForHkLimit(dsw, ctx.thi, msq, hklim);
     ctx.dsi = dsw + ctx.dswaki;
@@ -132,46 +134,56 @@ bool MarcherUe::marchMrchueSide(MrchueContext &context, int side,
   message << "    Side " << side << " ...\n";
   publishEvent({MarchEvent::Kind::Info, message.str()});
 
-  context.resetSideState(side, foil, stagnation);
+  const SideInput sideInput =
+      makeSideInput(context, side, foil, stagnation);
+  SideMarchState sideState = initializeMrchueSide(sideInput);
 
-  SideMarchState sideState = initializeMrchueSide(context, side);
-
-  const int stationCount = context.readSideStationCount(side);
   for (int stationIndex = 0;
-       stationIndex < stationCount - 1;
+       stationIndex < sideInput.stationCount - 1;
        ++stationIndex)
   {
+    const StationInput input =
+        makeStationInput(context, side, stationIndex, foil);
     MrchueStationContext station;
-    prepareMrchueStationContext(context, side, stationIndex, sideState, station);
+    prepareMrchueStationContext(context, input, sideState, station);
     const MrchueStationContext resolvedStation = finalizeStationResult(
-        performMrchueNewtonLoop(context, side, stationIndex, station, foil.edge),
+        performMrchueNewtonLoop(context, input, station, input.edge),
         [&](StationMarchResult &result) {
-          publishEvent(makeFailureEvent(result.recovery.phase, side, stationIndex,
-                                        result.station.dmax));
+          publishEvent(makeFailureEvent(result.recovery.phase, input.side,
+                                        input.stationIndex, result.station.dmax));
           context.recoverStationAfterFailure(
-              side, stationIndex, result.station, result.station.ami,
+              input.side, input.stationIndex, result.station, result.station.ami,
               result.recovery.edgeMode, result.recovery.laminarAdvance);
         },
         publishEvent,
         [&](const MrchueStationContext &resultStation) {
-          storeMrchueStationState(context, side, stationIndex, resultStation);
+          storeMrchueStationState(context, input.side, input.stationIndex,
+                                 resultStation);
         });
 
     updateSideStateFromStation(resolvedStation, sideState);
-    updateSideStateForTrailingEdge(context, side, foil, stationIndex, sideState);
+    updateSideStateForTrailingEdge(input, foil, sideState);
   }
 
   return true;
 }
 
-MarcherUe::SideMarchState MarcherUe::initializeMrchueSide(MrchueContext &context,
-                                                          int side)
+MarcherUe::SideInput MarcherUe::makeSideInput(MrchueContext &context, int side,
+                                              const Foil &foil,
+                                              const StagnationResult &stagnation) const
 {
-  const auto station = context.readStationModel(side, 0);
-  const double xsi = station.arcLength;
-  const double uei = station.edgeVelocity;
+  context.resetSideState(side, foil, stagnation);
+  return {side, context.readSideStationCount(side),
+          context.readStationModel(side, 0), context.readBlReynoldsReybl()};
+}
+
+MarcherUe::SideMarchState
+MarcherUe::initializeMrchueSide(const SideInput &input)
+{
+  const double xsi = input.leadingStationModel.arcLength;
+  const double uei = input.leadingStationModel.edgeVelocity;
   const double ucon = uei / xsi;
-  const double tsq = 0.45 / (ucon * 6.0 * context.readBlReynoldsReybl());
+  const double tsq = 0.45 / (ucon * 6.0 * input.reybl);
   SideMarchState sideState;
   sideState.thi = std::sqrt(tsq);
   sideState.dsi = 2.2 * sideState.thi;
@@ -181,14 +193,14 @@ MarcherUe::SideMarchState MarcherUe::initializeMrchueSide(MrchueContext &context
 }
 
 void MarcherUe::prepareMrchueStationContext(MrchueContext &context,
-                                            int side, int stationIndex,
+                                            const StationInput &input,
                                             const SideMarchState &sideState,
                                             MrchueStationContext &ctx)
 {
-  const auto station = context.readStationModel(side, stationIndex);
-  ctx.flowRegime = context.determineRegimeForStation(side, stationIndex);
-  ctx.xsi = station.arcLength;
-  ctx.uei = station.edgeVelocity;
+  ctx.flowRegime =
+      context.determineRegimeForStation(input.side, input.stationIndex);
+  ctx.xsi = input.stationModel.arcLength;
+  ctx.uei = input.stationModel.edgeVelocity;
   ctx.thi = sideState.thi;
   ctx.dsi = sideState.dsi;
   ctx.ami = sideState.ami;
@@ -199,13 +211,26 @@ void MarcherUe::prepareMrchueStationContext(MrchueContext &context,
   ctx.htarg = 0.0;
   if (ctx.isWake())
   {
-    ctx.dswaki = station.wakeGap;
+    ctx.dswaki = input.stationModel.wakeGap;
   }
   else
   {
     ctx.dswaki = 0.0;
   }
   ctx.flowRegime = context.applyFlowRegimeCandidate(ctx.flowRegime);
+}
+
+MarcherUe::StationInput MarcherUe::makeStationInput(MrchueContext &context,
+                                                    int side, int stationIndex,
+                                                    const Foil &foil) const
+{
+  return {side,
+          stationIndex,
+          foil.edge,
+          context.readStationModel(side, stationIndex),
+          context.readTrailingEdgeModel(),
+          context.readBlCompressibilityHstinv(),
+          context.readBlCompressibilityGm1bl()};
 }
 
 void MarcherUe::updateSideStateFromStation(const MrchueStationContext &ctx,
@@ -217,27 +242,25 @@ void MarcherUe::updateSideStateFromStation(const MrchueStationContext &ctx,
   sideState.dsi = ctx.dsi;
 }
 
-void MarcherUe::updateSideStateForTrailingEdge(MrchueContext &context, int side,
+void MarcherUe::updateSideStateForTrailingEdge(const StationInput &input,
                                                const Foil &foil,
-                                               int stationIndex,
                                                SideMarchState &sideState)
 {
-  const auto station = context.readStationModel(side, stationIndex);
-  if (stationIndex != station.trailingEdgeIndex)
+  if (input.stationIndex != input.stationModel.trailingEdgeIndex)
   {
     return;
   }
 
-  const auto trailingEdge = context.readTrailingEdgeModel();
-  sideState.thi = trailingEdge.topMomentumThickness +
-                  trailingEdge.bottomMomentumThickness;
-  sideState.dsi = trailingEdge.topDisplacementThickness +
-                  trailingEdge.bottomDisplacementThickness + foil.edge.ante;
+  sideState.thi = input.trailingEdgeModel.topMomentumThickness +
+                  input.trailingEdgeModel.bottomMomentumThickness;
+  sideState.dsi = input.trailingEdgeModel.topDisplacementThickness +
+                  input.trailingEdgeModel.bottomDisplacementThickness +
+                  foil.edge.ante;
 }
 
 MarcherUe::StationMarchResult
-MarcherUe::performMrchueNewtonLoop(MrchueContext &context, int side,
-                                   int stationIndex,
+MarcherUe::performMrchueNewtonLoop(MrchueContext &context,
+                                   const StationInput &input,
                                    MrchueStationContext station,
                                    const Edge &edge)
 {
@@ -262,23 +285,23 @@ MarcherUe::performMrchueNewtonLoop(MrchueContext &context, int side,
         (!(station.flowRegime == FlowRegimeEnum::Turbulent ||
            station.flowRegime == FlowRegimeEnum::Wake)))
     {
-      context.runTransitionCheckForMrchue(side, stationIndex, station.ami,
-                                          station.cti);
+      context.runTransitionCheckForMrchue(input.side, input.stationIndex,
+                                          station.ami, station.cti);
       station.flowRegime = context.currentFlowRegime();
     }
 
-    const auto stationModel = context.readStationModel(side, stationIndex);
-    if (stationIndex == stationModel.trailingEdgeIndex + 1)
+    if (input.stationIndex == input.stationModel.trailingEdgeIndex + 1)
     {
-      const auto trailingEdge = context.readTrailingEdgeModel();
       station.tte =
-          trailingEdge.topMomentumThickness + trailingEdge.bottomMomentumThickness;
-      station.dte = trailingEdge.topDisplacementThickness +
-                    trailingEdge.bottomDisplacementThickness + edge.ante;
-      station.cte = (trailingEdge.topSkinFrictionCoeff *
-                         trailingEdge.topMomentumThickness +
-                     trailingEdge.bottomSkinFrictionCoeff *
-                         trailingEdge.bottomMomentumThickness) /
+          input.trailingEdgeModel.topMomentumThickness +
+          input.trailingEdgeModel.bottomMomentumThickness;
+      station.dte = input.trailingEdgeModel.topDisplacementThickness +
+                    input.trailingEdgeModel.bottomDisplacementThickness +
+                    edge.ante;
+      station.cte = (input.trailingEdgeModel.topSkinFrictionCoeff *
+                         input.trailingEdgeModel.topMomentumThickness +
+                     input.trailingEdgeModel.bottomSkinFrictionCoeff *
+                         input.trailingEdgeModel.bottomMomentumThickness) /
                     station.tte;
       context.solveTeSystemForCurrentProfiles(edge);
     }
@@ -290,31 +313,29 @@ MarcherUe::performMrchueNewtonLoop(MrchueContext &context, int side,
     if (station.direct)
     {
       context.solveMrchueDirectNewtonSystem();
-      dmax_local =
-          computeMrchueDmax(context, side, stationIndex, station, true);
+      dmax_local = computeMrchueDmax(context, input, station, true);
       const double rlx = ue_numerics::computeRelaxation(dmax_local);
 
       if (maybeSwitchToInverseMode(
-              context, side, stationIndex, station, rlx, kHlmax, kHtmax,
+              input, context, station, rlx, kHlmax, kHtmax,
               station.htarg, station.direct, events))
       {
         continue;
       }
 
-      applyMrchueStateDelta(context, side, stationIndex, station, rlx);
+      applyMrchueStateDelta(context, input, station, rlx);
     }
     else
     {
       const double effectiveHtarg = ue_numerics::computeInverseTarget(
           state.station2.hkz.scalar, station.htarg, station.hmax);
       context.solveMrchueInverseNewtonSystem(effectiveHtarg);
-      dmax_local =
-          computeMrchueDmax(context, side, stationIndex, station, false);
+      dmax_local = computeMrchueDmax(context, input, station, false);
       const double rlx = ue_numerics::computeRelaxation(dmax_local);
-      applyMrchueStateDelta(context, side, stationIndex, station, rlx);
+      applyMrchueStateDelta(context, input, station, rlx);
     }
 
-    clampAndAdjustMrchueStation(context, side, stationIndex, station);
+    clampAndAdjustMrchueStation(input, station);
 
     if (dmax_local <= 0.00001)
     {
