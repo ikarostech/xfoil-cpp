@@ -3,15 +3,16 @@
 #include <cmath>
 
 #include "simulation/BoundaryLayer.hpp"
+#include "simulation/boundary_layer_workflow_access.hpp"
 #include "simulation/march/context.hpp"
 
 class WorkflowMarchContext final : public MarchContext
 {
 public:
   explicit WorkflowMarchContext(BoundaryLayerWorkflow &workflow)
-      : workflow_(workflow) {}
+      : workflow_(workflow), access_(workflow) {}
 
-  BoundaryLayerState &mutableState() override { return workflow_.state; }
+  BoundaryLayerState &mutableState() override { return access_.state(); }
 
   int readSideStationCount(int side) const override {
     return workflow_.readSideStationCount(side);
@@ -38,31 +39,31 @@ public:
   }
   void runTransitionCheckForMrchue(int side, int stationIndex, double &ami,
                                    double &cti) override {
-    workflow_.transitionSolver.trchek();
-    ami = workflow_.state.station2.param.amplz;
-    if (workflow_.flowRegime == FlowRegimeEnum::Transition) {
-      workflow_.lattice.get(side).profiles.transitionIndex = stationIndex;
+    access_.transitionSolver().trchek();
+    ami = access_.state().station2.param.amplz;
+    if (access_.flowRegime() == FlowRegimeEnum::Transition) {
+      access_.lattice().get(side).profiles.transitionIndex = stationIndex;
       if (cti <= 0.0) {
         cti = 0.03;
-        workflow_.state.station2.param.sz = cti;
+        access_.state().station2.param.sz = cti;
       }
     } else {
-      workflow_.lattice.get(side).profiles.transitionIndex = stationIndex + 2;
+      access_.lattice().get(side).profiles.transitionIndex = stationIndex + 2;
     }
   }
   bool solveTeSystemForCurrentProfiles(const Edge &edge) override {
-    return workflow_.tesys(workflow_.lattice.top.profiles,
-                           workflow_.lattice.bottom.profiles, edge);
+    return access_.tesys(access_.lattice().top.profiles,
+                         access_.lattice().bottom.profiles, edge);
   }
 
   double readBlCompressibilityHstinv() const override {
-    return workflow_.blCompressibility.hstinv;
+    return access_.blCompressibility().hstinv;
   }
   double readBlCompressibilityGm1bl() const override {
-    return workflow_.blCompressibility.gm1bl;
+    return access_.blCompressibility().gm1bl;
   }
   double readBlReynoldsReybl() const override {
-    return workflow_.blReynolds.reybl;
+    return access_.blReynolds().reybl;
   }
 
   bool isStartOfWake(int side, int stationIndex) override {
@@ -133,45 +134,46 @@ public:
   bool blkin(BoundaryLayerState &state) override { return workflow_.blkin(state); }
   bool blsys() override { return workflow_.blsys(); }
   double calcHtarg(int ibl, int is, bool wake) override {
-    if (ibl < workflow_.lattice.get(is).profiles.transitionIndex) {
-      return workflow_.state.station1.hkz.scalar +
-             0.03 * (workflow_.state.station2.param.xz -
-                     workflow_.state.station1.param.xz) /
-                 workflow_.state.station1.param.tz;
+    if (ibl < access_.lattice().get(is).profiles.transitionIndex) {
+      return access_.state().station1.hkz.scalar +
+             0.03 * (access_.state().station2.param.xz -
+                     access_.state().station1.param.xz) /
+                 access_.state().station1.param.tz;
     }
 
-    if (ibl == workflow_.lattice.get(is).profiles.transitionIndex) {
-      return workflow_.state.station1.hkz.scalar +
-             (0.03 * (workflow_.xt.scalar - workflow_.state.station1.param.xz) -
-              0.15 * (workflow_.state.station2.param.xz -
+    if (ibl == access_.lattice().get(is).profiles.transitionIndex) {
+      return access_.state().station1.hkz.scalar +
+             (0.03 * (workflow_.xt.scalar - access_.state().station1.param.xz) -
+              0.15 * (access_.state().station2.param.xz -
                       workflow_.xt.scalar)) /
-                 workflow_.state.station1.param.tz;
+                 access_.state().station1.param.tz;
     }
 
     if (wake) {
       const double cst =
-          0.03 * (workflow_.state.station2.param.xz -
-                  workflow_.state.station1.param.xz) /
-          workflow_.state.station1.param.tz;
+          0.03 * (access_.state().station2.param.xz -
+                  access_.state().station1.param.xz) /
+          access_.state().station1.param.tz;
       auto euler = [](double hk2, double hk1, double cst_local) {
         return hk2 - (hk2 + cst_local * std::pow(hk2 - 1, 3) - hk1) /
                          (1 + 3 * cst_local * std::pow(hk2 - 1, 2));
       };
-      workflow_.state.station2.hkz.scalar = workflow_.state.station1.hkz.scalar;
+      access_.state().station2.hkz.scalar = access_.state().station1.hkz.scalar;
       for (int i = 0; i < 3; ++i) {
-        workflow_.state.station2.hkz.scalar =
-            euler(workflow_.state.station2.hkz.scalar,
-                  workflow_.state.station1.hkz.scalar, cst);
+        access_.state().station2.hkz.scalar =
+            euler(access_.state().station2.hkz.scalar,
+                  access_.state().station1.hkz.scalar, cst);
       }
-      return workflow_.state.station2.hkz.scalar;
+      return access_.state().station2.hkz.scalar;
     }
 
-    return workflow_.state.station1.hkz.scalar -
-           0.15 * (workflow_.state.station2.param.xz -
-                   workflow_.state.station1.param.xz) /
-               workflow_.state.station1.param.tz;
+    return access_.state().station1.hkz.scalar -
+           0.15 * (access_.state().station2.param.xz -
+                   access_.state().station1.param.xz) /
+               access_.state().station1.param.tz;
   }
 
 private:
   BoundaryLayerWorkflow &workflow_;
+  BoundaryLayerWorkflowAccess access_;
 };

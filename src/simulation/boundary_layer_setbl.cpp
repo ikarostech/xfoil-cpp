@@ -7,6 +7,7 @@
 #include "XFoil.h"
 #include "core/math_util.hpp"
 #include "infrastructure/logger.hpp"
+#include "simulation/boundary_layer_workflow_access.hpp"
 #include "simulation/march/march.hpp"
 #include "simulation/march/workflow_context.hpp"
 
@@ -156,7 +157,7 @@ struct SetblWorkingState {
 class BoundaryLayerSetblAssembler {
  public:
   explicit BoundaryLayerSetblAssembler(BoundaryLayerWorkflow &workflow)
-      : workflow_(workflow) {}
+      : workflow_(workflow), access_(workflow) {}
 
   SetblOutputView run(SidePairRef<const BoundaryLayerSideProfiles> profiles,
                       const FlowState &analysis_state,
@@ -214,7 +215,7 @@ class BoundaryLayerSetblAssembler {
   SideSweepInitResult initializeSideSweepState(
       const Foil &foil, const StagnationResult &stagnation, int side) const {
     SideSweepInitResult result;
-    result.xiforc = workflow_.xifset(foil, stagnation, side);
+    result.xiforc = access_.xifset(foil, stagnation, side);
     return result;
   }
 
@@ -277,10 +278,10 @@ class BoundaryLayerSetblAssembler {
     result.dds2 = d2_u2 * result.due2;
 
     result.state = base_state;
-    result.state.current() = workflow_.blprv(
+    result.state.current() = access_.blprv(
         result.state.current(), vars.xsi, vars.ami, vars.cti, vars.thi,
         vars.dsi, vars.dswaki, vars.uei);
-    workflow_.blkin(result.state);
+    access_.blkin(result.state);
     return result;
   }
 
@@ -629,13 +630,13 @@ class BoundaryLayerSetblAssembler {
       SetblOutputView &output, std::array<SetblStation, 2> &stations,
       SetblSideData &sideData) const {
     const auto zero = Eigen::Matrix<double, 3, 2>::Zero();
-    output.bl_newton_system.vm.resize(workflow_.nsys);
-    output.bl_newton_system.va.resize(workflow_.nsys, zero);
-    output.bl_newton_system.vb.resize(workflow_.nsys, zero);
-    output.bl_newton_system.vdel.resize(workflow_.nsys, zero);
-    stations[0].resizeSystem(workflow_.nsys);
-    stations[1].resizeSystem(workflow_.nsys);
-    sideData.resizeSystem(workflow_.nsys);
+    output.bl_newton_system.vm.resize(access_.systemSize());
+    output.bl_newton_system.va.resize(access_.systemSize(), zero);
+    output.bl_newton_system.vb.resize(access_.systemSize(), zero);
+    output.bl_newton_system.vdel.resize(access_.systemSize(), zero);
+    stations[0].resizeSystem(access_.systemSize());
+    stations[1].resizeSystem(access_.systemSize());
+    sideData.resizeSystem(access_.systemSize());
   }
 
   void initializeSetblProfiles(SetblOutputView &output) const {
@@ -648,7 +649,7 @@ class BoundaryLayerSetblAssembler {
       const Eigen::MatrixXd &dij, SetblOutputView &output,
       SetblSideData &sideData) const {
     const auto edge_result =
-        prepareEdgeVelocityAndSensitivities(profiles, dij, workflow_.nsys);
+        prepareEdgeVelocityAndSensitivities(profiles, dij, access_.systemSize());
     sideData.usav = edge_result.edgeVelocity;
     sideData.jvte = edge_result.jvte;
     sideData.dule = edge_result.dule;
@@ -714,13 +715,13 @@ class BoundaryLayerSetblAssembler {
           side, station, sideData.usav, sideData.ute_m, sideData.jvte,
           stations[0].d_m, output, foil.edge);
       if (te_update.isStartOfWake) {
-        workflow_.tesys(workflow_.lattice.top.profiles,
-                        workflow_.lattice.bottom.profiles, foil.edge);
+        access_.tesys(access_.lattice().top.profiles,
+                      access_.lattice().bottom.profiles, foil.edge);
         stations[0].d_m = te_update.d_m1;
         stations[0].due = te_update.due1;
         stations[0].dds = te_update.dds1;
       } else {
-        workflow_.blsys();
+        access_.blsys();
       }
 
       output.profiles.get(side).skinFrictionCoeffHistory[station] =
@@ -734,7 +735,7 @@ class BoundaryLayerSetblAssembler {
         stations[1].xi_ule = stagnation.sst_gp;
       }
 
-      assembleBlJacobianForStation(iv, workflow_.nsys, stations, sideData,
+      assembleBlJacobianForStation(iv, access_.systemSize(), stations, sideData,
                                    controlByAlpha, re_clmr, msq_clmr, output);
 
       if (te_update.isStartOfWake) {
@@ -757,9 +758,10 @@ class BoundaryLayerSetblAssembler {
       if (station == workflow_.lattice.get(side).trailingEdgeIndex) {
         output.flowRegime = FlowRegimeEnum::Wake;
         workflow_.flowRegime = output.flowRegime;
-        workflow_.state.station2 = workflow_.boundaryLayerVariablesSolver.solve(
-            workflow_.state.station2, FlowRegimeEnum::Wake);
-        workflow_.blmid(FlowRegimeEnum::Wake);
+        access_.state().station2 =
+            access_.variableSolver().solve(access_.state().station2,
+                                           FlowRegimeEnum::Wake);
+        access_.blmid(FlowRegimeEnum::Wake);
       }
 
       const auto advance = advanceStationArrays(
@@ -810,6 +812,7 @@ class BoundaryLayerSetblAssembler {
   }
 
   BoundaryLayerWorkflow &workflow_;
+  BoundaryLayerWorkflowAccess access_;
 };
 
 } // namespace

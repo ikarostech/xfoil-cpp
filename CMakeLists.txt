@@ -51,6 +51,8 @@ add_library(xfoil_simulation
     src/simulation/XFoil_init.cpp
     src/simulation/XFoil_viscous.cpp
     src/simulation/BoundaryLayer.cpp
+    src/simulation/boundary_layer_mixed_mode.cpp
+    src/simulation/boundary_layer_relaxation.cpp
     src/simulation/boundary_layer_setbl.cpp
     src/simulation/BoundaryLayer_geometry.cpp
     src/simulation/BoundaryLayerStore.cpp

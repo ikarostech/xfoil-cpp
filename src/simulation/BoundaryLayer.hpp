@@ -147,11 +147,9 @@ class BoundaryLayerWorkflow {
     void syncStationRegimeStates(int side, int stationIndex, FlowRegimeEnum stationRegime);
     FlowRegimeEnum determineRegimeForStation(int side, int stationIndex) const;
     double fallbackEdgeVelocity(int side, int stationIndex, EdgeVelocityFallbackMode edgeMode) const;
-    template <typename StationContext>
-    void resetStationKinematicsAfterFailure(int side, int stationIndex, StationContext &ctx,
+    void resetStationKinematicsAfterFailure(int side, int stationIndex, MixedModeStationContext &ctx,
                                             EdgeVelocityFallbackMode edgeMode);
-    template <typename StationContext>
-    void recoverStationAfterFailure(int side, int stationIndex, StationContext &ctx, double &ami,
+    void recoverStationAfterFailure(int side, int stationIndex, MixedModeStationContext &ctx, double &ami,
                                     EdgeVelocityFallbackMode edgeMode, int laminarAdvance);
     BoundaryLayerDelta buildBoundaryLayerDelta(int side, const Eigen::VectorXd &unew_side,
                                                const Eigen::VectorXd &u_ac_side, double dac,
@@ -181,62 +179,3 @@ class BoundaryLayerWorkflow {
     double stagnationSst = 0.0;
     BoundaryLayerGeometry geometry;
 };
-
-template <typename StationContext>
-inline void BoundaryLayerWorkflow::resetStationKinematicsAfterFailure(int side, int stationIndex, StationContext &ctx,
-                                                                      EdgeVelocityFallbackMode edgeMode) {
-    if (ctx.dmax <= 0.1 || stationIndex < 2) {
-        return;
-    }
-
-    if (stationIndex <= lattice.get(side).trailingEdgeIndex) {
-        const double ratio = lattice.get(side).arcLengthCoordinates[stationIndex] /
-                             lattice.get(side).arcLengthCoordinates[stationIndex - 1];
-        const double scale = std::sqrt(ratio);
-        ctx.thi            = lattice.get(side).profiles.momentumThickness[stationIndex - 1] * scale;
-        ctx.dsi            = lattice.get(side).profiles.displacementThickness[stationIndex - 1] * scale;
-    } else {
-        if (stationIndex == lattice.get(side).trailingEdgeIndex + 1) {
-            ctx.cti = ctx.cte;
-            ctx.thi = ctx.tte;
-            ctx.dsi = ctx.dte;
-        } else {
-            ctx.thi             = lattice.get(side).profiles.momentumThickness[stationIndex - 1];
-            const double ratlen = (lattice.get(side).arcLengthCoordinates[stationIndex] -
-                                   lattice.get(side).arcLengthCoordinates[stationIndex - 1]) /
-                                  (10.0 * lattice.get(side).profiles.displacementThickness[stationIndex - 1]);
-            ctx.dsi = (lattice.get(side).profiles.displacementThickness[stationIndex - 1] + ctx.thi * ratlen) /
-                      (1.0 + ratlen);
-        }
-    }
-
-    ctx.uei = fallbackEdgeVelocity(side, stationIndex, edgeMode);
-
-    if (stationIndex == lattice.get(side).profiles.transitionIndex) {
-        ctx.cti = 0.05;
-    }
-    if (stationIndex > lattice.get(side).profiles.transitionIndex) {
-        ctx.cti = lattice.get(side).profiles.skinFrictionCoeff[stationIndex - 1];
-    }
-}
-
-template <typename StationContext>
-inline void BoundaryLayerWorkflow::recoverStationAfterFailure(int side, int stationIndex, StationContext &ctx,
-                                                              double &ami, EdgeVelocityFallbackMode edgeMode,
-                                                              int laminarAdvance) {
-    ctx.flowRegime = applyFlowRegimeCandidate(ctx.flowRegime);
-
-    resetStationKinematicsAfterFailure(side, stationIndex, ctx, edgeMode);
-
-    blData updatedCurrent = blprv(state.current(), ctx.xsi, ctx.ami, ctx.cti, ctx.thi, ctx.dsi, ctx.dswaki, ctx.uei);
-    state.current()       = updatedCurrent;
-    blkin(state);
-    ctx.flowRegime = currentFlowRegime();
-
-    checkTransitionIfNeeded(side, stationIndex, ctx.isSimilarity(), laminarAdvance, ami);
-    ctx.flowRegime = currentFlowRegime();
-
-    syncStationRegimeStates(side, stationIndex, ctx.flowRegime);
-    ctx.flowRegime = currentFlowRegime();
-    ctx.ami        = ami;
-}
