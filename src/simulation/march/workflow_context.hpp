@@ -2,40 +2,36 @@
 
 #include <cmath>
 
-#include "simulation/BoundaryLayer.hpp"
 #include "simulation/boundary_layer_workflow_access.hpp"
 #include "simulation/march/context.hpp"
 
-class WorkflowMarchContext final : public MarchContext
-{
-public:
-  explicit WorkflowMarchContext(BoundaryLayerWorkflow &workflow)
-      : workflow_(workflow), access_(workflow) {}
+class WorkflowMarchContext final : public MarchContext {
+ public:
+  explicit WorkflowMarchContext(BoundaryLayerWorkflowAccess access)
+      : access_(access) {}
 
   BoundaryLayerState &mutableState() override { return access_.state(); }
 
   int readSideStationCount(int side) const override {
-    return workflow_.readSideStationCount(side);
+    return access_.readSideStationCount(side);
   }
   StationReadModel readStationModel(int side, int stationIndex) const override {
-    return workflow_.readStationModel(side, stationIndex);
+    return access_.readStationModel(side, stationIndex);
   }
   TrailingEdgeReadModel readTrailingEdgeModel() const override {
-    return workflow_.readTrailingEdgeModel();
+    return access_.readTrailingEdgeModel();
   }
 
   void emitMarchInfoLog(std::string_view message) const override {
-    workflow_.emitMarchInfoLog(message);
+    access_.emitMarchInfoLog(message);
   }
 
-  double readNewtonRhs(int row) const override {
-    return workflow_.readNewtonRhs(row);
-  }
+  double readNewtonRhs(int row) const override { return access_.readNewtonRhs(row); }
   void solveMrchueDirectNewtonSystem() override {
-    workflow_.solveMrchueDirectNewtonSystem();
+    access_.solveMrchueDirectNewtonSystem();
   }
   void solveMrchueInverseNewtonSystem(double htarg) override {
-    workflow_.solveMrchueInverseNewtonSystem(htarg);
+    access_.solveMrchueInverseNewtonSystem(htarg);
   }
   void runTransitionCheckForMrchue(int side, int stationIndex, double &ami,
                                    double &cti) override {
@@ -67,72 +63,70 @@ public:
   }
 
   bool isStartOfWake(int side, int stationIndex) override {
-    return workflow_.isStartOfWake(side, stationIndex);
+    return access_.isStartOfWake(side, stationIndex);
   }
-  FlowRegimeEnum
-  applyFlowRegimeCandidate(FlowRegimeEnum candidate) override {
-    return workflow_.applyFlowRegimeCandidate(candidate);
+  FlowRegimeEnum applyFlowRegimeCandidate(FlowRegimeEnum candidate) override {
+    return access_.applyFlowRegimeCandidate(candidate);
   }
   FlowRegimeEnum currentFlowRegime() const override {
-    return workflow_.currentFlowRegime();
+    return access_.currentFlowRegime();
   }
   FlowRegimeEnum determineRegimeForStation(int side,
                                            int stationIndex) const override {
-    return workflow_.determineRegimeForStation(side, stationIndex);
+    return access_.determineRegimeForStation(side, stationIndex);
   }
   int resetSideState(int side, const Foil &foil,
                      const StagnationResult &stagnation) override {
-    return workflow_.resetSideState(side, foil, stagnation);
+    return access_.resetSideState(side, foil, stagnation);
   }
 
   void updateSystemMatricesForStation(const Edge &edge, int side,
                                       int stationIndex,
                                       MixedModeStationContext &ctx) override {
-    workflow_.updateSystemMatricesForStation(edge, side, stationIndex, ctx);
+    access_.updateSystemMatricesForStation(edge, side, stationIndex, ctx);
   }
   void initializeFirstIterationState(int side, int stationIndex,
                                      int previousTransition,
                                      MixedModeStationContext &ctx,
                                      double &ueref, double &hkref) override {
-    workflow_.initializeFirstIterationState(side, stationIndex,
-                                            previousTransition, ctx, ueref,
-                                            hkref);
+    access_.initializeFirstIterationState(side, stationIndex,
+                                          previousTransition, ctx, ueref, hkref);
   }
   void configureSimilarityRow(double ueref) override {
-    workflow_.configureSimilarityRow(ueref);
+    access_.configureSimilarityRow(ueref);
   }
   void configureViscousRow(double hkref, double ueref, double senswt,
                            bool resetSensitivity, bool averageSensitivity,
                            double &sens, double &sennew) override {
-    workflow_.configureViscousRow(hkref, ueref, senswt, resetSensitivity,
-                                  averageSensitivity, sens, sennew);
+    access_.configureViscousRow(hkref, ueref, senswt, resetSensitivity,
+                                averageSensitivity, sens, sennew);
   }
   bool applyMixedModeNewtonStep(int side, int stationIndex, double &ami,
                                 MixedModeStationContext &ctx) override {
-    return workflow_.applyMixedModeNewtonStep(side, stationIndex, ami, ctx);
+    return access_.applyMixedModeNewtonStep(side, stationIndex, ami, ctx);
   }
   void checkTransitionIfNeeded(int side, int stationIndex, bool skipCheck,
                                int laminarAdvance, double &ami) override {
-    workflow_.checkTransitionIfNeeded(side, stationIndex, skipCheck,
-                                      laminarAdvance, ami);
+    access_.checkTransitionIfNeeded(side, stationIndex, skipCheck,
+                                    laminarAdvance, ami);
   }
   void storeStationStateCommon(int side, int stationIndex,
                                const MixedModeStationContext &ctx) override {
-    workflow_.storeStationStateCommon(side, stationIndex, ctx);
+    access_.storeStationStateCommon(side, stationIndex, ctx);
   }
   void recoverStationAfterFailure(
       int side, int stationIndex, MixedModeStationContext &ctx, double &ami,
       EdgeVelocityFallbackMode edgeMode, int laminarAdvance) override {
-    workflow_.recoverStationAfterFailure(side, stationIndex, ctx, ami, edgeMode,
-                                         laminarAdvance);
+    access_.recoverStationAfterFailure(side, stationIndex, ctx, ami, edgeMode,
+                                       laminarAdvance);
   }
 
   blData blprv(blData data, double xsi, double ami, double cti, double thi,
                double dsi, double dswaki, double uei) const override {
-    return workflow_.blprv(data, xsi, ami, cti, thi, dsi, dswaki, uei);
+    return access_.blprv(data, xsi, ami, cti, thi, dsi, dswaki, uei);
   }
-  bool blkin(BoundaryLayerState &state) override { return workflow_.blkin(state); }
-  bool blsys() override { return workflow_.blsys(); }
+  bool blkin(BoundaryLayerState &state) override { return access_.blkin(state); }
+  bool blsys() override { return access_.blsys(); }
   double calcHtarg(int ibl, int is, bool wake) override {
     if (ibl < access_.lattice().get(is).profiles.transitionIndex) {
       return access_.state().station1.hkz.scalar +
@@ -143,9 +137,8 @@ public:
 
     if (ibl == access_.lattice().get(is).profiles.transitionIndex) {
       return access_.state().station1.hkz.scalar +
-             (0.03 * (workflow_.xt.scalar - access_.state().station1.param.xz) -
-              0.15 * (access_.state().station2.param.xz -
-                      workflow_.xt.scalar)) /
+             (0.03 * (access_.xt().scalar - access_.state().station1.param.xz) -
+              0.15 * (access_.state().station2.param.xz - access_.xt().scalar)) /
                  access_.state().station1.param.tz;
     }
 
@@ -173,7 +166,6 @@ public:
                access_.state().station1.param.tz;
   }
 
-private:
-  BoundaryLayerWorkflow &workflow_;
+ private:
   BoundaryLayerWorkflowAccess access_;
 };

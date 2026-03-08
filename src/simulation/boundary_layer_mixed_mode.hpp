@@ -1,11 +1,22 @@
 #pragma once
 
 #include "simulation/BoundaryLayer.hpp"
+#include "simulation/boundary_layer_solver_ops.hpp"
 
 class BoundaryLayerMixedModeOps {
  public:
-  explicit BoundaryLayerMixedModeOps(BoundaryLayerWorkflow &workflow)
-      : workflow_(workflow) {}
+  struct Context {
+    SidePair<BoundaryLayerLattice> &lattice;
+    BoundaryLayerState &state;
+    FlowRegimeEnum &flowRegime;
+    BlSystemCoeffs &blc;
+    const BlCompressibilityParams &blCompressibility;
+    BoundaryLayerVariablesSolver &boundaryLayerVariablesSolver;
+    BoundaryLayerTransitionSolver &transitionSolver;
+    BoundaryLayerSolverOps solverOps;
+  };
+
+  explicit BoundaryLayerMixedModeOps(Context context) : context_(context) {}
 
   void storeStationStateCommon(
       int side, int stationIndex,
@@ -43,5 +54,5 @@ class BoundaryLayerMixedModeOps {
       int laminarAdvance);
 
  private:
-  BoundaryLayerWorkflow &workflow_;
+  Context context_;
 };

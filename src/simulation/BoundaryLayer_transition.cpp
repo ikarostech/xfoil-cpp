@@ -7,24 +7,37 @@
 
 #include "XFoil.h"
 #include "core/boundary_layer_util.hpp"
+#include "domain/coefficient/skin_friction.hpp"
 #include "infrastructure/logger.hpp"
 #include "simulation/BoundaryLayer.hpp"
 
 using Eigen::Matrix;
 using Eigen::Vector;
 
-BoundaryLayerTransitionSolver::BoundaryLayerTransitionSolver(
-    BoundaryLayerWorkflow &workflow)
-    : workflow_(&workflow) {}
+namespace {
+BoundaryLayerTransitionSolver makeTransitionSolver(BoundaryLayerWorkflow &workflow) {
+  return BoundaryLayerTransitionSolver(
+      {workflow.state,
+       workflow.blTransition,
+       workflow.flowRegime,
+       workflow.xt,
+       workflow.blc,
+       workflow.blCompressibility,
+       workflow.blReynolds});
+}
+} // namespace
+
+BoundaryLayerTransitionSolver::BoundaryLayerTransitionSolver(Context context)
+    : context_(context) {}
 
 BoundaryLayerWorkflow::BoundaryLayerWorkflow()
-    : transitionSolver(*this),
+    : transitionSolver(makeTransitionSolver(*this)),
       geometry(lattice, wgap, stagnationIndex, stagnationSst) {}
 
 struct BoundaryLayerTransitionSolver::TrchekData {
-  explicit TrchekData(BoundaryLayerWorkflow &workflow)
-      : state(workflow.state), blTransition(workflow.blTransition),
-        flowRegime(workflow.flowRegime), xt(workflow.xt) {
+  explicit TrchekData(Context &context)
+      : state(context.state), blTransition(context.blTransition),
+        flowRegime(context.flowRegime), xt(context.xt) {
     tt_sens.vector.setZero();
     dt_sens.vector.setZero();
     ut_sens.vector.setZero();
@@ -69,9 +82,9 @@ struct BoundaryLayerTransitionSolver::TrchekData {
 };
 
 struct BoundaryLayerTransitionSolver::TrdifData {
-  explicit TrdifData(BoundaryLayerWorkflow &workflow)
-      : state(workflow.state), blTransition(workflow.blTransition),
-        blc(workflow.blc), xt(workflow.xt) {}
+  explicit TrdifData(Context &context)
+      : state(context.state), blTransition(context.blTransition),
+        blc(context.blc), xt(context.xt) {}
 
   BoundaryLayerState &state;
   BlTransitionParams &blTransition;
@@ -115,11 +128,123 @@ struct BoundaryLayerTransitionSolver::TrdifData {
 };
 
 double BoundaryLayerTransitionSolver::computeTransitionLocation(
-    double weightingFactor) const {
-  const double upstreamLocation = workflow_->state.station1.param.xz;
-  const double downstreamLocation = workflow_->state.station2.param.xz;
+    const BoundaryLayerState &state, double weightingFactor) const {
+  const double upstreamLocation = state.station1.param.xz;
+  const double downstreamLocation = state.station2.param.xz;
   return upstreamLocation * (1.0 - weightingFactor) +
          downstreamLocation * weightingFactor;
+}
+
+bool BoundaryLayerTransitionSolver::blkin(BoundaryLayerState &state) const {
+  const auto &compressibility = context_.blCompressibility;
+  const auto &reynolds = context_.blReynolds;
+  blData &current = state.current();
+  current.param.mz = current.param.uz * current.param.uz *
+                     compressibility.hstinv /
+                     (compressibility.gm1bl *
+                      (1.0 - 0.5 * current.param.uz * current.param.uz *
+                                 compressibility.hstinv));
+  double tr2 = 1.0 + 0.5 * compressibility.gm1bl * current.param.mz;
+  current.param.mz_uz = 2.0 * current.param.mz * tr2 / current.param.uz;
+  current.param.mz_ms =
+      current.param.uz * current.param.uz * tr2 /
+      (compressibility.gm1bl *
+       (1.0 - 0.5 * current.param.uz * current.param.uz *
+                  compressibility.hstinv)) *
+      compressibility.hstinv_ms;
+
+  current.param.rz = compressibility.rstbl * pow(tr2, (-1.0 / compressibility.gm1bl));
+  current.param.rz_uz = -current.param.rz / tr2 * 0.5 * current.param.mz_uz;
+  current.param.rz_ms =
+      -current.param.rz / tr2 * 0.5 * current.param.mz_ms +
+      compressibility.rstbl_ms * pow(tr2, (-1.0 / compressibility.gm1bl));
+
+  current.param.hz = current.param.dz / current.param.tz;
+  current.param.hz_dz = 1.0 / current.param.tz;
+  current.param.hz_tz = -current.param.hz / current.param.tz;
+
+  const double herat =
+      1.0 - 0.5 * current.param.uz * current.param.uz * compressibility.hstinv;
+  const double he_u2 = -current.param.uz * compressibility.hstinv;
+  const double he_ms =
+      -0.5 * current.param.uz * current.param.uz * compressibility.hstinv_ms;
+  const double v2_he =
+      (1.5 / herat - 1.0 / (herat + BoundaryLayerWorkflow::kHvrat));
+
+  boundary_layer::KineticShapeParameterResult hkin_result =
+      boundary_layer::hkin(current.param.hz, current.param.mz);
+  current.hkz.scalar = hkin_result.hk;
+  current.hkz.u() = hkin_result.hk_msq * current.param.mz_uz;
+  current.hkz.t() = hkin_result.hk_h * current.param.hz_tz;
+  current.hkz.d() = hkin_result.hk_h * current.param.hz_dz;
+  current.hkz.ms() = hkin_result.hk_msq * current.param.mz_ms;
+
+  current.rtz.scalar =
+      current.param.rz * current.param.uz * current.param.tz /
+      (sqrt(herat * herat * herat) * (1.0 + BoundaryLayerWorkflow::kHvrat) /
+       (herat + BoundaryLayerWorkflow::kHvrat) / reynolds.reybl);
+  current.rtz.u() =
+      current.rtz.scalar *
+      (1.0 / current.param.uz + current.param.rz_uz / current.param.rz -
+       v2_he * he_u2);
+  current.rtz.t() = current.rtz.scalar / current.param.tz;
+  current.rtz.ms() =
+      current.rtz.scalar *
+      (current.param.rz_ms / current.param.rz +
+       (1 / reynolds.reybl * reynolds.reybl_ms - v2_he * he_ms));
+  current.rtz.re() = current.rtz.scalar * (reynolds.reybl_re / reynolds.reybl);
+
+  return true;
+}
+
+SkinFrictionCoefficients
+BoundaryLayerTransitionSolver::blmid(FlowRegimeEnum flowRegimeType) const {
+  blData &previous = context_.state.previous();
+  blData &current = context_.state.current();
+
+  if (flowRegimeType == FlowRegimeEnum::Similarity) {
+    previous.hkz = current.hkz;
+    previous.rtz = current.rtz;
+    previous.param.mz = current.param.mz;
+    previous.param.mz_uz = current.param.mz_uz;
+    previous.param.mz_ms = current.param.mz_ms;
+  }
+
+  const double hka = 0.5 * (previous.hkz.scalar + current.hkz.scalar);
+  const double rta = 0.5 * (previous.rtz.scalar + current.rtz.scalar);
+  const double ma = 0.5 * (previous.param.mz + current.param.mz);
+
+  skin_friction::C_f cf_res =
+      skin_friction::getSkinFriction(hka, rta, ma, flowRegimeType);
+
+  SkinFrictionCoefficients coeffs;
+  coeffs.cfm = cf_res.cf;
+  const double cfm_hka = cf_res.hk;
+  const double cfm_rta = cf_res.rt;
+  const double cfm_ma = cf_res.msq;
+
+  coeffs.cfm_u1 =
+      0.5 * (cfm_hka * previous.hkz.u() + cfm_ma * previous.param.mz_uz +
+             cfm_rta * previous.rtz.u());
+  coeffs.cfm_t1 =
+      0.5 * (cfm_hka * previous.hkz.t() + cfm_rta * previous.rtz.t());
+  coeffs.cfm_d1 = 0.5 * (cfm_hka * previous.hkz.d());
+
+  coeffs.cfm_u2 =
+      0.5 * (cfm_hka * current.hkz.u() + cfm_ma * current.param.mz_uz +
+             cfm_rta * current.rtz.u());
+  coeffs.cfm_t2 =
+      0.5 * (cfm_hka * current.hkz.t() + cfm_rta * current.rtz.t());
+  coeffs.cfm_d2 = 0.5 * (cfm_hka * current.hkz.d());
+
+  coeffs.cfm_ms =
+      0.5 * (cfm_hka * previous.hkz.ms() + cfm_ma * previous.param.mz_ms +
+             cfm_rta * previous.rtz.ms() + cfm_hka * current.hkz.ms() +
+             cfm_ma * current.param.mz_ms + cfm_rta * current.rtz.ms());
+  coeffs.cfm_re =
+      0.5 * (cfm_rta * previous.rtz.re() + cfm_rta * current.rtz.re());
+
+  return coeffs;
 }
 
 bool BoundaryLayerTransitionSolver::iterateAmplification(TrchekData &data) {
@@ -188,7 +313,7 @@ bool BoundaryLayerTransitionSolver::iterateAmplification(TrchekData &data) {
       data.wf_xf = data.sfx_xf;
     }
 
-    data.xt.scalar = computeTransitionLocation(data.wf);
+    data.xt.scalar = computeTransitionLocation(data.state, data.wf);
     data.tt = data.state.station1.param.tz * (1.0 - data.wf) +
               data.state.station2.param.tz * data.wf;
     data.dt = data.state.station1.param.dz * (1.0 - data.wf) +
@@ -213,7 +338,7 @@ bool BoundaryLayerTransitionSolver::iterateAmplification(TrchekData &data) {
     data.state.station2.param.dz = data.dt;
     data.state.station2.param.uz = data.ut;
 
-    workflow_->blkin(data.state);
+    blkin(data.state);
 
     blData::blVector hkt = data.state.station2.hkz;
     blData::blVector rtt = data.state.station2.rtz;
@@ -501,12 +626,12 @@ void BoundaryLayerTransitionSolver::setupLaminarTransitionSystem(
   data.state.station2.param.amplz = data.blTransition.amcrit;
   data.state.station2.param.sz = 0.0;
 
-  workflow_->blkin(data.state);
+  blkin(data.state);
   data.state.station2 = boundaryLayerVariablesSolver.solve(
       data.state.station2, FlowRegimeEnum::Laminar);
 
   const SkinFrictionCoefficients laminarSkinFriction =
-      workflow_->blmid(FlowRegimeEnum::Laminar);
+      blmid(FlowRegimeEnum::Laminar);
 
   data.blc = blDiffSolver.solve(FlowRegimeEnum::Laminar, data.state,
                                 laminarSkinFriction, data.blTransition.amcrit);
@@ -582,7 +707,7 @@ void BoundaryLayerTransitionSolver::setupTurbulentTransitionSystem(
   data.state.station2 = boundaryLayerStore.restoreblData(2);
 
   const SkinFrictionCoefficients turbulentSkinFriction =
-      workflow_->blmid(FlowRegimeEnum::Turbulent);
+      blmid(FlowRegimeEnum::Turbulent);
 
   data.blc =
       blDiffSolver.solve(FlowRegimeEnum::Turbulent, data.state,
@@ -672,7 +797,7 @@ bool BoundaryLayerTransitionSolver::trdif() {
   //     the turbulent part  xt < xi < x2
   //     are simply summed.
   //-----------------------------------------------
-  TrdifData data(*workflow_);
+  TrdifData data(context_);
 
   boundaryLayerStore.saveblData(data.state.station1, 1);
   boundaryLayerStore.saveblData(data.state.station2, 2);
@@ -709,7 +834,7 @@ bool BoundaryLayerTransitionSolver::trchek() {
   //  if n2>ncrit:  nt=ncrit , xt=(ncrit-n1)/(n2-n1)  (transition)
   //
   //----------------------------------------------------------------
-  TrchekData data(*workflow_);
+  TrchekData data(context_);
 
   boundaryLayerStore.saveblData(data.state.station2, 2);
 

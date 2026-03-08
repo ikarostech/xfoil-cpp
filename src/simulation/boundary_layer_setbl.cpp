@@ -156,8 +156,8 @@ struct SetblWorkingState {
 
 class BoundaryLayerSetblAssembler {
  public:
-  explicit BoundaryLayerSetblAssembler(BoundaryLayerWorkflow &workflow)
-      : workflow_(workflow), access_(workflow) {}
+  explicit BoundaryLayerSetblAssembler(BoundaryLayerWorkflowAccess access)
+      : access_(access) {}
 
   SetblOutputView run(SidePairRef<const BoundaryLayerSideProfiles> profiles,
                       const FlowState &analysis_state,
@@ -176,7 +176,7 @@ class BoundaryLayerSetblAssembler {
                                    state.re_clmr, state.msq_clmr, current_mach,
                                    current_re);
 
-    WorkflowMarchContext marchContext(workflow_);
+    WorkflowMarchContext marchContext(access_);
     if (!bl_initialized) {
       Logger::instance().write("   Initializing bl ...\n");
       marcher_ue.mrchue(marchContext, foil, stagnation);
@@ -202,9 +202,9 @@ class BoundaryLayerSetblAssembler {
     result.u_m1 = u_m1;
     result.d_m1 = d_m1;
     for (int js = 1; js <= 2; ++js) {
-      for (int jbl = 0; jbl < workflow_.lattice.get(js).stationCount - 1;
+      for (int jbl = 0; jbl < access_.lattice().get(js).stationCount - 1;
            ++jbl) {
-        const int jv = workflow_.lattice.get(js).stationToSystem[jbl];
+        const int jv = access_.lattice().get(js).stationToSystem[jbl];
         result.u_m1[jv] = 0.0;
         result.d_m1[jv] = 0.0;
       }
@@ -223,7 +223,7 @@ class BoundaryLayerSetblAssembler {
       int side, int station, bool station_is_wake, const SetblOutputView &output,
       double ami, double cti) const {
     StationPrimaryVars vars;
-    vars.xsi = workflow_.lattice.get(side).arcLengthCoordinates[station];
+    vars.xsi = access_.lattice().get(side).arcLengthCoordinates[station];
 
     if (station < output.profiles.get(side).transitionIndex) {
       vars.ami = output.profiles.get(side).skinFrictionCoeff[station];
@@ -239,8 +239,8 @@ class BoundaryLayerSetblAssembler {
     vars.dsi = vars.mdi / vars.uei;
 
     if (station_is_wake) {
-      const int wake_index = station - workflow_.lattice.get(side).trailingEdgeIndex;
-      vars.dswaki = workflow_.wgap[wake_index - 1];
+      const int wake_index = station - access_.lattice().get(side).trailingEdgeIndex;
+      vars.dswaki = access_.wgap()[wake_index - 1];
     }
 
     return vars;
@@ -258,21 +258,21 @@ class BoundaryLayerSetblAssembler {
     result.u_m2 = VectorXd::Zero(system_size);
     result.d_m2 = VectorXd::Zero(system_size);
     for (int js = 1; js <= 2; ++js) {
-      for (int jbl = 0; jbl < workflow_.lattice.get(js).stationCount - 1;
+      for (int jbl = 0; jbl < access_.lattice().get(js).stationCount - 1;
            ++jbl) {
-        const int jv = workflow_.lattice.get(js).stationToSystem[jbl];
+        const int jv = access_.lattice().get(js).stationToSystem[jbl];
         result.u_m2[jv] =
-            -workflow_.lattice.get(side).panelInfluenceFactor[station] *
-            workflow_.lattice.get(js).panelInfluenceFactor[jbl] *
-            dij(workflow_.lattice.get(side).stationToPanel[station],
-                workflow_.lattice.get(js).stationToPanel[jbl]);
+            -access_.lattice().get(side).panelInfluenceFactor[station] *
+            access_.lattice().get(js).panelInfluenceFactor[jbl] *
+            dij(access_.lattice().get(side).stationToPanel[station],
+                access_.lattice().get(js).stationToPanel[jbl]);
         result.d_m2[jv] = d2_u2 * result.u_m2[jv];
       }
     }
     result.d_m2[iv] += d2_m2;
 
     result.u_a2 =
-        workflow_.lattice.get(side).inviscidEdgeVelocityMatrix(1, station);
+        access_.lattice().get(side).inviscidEdgeVelocityMatrix(1, station);
     result.d_a2 = d2_u2 * result.u_a2;
     result.due2 = output.profiles.get(side).edgeVelocity[station] - usav.get(side)[station];
     result.dds2 = d2_u2 * result.due2;
@@ -290,8 +290,8 @@ class BoundaryLayerSetblAssembler {
     if (station_is_transition_candidate &&
         flow_regime != FlowRegimeEnum::Transition) {
       std::stringstream ss;
-      ss << "setbl: xtr???  n1=" << workflow_.state.station1.param.amplz
-         << " n2=" << workflow_.state.station2.param.amplz << ":\n";
+      ss << "setbl: xtr???  n1=" << access_.state().station1.param.amplz
+         << " n2=" << access_.state().station2.param.amplz << ":\n";
       Logger::instance().write(ss.str());
     }
   }
@@ -302,71 +302,71 @@ class BoundaryLayerSetblAssembler {
       const VectorXd &d_m1_template, const SetblOutputView &output,
       const Edge &edge) const {
     TeWakeUpdateResult result;
-    if (station != workflow_.lattice.get(side).trailingEdgeIndex + 1) {
+    if (station != access_.lattice().get(side).trailingEdgeIndex + 1) {
       return result;
     }
     result.isStartOfWake = true;
 
     result.coeffs.tte =
         output.profiles.get(1)
-            .momentumThickness[workflow_.lattice.top.trailingEdgeIndex] +
+            .momentumThickness[access_.lattice().top.trailingEdgeIndex] +
         output.profiles.get(2)
-            .momentumThickness[workflow_.lattice.bottom.trailingEdgeIndex];
+            .momentumThickness[access_.lattice().bottom.trailingEdgeIndex];
     result.coeffs.dte =
         output.profiles.get(1)
-            .displacementThickness[workflow_.lattice.top.trailingEdgeIndex] +
+            .displacementThickness[access_.lattice().top.trailingEdgeIndex] +
         output.profiles.get(2).displacementThickness
-            [workflow_.lattice.bottom.trailingEdgeIndex] +
+            [access_.lattice().bottom.trailingEdgeIndex] +
         edge.ante;
     result.coeffs.cte =
         (output.profiles.get(1)
-             .skinFrictionCoeff[workflow_.lattice.top.trailingEdgeIndex] *
+             .skinFrictionCoeff[access_.lattice().top.trailingEdgeIndex] *
              output.profiles.get(1)
-                 .momentumThickness[workflow_.lattice.top.trailingEdgeIndex] +
+                 .momentumThickness[access_.lattice().top.trailingEdgeIndex] +
          output.profiles.get(2)
-                 .skinFrictionCoeff[workflow_.lattice.bottom.trailingEdgeIndex] *
+                 .skinFrictionCoeff[access_.lattice().bottom.trailingEdgeIndex] *
              output.profiles.get(2).momentumThickness
-                 [workflow_.lattice.bottom.trailingEdgeIndex]) /
+                 [access_.lattice().bottom.trailingEdgeIndex]) /
         result.coeffs.tte;
 
     result.coeffs.tte_tte1 = 1.0;
     result.coeffs.tte_tte2 = 1.0;
     result.coeffs.dte_mte1 =
-        1.0 / output.profiles.top.edgeVelocity[workflow_.lattice.top.trailingEdgeIndex];
+        1.0 / output.profiles.top.edgeVelocity[access_.lattice().top.trailingEdgeIndex];
     result.coeffs.dte_ute1 =
         -output.profiles.get(1)
-             .displacementThickness[workflow_.lattice.top.trailingEdgeIndex] /
-        output.profiles.top.edgeVelocity[workflow_.lattice.top.trailingEdgeIndex];
+             .displacementThickness[access_.lattice().top.trailingEdgeIndex] /
+        output.profiles.top.edgeVelocity[access_.lattice().top.trailingEdgeIndex];
     result.coeffs.dte_mte2 =
-        1.0 / output.profiles.bottom.edgeVelocity[workflow_.lattice.bottom.trailingEdgeIndex];
+        1.0 / output.profiles.bottom.edgeVelocity[access_.lattice().bottom.trailingEdgeIndex];
     result.coeffs.dte_ute2 =
         -output.profiles.get(2)
-             .displacementThickness[workflow_.lattice.bottom.trailingEdgeIndex] /
-        output.profiles.bottom.edgeVelocity[workflow_.lattice.bottom.trailingEdgeIndex];
+             .displacementThickness[access_.lattice().bottom.trailingEdgeIndex] /
+        output.profiles.bottom.edgeVelocity[access_.lattice().bottom.trailingEdgeIndex];
     result.coeffs.cte_cte1 =
         output.profiles.get(1)
-            .momentumThickness[workflow_.lattice.top.trailingEdgeIndex] /
+            .momentumThickness[access_.lattice().top.trailingEdgeIndex] /
         result.coeffs.tte;
     result.coeffs.cte_cte2 =
         output.profiles.get(2)
-            .momentumThickness[workflow_.lattice.bottom.trailingEdgeIndex] /
+            .momentumThickness[access_.lattice().bottom.trailingEdgeIndex] /
         result.coeffs.tte;
     result.coeffs.cte_tte1 =
         (output.profiles.get(1)
-             .skinFrictionCoeff[workflow_.lattice.top.trailingEdgeIndex] -
+             .skinFrictionCoeff[access_.lattice().top.trailingEdgeIndex] -
          result.coeffs.cte) /
         result.coeffs.tte;
     result.coeffs.cte_tte2 =
         (output.profiles.get(2)
-             .skinFrictionCoeff[workflow_.lattice.bottom.trailingEdgeIndex] -
+             .skinFrictionCoeff[access_.lattice().bottom.trailingEdgeIndex] -
          result.coeffs.cte) /
         result.coeffs.tte;
 
     result.d_m1 = d_m1_template;
     for (int js = 1; js <= 2; ++js) {
-      for (int jbl = 0; jbl < workflow_.lattice.get(js).stationCount - 1;
+      for (int jbl = 0; jbl < access_.lattice().get(js).stationCount - 1;
            ++jbl) {
-        const int jv = workflow_.lattice.get(js).stationToSystem[jbl];
+        const int jv = access_.lattice().get(js).stationToSystem[jbl];
         result.d_m1[jv] = result.coeffs.dte_ute1 * ute_m.get(1)[jv] +
                           result.coeffs.dte_ute2 * ute_m.get(2)[jv];
       }
@@ -376,11 +376,11 @@ class BoundaryLayerSetblAssembler {
 
     result.dds1 =
         result.coeffs.dte_ute1 *
-            (output.profiles.top.edgeVelocity[workflow_.lattice.top.trailingEdgeIndex] -
-             usav.top[workflow_.lattice.top.trailingEdgeIndex]) +
+            (output.profiles.top.edgeVelocity[access_.lattice().top.trailingEdgeIndex] -
+             usav.top[access_.lattice().top.trailingEdgeIndex]) +
         result.coeffs.dte_ute2 *
-            (output.profiles.bottom.edgeVelocity[workflow_.lattice.bottom.trailingEdgeIndex] -
-             usav.bottom[workflow_.lattice.bottom.trailingEdgeIndex]);
+            (output.profiles.bottom.edgeVelocity[access_.lattice().bottom.trailingEdgeIndex] -
+             usav.bottom[access_.lattice().bottom.trailingEdgeIndex]);
 
     return result;
   }
@@ -388,26 +388,26 @@ class BoundaryLayerSetblAssembler {
   TeWakeJacobianAdjustments computeTeWakeJacobianAdjustments(
       const TeWakeCoefficients &coeffs) const {
     TeWakeJacobianAdjustments result;
-    result.vz[0][0] = workflow_.blc.a1(0, 0) * coeffs.cte_cte1;
-    result.vz[0][1] = workflow_.blc.a1(0, 0) * coeffs.cte_tte1 +
-                      workflow_.blc.a1(0, 1) * coeffs.tte_tte1;
-    result.vb(0, 0) = workflow_.blc.a1(0, 0) * coeffs.cte_cte2;
-    result.vb(0, 1) = workflow_.blc.a1(0, 0) * coeffs.cte_tte2 +
-                      workflow_.blc.a1(0, 1) * coeffs.tte_tte2;
+    result.vz[0][0] = access_.blc().a1(0, 0) * coeffs.cte_cte1;
+    result.vz[0][1] = access_.blc().a1(0, 0) * coeffs.cte_tte1 +
+                      access_.blc().a1(0, 1) * coeffs.tte_tte1;
+    result.vb(0, 0) = access_.blc().a1(0, 0) * coeffs.cte_cte2;
+    result.vb(0, 1) = access_.blc().a1(0, 0) * coeffs.cte_tte2 +
+                      access_.blc().a1(0, 1) * coeffs.tte_tte2;
 
-    result.vz[1][0] = workflow_.blc.a1(1, 0) * coeffs.cte_cte1;
-    result.vz[1][1] = workflow_.blc.a1(1, 0) * coeffs.cte_tte1 +
-                      workflow_.blc.a1(1, 1) * coeffs.tte_tte1;
-    result.vb(1, 0) = workflow_.blc.a1(1, 0) * coeffs.cte_cte2;
-    result.vb(1, 1) = workflow_.blc.a1(1, 0) * coeffs.cte_tte2 +
-                      workflow_.blc.a1(1, 1) * coeffs.tte_tte2;
+    result.vz[1][0] = access_.blc().a1(1, 0) * coeffs.cte_cte1;
+    result.vz[1][1] = access_.blc().a1(1, 0) * coeffs.cte_tte1 +
+                      access_.blc().a1(1, 1) * coeffs.tte_tte1;
+    result.vb(1, 0) = access_.blc().a1(1, 0) * coeffs.cte_cte2;
+    result.vb(1, 1) = access_.blc().a1(1, 0) * coeffs.cte_tte2 +
+                      access_.blc().a1(1, 1) * coeffs.tte_tte2;
 
-    result.vz[2][0] = workflow_.blc.a1(2, 0) * coeffs.cte_cte1;
-    result.vz[2][1] = workflow_.blc.a1(2, 0) * coeffs.cte_tte1 +
-                      workflow_.blc.a1(2, 1) * coeffs.tte_tte1;
-    result.vb(2, 0) = workflow_.blc.a1(2, 0) * coeffs.cte_cte2;
-    result.vb(2, 1) = workflow_.blc.a1(2, 0) * coeffs.cte_tte2 +
-                      workflow_.blc.a1(2, 1) * coeffs.tte_tte2;
+    result.vz[2][0] = access_.blc().a1(2, 0) * coeffs.cte_cte1;
+    result.vz[2][1] = access_.blc().a1(2, 0) * coeffs.cte_tte1 +
+                      access_.blc().a1(2, 1) * coeffs.tte_tte1;
+    result.vb(2, 0) = access_.blc().a1(2, 0) * coeffs.cte_cte2;
+    result.vb(2, 1) = access_.blc().a1(2, 0) * coeffs.cte_tte2 +
+                      access_.blc().a1(2, 1) * coeffs.tte_tte2;
     return result;
   }
 
@@ -416,32 +416,32 @@ class BoundaryLayerSetblAssembler {
       const Eigen::MatrixXd &dij, int nsys) const {
     EdgeVelocitySensitivityResult result;
 
-    result.edgeVelocity = workflow_.ueset(dij);
+    result.edgeVelocity = access_.ueset(dij);
     result.outputEdgeVelocity.top = profiles.top.edgeVelocity;
     result.outputEdgeVelocity.bottom = profiles.bottom.edgeVelocity;
 
-    result.jvte.top = workflow_.lattice.top.stationToSystem
-        [workflow_.lattice.top.trailingEdgeIndex];
-    result.jvte.bottom = workflow_.lattice.bottom.stationToSystem
-        [workflow_.lattice.bottom.trailingEdgeIndex];
+    result.jvte.top = access_.lattice().top.stationToSystem
+        [access_.lattice().top.trailingEdgeIndex];
+    result.jvte.bottom = access_.lattice().bottom.stationToSystem
+        [access_.lattice().bottom.trailingEdgeIndex];
 
     result.dule.top = result.outputEdgeVelocity.top[0] - result.edgeVelocity.top[0];
     result.dule.bottom =
         result.outputEdgeVelocity.bottom[0] - result.edgeVelocity.bottom[0];
 
     const auto le_te_sensitivities = computeLeTeSensitivities(
-        workflow_.lattice.get(1).stationToPanel[0],
-        workflow_.lattice.get(2).stationToPanel[0],
-        workflow_.lattice.get(1)
-            .stationToPanel[workflow_.lattice.top.trailingEdgeIndex],
-        workflow_.lattice.get(2)
-            .stationToPanel[workflow_.lattice.bottom.trailingEdgeIndex],
+        access_.lattice().get(1).stationToPanel[0],
+        access_.lattice().get(2).stationToPanel[0],
+        access_.lattice().get(1)
+            .stationToPanel[access_.lattice().top.trailingEdgeIndex],
+        access_.lattice().get(2)
+            .stationToPanel[access_.lattice().bottom.trailingEdgeIndex],
         nsys, dij);
     result.ule_m = le_te_sensitivities.ule_m;
     result.ute_m = le_te_sensitivities.ute_m;
 
-    result.ule_a.top = workflow_.lattice.get(1).inviscidEdgeVelocityMatrix(1, 0);
-    result.ule_a.bottom = workflow_.lattice.get(2).inviscidEdgeVelocityMatrix(1, 0);
+    result.ule_a.top = access_.lattice().get(1).inviscidEdgeVelocityMatrix(1, 0);
+    result.ule_a.bottom = access_.lattice().get(2).inviscidEdgeVelocityMatrix(1, 0);
     return result;
   }
 
@@ -449,21 +449,21 @@ class BoundaryLayerSetblAssembler {
       int iv, int nsys, const std::array<SetblStation, 2> &setblStations,
       const SetblSideData &setblSides, bool controlByAlpha, double re_clmr,
       double msq_clmr, SetblOutputView &output) {
-    output.bl_newton_system.vb[iv] = workflow_.blc.a1.block(0, 0, 3, 2);
-    output.bl_newton_system.va[iv] = workflow_.blc.a2.block(0, 0, 3, 2);
+    output.bl_newton_system.vb[iv] = access_.blc().a1.block(0, 0, 3, 2);
+    output.bl_newton_system.va[iv] = access_.blc().a2.block(0, 0, 3, 2);
 
     Eigen::Matrix<double, 3, 4> A;
-    A.col(0) = workflow_.blc.a1.col(3).head<3>();
-    A.col(1) = workflow_.blc.a1.col(2).head<3>();
-    A.col(2) = workflow_.blc.a2.col(3).head<3>();
-    A.col(3) = workflow_.blc.a2.col(2).head<3>();
+    A.col(0) = access_.blc().a1.col(3).head<3>();
+    A.col(1) = access_.blc().a1.col(2).head<3>();
+    A.col(2) = access_.blc().a2.col(3).head<3>();
+    A.col(3) = access_.blc().a2.col(2).head<3>();
 
     Eigen::Matrix<double, 4, 2> B;
     B << setblStations[0].due, setblStations[0].u_a, setblStations[0].dds,
         setblStations[0].d_a, setblStations[1].due, setblStations[1].u_a,
         setblStations[1].dds, setblStations[1].d_a;
     const Eigen::Vector3d ax =
-        (workflow_.blc.a1.col(4) + workflow_.blc.a2.col(4) + workflow_.blc.d_xi)
+        (access_.blc().a1.col(4) + access_.blc().a2.col(4) + access_.blc().d_xi)
             .head<3>();
     const Eigen::RowVector2d xi =
         setblStations[0].xi_ule *
@@ -485,8 +485,8 @@ class BoundaryLayerSetblAssembler {
 
     if (controlByAlpha) {
       output.bl_newton_system.vdel[iv].col(1).head<3>() =
-          workflow_.blc.d_re.head(3) * re_clmr +
-          workflow_.blc.d_msq.head(3) * msq_clmr;
+          access_.blc().d_re.head(3) * re_clmr +
+          access_.blc().d_msq.head(3) * msq_clmr;
     }
   }
 
@@ -621,9 +621,9 @@ class BoundaryLayerSetblAssembler {
     output.blCompressibility = reference_params.blCompressibility;
     output.blReynolds = reference_params.blReynolds;
     output.blTransition.amcrit = reference_params.amcrit;
-    workflow_.blCompressibility = output.blCompressibility;
-    workflow_.blReynolds = output.blReynolds;
-    workflow_.blTransition.amcrit = output.blTransition.amcrit;
+    access_.blCompressibility() = output.blCompressibility;
+    access_.blReynolds() = output.blReynolds;
+    access_.blTransition().amcrit = output.blTransition.amcrit;
   }
 
   void initializeSetblSystemStorage(
@@ -640,8 +640,8 @@ class BoundaryLayerSetblAssembler {
   }
 
   void initializeSetblProfiles(SetblOutputView &output) const {
-    output.profiles.top = workflow_.lattice.top.profiles;
-    output.profiles.bottom = workflow_.lattice.bottom.profiles;
+    output.profiles.top = access_.lattice().top.profiles;
+    output.profiles.bottom = access_.lattice().bottom.profiles;
   }
 
   void initializeSetblEdgeVelocityState(
@@ -676,18 +676,18 @@ class BoundaryLayerSetblAssembler {
     stations[0].due = sweep_init.due1;
     stations[0].dds = sweep_init.dds1;
     output.blTransition.xiforc = sweep_init.xiforc;
-    workflow_.blTransition.xiforc = output.blTransition.xiforc;
+    access_.blTransition().xiforc = output.blTransition.xiforc;
 
-    for (int station = 0; station < workflow_.lattice.get(side).stationCount - 1;
+    for (int station = 0; station < access_.lattice().get(side).stationCount - 1;
          ++station) {
-      const int iv = workflow_.lattice.get(side).stationToSystem[station];
+      const int iv = access_.lattice().get(side).stationToSystem[station];
       const bool station_is_wake =
-          station > workflow_.lattice.get(side).trailingEdgeIndex;
+          station > access_.lattice().get(side).trailingEdgeIndex;
       const bool station_is_transition_candidate =
           station == output.profiles.get(side).transitionIndex;
 
-      output.flowRegime = workflow_.determineRegimeForStation(side, station);
-      workflow_.flowRegime = output.flowRegime;
+      output.flowRegime = access_.determineRegimeForStation(side, station);
+      access_.flowRegime() = output.flowRegime;
 
       const auto vars = loadStationPrimaryVars(side, station, station_is_wake,
                                                output, ami, cti);
@@ -695,7 +695,7 @@ class BoundaryLayerSetblAssembler {
       cti = vars.cti;
 
       auto station_update = updateStationMatricesAndState(
-          side, station, iv, vars, sideData.usav, output, workflow_.state,
+          side, station, iv, vars, sideData.usav, output, access_.state(),
           stations[1].u_m.size(), dij);
       stations[1].u_m = station_update.u_m2;
       stations[1].d_m = station_update.d_m2;
@@ -703,11 +703,11 @@ class BoundaryLayerSetblAssembler {
       stations[1].d_a = station_update.d_a2;
       stations[1].due = station_update.due2;
       stations[1].dds = station_update.dds2;
-      workflow_.state = station_update.state;
+      access_.state() = station_update.state;
 
       if (station_is_transition_candidate) {
-        workflow_.transitionSolver.trchek();
-        ami = workflow_.state.station2.param.amplz;
+        access_.transitionSolver().trchek();
+        ami = access_.state().station2.param.amplz;
       }
       buildTransitionLog(station_is_transition_candidate, output.flowRegime);
 
@@ -725,7 +725,7 @@ class BoundaryLayerSetblAssembler {
       }
 
       output.profiles.get(side).skinFrictionCoeffHistory[station] =
-          workflow_.state.station2.cqz.scalar;
+          access_.state().station2.cqz.scalar;
 
       if (side == 1) {
         stations[0].xi_ule = stagnation.sst_go;
@@ -750,14 +750,14 @@ class BoundaryLayerSetblAssembler {
 
       if (output.flowRegime == FlowRegimeEnum::Transition) {
         output.profiles.get(side).transitionIndex = station;
-        workflow_.lattice.get(side).profiles.transitionIndex = station;
+        access_.lattice().get(side).profiles.transitionIndex = station;
         output.flowRegime = FlowRegimeEnum::Turbulent;
-        workflow_.flowRegime = output.flowRegime;
+        access_.flowRegime() = output.flowRegime;
       }
 
-      if (station == workflow_.lattice.get(side).trailingEdgeIndex) {
+      if (station == access_.lattice().get(side).trailingEdgeIndex) {
         output.flowRegime = FlowRegimeEnum::Wake;
-        workflow_.flowRegime = output.flowRegime;
+        access_.flowRegime() = output.flowRegime;
         access_.state().station2 =
             access_.variableSolver().solve(access_.state().station2,
                                            FlowRegimeEnum::Wake);
@@ -773,7 +773,7 @@ class BoundaryLayerSetblAssembler {
       stations[0].d_a = advance.d_a1;
       stations[0].due = advance.due1;
       stations[0].dds = advance.dds1;
-      workflow_.state.stepbl();
+      access_.state().stepbl();
     }
   }
 
@@ -786,32 +786,31 @@ class BoundaryLayerSetblAssembler {
     sensitivities.ute_m.top = VectorXd::Zero(nsys);
     sensitivities.ute_m.bottom = VectorXd::Zero(nsys);
     for (int js = 1; js <= 2; ++js) {
-      for (int jbl = 0; jbl < workflow_.lattice.get(js).stationCount - 1;
+      for (int jbl = 0; jbl < access_.lattice().get(js).stationCount - 1;
            ++jbl) {
-        const int panel_index = workflow_.lattice.get(js).stationToPanel[jbl];
-        const int system_index = workflow_.lattice.get(js).stationToSystem[jbl];
+        const int panel_index = access_.lattice().get(js).stationToPanel[jbl];
+        const int system_index = access_.lattice().get(js).stationToSystem[jbl];
         const double panel_factor =
-            workflow_.lattice.get(js).panelInfluenceFactor[jbl];
+            access_.lattice().get(js).panelInfluenceFactor[jbl];
         sensitivities.ule_m.top[system_index] =
-            -workflow_.lattice.top.panelInfluenceFactor[0] * panel_factor *
+            -access_.lattice().top.panelInfluenceFactor[0] * panel_factor *
             dij(ile1, panel_index);
         sensitivities.ule_m.bottom[system_index] =
-            -workflow_.lattice.bottom.panelInfluenceFactor[0] * panel_factor *
+            -access_.lattice().bottom.panelInfluenceFactor[0] * panel_factor *
             dij(ile2, panel_index);
         sensitivities.ute_m.top[system_index] =
-            -workflow_.lattice.top
-                 .panelInfluenceFactor[workflow_.lattice.top.trailingEdgeIndex] *
+            -access_.lattice().top
+                 .panelInfluenceFactor[access_.lattice().top.trailingEdgeIndex] *
             panel_factor * dij(ite1, panel_index);
         sensitivities.ute_m.bottom[system_index] =
-            -workflow_.lattice.bottom.panelInfluenceFactor
-                 [workflow_.lattice.bottom.trailingEdgeIndex] *
+            -access_.lattice().bottom.panelInfluenceFactor
+                 [access_.lattice().bottom.trailingEdgeIndex] *
             panel_factor * dij(ite2, panel_index);
       }
     }
     return sensitivities;
   }
 
-  BoundaryLayerWorkflow &workflow_;
   BoundaryLayerWorkflowAccess access_;
 };
 
@@ -823,7 +822,7 @@ SetblOutputView runBoundaryLayerSetbl(
     const FlowState &analysis_state, const AeroCoefficients &aero_coeffs,
     double acrit, const Foil &foil, const StagnationResult &stagnation,
     const Eigen::MatrixXd &dij, bool bl_initialized) {
-  BoundaryLayerSetblAssembler assembler(workflow);
+  BoundaryLayerSetblAssembler assembler(makeBoundaryLayerWorkflowAccess(workflow));
   return assembler.run(profiles, analysis_state, aero_coeffs, acrit, foil,
                        stagnation, dij, bl_initialized);
 }

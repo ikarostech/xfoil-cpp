@@ -37,10 +37,11 @@ double adjustDisplacementForHkLimit(double displacementThickness,
 
 BoundaryLayerWorkflow::BoundaryLayerDelta
 BoundaryLayerRelaxationOps::buildBoundaryLayerDelta(
-    int side, const Eigen::VectorXd &unew_side, const Eigen::VectorXd &u_ac_side,
-    double dac, const BoundaryLayerWorkflow::Matrix3x2dVector &vdel) const {
+    const BoundaryLayerLattice &lattice_side, const Eigen::VectorXd &unew_side,
+    const Eigen::VectorXd &u_ac_side, double dac,
+    const BoundaryLayerWorkflow::Matrix3x2dVector &vdel) {
   BoundaryLayerWorkflow::BoundaryLayerDelta delta;
-  const int len = workflow_.lattice.get(side).stationCount - 1;
+  const int len = lattice_side.stationCount - 1;
   if (len <= 0) {
     return delta;
   }
@@ -50,7 +51,7 @@ BoundaryLayerRelaxationOps::buildBoundaryLayerDelta(
   delta.ddisplacementThickness = Eigen::VectorXd(len);
   delta.dedgeVelocity = Eigen::VectorXd(len);
 
-  const auto iv = workflow_.lattice.get(side).stationToSystem.segment(0, len);
+  const auto iv = lattice_side.stationToSystem.segment(0, len);
   Eigen::VectorXd dmass(len);
   for (int j = 0; j < len; ++j) {
     const int idx = iv[j];
@@ -60,9 +61,9 @@ BoundaryLayerRelaxationOps::buildBoundaryLayerDelta(
   }
 
   const Eigen::VectorXd edge_velocity_segment =
-      workflow_.lattice.get(side).profiles.edgeVelocity.head(len);
+      lattice_side.profiles.edgeVelocity.head(len);
   const Eigen::VectorXd displacement_segment =
-      workflow_.lattice.get(side).profiles.displacementThickness.head(len);
+      lattice_side.profiles.displacementThickness.head(len);
 
   delta.dedgeVelocity =
       unew_side.head(len) + dac * u_ac_side.head(len) - edge_velocity_segment;
@@ -74,8 +75,9 @@ BoundaryLayerRelaxationOps::buildBoundaryLayerDelta(
 
 BoundaryLayerWorkflow::BoundaryLayerMetrics
 BoundaryLayerRelaxationOps::evaluateSegmentRelaxation(
-    int side, const BoundaryLayerWorkflow::BoundaryLayerDelta &delta, double dhi,
-    double dlo, double &relaxation) const {
+    const BoundaryLayerSideProfiles &profiles,
+    const BoundaryLayerWorkflow::BoundaryLayerDelta &delta, double dhi,
+    double dlo, double &relaxation) {
   BoundaryLayerWorkflow::BoundaryLayerMetrics metrics;
   const int len = delta.dskinFrictionCoeff.size();
   if (len <= 0) {
@@ -83,14 +85,14 @@ BoundaryLayerRelaxationOps::evaluateSegmentRelaxation(
   }
 
   const Eigen::VectorXd skin_friction_segment =
-      workflow_.lattice.get(side).profiles.skinFrictionCoeff.head(len);
+      profiles.skinFrictionCoeff.head(len);
   const Eigen::VectorXd momentum_segment =
-      workflow_.lattice.get(side).profiles.momentumThickness.head(len);
+      profiles.momentumThickness.head(len);
   const Eigen::VectorXd displacement_segment =
-      workflow_.lattice.get(side).profiles.displacementThickness.head(len);
+      profiles.displacementThickness.head(len);
 
   Eigen::VectorXd dn1(len);
-  const int transition_index = workflow_.lattice.get(side).profiles.transitionIndex;
+  const int transition_index = profiles.transitionIndex;
   for (int idx = 0; idx < len; ++idx) {
     dn1[idx] = idx < transition_index
                    ? delta.dskinFrictionCoeff[idx] / 10.0
@@ -118,9 +120,10 @@ BoundaryLayerRelaxationOps::evaluateSegmentRelaxation(
 }
 
 BoundaryLayerSideProfiles BoundaryLayerRelaxationOps::applyBoundaryLayerDelta(
-    int side, const BoundaryLayerWorkflow::BoundaryLayerDelta &delta,
-    double relaxation, double hstinv, double gamm1) const {
-  BoundaryLayerSideProfiles updated = workflow_.lattice.get(side).profiles;
+    const BoundaryLayerLattice &lattice_side, const Eigen::VectorXd &wgap,
+    const BoundaryLayerWorkflow::BoundaryLayerDelta &delta, double relaxation,
+    double hstinv, double gamm1) {
+  BoundaryLayerSideProfiles updated = lattice_side.profiles;
   const int len = delta.dskinFrictionCoeff.size();
   if (len <= 0) {
     return updated;
@@ -132,22 +135,19 @@ BoundaryLayerSideProfiles BoundaryLayerRelaxationOps::applyBoundaryLayerDelta(
       relaxation * delta.ddisplacementThickness;
   updated.edgeVelocity.head(len) += relaxation * delta.dedgeVelocity;
 
-  const int transition_index =
-      std::max(0, workflow_.lattice.get(side).profiles.transitionIndex);
+  const int transition_index = std::max(0, lattice_side.profiles.transitionIndex);
   for (int idx = transition_index; idx < len; ++idx) {
     updated.skinFrictionCoeff[idx] = std::min(updated.skinFrictionCoeff[idx], 0.25);
   }
 
   for (int ibl = 0; ibl < len; ++ibl) {
     double dswaki = 0.0;
-    if (ibl > workflow_.lattice.get(side).trailingEdgeIndex) {
-      const int wake_index =
-          ibl - (workflow_.lattice.get(side).trailingEdgeIndex + 1);
-      dswaki = workflow_.wgap[wake_index];
+    if (ibl > lattice_side.trailingEdgeIndex) {
+      const int wake_index = ibl - (lattice_side.trailingEdgeIndex + 1);
+      dswaki = wgap[wake_index];
     }
 
-    const double hklim =
-        ibl <= workflow_.lattice.get(side).trailingEdgeIndex ? 1.02 : 1.00005;
+    const double hklim = ibl <= lattice_side.trailingEdgeIndex ? 1.02 : 1.00005;
     const double edge_velocity = updated.edgeVelocity[ibl];
     const double edge_velocity_sq = edge_velocity * edge_velocity;
     const double denom = 1.0 - 0.5 * edge_velocity_sq * hstinv;
