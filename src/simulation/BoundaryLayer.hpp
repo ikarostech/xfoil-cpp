@@ -237,8 +237,6 @@ class BoundaryLayerWorkflow {
     double readNewtonRhs(int row) const;
     void solveMrchueDirectNewtonSystem();
     void solveMrchueInverseNewtonSystem(double htarg);
-    void runTransitionCheckForMrchue(int side, int stationIndex, double &ami, double &cti);
-    bool solveTeSystemForCurrentProfiles(const Edge &edge);
     bool isStartOfWake(int side, int stationIndex);
     FlowRegimeEnum applyFlowRegimeCandidate(FlowRegimeEnum candidate);
     FlowRegimeEnum currentFlowRegime() const;
@@ -324,7 +322,6 @@ class BoundaryLayerWorkflow {
     bool blkin(BoundaryLayerState &state);
     bool tesys(const BoundaryLayerSideProfiles &top_profiles, const BoundaryLayerSideProfiles &bottom_profiles,
                const Edge &edge);
-    double calcHtarg(int ibl, int is, bool wake);
     double xifset(const Foil &foil, const StagnationResult &stagnation, int is) const;
 
   private:

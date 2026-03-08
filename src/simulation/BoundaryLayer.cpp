@@ -271,26 +271,6 @@ void BoundaryLayerWorkflow::solveMrchueInverseNewtonSystem(double htarg) {
   blc.rhs = blc.a2.block(0, 0, 4, 4).fullPivLu().solve(blc.rhs);
 }
 
-void BoundaryLayerWorkflow::runTransitionCheckForMrchue(int side, int stationIndex,
-                                                        double &ami,
-                                                        double &cti) {
-  transitionSolver.trchek();
-  ami = state.station2.param.amplz;
-  if (flowRegime == FlowRegimeEnum::Transition) {
-    lattice.get(side).profiles.transitionIndex = stationIndex;
-    if (cti <= 0.0) {
-      cti = 0.03;
-      state.station2.param.sz = cti;
-    }
-  } else {
-    lattice.get(side).profiles.transitionIndex = stationIndex + 2;
-  }
-}
-
-bool BoundaryLayerWorkflow::solveTeSystemForCurrentProfiles(const Edge &edge) {
-  return tesys(lattice.top.profiles, lattice.bottom.profiles, edge);
-}
-
 void BoundaryLayerWorkflow::storeStationStateCommon(
     int side, int stationIndex, const MixedModeStationContext &ctx) {
   if (stationIndex < lattice.get(side).profiles.transitionIndex) {
@@ -847,41 +827,6 @@ bool BoundaryLayerWorkflow::blsys() {
   }
 
   return true;
-}
-
-double BoundaryLayerWorkflow::calcHtarg(int ibl, int is, bool wake) {
-  if (ibl < lattice.get(is).profiles.transitionIndex) {
-    return state.station1.hkz.scalar +
-           0.03 * (state.station2.param.xz - state.station1.param.xz) /
-               state.station1.param.tz;
-  }
-
-  if (ibl == lattice.get(is).profiles.transitionIndex) {
-    return state.station1.hkz.scalar +
-           (0.03 * (xt.scalar - state.station1.param.xz) -
-            0.15 * (state.station2.param.xz - xt.scalar)) /
-               state.station1.param.tz;
-  }
-
-  if (wake) {
-    const double cst = 0.03 *
-                       (state.station2.param.xz - state.station1.param.xz) /
-                       state.station1.param.tz;
-    auto euler = [](double hk2, double hk1, double cst_local) {
-      return hk2 - (hk2 + cst_local * pow(hk2 - 1, 3) - hk1) /
-                       (1 + 3 * cst_local * pow(hk2 - 1, 2));
-    };
-    state.station2.hkz.scalar = state.station1.hkz.scalar;
-    for (int i = 0; i < 3; i++) {
-      state.station2.hkz.scalar =
-          euler(state.station2.hkz.scalar, state.station1.hkz.scalar, cst);
-    }
-    return state.station2.hkz.scalar;
-  }
-
-  return state.station1.hkz.scalar -
-         0.15 * (state.station2.param.xz - state.station1.param.xz) /
-             state.station1.param.tz;
 }
 
 bool BoundaryLayerWorkflow::tesys(
