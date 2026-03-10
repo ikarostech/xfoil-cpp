@@ -7,7 +7,7 @@
 
 class WorkflowMarchContext final : public MarchContext {
  public:
-  explicit WorkflowMarchContext(BoundaryLayerWorkflowAccess access)
+  explicit WorkflowMarchContext(BoundaryLayerMarchAccess access)
       : access_(access) {}
 
   BoundaryLayerState &mutableState() override { return access_.state(); }
@@ -167,5 +167,5 @@ class WorkflowMarchContext final : public MarchContext {
   }
 
  private:
-  BoundaryLayerWorkflowAccess access_;
+  BoundaryLayerMarchAccess access_;
 };

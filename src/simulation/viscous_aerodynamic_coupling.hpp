@@ -11,13 +11,13 @@ class BoundaryLayerAerodynamicCoupling {
       const BoundaryLayerWorkflow &workflow, const XFoil &xfoil,
       const BoundaryLayerMatrix3x2dVector &vdel) {
     return BoundaryLayerAerodynamicsOps::computeNewUeDistribution(
-        workflow.lattice, xfoil, vdel);
+        workflow.stateStore().lattice, xfoil, vdel);
   }
 
   static BoundaryLayerClContributions computeClFromEdgeVelocityDistribution(
       const BoundaryLayerWorkflow &workflow, const XFoil &xfoil,
       const BoundaryLayerEdgeVelocityDistribution &distribution) {
     return BoundaryLayerAerodynamicsOps::computeClFromEdgeVelocityDistribution(
-        workflow.lattice, xfoil, distribution);
+        workflow.stateStore().lattice, xfoil, distribution);
   }
 };

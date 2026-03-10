@@ -55,9 +55,11 @@ void XFoil::initializeDataStructures() {
   const int surface_buffer_nodes = point_count + 6;
   const int bl_node_count = point_count + wake_nodes;
   auto &cache = ensureInitState(this);
+  auto &state_store = boundaryLayerWorkflow.stateStore();
+  auto &workspace = boundaryLayerWorkflow.workspace();
 
-  boundaryLayerWorkflow.lattice.top = BoundaryLayerLattice(bl_node_count);
-  boundaryLayerWorkflow.lattice.bottom = BoundaryLayerLattice(bl_node_count);
+  state_store.lattice.top = BoundaryLayerLattice(bl_node_count);
+  state_store.lattice.bottom = BoundaryLayerLattice(bl_node_count);
 
   aerodynamicCache.bij = MatrixXd::Zero(point_count + 1, total_nodes_with_wake);
   aerodynamicCache.dij =
@@ -72,31 +74,34 @@ void XFoil::initializeDataStructures() {
   aerodynamicCache.qinvu = Matrix2Xd::Zero(2, total_nodes_with_wake);
   qvis = VectorXd::Zero(total_nodes_with_wake);
 
-  boundaryLayerWorkflow.wgap = VectorXd::Zero(wake_nodes);
-  boundaryLayerWorkflow.blc.clear();
+  state_store.wgap = VectorXd::Zero(wake_nodes);
+  workspace.blc.clear();
 
   qgamm = VectorXd::Zero(point_count);
 }
 
 void XFoil::resetFlags() {
+  auto &state_store = boundaryLayerWorkflow.stateStore();
   invalidateWakeGeometry();
   invalidatePanelMap();
   invalidateConvergedSolution();
   analysis_state_.viscous = false;
   analysis_state_.controlByAlpha = false;
   foil.edge.sharp = false;
-  boundaryLayerWorkflow.flowRegime = FlowRegimeEnum::Laminar;
+  state_store.flowRegime = FlowRegimeEnum::Laminar;
 }
 
 void XFoil::resetVariables() {
-  boundaryLayerWorkflow.state.station1 = blData{};
-  boundaryLayerWorkflow.state.station2 = blData{};
-  boundaryLayerWorkflow.lattice.top.profiles.transitionIndex = 0;
-  boundaryLayerWorkflow.lattice.bottom.profiles.transitionIndex = 0;
-  boundaryLayerWorkflow.lattice.top.stationCount = 0;
-  boundaryLayerWorkflow.lattice.bottom.stationCount = 0;
-  boundaryLayerWorkflow.lattice.top.trailingEdgeIndex = 0;
-  boundaryLayerWorkflow.lattice.bottom.trailingEdgeIndex = 0;
+  auto &state_store = boundaryLayerWorkflow.stateStore();
+  auto &workspace = boundaryLayerWorkflow.workspace();
+  workspace.state.station1 = blData{};
+  workspace.state.station2 = blData{};
+  state_store.lattice.top.profiles.transitionIndex = 0;
+  state_store.lattice.bottom.profiles.transitionIndex = 0;
+  state_store.lattice.top.stationCount = 0;
+  state_store.lattice.bottom.stationCount = 0;
+  state_store.lattice.top.trailingEdgeIndex = 0;
+  state_store.lattice.bottom.trailingEdgeIndex = 0;
 
   analysis_state_.qinf = 1.0;
   aero_coeffs_.cl = 0.0;
@@ -106,21 +111,21 @@ void XFoil::resetVariables() {
   sigte = gamte = 0.0;
   avisc = std::numeric_limits<double>::quiet_NaN();
   resetFlags();
-  boundaryLayerWorkflow.stagnationIndex = 0;
-  boundaryLayerWorkflow.stagnationSst = 0.0;
-  boundaryLayerWorkflow.blCompressibility.qinfbl =
-      boundaryLayerWorkflow.blCompressibility.tkbl =
-          boundaryLayerWorkflow.blCompressibility.tkbl_ms = 0.0;
-  boundaryLayerWorkflow.blCompressibility.rstbl =
-      boundaryLayerWorkflow.blCompressibility.rstbl_ms = 0.0;
-  boundaryLayerWorkflow.blCompressibility.hstinv =
-      boundaryLayerWorkflow.blCompressibility.hstinv_ms = 0.0;
-  boundaryLayerWorkflow.blReynolds.reybl =
-      boundaryLayerWorkflow.blReynolds.reybl_ms =
-          boundaryLayerWorkflow.blReynolds.reybl_re = 0.0;
-  boundaryLayerWorkflow.blCompressibility.gm1bl = 0.0;
-  boundaryLayerWorkflow.blTransition.xiforc = 0.0;
-  boundaryLayerWorkflow.blTransition.amcrit = 0.0;
+  state_store.stagnationIndex = 0;
+  state_store.stagnationSst = 0.0;
+  state_store.blCompressibility.qinfbl =
+      state_store.blCompressibility.tkbl =
+          state_store.blCompressibility.tkbl_ms = 0.0;
+  state_store.blCompressibility.rstbl =
+      state_store.blCompressibility.rstbl_ms = 0.0;
+  state_store.blCompressibility.hstinv =
+      state_store.blCompressibility.hstinv_ms = 0.0;
+  state_store.blReynolds.reybl =
+      state_store.blReynolds.reybl_ms =
+          state_store.blReynolds.reybl_re = 0.0;
+  state_store.blCompressibility.gm1bl = 0.0;
+  state_store.blTransition.xiforc = 0.0;
+  state_store.blTransition.amcrit = 0.0;
   auto &cache = ensureInitState(this);
   cache.amax = 0.0;
   analysis_state_.alpha = 0.0;

@@ -17,6 +17,25 @@
 #include "simulation/skin_friction_coefficients.hpp"
 
 class Edge;
+
+struct BoundaryLayerStateStore {
+    Eigen::VectorXd wgap;
+    SidePair<BoundaryLayerLattice> lattice;
+    FlowRegimeEnum flowRegime = FlowRegimeEnum::Laminar;
+    BlCompressibilityParams blCompressibility{};
+    BlReynoldsParams blReynolds{};
+    BlTransitionParams blTransition{};
+    int stagnationIndex  = 0;
+    double stagnationSst = 0.0;
+};
+
+struct BoundaryLayerWorkspace {
+    BlSystemCoeffs blc;
+    BoundaryLayerState state;
+    blDiff xt;
+    int nsys = 0;
+};
+
 class BoundaryLayerWorkflow {
   public:
     BoundaryLayerWorkflow();
@@ -24,10 +43,6 @@ class BoundaryLayerWorkflow {
     BoundaryLayerVariablesSolver boundaryLayerVariablesSolver;
     BlDiffSolver blDiffSolver;
     BoundaryLayerTransitionSolver transitionSolver;
-    FlowRegimeEnum flowRegime = FlowRegimeEnum::Laminar;
-    BlCompressibilityParams blCompressibility{};
-    BlReynoldsParams blReynolds{};
-    BlTransitionParams blTransition{};
 
     // Sutherland's const./T0 (assumes stagnation conditions are at STP).
     static constexpr double kHvrat = 0.35;
@@ -68,18 +83,30 @@ class BoundaryLayerWorkflow {
     bool tesys(const BoundaryLayerSideProfiles &top_profiles, const BoundaryLayerSideProfiles &bottom_profiles,
                const Edge &edge);
 
+    BoundaryLayerStateStore &stateStore() {
+        return state_store_;
+    }
+    const BoundaryLayerStateStore &stateStore() const {
+        return state_store_;
+    }
+    BoundaryLayerWorkspace &workspace() {
+        return workspace_;
+    }
+    const BoundaryLayerWorkspace &workspace() const {
+        return workspace_;
+    }
+    BoundaryLayerGeometry &geometryService() {
+        return geometry_;
+    }
+    const BoundaryLayerGeometry &geometryService() const {
+        return geometry_;
+    }
+
   private:
     static double adjustDisplacementForHkLimit(double displacementThickness, double momentumThickness, double msq,
                                                double hklim);
 
-  public:
-    Eigen::VectorXd wgap;
-    SidePair<BoundaryLayerLattice> lattice;
-    BlSystemCoeffs blc;
-    BoundaryLayerState state;
-    blDiff xt;
-    int nsys             = 0;
-    int stagnationIndex  = 0;
-    double stagnationSst = 0.0;
-    BoundaryLayerGeometry geometry;
+    BoundaryLayerStateStore state_store_;
+    BoundaryLayerWorkspace workspace_;
+    BoundaryLayerGeometry geometry_;
 };

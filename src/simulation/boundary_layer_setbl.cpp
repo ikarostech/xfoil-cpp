@@ -156,8 +156,9 @@ struct SetblWorkingState {
 
 class BoundaryLayerSetblAssembler {
  public:
-  explicit BoundaryLayerSetblAssembler(BoundaryLayerWorkflowAccess access)
-      : access_(access) {}
+  BoundaryLayerSetblAssembler(BoundaryLayerSetblAccess access,
+                              BoundaryLayerMarchAccess march_access)
+      : access_(access), marchAccess_(march_access) {}
 
   SetblOutputView run(SidePairRef<const BoundaryLayerSideProfiles> profiles,
                       const FlowState &analysis_state,
@@ -176,7 +177,7 @@ class BoundaryLayerSetblAssembler {
                                    state.re_clmr, state.msq_clmr, current_mach,
                                    current_re);
 
-    WorkflowMarchContext marchContext(access_);
+    WorkflowMarchContext marchContext{marchAccess_};
     if (!bl_initialized) {
       Logger::instance().write("   Initializing bl ...\n");
       marcher_ue.mrchue(marchContext, foil, stagnation);
@@ -706,7 +707,7 @@ class BoundaryLayerSetblAssembler {
       access_.state() = station_update.state;
 
       if (station_is_transition_candidate) {
-        access_.transitionSolver().trchek();
+        access_.runTransitionCheck();
         ami = access_.state().station2.param.amplz;
       }
       buildTransitionLog(station_is_transition_candidate, output.flowRegime);
@@ -758,9 +759,7 @@ class BoundaryLayerSetblAssembler {
       if (station == access_.lattice().get(side).trailingEdgeIndex) {
         output.flowRegime = FlowRegimeEnum::Wake;
         access_.flowRegime() = output.flowRegime;
-        access_.state().station2 =
-            access_.variableSolver().solve(access_.state().station2,
-                                           FlowRegimeEnum::Wake);
+        access_.solveWakeState();
         access_.blmid(FlowRegimeEnum::Wake);
       }
 
@@ -811,7 +810,8 @@ class BoundaryLayerSetblAssembler {
     return sensitivities;
   }
 
-  BoundaryLayerWorkflowAccess access_;
+  BoundaryLayerSetblAccess access_;
+  BoundaryLayerMarchAccess marchAccess_;
 };
 
 } // namespace
@@ -822,7 +822,17 @@ SetblOutputView runBoundaryLayerSetbl(
     const FlowState &analysis_state, const AeroCoefficients &aero_coeffs,
     double acrit, const Foil &foil, const StagnationResult &stagnation,
     const Eigen::MatrixXd &dij, bool bl_initialized) {
-  BoundaryLayerSetblAssembler assembler(makeBoundaryLayerWorkflowAccess(workflow));
+  const auto context = makeBoundaryLayerSetblContext(workflow);
+  const auto march_context = makeBoundaryLayerMarchContext(workflow);
+  const auto solver_ops = makeBoundaryLayerSetblSolverOps(workflow);
+  BoundaryLayerSetblAssembler assembler{
+      BoundaryLayerSetblAccess(context, workflow.boundaryLayerVariablesSolver,
+                               workflow.transitionSolver,
+                               workflow.stateStore().flowRegime,
+                               workflow.stateStore().blCompressibility,
+                               workflow.stateStore().blReynolds,
+                               workflow.stateStore().blTransition, solver_ops),
+      BoundaryLayerMarchAccess(march_context)};
   return assembler.run(profiles, analysis_state, aero_coeffs, acrit, foil,
                        stagnation, dij, bl_initialized);
 }

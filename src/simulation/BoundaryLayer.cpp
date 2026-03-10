@@ -11,24 +11,28 @@ using BoundaryContext = BoundaryLayerMixedModeStationContext;
 
 namespace {
 BoundaryLayerSolverOps makeSolverOps(BoundaryLayerWorkflow &workflow) {
+  auto &state_store = workflow.stateStore();
+  auto &workspace = workflow.workspace();
   return BoundaryLayerSolverOps({workflow.boundaryLayerVariablesSolver,
                                  workflow.blDiffSolver,
                                  workflow.transitionSolver,
-                                 workflow.flowRegime,
-                                 workflow.blCompressibility,
-                                 workflow.blReynolds,
-                                 workflow.blTransition,
-                                 workflow.state,
-                                 workflow.blc,
-                                 workflow.lattice});
+                                 state_store.flowRegime,
+                                 state_store.blCompressibility,
+                                 state_store.blReynolds,
+                                 state_store.blTransition,
+                                 workspace.state,
+                                 workspace.blc,
+                                 state_store.lattice});
 }
 
 BoundaryLayerMixedModeOps makeMixedModeOps(BoundaryLayerWorkflow &workflow) {
-  return BoundaryLayerMixedModeOps({workflow.lattice,
-                                    workflow.state,
-                                    workflow.flowRegime,
-                                    workflow.blc,
-                                    workflow.blCompressibility,
+  auto &state_store = workflow.stateStore();
+  auto &workspace = workflow.workspace();
+  return BoundaryLayerMixedModeOps({state_store.lattice,
+                                    workspace.state,
+                                    state_store.flowRegime,
+                                    workspace.blc,
+                                    state_store.blCompressibility,
                                     workflow.boundaryLayerVariablesSolver,
                                     workflow.transitionSolver,
                                     makeSolverOps(workflow)});
@@ -64,23 +68,27 @@ BoundaryLayerDelta
 BoundaryLayerWorkflow::buildBoundaryLayerDelta(
     int side, const Eigen::VectorXd &unew_side, const Eigen::VectorXd &u_ac_side,
     double dac, const BoundaryLayerMatrix3x2dVector &vdel) const {
+  const auto &state_store = stateStore();
   return BoundaryLayerRelaxationOps::buildBoundaryLayerDelta(
-      lattice.get(side), unew_side, u_ac_side, dac, vdel);
+      state_store.lattice.get(side), unew_side, u_ac_side, dac, vdel);
 }
 
 BoundaryLayerMetrics
 BoundaryLayerWorkflow::evaluateSegmentRelaxation(
     int side, const BoundaryLayerDelta &delta, double dhi, double dlo,
     double &relaxation) const {
+  const auto &state_store = stateStore();
   return BoundaryLayerRelaxationOps::evaluateSegmentRelaxation(
-      lattice.get(side).profiles, delta, dhi, dlo, relaxation);
+      state_store.lattice.get(side).profiles, delta, dhi, dlo, relaxation);
 }
 
 BoundaryLayerSideProfiles BoundaryLayerWorkflow::applyBoundaryLayerDelta(
     int side, const BoundaryLayerDelta &delta, double relaxation, double hstinv,
     double gamm1) const {
+  const auto &state_store = stateStore();
   return BoundaryLayerRelaxationOps::applyBoundaryLayerDelta(
-      lattice.get(side), wgap, delta, relaxation, hstinv, gamm1);
+      state_store.lattice.get(side), state_store.wgap, delta, relaxation,
+      hstinv, gamm1);
 }
 
 void BoundaryLayerWorkflow::syncStationRegimeStates(int side, int stationIndex,

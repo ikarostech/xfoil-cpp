@@ -16,14 +16,16 @@ using Eigen::Vector;
 
 namespace {
 BoundaryLayerTransitionSolver makeTransitionSolver(BoundaryLayerWorkflow &workflow) {
+  auto &state_store = workflow.stateStore();
+  auto &workspace = workflow.workspace();
   return BoundaryLayerTransitionSolver(
-      {workflow.state,
-       workflow.blTransition,
-       workflow.flowRegime,
-       workflow.xt,
-       workflow.blc,
-       workflow.blCompressibility,
-       workflow.blReynolds});
+      {workspace.state,
+       state_store.blTransition,
+       state_store.flowRegime,
+       workspace.xt,
+       workspace.blc,
+       state_store.blCompressibility,
+       state_store.blReynolds});
 }
 } // namespace
 
@@ -32,7 +34,8 @@ BoundaryLayerTransitionSolver::BoundaryLayerTransitionSolver(Context context)
 
 BoundaryLayerWorkflow::BoundaryLayerWorkflow()
     : transitionSolver(makeTransitionSolver(*this)),
-      geometry(lattice, wgap, stagnationIndex, stagnationSst) {}
+      geometry_(state_store_.lattice, state_store_.wgap,
+                state_store_.stagnationIndex, state_store_.stagnationSst) {}
 
 struct BoundaryLayerTransitionSolver::TrchekData {
   explicit TrchekData(Context &context)

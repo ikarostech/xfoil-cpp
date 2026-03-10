@@ -81,7 +81,7 @@ XFoil::XFoil() : analysis_state_() {
 
   // initialize transition parameters until user changes them
   acrit = 9.0;
-  auto &boundary_layer_lattice = boundaryLayerWorkflow.lattice;
+  auto &boundary_layer_lattice = boundaryLayerWorkflow.stateStore().lattice;
   boundary_layer_lattice.top.transitionLocation = 1.0;
   boundary_layer_lattice.bottom.transitionLocation = 1.0;
 
@@ -102,8 +102,9 @@ bool XFoil::isBLInitialized() const {
   if (!hasPanelMap()) {
     return false;
   }
-  const auto &top = boundaryLayerWorkflow.lattice.top;
-  const auto &bottom = boundaryLayerWorkflow.lattice.bottom;
+  const auto &lattice = boundaryLayerWorkflow.stateStore().lattice;
+  const auto &top = lattice.top;
+  const auto &bottom = lattice.bottom;
   if (top.stationCount <= 1 || bottom.stationCount <= 1) {
     return false;
   }
@@ -152,8 +153,9 @@ void XFoil::setBLInitialized(bool bInitialized) {
     if (lattice.profiles.massFlux.size() > 0)
       lattice.profiles.massFlux.setZero();
   };
-  invalidateSide(boundaryLayerWorkflow.lattice.top);
-  invalidateSide(boundaryLayerWorkflow.lattice.bottom);
+  auto &lattice = boundaryLayerWorkflow.stateStore().lattice;
+  invalidateSide(lattice.top);
+  invalidateSide(lattice.bottom);
   invalidateConvergedSolution();
 }
 
@@ -179,13 +181,15 @@ void XFoil::invalidateWakeGeometry() {
 }
 
 void XFoil::invalidatePanelMap() {
-  boundaryLayerWorkflow.lattice.top.stationCount = 0;
-  boundaryLayerWorkflow.lattice.bottom.stationCount = 0;
+  auto &lattice = boundaryLayerWorkflow.stateStore().lattice;
+  lattice.top.stationCount = 0;
+  lattice.bottom.stationCount = 0;
 }
 
 bool XFoil::hasPanelMap() const {
-  const auto &top = boundaryLayerWorkflow.lattice.top;
-  const auto &bottom = boundaryLayerWorkflow.lattice.bottom;
+  const auto &lattice = boundaryLayerWorkflow.stateStore().lattice;
+  const auto &top = lattice.top;
+  const auto &bottom = lattice.bottom;
   const int point_count = foil.foil_shape.n;
   const int total_nodes = point_count + foil.wake_shape.n;
 
