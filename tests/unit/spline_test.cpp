@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <vector>
 
-#include "core/spline.hpp"
+#include "numerics/spline.hpp"
 
 TEST(scalc, test_value) {
   // given

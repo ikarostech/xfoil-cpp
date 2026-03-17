@@ -5,8 +5,8 @@
 #include <sstream>
 #include <string>
 
-#include "XFoil.h"
-#include "domain/flow_regime.hpp"
+#include "solver/xfoil/XFoil.h"
+#include "model/flow_regime.hpp"
 
 namespace {
 constexpr int kMaxDatPoints = 604;

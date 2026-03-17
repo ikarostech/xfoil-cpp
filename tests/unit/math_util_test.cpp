@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <vector>
 
-#include "core/math_util.hpp"
+#include "numerics/math_util.hpp"
 
 TEST(tridiagonalSolve, test_value) {
   // given

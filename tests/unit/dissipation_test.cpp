@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
-#include "domain/coefficient/dissipation.hpp"
-#include "domain/flow_regime.hpp"
+#include "numerics/coefficient/dissipation.hpp"
+#include "model/flow_regime.hpp"
 
 TEST(DissipationTest, DilBelow4) {
   double hk = 3.0;

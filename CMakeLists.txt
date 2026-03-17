@@ -7,75 +7,75 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
 
 find_package(Eigen3 3.4 REQUIRED NO_MODULE)
 
-add_library(xfoil_core
-    src/core/math_util.cpp
-    src/core/spline.cpp
-    src/core/boundary_layer_util.cpp
+add_library(xfoil_numerics
+    src/numerics/math_util.cpp
+    src/numerics/spline.cpp
+    src/numerics/boundary_layer_util.cpp
+    src/numerics/coefficient/dissipation.cpp
+    src/numerics/coefficient/skin_friction.cpp
 )
-target_include_directories(xfoil_core
+target_include_directories(xfoil_numerics
     PUBLIC
         ${CMAKE_SOURCE_DIR}/src
-        ${CMAKE_SOURCE_DIR}/src/core
+        ${CMAKE_SOURCE_DIR}/src/numerics
 )
-target_link_libraries(xfoil_core
+target_link_libraries(xfoil_numerics
     PUBLIC
         Eigen3::Eigen
 )
 
-add_library(xfoil_domain
-    src/domain/boundary_layer.cpp
-    src/domain/boundary_layer/boundary_layer_diff_solver.cpp
-    src/domain/boundary_layer/boundary_layer_variables_solver.cpp
-    src/domain/coefficient/dissipation.cpp
-    src/domain/coefficient/skin_friction.cpp
-    src/domain/foil/edge.cpp
-    src/domain/foil/foil_shape.cpp
+add_library(xfoil_model
+    src/model/boundary_layer.cpp
+    src/model/foil/edge.cpp
+    src/model/foil/foil_shape.cpp
 )
-target_include_directories(xfoil_domain
+target_include_directories(xfoil_model
     PUBLIC
         ${CMAKE_SOURCE_DIR}/src
-        ${CMAKE_SOURCE_DIR}/src/domain
+        ${CMAKE_SOURCE_DIR}/src/model
 )
-target_link_libraries(xfoil_domain
+target_link_libraries(xfoil_model
     PUBLIC
-        xfoil_core
+        xfoil_numerics
         Eigen3::Eigen
 )
 
-add_library(xfoil_simulation
-    src/simulation/XFoil.cpp
-    src/simulation/XFoil_aerodynamics.cpp
-    src/simulation/InviscidSolver.cpp
-    src/simulation/Blsolve.cpp
-    src/simulation/XFoil_geometry.cpp
-    src/simulation/XFoil_init.cpp
-    src/simulation/XFoil_viscous.cpp
-    src/simulation/BoundaryLayer.cpp
-    src/simulation/boundary_layer_aerodynamics.cpp
-    src/simulation/boundary_layer_mixed_mode.cpp
-    src/simulation/boundary_layer_relaxation.cpp
-    src/simulation/boundary_layer_runtime_state.cpp
-    src/simulation/boundary_layer_setbl.cpp
-    src/simulation/boundary_layer_solver_ops.cpp
-    src/simulation/BoundaryLayer_geometry.cpp
-    src/simulation/BoundaryLayerStore.cpp
-    src/simulation/march/march.cpp
-    src/simulation/march/du.cpp
-    src/simulation/march/ue.cpp
-    src/simulation/BoundaryLayer_transition.cpp
-    src/simulation/psi.cpp
-    src/domain/foil/foil.cpp
+add_library(xfoil_solver
+    src/solver/xfoil/XFoil.cpp
+    src/solver/xfoil/XFoil_aerodynamics.cpp
+    src/solver/xfoil/XFoil_geometry.cpp
+    src/solver/xfoil/XFoil_init.cpp
+    src/solver/xfoil/XFoil_viscous.cpp
+    src/solver/inviscid/InviscidSolver.cpp
+    src/solver/inviscid/psi.cpp
+    src/solver/boundary_layer/blsolve.cpp
+    src/solver/boundary_layer/boundary_layer_workflow.cpp
+    src/solver/boundary_layer/boundary_layer_store.cpp
+    src/solver/boundary_layer/boundary_layer_geometry.cpp
+    src/solver/boundary_layer/boundary_layer_transition.cpp
+    src/solver/boundary_layer/boundary_layer_aerodynamics.cpp
+    src/solver/boundary_layer/boundary_layer_mixed_mode.cpp
+    src/solver/boundary_layer/boundary_layer_relaxation.cpp
+    src/solver/boundary_layer/boundary_layer_runtime_state.cpp
+    src/solver/boundary_layer/boundary_layer_setbl.cpp
+    src/solver/boundary_layer/boundary_layer_solver_ops.cpp
+    src/solver/march/march.cpp
+    src/solver/march/du.cpp
+    src/solver/march/ue.cpp
+    src/solver/boundary_layer/boundary_layer_diff_solver.cpp
+    src/solver/boundary_layer/boundary_layer_variables_solver.cpp
+    src/model/foil/foil.cpp
 )
-target_include_directories(xfoil_simulation
+target_include_directories(xfoil_solver
     PUBLIC
         ${CMAKE_SOURCE_DIR}/src
-        ${CMAKE_SOURCE_DIR}/src/simulation
+        ${CMAKE_SOURCE_DIR}/src/solver
         ${CMAKE_SOURCE_DIR}/src/infrastructure
 )
-target_link_libraries(xfoil_simulation
+target_link_libraries(xfoil_solver
     PUBLIC
-        xfoil_domain
-        xfoil_core
+        xfoil_model
+        xfoil_numerics
         Eigen3::Eigen
 )
 
@@ -85,12 +85,12 @@ add_executable(testExe
 target_include_directories(testExe
     PRIVATE
         ${CMAKE_SOURCE_DIR}/src
-        ${CMAKE_SOURCE_DIR}/src/simulation
+        ${CMAKE_SOURCE_DIR}/src/solver
 )
 
 target_link_libraries(testExe
     PRIVATE
-        xfoil_simulation
+        xfoil_solver
 )
 
 file(COPY sample/ DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/sample)
