@@ -7,7 +7,8 @@
 #include "XFoil.h"
 #include "core/math_util.hpp"
 #include "infrastructure/logger.hpp"
-#include "simulation/viscous_workflow_access.hpp"
+#include "simulation/march_access.hpp"
+#include "simulation/setbl_access.hpp"
 #include "simulation/march/march.hpp"
 #include "simulation/march/workflow_context.hpp"
 
@@ -823,7 +824,6 @@ SetblOutputView runBoundaryLayerSetbl(
     double acrit, const Foil &foil, const StagnationResult &stagnation,
     const Eigen::MatrixXd &dij, bool bl_initialized) {
   const auto context = makeBoundaryLayerSetblContext(workflow);
-  const auto march_context = makeBoundaryLayerMarchContext(workflow);
   const auto solver_ops = makeBoundaryLayerSetblSolverOps(workflow);
   BoundaryLayerSetblAssembler assembler{
       BoundaryLayerSetblAccess(context, workflow.boundaryLayerVariablesSolver,
@@ -832,7 +832,7 @@ SetblOutputView runBoundaryLayerSetbl(
                                workflow.stateStore().blCompressibility,
                                workflow.stateStore().blReynolds,
                                workflow.stateStore().blTransition, solver_ops),
-      BoundaryLayerMarchAccess(march_context)};
+      makeBoundaryLayerMarchAccess(workflow)};
   return assembler.run(profiles, analysis_state, aero_coeffs, acrit, foil,
                        stagnation, dij, bl_initialized);
 }
