@@ -1,6 +1,6 @@
 #pragma once
 
-#include "solver/boundary_layer/boundary_layer_state.hpp"
+#include "model/boundary_layer/state.hpp"
 
 struct BlSystemCoeffs;
 

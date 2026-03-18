@@ -1,4 +1,4 @@
-#include "solver/boundary_layer/boundary_layer_setbl.hpp"
+#include "solver/boundary_layer/initialization/setbl.hpp"
 
 #include <array>
 #include <cmath>
@@ -8,7 +8,7 @@
 #include "numerics/math_util.hpp"
 #include "infrastructure/logger.hpp"
 #include "solver/boundary_layer/march_access.hpp"
-#include "solver/boundary_layer/setbl_access.hpp"
+#include "solver/boundary_layer/initialization/setbl_access.hpp"
 #include "solver/march/march.hpp"
 #include "solver/march/workflow_context.hpp"
 
@@ -29,16 +29,6 @@ struct EdgeVelocitySensitivityResult {
   SidePair<VectorXd> ule_m;
   SidePair<VectorXd> ute_m;
   SidePair<double> ule_a{0.0, 0.0};
-};
-
-struct BlReferenceParams {
-  double currentMach = 0.0;
-  double currentRe = 0.0;
-  double re_clmr = 0.0;
-  double msq_clmr = 0.0;
-  BlCompressibilityParams blCompressibility{};
-  BlReynoldsParams blReynolds{};
-  double amcrit = 0.0;
 };
 
 struct SetblStation {
@@ -507,107 +497,11 @@ class BoundaryLayerSetblAssembler {
     return result;
   }
 
-  BlReferenceParams computeBlReferenceParams(
+  BoundaryLayerReferenceParams computeBlReferenceParams(
       const FlowState &analysis_state, const AeroCoefficients &aero_coeffs,
       double acrit) const {
-    BlReferenceParams params;
-    double clmr = analysis_state.controlByAlpha ? aero_coeffs.cl : analysis_state.clspec;
-    const double cla = std::max(clmr, 0.000001);
-
-    switch (analysis_state.machType) {
-    case FlowState::MachType::CONSTANT:
-      params.currentMach = analysis_state.referenceMach;
-      break;
-    case FlowState::MachType::FIXED_LIFT:
-      params.currentMach = analysis_state.referenceMach / std::sqrt(cla);
-      break;
-    case FlowState::MachType::FIXED_LIFT_AND_DYNAMIC_PRESSURE:
-      params.currentMach = analysis_state.referenceMach;
-      break;
-    default:
-      params.currentMach = analysis_state.currentMach;
-      break;
-    }
-
-    double ma_clmr = 0.0;
-    if (analysis_state.machType == FlowState::MachType::FIXED_LIFT) {
-      ma_clmr = -0.5 * params.currentMach / cla;
-    }
-
-    switch (analysis_state.reynoldsType) {
-    case FlowState::ReynoldsType::CONSTANT:
-      params.currentRe = analysis_state.referenceRe;
-      break;
-    case FlowState::ReynoldsType::FIXED_LIFT:
-      params.currentRe = analysis_state.referenceRe / std::sqrt(cla);
-      params.re_clmr = -0.5 * params.currentRe / cla;
-      break;
-    case FlowState::ReynoldsType::FIXED_LIFT_AND_DYNAMIC_PRESSURE:
-      params.currentRe = analysis_state.referenceRe / cla;
-      params.re_clmr = -params.currentRe / cla;
-      break;
-    default:
-      params.currentRe = analysis_state.currentRe;
-      break;
-    }
-
-    params.msq_clmr = 2.0 * params.currentMach * ma_clmr;
-
-    const double beta = std::sqrt(1.0 - params.currentMach * params.currentMach);
-    const double beta_msq = -0.5 / beta;
-    const double karman_tsien_factor =
-        (params.currentMach / (1.0 + beta)) * (params.currentMach / (1.0 + beta));
-    const double karman_tsien_factor_msq =
-        1.0 / ((1.0 + beta) * (1.0 + beta)) -
-        2.0 * karman_tsien_factor / (1.0 + beta) * beta_msq;
-
-    params.blCompressibility.gm1bl = 0.4;
-    params.blCompressibility.qinfbl = analysis_state.qinf;
-    params.blCompressibility.tkbl = karman_tsien_factor;
-    params.blCompressibility.tkbl_ms = karman_tsien_factor_msq;
-    params.blCompressibility.rstbl = std::pow(
-        1.0 + 0.5 * params.blCompressibility.gm1bl * params.currentMach * params.currentMach,
-        1.0 / params.blCompressibility.gm1bl);
-    params.blCompressibility.rstbl_ms =
-        0.5 * params.blCompressibility.rstbl /
-        (1.0 + 0.5 * params.blCompressibility.gm1bl * params.currentMach *
-                   params.currentMach);
-    params.blCompressibility.hstinv =
-        params.blCompressibility.gm1bl *
-        MathUtil::pow(params.currentMach / params.blCompressibility.qinfbl, 2) /
-        (1.0 + 0.5 * params.blCompressibility.gm1bl * params.currentMach *
-                   params.currentMach);
-    params.blCompressibility.hstinv_ms =
-        params.blCompressibility.gm1bl *
-            MathUtil::pow(1.0 / params.blCompressibility.qinfbl, 2) /
-            (1.0 + 0.5 * params.blCompressibility.gm1bl * params.currentMach *
-                       params.currentMach) -
-        0.5 * params.blCompressibility.gm1bl * params.blCompressibility.hstinv /
-            (1.0 + 0.5 * params.blCompressibility.gm1bl * params.currentMach *
-                       params.currentMach);
-
-    const double herat =
-        1.0 - 0.5 * params.blCompressibility.qinfbl *
-                  params.blCompressibility.qinfbl *
-                  params.blCompressibility.hstinv;
-    const double herat_ms =
-        -0.5 * params.blCompressibility.qinfbl * params.blCompressibility.qinfbl *
-        params.blCompressibility.hstinv_ms;
-
-    params.blReynolds.reybl =
-        params.currentRe * std::sqrt(herat * herat * herat) *
-        (1.0 + BoundaryLayerWorkflow::kHvrat) /
-        (herat + BoundaryLayerWorkflow::kHvrat);
-    params.blReynolds.reybl_re = std::sqrt(herat * herat * herat) *
-                                 (1.0 + BoundaryLayerWorkflow::kHvrat) /
-                                 (herat + BoundaryLayerWorkflow::kHvrat);
-    params.blReynolds.reybl_ms =
-        params.blReynolds.reybl *
-        (1.5 / herat - 1.0 / (herat + BoundaryLayerWorkflow::kHvrat)) *
-        herat_ms;
-
-    params.amcrit = acrit;
-    return params;
+    return BoundaryLayerPhysics::buildReferenceParams(analysis_state,
+                                                      aero_coeffs, acrit);
   }
 
   void initializeSetblReferenceParams(

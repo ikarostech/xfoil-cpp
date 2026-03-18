@@ -5,7 +5,7 @@
 #include "solver/boundary_layer/blsolve.hpp"
 #include "solver/inviscid/InviscidSolver.hpp"
 #include "solver/boundary_layer/viscous_aerodynamic_coupling.hpp"
-#include "solver/boundary_layer/viscous_initializer.hpp"
+#include "solver/boundary_layer/initialization/viscous_initializer.hpp"
 #include "solver/march/march.hpp"
 #include "solver/inviscid/psi.hpp"
 #include <algorithm>

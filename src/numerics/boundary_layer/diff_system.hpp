@@ -2,10 +2,10 @@
 
 #include <Eigen/Core>
 
-#include "numerics/coefficient/bl_newton.hpp"
+#include "model/boundary_layer/skin_friction_coefficients.hpp"
+#include "model/boundary_layer/state.hpp"
 #include "model/flow_regime.hpp"
-#include "solver/boundary_layer/boundary_layer_state.hpp"
-#include "solver/boundary_layer/skin_friction_coefficients.hpp"
+#include "numerics/coefficient/bl_newton.hpp"
 
 class BlDiffSolver {
 public:

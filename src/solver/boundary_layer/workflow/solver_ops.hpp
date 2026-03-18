@@ -1,6 +1,7 @@
 #pragma once
 
-#include "solver/boundary_layer/boundary_layer_workflow.hpp"
+#include "model/boundary_layer/physics.hpp"
+#include "solver/boundary_layer/workflow/workflow.hpp"
 
 class BoundaryLayerSolverOps {
  public:

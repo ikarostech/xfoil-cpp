@@ -4,17 +4,18 @@
 #include <cmath>
 
 #include "model/boundary_layer/bl_compressibility_params.hpp"
+#include "model/boundary_layer/physics.hpp"
 #include "model/boundary_layer/bl_reynolds_params.hpp"
 #include "model/boundary_layer/bl_transition_params.hpp"
-#include "solver/boundary_layer/boundary_layer_diff_solver.hpp"
-#include "solver/boundary_layer/boundary_layer_variables_solver.hpp"
+#include "model/boundary_layer/state.hpp"
+#include "model/boundary_layer/skin_friction_coefficients.hpp"
+#include "numerics/boundary_layer/diff_system.hpp"
+#include "numerics/boundary_layer/variables.hpp"
 #include "numerics/coefficient/bl_newton.hpp"
 #include "model/flow_regime.hpp"
-#include "solver/boundary_layer/boundary_layer_transition.hpp"
+#include "solver/boundary_layer/workflow/transition.hpp"
 #include "solver/boundary_layer/boundary_layer_geometry.hpp"
-#include "solver/boundary_layer/boundary_layer_state.hpp"
 #include "solver/boundary_layer/viscous_types.hpp"
-#include "solver/boundary_layer/skin_friction_coefficients.hpp"
 
 class Edge;
 
@@ -43,9 +44,6 @@ class BoundaryLayerWorkflow {
     BoundaryLayerVariablesSolver boundaryLayerVariablesSolver;
     BlDiffSolver blDiffSolver;
     BoundaryLayerTransitionSolver transitionSolver;
-
-    // Sutherland's const./T0 (assumes stagnation conditions are at STP).
-    static constexpr double kHvrat = 0.35;
 
     struct QtanResult {
         Eigen::VectorXd qnew;
@@ -103,9 +101,6 @@ class BoundaryLayerWorkflow {
     }
 
   private:
-    static double adjustDisplacementForHkLimit(double displacementThickness, double momentumThickness, double msq,
-                                               double hklim);
-
     BoundaryLayerStateStore state_store_;
     BoundaryLayerWorkspace workspace_;
     BoundaryLayerGeometry geometry_;

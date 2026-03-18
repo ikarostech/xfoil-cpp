@@ -3,9 +3,9 @@
 #include <string_view>
 
 #include "infrastructure/logger.hpp"
-#include "solver/boundary_layer/boundary_layer_runtime_state.hpp"
+#include "solver/boundary_layer/runtime/state.hpp"
 #include "solver/march/mrchue_linear_system.hpp"
-#include "solver/boundary_layer/setbl_access.hpp"
+#include "solver/boundary_layer/initialization/setbl_access.hpp"
 
 struct BoundaryLayerMarchContextData {
   BoundaryLayerState &state;

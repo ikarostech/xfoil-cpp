@@ -1,22 +1,13 @@
-#include "solver/boundary_layer/boundary_layer_mixed_mode.hpp"
+#include "solver/boundary_layer/workflow/mixed_mode.hpp"
 
 #include <algorithm>
 #include <cmath>
 
-#include "model/boundary_layer.hpp"
+#include "model/boundary_layer/physics.hpp"
 
 namespace {
 constexpr double kMixedModeConvergenceTolerance = 5.0e-6;
 using BoundaryContext = BoundaryLayerMixedModeStationContext;
-
-double adjustDisplacementForHkLimit(double displacementThickness,
-                                    double momentumThickness, double msq,
-                                    double hklim) {
-  const double h = displacementThickness / momentumThickness;
-  const auto hkin_result = boundary_layer::hkin(h, msq);
-  const double dh = std::max(0.0, hklim - hkin_result.hk) / hkin_result.hk_h;
-  return displacementThickness + dh * momentumThickness;
-}
 } // namespace
 
 void BoundaryLayerMixedModeOps::storeStationStateCommon(
@@ -246,7 +237,8 @@ bool BoundaryLayerMixedModeOps::applyMixedModeNewtonStep(
                      (context_.blCompressibility.gm1bl *
                       (1.0 - 0.5 * uei_sq * context_.blCompressibility.hstinv));
   double dsw = ctx.dsi - ctx.dswaki;
-  dsw = adjustDisplacementForHkLimit(dsw, ctx.thi, msq, hklim);
+  dsw = BoundaryLayerPhysics::adjustDisplacementForHkLimit(dsw, ctx.thi, msq,
+                                                           hklim);
   ctx.dsi = dsw + ctx.dswaki;
 
   return ctx.dmax <= kMixedModeConvergenceTolerance;

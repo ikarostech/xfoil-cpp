@@ -5,7 +5,6 @@
 
 #include <Eigen/Core>
 
-#include "numerics/side_pair.hpp"
 #include "model/boundary_layer.hpp"
 
 /**
@@ -119,6 +118,7 @@ struct BoundaryLayerLattice {
     inviscidEdgeVelocityMatrix.resize(2, size);
     panelInfluenceFactor.resize(size);
   }
+
   BoundaryLayerLattice() = default;
-  BoundaryLayerLattice(const int size) { resize(size); }
+  explicit BoundaryLayerLattice(int size) { resize(size); }
 };

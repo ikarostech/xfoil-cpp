@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "model/boundary_layer/physics.hpp"
 #include "numerics/math_util.hpp"
 
 namespace march::ue_numerics
@@ -11,10 +12,8 @@ inline double adjustDisplacementForHkLimit(double displacementThickness,
                                            double momentumThickness,
                                            double msq, double hklim)
 {
-  const double h = displacementThickness / momentumThickness;
-  const auto hkinResult = boundary_layer::hkin(h, msq);
-  const double dh = std::max(0.0, hklim - hkinResult.hk) / hkinResult.hk_h;
-  return displacementThickness + dh * momentumThickness;
+  return BoundaryLayerPhysics::adjustDisplacementForHkLimit(
+      displacementThickness, momentumThickness, msq, hklim);
 }
 
 inline double computeMachSquared(double edgeVelocity, double hstinv,

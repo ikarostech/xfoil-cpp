@@ -22,7 +22,6 @@
 
 #include "solver/xfoil/XFoil.h"
 #include "Eigen/Core"
-#include "solver/boundary_layer/boundary_layer_diff_solver.hpp"
 #include <cmath>
 #include <limits>
 using namespace Eigen;

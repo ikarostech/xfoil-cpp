@@ -41,7 +41,7 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 #include "Eigen/Dense"
 #include "Eigen/StdVector"
 
-#include "solver/boundary_layer/boundary_layer_workflow.hpp"
+#include "solver/boundary_layer/workflow/workflow.hpp"
 #include "numerics/side_pair.hpp"
 #include "model/boundary_layer.hpp"
 #include "model/coefficient/aero_coefficients.hpp"

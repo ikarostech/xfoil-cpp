@@ -2,9 +2,9 @@
 
 #include <string>
 
+#include "model/boundary_layer/state.hpp"
 #include "numerics/side_pair.hpp"
 #include "model/foil/foil.hpp"
-#include "solver/boundary_layer/boundary_layer_state.hpp"
 
 class XFoil;
 

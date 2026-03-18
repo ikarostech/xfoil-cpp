@@ -11,6 +11,8 @@ add_library(xfoil_numerics
     src/numerics/math_util.cpp
     src/numerics/spline.cpp
     src/numerics/boundary_layer_util.cpp
+    src/numerics/boundary_layer/variables.cpp
+    src/numerics/boundary_layer/diff_system.cpp
     src/numerics/coefficient/dissipation.cpp
     src/numerics/coefficient/skin_friction.cpp
 )
@@ -26,6 +28,7 @@ target_link_libraries(xfoil_numerics
 
 add_library(xfoil_model
     src/model/boundary_layer.cpp
+    src/model/boundary_layer/physics.cpp
     src/model/foil/edge.cpp
     src/model/foil/foil_shape.cpp
 )
@@ -49,21 +52,19 @@ add_library(xfoil_solver
     src/solver/inviscid/InviscidSolver.cpp
     src/solver/inviscid/psi.cpp
     src/solver/boundary_layer/blsolve.cpp
-    src/solver/boundary_layer/boundary_layer_workflow.cpp
+    src/solver/boundary_layer/workflow/workflow.cpp
     src/solver/boundary_layer/boundary_layer_store.cpp
     src/solver/boundary_layer/boundary_layer_geometry.cpp
-    src/solver/boundary_layer/boundary_layer_transition.cpp
+    src/solver/boundary_layer/workflow/transition.cpp
     src/solver/boundary_layer/boundary_layer_aerodynamics.cpp
-    src/solver/boundary_layer/boundary_layer_mixed_mode.cpp
-    src/solver/boundary_layer/boundary_layer_relaxation.cpp
-    src/solver/boundary_layer/boundary_layer_runtime_state.cpp
-    src/solver/boundary_layer/boundary_layer_setbl.cpp
-    src/solver/boundary_layer/boundary_layer_solver_ops.cpp
+    src/solver/boundary_layer/workflow/mixed_mode.cpp
+    src/solver/boundary_layer/workflow/relaxation.cpp
+    src/solver/boundary_layer/runtime/state.cpp
+    src/solver/boundary_layer/initialization/setbl.cpp
+    src/solver/boundary_layer/workflow/solver_ops.cpp
     src/solver/march/march.cpp
     src/solver/march/du.cpp
     src/solver/march/ue.cpp
-    src/solver/boundary_layer/boundary_layer_diff_solver.cpp
-    src/solver/boundary_layer/boundary_layer_variables_solver.cpp
     src/model/foil/foil.cpp
 )
 target_include_directories(xfoil_solver

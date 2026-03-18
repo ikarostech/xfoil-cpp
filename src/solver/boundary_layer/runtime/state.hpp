@@ -1,10 +1,10 @@
 #pragma once
 
 #include "model/boundary_layer/bl_transition_params.hpp"
+#include "model/boundary_layer/runtime_types.hpp"
+#include "model/boundary_layer/state.hpp"
 #include "model/foil/foil.hpp"
 #include "solver/boundary_layer/boundary_layer_geometry.hpp"
-#include "solver/boundary_layer/boundary_layer_state.hpp"
-#include "solver/boundary_layer/viscous_types.hpp"
 
 class BoundaryLayerRuntimeStateOps {
  public:

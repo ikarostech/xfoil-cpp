@@ -1,10 +1,10 @@
 #pragma once
 
-#include "solver/boundary_layer/boundary_layer_workflow.hpp"
+#include "solver/boundary_layer/workflow/workflow.hpp"
 #include "solver/boundary_layer/boundary_layer_aerodynamics.hpp"
-#include "solver/boundary_layer/boundary_layer_mixed_mode.hpp"
-#include "solver/boundary_layer/boundary_layer_runtime_state.hpp"
-#include "solver/boundary_layer/boundary_layer_solver_ops.hpp"
+#include "solver/boundary_layer/workflow/mixed_mode.hpp"
+#include "solver/boundary_layer/runtime/state.hpp"
+#include "solver/boundary_layer/workflow/solver_ops.hpp"
 
 struct BoundaryLayerSetblContext {
   BoundaryLayerState &state;

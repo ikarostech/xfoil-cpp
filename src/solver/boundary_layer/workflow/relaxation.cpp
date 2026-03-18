@@ -1,6 +1,8 @@
-#include "solver/boundary_layer/boundary_layer_relaxation.hpp"
+#include "solver/boundary_layer/workflow/relaxation.hpp"
 
 #include <algorithm>
+
+#include "model/boundary_layer/physics.hpp"
 
 namespace {
 
@@ -22,15 +24,6 @@ void applyRelaxationLimit(const Eigen::VectorXd &dn, double dhi, double dlo,
   if (min_neg < 0.0) {
     relaxation = std::min(relaxation, dlo / min_neg);
   }
-}
-
-double adjustDisplacementForHkLimit(double displacementThickness,
-                                    double momentumThickness, double msq,
-                                    double hklim) {
-  const double h = displacementThickness / momentumThickness;
-  const auto hkin_result = boundary_layer::hkin(h, msq);
-  const double dh = std::max(0.0, hklim - hkin_result.hk) / hkin_result.hk_h;
-  return displacementThickness + dh * momentumThickness;
 }
 
 } // namespace
@@ -153,8 +146,8 @@ BoundaryLayerSideProfiles BoundaryLayerRelaxationOps::applyBoundaryLayerDelta(
     const double denom = 1.0 - 0.5 * edge_velocity_sq * hstinv;
     const double msq = edge_velocity_sq * hstinv / (gamm1 * denom);
     double dsw = updated.displacementThickness[ibl] - dswaki;
-    dsw = adjustDisplacementForHkLimit(dsw, updated.momentumThickness[ibl], msq,
-                                       hklim);
+    dsw = BoundaryLayerPhysics::adjustDisplacementForHkLimit(
+        dsw, updated.momentumThickness[ibl], msq, hklim);
     updated.displacementThickness[ibl] = dsw + dswaki;
     updated.massFlux[ibl] = updated.displacementThickness[ibl] * edge_velocity;
   }

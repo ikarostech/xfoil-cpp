@@ -1,11 +1,11 @@
-#include "solver/boundary_layer/boundary_layer_workflow.hpp"
+#include "solver/boundary_layer/workflow/workflow.hpp"
 
 #include <algorithm>
 
 #include "model/boundary_layer.hpp"
-#include "solver/boundary_layer/boundary_layer_mixed_mode.hpp"
-#include "solver/boundary_layer/boundary_layer_relaxation.hpp"
-#include "solver/boundary_layer/boundary_layer_solver_ops.hpp"
+#include "solver/boundary_layer/workflow/mixed_mode.hpp"
+#include "solver/boundary_layer/workflow/relaxation.hpp"
+#include "solver/boundary_layer/workflow/solver_ops.hpp"
 
 using BoundaryContext = BoundaryLayerMixedModeStationContext;
 
@@ -37,18 +37,6 @@ BoundaryLayerMixedModeOps makeMixedModeOps(BoundaryLayerWorkflow &workflow) {
                                     workflow.transitionSolver,
                                     makeSolverOps(workflow)});
 }
-} // namespace
-
-double BoundaryLayerWorkflow::adjustDisplacementForHkLimit(
-    double displacementThickness, double momentumThickness, double msq,
-    double hklim) {
-  const double h = displacementThickness / momentumThickness;
-
-  boundary_layer::KineticShapeParameterResult hkin_result =
-      boundary_layer::hkin(h, msq);
-
-  const double dh = std::max(0.0, hklim - hkin_result.hk) / hkin_result.hk_h;
-  return displacementThickness + dh * momentumThickness;
 }
 
 void BoundaryLayerWorkflow::storeStationStateCommon(

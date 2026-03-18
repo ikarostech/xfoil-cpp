@@ -1,10 +1,10 @@
 #pragma once
 
-#include "solver/boundary_layer/boundary_layer_state.hpp"
+#include "model/boundary_layer/state.hpp"
 #include "solver/boundary_layer/boundary_layer_builder.hpp"
 #include "model/coefficient/aero_coefficients.hpp"
 #include "model/flow_state.hpp"
-#include "solver/boundary_layer/boundary_layer_workflow.hpp"
+#include "solver/boundary_layer/workflow/workflow.hpp"
 
 SetblOutputView runBoundaryLayerSetbl(
     BoundaryLayerWorkflow &workflow,

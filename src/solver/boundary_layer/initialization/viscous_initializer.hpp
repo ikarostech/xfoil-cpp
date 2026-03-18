@@ -1,8 +1,8 @@
 #pragma once
 
-#include "solver/boundary_layer/boundary_layer_workflow.hpp"
-#include "solver/boundary_layer/boundary_layer_runtime_state.hpp"
-#include "solver/boundary_layer/boundary_layer_setbl.hpp"
+#include "solver/boundary_layer/workflow/workflow.hpp"
+#include "solver/boundary_layer/runtime/state.hpp"
+#include "solver/boundary_layer/initialization/setbl.hpp"
 
 class BoundaryLayerInitializer {
  public:

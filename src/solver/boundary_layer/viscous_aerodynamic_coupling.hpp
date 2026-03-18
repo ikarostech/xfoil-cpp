@@ -1,6 +1,6 @@
 #pragma once
 
-#include "solver/boundary_layer/boundary_layer_workflow.hpp"
+#include "solver/boundary_layer/workflow/workflow.hpp"
 #include "solver/boundary_layer/boundary_layer_aerodynamics.hpp"
 
 class XFoil;

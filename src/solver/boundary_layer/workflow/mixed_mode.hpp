@@ -1,6 +1,6 @@
 #pragma once
 
-#include "solver/boundary_layer/boundary_layer_solver_ops.hpp"
+#include "solver/boundary_layer/workflow/solver_ops.hpp"
 #include "solver/boundary_layer/viscous_types.hpp"
 
 class BoundaryLayerMixedModeOps {
