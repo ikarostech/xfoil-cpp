@@ -81,6 +81,106 @@ class BoundaryLayerWorkflow {
     bool tesys(const BoundaryLayerSideProfiles &top_profiles, const BoundaryLayerSideProfiles &bottom_profiles,
                const Edge &edge);
 
+    SidePair<BoundaryLayerLattice> &lattice() {
+        return state_store_.lattice;
+    }
+    const SidePair<BoundaryLayerLattice> &lattice() const {
+        return state_store_.lattice;
+    }
+    BoundaryLayerLattice &lattice(int side) {
+        return state_store_.lattice.get(side);
+    }
+    const BoundaryLayerLattice &lattice(int side) const {
+        return state_store_.lattice.get(side);
+    }
+    Eigen::VectorXd &wakeGap() {
+        return state_store_.wgap;
+    }
+    const Eigen::VectorXd &wakeGap() const {
+        return state_store_.wgap;
+    }
+    BoundaryLayerState &state() {
+        return workspace_.state;
+    }
+    const BoundaryLayerState &state() const {
+        return workspace_.state;
+    }
+    BlSystemCoeffs &systemCoefficients() {
+        return workspace_.blc;
+    }
+    const BlSystemCoeffs &systemCoefficients() const {
+        return workspace_.blc;
+    }
+    int &systemSize() {
+        return workspace_.nsys;
+    }
+    int systemSize() const {
+        return workspace_.nsys;
+    }
+    blDiff &transitionSensitivity() {
+        return workspace_.xt;
+    }
+    const blDiff &transitionSensitivity() const {
+        return workspace_.xt;
+    }
+    FlowRegimeEnum &flowRegime() {
+        return state_store_.flowRegime;
+    }
+    const FlowRegimeEnum &flowRegime() const {
+        return state_store_.flowRegime;
+    }
+    BlCompressibilityParams &compressibility() {
+        return state_store_.blCompressibility;
+    }
+    const BlCompressibilityParams &compressibility() const {
+        return state_store_.blCompressibility;
+    }
+    BlReynoldsParams &reynolds() {
+        return state_store_.blReynolds;
+    }
+    const BlReynoldsParams &reynolds() const {
+        return state_store_.blReynolds;
+    }
+    BlTransitionParams &transition() {
+        return state_store_.blTransition;
+    }
+    const BlTransitionParams &transition() const {
+        return state_store_.blTransition;
+    }
+    int &stagnationIndex() {
+        return state_store_.stagnationIndex;
+    }
+    double &stagnationSst() {
+        return state_store_.stagnationSst;
+    }
+
+    void setTransitionLocations(double top, double bottom);
+    void initializeLattices(int size);
+    void initializeWakeGap(int wake_nodes);
+    void assignInviscidEdgeVelocity(const SidePair<Eigen::Matrix2Xd> &velocity);
+    void seedEdgeVelocityFromInviscid();
+    void applyProfiles(const SidePair<BoundaryLayerSideProfiles> &profiles);
+    void applyProfiles(SidePair<BoundaryLayerSideProfiles> &&profiles);
+    StagnationResult findStagnation(const Eigen::Matrix2Xd &surface_vortex,
+                                    const Eigen::VectorXd &spline_length) const;
+    bool buildPanelMap(int point_count, int wake_point_count);
+    bool rebuildArcLengthCoordinates(const Foil &foil);
+    bool buildSystemMapping();
+    SidePair<Eigen::Matrix2Xd>
+    computeInviscidEdgeVelocity(const Eigen::Matrix2Xd &qinv_matrix) const;
+    bool moveStagnation(const Eigen::Matrix2Xd &surface_vortex,
+                        const Eigen::VectorXd &spline_length, const Foil &foil,
+                        const Eigen::Matrix2Xd &qinv_matrix,
+                        StagnationResult &stagnation);
+    int resetSideState(int side, const Foil &foil,
+                       const StagnationResult &stagnation);
+    double computeForcedTransitionArcLength(const Foil &foil,
+                                            const StagnationResult &stagnation,
+                                            int side) const;
+    void runTransitionCheckForMrchue(int side, int stationIndex, double &ami,
+                                     double &cti, int laminarAdvance = 2);
+    double calcHtarg(int stationIndex, int side, bool wake);
+
     BoundaryLayerStateStore &stateStore() {
         return state_store_;
     }

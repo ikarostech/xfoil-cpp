@@ -80,9 +80,7 @@ XFoil::XFoil() : analysis_state_() {
 
   // initialize transition parameters until user changes them
   acrit = 9.0;
-  auto &boundary_layer_lattice = boundaryLayerWorkflow.stateStore().lattice;
-  boundary_layer_lattice.top.transitionLocation = 1.0;
-  boundary_layer_lattice.bottom.transitionLocation = 1.0;
+  boundaryLayerWorkflow.setTransitionLocations(1.0, 1.0);
 
   //---- initialize freestream mach number to zero
   analysis_state_.machType = MachType::CONSTANT;
@@ -101,9 +99,8 @@ bool XFoil::isBLInitialized() const {
   if (!hasPanelMap()) {
     return false;
   }
-  const auto &lattice = boundaryLayerWorkflow.stateStore().lattice;
-  const auto &top = lattice.top;
-  const auto &bottom = lattice.bottom;
+  const auto &top = boundaryLayerWorkflow.lattice(1);
+  const auto &bottom = boundaryLayerWorkflow.lattice(2);
   if (top.stationCount <= 1 || bottom.stationCount <= 1) {
     return false;
   }
@@ -152,9 +149,8 @@ void XFoil::setBLInitialized(bool bInitialized) {
     if (lattice.profiles.massFlux.size() > 0)
       lattice.profiles.massFlux.setZero();
   };
-  auto &lattice = boundaryLayerWorkflow.stateStore().lattice;
-  invalidateSide(lattice.top);
-  invalidateSide(lattice.bottom);
+  invalidateSide(boundaryLayerWorkflow.lattice(1));
+  invalidateSide(boundaryLayerWorkflow.lattice(2));
   invalidateConvergedSolution();
 }
 
@@ -180,15 +176,13 @@ void XFoil::invalidateWakeGeometry() {
 }
 
 void XFoil::invalidatePanelMap() {
-  auto &lattice = boundaryLayerWorkflow.stateStore().lattice;
-  lattice.top.stationCount = 0;
-  lattice.bottom.stationCount = 0;
+  boundaryLayerWorkflow.lattice(1).stationCount = 0;
+  boundaryLayerWorkflow.lattice(2).stationCount = 0;
 }
 
 bool XFoil::hasPanelMap() const {
-  const auto &lattice = boundaryLayerWorkflow.stateStore().lattice;
-  const auto &top = lattice.top;
-  const auto &bottom = lattice.bottom;
+  const auto &top = boundaryLayerWorkflow.lattice(1);
+  const auto &bottom = boundaryLayerWorkflow.lattice(2);
   const int point_count = foil.foil_shape.n;
   const int total_nodes = point_count + foil.wake_shape.n;
 

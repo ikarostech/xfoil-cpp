@@ -1,7 +1,5 @@
 #pragma once
 
-#include <cmath>
-
 #include "solver/boundary_layer/march_access.hpp"
 #include "solver/march/context.hpp"
 
@@ -35,17 +33,7 @@ class WorkflowMarchContext final : public MarchContext {
   }
   void runTransitionCheckForMrchue(int side, int stationIndex, double &ami,
                                    double &cti) override {
-    access_.transitionSolver().trchek();
-    ami = access_.state().station2.param.amplz;
-    if (access_.flowRegime() == FlowRegimeEnum::Transition) {
-      access_.lattice().get(side).profiles.transitionIndex = stationIndex;
-      if (cti <= 0.0) {
-        cti = 0.03;
-        access_.state().station2.param.sz = cti;
-      }
-    } else {
-      access_.lattice().get(side).profiles.transitionIndex = stationIndex + 2;
-    }
+    access_.runTransitionCheckForMrchue(side, stationIndex, ami, cti);
   }
   bool solveTeSystemForCurrentProfiles(const Edge &edge) override {
     return access_.tesys(access_.lattice().top.profiles,
@@ -128,42 +116,7 @@ class WorkflowMarchContext final : public MarchContext {
   bool blkin(BoundaryLayerState &state) override { return access_.blkin(state); }
   bool blsys() override { return access_.blsys(); }
   double calcHtarg(int ibl, int is, bool wake) override {
-    if (ibl < access_.lattice().get(is).profiles.transitionIndex) {
-      return access_.state().station1.hkz.scalar +
-             0.03 * (access_.state().station2.param.xz -
-                     access_.state().station1.param.xz) /
-                 access_.state().station1.param.tz;
-    }
-
-    if (ibl == access_.lattice().get(is).profiles.transitionIndex) {
-      return access_.state().station1.hkz.scalar +
-             (0.03 * (access_.xt().scalar - access_.state().station1.param.xz) -
-              0.15 * (access_.state().station2.param.xz - access_.xt().scalar)) /
-                 access_.state().station1.param.tz;
-    }
-
-    if (wake) {
-      const double cst =
-          0.03 * (access_.state().station2.param.xz -
-                  access_.state().station1.param.xz) /
-          access_.state().station1.param.tz;
-      auto euler = [](double hk2, double hk1, double cst_local) {
-        return hk2 - (hk2 + cst_local * std::pow(hk2 - 1, 3) - hk1) /
-                         (1 + 3 * cst_local * std::pow(hk2 - 1, 2));
-      };
-      access_.state().station2.hkz.scalar = access_.state().station1.hkz.scalar;
-      for (int i = 0; i < 3; ++i) {
-        access_.state().station2.hkz.scalar =
-            euler(access_.state().station2.hkz.scalar,
-                  access_.state().station1.hkz.scalar, cst);
-      }
-      return access_.state().station2.hkz.scalar;
-    }
-
-    return access_.state().station1.hkz.scalar -
-           0.15 * (access_.state().station2.param.xz -
-                   access_.state().station1.param.xz) /
-               access_.state().station1.param.tz;
+    return access_.calcHtarg(ibl, is, wake);
   }
 
  private:

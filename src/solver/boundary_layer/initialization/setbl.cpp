@@ -717,15 +717,8 @@ SetblOutputView runBoundaryLayerSetbl(
     const FlowState &analysis_state, const AeroCoefficients &aero_coeffs,
     double acrit, const Foil &foil, const StagnationResult &stagnation,
     const Eigen::MatrixXd &dij, bool bl_initialized) {
-  const auto context = makeBoundaryLayerSetblContext(workflow);
-  const auto solver_ops = makeBoundaryLayerSetblSolverOps(workflow);
   BoundaryLayerSetblAssembler assembler{
-      BoundaryLayerSetblAccess(context, workflow.boundaryLayerVariablesSolver,
-                               workflow.transitionSolver,
-                               workflow.stateStore().flowRegime,
-                               workflow.stateStore().blCompressibility,
-                               workflow.stateStore().blReynolds,
-                               workflow.stateStore().blTransition, solver_ops),
+      makeBoundaryLayerSetblAccess(workflow),
       makeBoundaryLayerMarchAccess(workflow)};
   return assembler.run(profiles, analysis_state, aero_coeffs, acrit, foil,
                        stagnation, dij, bl_initialized);

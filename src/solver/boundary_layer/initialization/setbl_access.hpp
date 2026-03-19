@@ -6,46 +6,23 @@
 #include "solver/boundary_layer/runtime/state.hpp"
 #include "solver/boundary_layer/workflow/solver_ops.hpp"
 
-struct BoundaryLayerSetblContext {
-  BoundaryLayerState &state;
-  SidePair<BoundaryLayerLattice> &lattice;
-  Eigen::VectorXd &wgap;
-  BlSystemCoeffs &blc;
-  int &nsys;
-};
-
 class BoundaryLayerSetblAccess {
  public:
-  BoundaryLayerSetblAccess(BoundaryLayerSetblContext context,
-                           BoundaryLayerVariablesSolver &variable_solver,
-                           BoundaryLayerTransitionSolver &transition_solver,
-                           FlowRegimeEnum &flow_regime,
-                           BlCompressibilityParams &bl_compressibility,
-                           BlReynoldsParams &bl_reynolds,
-                           BlTransitionParams &bl_transition,
+  BoundaryLayerSetblAccess(BoundaryLayerWorkflow &workflow,
                            BoundaryLayerSolverOps solver_ops)
-      : context_(context),
-        variableSolver_(variable_solver),
-        transitionSolver_(transition_solver),
-        flowRegime_(flow_regime),
-        blCompressibility_(bl_compressibility),
-        blReynolds_(bl_reynolds),
-        blTransition_(bl_transition),
-        solverOps_(solver_ops) {}
+      : workflow_(workflow), solverOps_(solver_ops) {}
 
-  BoundaryLayerSetblContext context() const { return context_; }
-
-  BoundaryLayerState &state() const { return context_.state; }
-  SidePair<BoundaryLayerLattice> &lattice() const { return context_.lattice; }
-  Eigen::VectorXd &wgap() const { return context_.wgap; }
-  BlSystemCoeffs &blc() const { return context_.blc; }
-  FlowRegimeEnum &flowRegime() const { return flowRegime_; }
+  BoundaryLayerState &state() const { return workflow_.state(); }
+  SidePair<BoundaryLayerLattice> &lattice() const { return workflow_.lattice(); }
+  Eigen::VectorXd &wgap() const { return workflow_.wakeGap(); }
+  BlSystemCoeffs &blc() const { return workflow_.systemCoefficients(); }
+  FlowRegimeEnum &flowRegime() const { return workflow_.flowRegime(); }
   BlCompressibilityParams &blCompressibility() const {
-    return blCompressibility_;
+    return workflow_.compressibility();
   }
-  BlReynoldsParams &blReynolds() const { return blReynolds_; }
-  BlTransitionParams &blTransition() const { return blTransition_; }
-  int systemSize() const { return context_.nsys; }
+  BlReynoldsParams &blReynolds() const { return workflow_.reynolds(); }
+  BlTransitionParams &blTransition() const { return workflow_.transition(); }
+  int systemSize() const { return workflow_.systemSize(); }
   FlowRegimeEnum determineRegimeForStation(int side, int stationIndex) const {
     return makeMixedModeOps().determineRegimeForStation(side, stationIndex);
   }
@@ -64,77 +41,51 @@ class BoundaryLayerSetblAccess {
   SkinFrictionCoefficients blmid(FlowRegimeEnum flow_regime) const {
     return solverOps_.blmid(flow_regime);
   }
-  void runTransitionCheck() const { transitionSolver_.trchek(); }
+  void runTransitionCheck() const { workflow_.transitionSolver.trchek(); }
   void solveWakeState() const {
-    context_.state.station2 =
-        variableSolver_.solve(context_.state.station2, FlowRegimeEnum::Wake);
+    workflow_.state().station2 = workflow_.boundaryLayerVariablesSolver.solve(
+        workflow_.state().station2, FlowRegimeEnum::Wake);
   }
   double xifset(const Foil &foil, const StagnationResult &stagnation,
                 int side) const {
-    return BoundaryLayerRuntimeStateOps::xifset(context_.lattice, foil,
-                                                stagnation, side);
+    return workflow_.computeForcedTransitionArcLength(foil, stagnation, side);
   }
   SidePair<Eigen::VectorXd> ueset(const Eigen::MatrixXd &dij) const {
-    return BoundaryLayerAerodynamicsOps::ueset(context_.lattice, dij);
+    return BoundaryLayerAerodynamicsOps::ueset(workflow_.lattice(), dij);
   }
 
  private:
   BoundaryLayerMixedModeOps makeMixedModeOps() const {
-    return BoundaryLayerMixedModeOps({context_.lattice,
-                                      context_.state,
-                                      flowRegime_,
-                                      context_.blc,
-                                      blCompressibility_,
-                                      variableSolver_,
-                                      transitionSolver_,
+    return BoundaryLayerMixedModeOps({workflow_.lattice(),
+                                      workflow_.state(),
+                                      workflow_.flowRegime(),
+                                      workflow_.systemCoefficients(),
+                                      workflow_.compressibility(),
+                                      workflow_.boundaryLayerVariablesSolver,
+                                      workflow_.transitionSolver,
                                       solverOps_});
   }
 
-  BoundaryLayerSetblContext context_;
-  BoundaryLayerVariablesSolver &variableSolver_;
-  BoundaryLayerTransitionSolver &transitionSolver_;
-  FlowRegimeEnum &flowRegime_;
-  BlCompressibilityParams &blCompressibility_;
-  BlReynoldsParams &blReynolds_;
-  BlTransitionParams &blTransition_;
+  BoundaryLayerWorkflow &workflow_;
   BoundaryLayerSolverOps solverOps_;
 };
 
-inline BoundaryLayerSetblContext makeBoundaryLayerSetblContext(
-    BoundaryLayerWorkflow &workflow) {
-  auto &state_store = workflow.stateStore();
-  auto &workspace = workflow.workspace();
-  return {workspace.state,
-          state_store.lattice,
-          state_store.wgap,
-          workspace.blc,
-          workspace.nsys};
-}
-
 inline BoundaryLayerSolverOps makeBoundaryLayerSetblSolverOps(
     BoundaryLayerWorkflow &workflow) {
-  auto &state_store = workflow.stateStore();
-  auto &workspace = workflow.workspace();
   return BoundaryLayerSolverOps({workflow.boundaryLayerVariablesSolver,
                                  workflow.blDiffSolver,
                                  workflow.transitionSolver,
-                                 state_store.flowRegime,
-                                 state_store.blCompressibility,
-                                 state_store.blReynolds,
-                                 state_store.blTransition,
-                                 workspace.state,
-                                 workspace.blc,
-                                 state_store.lattice});
+                                 workflow.flowRegime(),
+                                 workflow.compressibility(),
+                                 workflow.reynolds(),
+                                 workflow.transition(),
+                                 workflow.state(),
+                                 workflow.systemCoefficients(),
+                                 workflow.lattice()});
 }
 
 inline BoundaryLayerSetblAccess makeBoundaryLayerSetblAccess(
     BoundaryLayerWorkflow &workflow) {
-  return BoundaryLayerSetblAccess(makeBoundaryLayerSetblContext(workflow),
-                                  workflow.boundaryLayerVariablesSolver,
-                                  workflow.transitionSolver,
-                                  workflow.stateStore().flowRegime,
-                                  workflow.stateStore().blCompressibility,
-                                  workflow.stateStore().blReynolds,
-                                  workflow.stateStore().blTransition,
+  return BoundaryLayerSetblAccess(workflow,
                                   makeBoundaryLayerSetblSolverOps(workflow));
 }

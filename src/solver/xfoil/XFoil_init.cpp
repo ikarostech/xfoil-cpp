@@ -55,11 +55,8 @@ void XFoil::initializeDataStructures() {
   const int surface_buffer_nodes = point_count + 6;
   const int bl_node_count = point_count + wake_nodes;
   auto &cache = ensureInitState(this);
-  auto &state_store = boundaryLayerWorkflow.stateStore();
-  auto &workspace = boundaryLayerWorkflow.workspace();
 
-  state_store.lattice.top = BoundaryLayerLattice(bl_node_count);
-  state_store.lattice.bottom = BoundaryLayerLattice(bl_node_count);
+  boundaryLayerWorkflow.initializeLattices(bl_node_count);
 
   aerodynamicCache.bij = MatrixXd::Zero(point_count + 1, total_nodes_with_wake);
   aerodynamicCache.dij =
@@ -74,34 +71,31 @@ void XFoil::initializeDataStructures() {
   aerodynamicCache.qinvu = Matrix2Xd::Zero(2, total_nodes_with_wake);
   qvis = VectorXd::Zero(total_nodes_with_wake);
 
-  state_store.wgap = VectorXd::Zero(wake_nodes);
-  workspace.blc.clear();
+  boundaryLayerWorkflow.initializeWakeGap(wake_nodes);
+  boundaryLayerWorkflow.systemCoefficients().clear();
 
   qgamm = VectorXd::Zero(point_count);
 }
 
 void XFoil::resetFlags() {
-  auto &state_store = boundaryLayerWorkflow.stateStore();
   invalidateWakeGeometry();
   invalidatePanelMap();
   invalidateConvergedSolution();
   analysis_state_.viscous = false;
   analysis_state_.controlByAlpha = false;
   foil.edge.sharp = false;
-  state_store.flowRegime = FlowRegimeEnum::Laminar;
+  boundaryLayerWorkflow.flowRegime() = FlowRegimeEnum::Laminar;
 }
 
 void XFoil::resetVariables() {
-  auto &state_store = boundaryLayerWorkflow.stateStore();
-  auto &workspace = boundaryLayerWorkflow.workspace();
-  workspace.state.station1 = blData{};
-  workspace.state.station2 = blData{};
-  state_store.lattice.top.profiles.transitionIndex = 0;
-  state_store.lattice.bottom.profiles.transitionIndex = 0;
-  state_store.lattice.top.stationCount = 0;
-  state_store.lattice.bottom.stationCount = 0;
-  state_store.lattice.top.trailingEdgeIndex = 0;
-  state_store.lattice.bottom.trailingEdgeIndex = 0;
+  boundaryLayerWorkflow.state().station1 = blData{};
+  boundaryLayerWorkflow.state().station2 = blData{};
+  boundaryLayerWorkflow.lattice(1).profiles.transitionIndex = 0;
+  boundaryLayerWorkflow.lattice(2).profiles.transitionIndex = 0;
+  boundaryLayerWorkflow.lattice(1).stationCount = 0;
+  boundaryLayerWorkflow.lattice(2).stationCount = 0;
+  boundaryLayerWorkflow.lattice(1).trailingEdgeIndex = 0;
+  boundaryLayerWorkflow.lattice(2).trailingEdgeIndex = 0;
 
   analysis_state_.qinf = 1.0;
   aero_coeffs_.cl = 0.0;
@@ -111,21 +105,21 @@ void XFoil::resetVariables() {
   sigte = gamte = 0.0;
   avisc = std::numeric_limits<double>::quiet_NaN();
   resetFlags();
-  state_store.stagnationIndex = 0;
-  state_store.stagnationSst = 0.0;
-  state_store.blCompressibility.qinfbl =
-      state_store.blCompressibility.tkbl =
-          state_store.blCompressibility.tkbl_ms = 0.0;
-  state_store.blCompressibility.rstbl =
-      state_store.blCompressibility.rstbl_ms = 0.0;
-  state_store.blCompressibility.hstinv =
-      state_store.blCompressibility.hstinv_ms = 0.0;
-  state_store.blReynolds.reybl =
-      state_store.blReynolds.reybl_ms =
-          state_store.blReynolds.reybl_re = 0.0;
-  state_store.blCompressibility.gm1bl = 0.0;
-  state_store.blTransition.xiforc = 0.0;
-  state_store.blTransition.amcrit = 0.0;
+  boundaryLayerWorkflow.stagnationIndex() = 0;
+  boundaryLayerWorkflow.stagnationSst() = 0.0;
+  boundaryLayerWorkflow.compressibility().qinfbl =
+      boundaryLayerWorkflow.compressibility().tkbl =
+          boundaryLayerWorkflow.compressibility().tkbl_ms = 0.0;
+  boundaryLayerWorkflow.compressibility().rstbl =
+      boundaryLayerWorkflow.compressibility().rstbl_ms = 0.0;
+  boundaryLayerWorkflow.compressibility().hstinv =
+      boundaryLayerWorkflow.compressibility().hstinv_ms = 0.0;
+  boundaryLayerWorkflow.reynolds().reybl =
+      boundaryLayerWorkflow.reynolds().reybl_ms =
+          boundaryLayerWorkflow.reynolds().reybl_re = 0.0;
+  boundaryLayerWorkflow.compressibility().gm1bl = 0.0;
+  boundaryLayerWorkflow.transition().xiforc = 0.0;
+  boundaryLayerWorkflow.transition().amcrit = 0.0;
   auto &cache = ensureInitState(this);
   cache.amax = 0.0;
   analysis_state_.alpha = 0.0;

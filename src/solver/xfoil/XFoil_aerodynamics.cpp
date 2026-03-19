@@ -16,7 +16,7 @@ double XFoil::cdcalc() const {
   if (!(analysis_state_.viscous && isBLInitialized())) {
     return 0.0;
   }
-  const auto &lattice = boundaryLayerWorkflow.stateStore().lattice;
+  const auto &lattice = boundaryLayerWorkflow.lattice();
 
   const double beta = std::sqrt(std::max(
       0.0, 1.0 - analysis_state_.currentMach * analysis_state_.currentMach));

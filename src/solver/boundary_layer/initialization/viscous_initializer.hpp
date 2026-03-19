@@ -19,27 +19,21 @@ class BoundaryLayerInitializer {
 
   static void applyOutput(BoundaryLayerWorkflow &workflow,
                           SetblOutputView &output) {
-    auto &state_store = workflow.stateStore();
-    state_store.blCompressibility = output.blCompressibility;
-    state_store.blReynolds = output.blReynolds;
-    state_store.lattice.top.profiles = std::move(output.profiles.top);
-    state_store.lattice.bottom.profiles = std::move(output.profiles.bottom);
-    state_store.flowRegime = output.flowRegime;
-    state_store.blTransition = output.blTransition;
+    workflow.compressibility() = output.blCompressibility;
+    workflow.reynolds() = output.blReynolds;
+    workflow.applyProfiles(std::move(output.profiles));
+    workflow.flowRegime() = output.flowRegime;
+    workflow.transition() = output.blTransition;
   }
 
   static int resetSideState(BoundaryLayerWorkflow &workflow, int side,
                             const Foil &foil,
                             const StagnationResult &stagnation) {
-    auto &state_store = workflow.stateStore();
-    return BoundaryLayerRuntimeStateOps::resetSideState(
-        state_store.lattice, state_store.blTransition, state_store.flowRegime, side,
-        foil, stagnation);
+    return workflow.resetSideState(side, foil, stagnation);
   }
 
   static double xifset(const BoundaryLayerWorkflow &workflow, const Foil &foil,
                        const StagnationResult &stagnation, int side) {
-    return BoundaryLayerRuntimeStateOps::xifset(workflow.stateStore().lattice, foil,
-                                                stagnation, side);
+    return workflow.computeForcedTransitionArcLength(foil, stagnation, side);
   }
 };
