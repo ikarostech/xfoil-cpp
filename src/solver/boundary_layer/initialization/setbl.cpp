@@ -9,6 +9,11 @@
 #include "infrastructure/logger.hpp"
 #include "solver/boundary_layer/march_access.hpp"
 #include "solver/boundary_layer/initialization/setbl_access.hpp"
+#include "solver/boundary_layer/initialization/setbl_edge_velocity.hpp"
+#include "solver/boundary_layer/initialization/setbl_jacobian.hpp"
+#include "solver/boundary_layer/initialization/setbl_side_sweep.hpp"
+#include "solver/boundary_layer/initialization/setbl_station_update.hpp"
+#include "solver/boundary_layer/initialization/setbl_trailing_edge.hpp"
 #include "solver/march/march.hpp"
 #include "solver/march/workflow_context.hpp"
 
@@ -16,35 +21,7 @@ namespace {
 
 using Eigen::VectorXd;
 
-struct LeTeSensitivities {
-  SidePair<VectorXd> ule_m;
-  SidePair<VectorXd> ute_m;
-};
-
-struct EdgeVelocitySensitivityResult {
-  SidePair<VectorXd> edgeVelocity;
-  SidePair<VectorXd> outputEdgeVelocity;
-  SidePair<int> jvte{0, 0};
-  SidePair<double> dule{0.0, 0.0};
-  SidePair<VectorXd> ule_m;
-  SidePair<VectorXd> ute_m;
-  SidePair<double> ule_a{0.0, 0.0};
-};
-
-struct SetblStation {
-  VectorXd u_m;
-  VectorXd d_m;
-  double u_a = 0.0;
-  double d_a = 0.0;
-  double due = 0.0;
-  double dds = 0.0;
-  double xi_ule = 0.0;
-
-  void resizeSystem(int system_size) {
-    u_m = VectorXd::Zero(system_size);
-    d_m = VectorXd::Zero(system_size);
-  }
-};
+using SetblStation = setbl_jacobian::StationState;
 
 struct SetblSideData {
   SidePair<int> jvte{0, 0};
@@ -64,32 +41,7 @@ struct SetblSideData {
   }
 };
 
-struct StationPrimaryVars {
-  double xsi = 0.0;
-  double uei = 0.0;
-  double thi = 0.0;
-  double mdi = 0.0;
-  double dsi = 0.0;
-  double dswaki = 0.0;
-  double ami = 0.0;
-  double cti = 0.0;
-};
-
-struct TeWakeCoefficients {
-  double tte = 0.0;
-  double cte = 0.0;
-  double dte = 0.0;
-  double tte_tte1 = 0.0;
-  double tte_tte2 = 0.0;
-  double dte_mte1 = 0.0;
-  double dte_ute1 = 0.0;
-  double dte_mte2 = 0.0;
-  double dte_ute2 = 0.0;
-  double cte_cte1 = 0.0;
-  double cte_cte2 = 0.0;
-  double cte_tte1 = 0.0;
-  double cte_tte2 = 0.0;
-};
+using StationPrimaryVars = setbl_station_update::StationPrimaryVars;
 
 struct SimilarityStationCoefficients {
   VectorXd u_m1;
@@ -104,37 +56,7 @@ struct SideSweepInitResult {
   double xiforc = 0.0;
 };
 
-struct StationUpdateResult {
-  BoundaryLayerState state;
-  VectorXd u_m2;
-  VectorXd d_m2;
-  double u_a2 = 0.0;
-  double d_a2 = 0.0;
-  double due2 = 0.0;
-  double dds2 = 0.0;
-};
-
-struct TeWakeUpdateResult {
-  bool isStartOfWake = false;
-  VectorXd d_m1;
-  double due1 = 0.0;
-  double dds1 = 0.0;
-  TeWakeCoefficients coeffs{};
-};
-
-struct TeWakeJacobianAdjustments {
-  double vz[3][2] = {{0.0, 0.0}, {0.0, 0.0}, {0.0, 0.0}};
-  Eigen::Matrix<double, 3, 2> vb = Eigen::Matrix<double, 3, 2>::Zero();
-};
-
-struct StationArraysAdvanceResult {
-  VectorXd u_m1;
-  VectorXd d_m1;
-  double u_a1 = 0.0;
-  double d_a1 = 0.0;
-  double due1 = 0.0;
-  double dds1 = 0.0;
-};
+using StationUpdateResult = setbl_station_update::StationUpdateResult;
 
 struct SetblWorkingState {
   std::array<SetblStation, 2> stations{};
@@ -188,15 +110,19 @@ class BoundaryLayerSetblAssembler {
   }
 
  private:
+  void resizeStation(SetblStation &station, int system_size) const {
+    station.u_m = VectorXd::Zero(system_size);
+    station.d_m = VectorXd::Zero(system_size);
+  }
+
   SimilarityStationCoefficients resetSimilarityStationCoefficients(
       const VectorXd &u_m1, const VectorXd &d_m1) const {
     SimilarityStationCoefficients result;
     result.u_m1 = u_m1;
     result.d_m1 = d_m1;
     for (int js = 1; js <= 2; ++js) {
-      for (int jbl = 0; jbl < access_.lattice().get(js).stationCount - 1;
-           ++jbl) {
-        const int jv = access_.lattice().get(js).stationToSystem[jbl];
+      for (int jbl = 0; jbl < access_.stationCount(js) - 1; ++jbl) {
+        const int jv = access_.stationToSystem(js, jbl);
         result.u_m1[jv] = 0.0;
         result.d_m1[jv] = 0.0;
       }
@@ -215,7 +141,7 @@ class BoundaryLayerSetblAssembler {
       int side, int station, bool station_is_wake, const SetblOutputView &output,
       double ami, double cti) const {
     StationPrimaryVars vars;
-    vars.xsi = access_.lattice().get(side).arcLengthCoordinates[station];
+    vars.xsi = access_.arcLengthCoordinate(side, station);
 
     if (station < output.profiles.get(side).transitionIndex) {
       vars.ami = output.profiles.get(side).skinFrictionCoeff[station];
@@ -227,12 +153,10 @@ class BoundaryLayerSetblAssembler {
 
     vars.uei = output.profiles.get(side).edgeVelocity[station];
     vars.thi = output.profiles.get(side).momentumThickness[station];
-    vars.mdi = output.profiles.get(side).massFlux[station];
-    vars.dsi = vars.mdi / vars.uei;
+    vars.dsi = output.profiles.get(side).massFlux[station] / vars.uei;
 
     if (station_is_wake) {
-      const int wake_index = station - access_.lattice().get(side).trailingEdgeIndex;
-      vars.dswaki = access_.wgap()[wake_index - 1];
+      vars.dswaki = access_.wakeGapAt(side, station);
     }
 
     return vars;
@@ -243,38 +167,9 @@ class BoundaryLayerSetblAssembler {
       const SidePair<VectorXd> &usav, const SetblOutputView &output,
       const BoundaryLayerState &base_state, int system_size,
       const Eigen::MatrixXd &dij) {
-    StationUpdateResult result;
-    const double d2_m2 = 1.0 / vars.uei;
-    const double d2_u2 = -vars.dsi / vars.uei;
-
-    result.u_m2 = VectorXd::Zero(system_size);
-    result.d_m2 = VectorXd::Zero(system_size);
-    for (int js = 1; js <= 2; ++js) {
-      for (int jbl = 0; jbl < access_.lattice().get(js).stationCount - 1;
-           ++jbl) {
-        const int jv = access_.lattice().get(js).stationToSystem[jbl];
-        result.u_m2[jv] =
-            -access_.lattice().get(side).panelInfluenceFactor[station] *
-            access_.lattice().get(js).panelInfluenceFactor[jbl] *
-            dij(access_.lattice().get(side).stationToPanel[station],
-                access_.lattice().get(js).stationToPanel[jbl]);
-        result.d_m2[jv] = d2_u2 * result.u_m2[jv];
-      }
-    }
-    result.d_m2[iv] += d2_m2;
-
-    result.u_a2 =
-        access_.lattice().get(side).inviscidEdgeVelocityMatrix(1, station);
-    result.d_a2 = d2_u2 * result.u_a2;
-    result.due2 = output.profiles.get(side).edgeVelocity[station] - usav.get(side)[station];
-    result.dds2 = d2_u2 * result.due2;
-
-    result.state = base_state;
-    result.state.current() = access_.blprv(
-        result.state.current(), vars.xsi, vars.ami, vars.cti, vars.thi,
-        vars.dsi, vars.dswaki, vars.uei);
-    access_.blkin(result.state);
-    return result;
+    return setbl_station_update::SetblStationUpdateOps::update(
+        access_, side, station, iv, vars, usav, output.profiles, base_state,
+        system_size, dij);
   }
 
   void buildTransitionLog(bool station_is_transition_candidate,
@@ -283,218 +178,58 @@ class BoundaryLayerSetblAssembler {
         flow_regime != FlowRegimeEnum::Transition) {
       std::stringstream ss;
       ss << "setbl: xtr???  n1=" << access_.state().station1.param.amplz
-         << " n2=" << access_.state().station2.param.amplz << ":\n";
+         << " n2=" << access_.currentAmplification() << ":\n";
       Logger::instance().write(ss.str());
     }
   }
 
-  TeWakeUpdateResult computeTeWakeCoefficients(
+  setbl_te::TeWakeUpdateResult computeTeWakeCoefficients(
       int side, int station, const SidePair<VectorXd> &usav,
       const SidePair<VectorXd> &ute_m, const SidePair<int> &jvte,
       const VectorXd &d_m1_template, const SetblOutputView &output,
       const Edge &edge) const {
-    TeWakeUpdateResult result;
-    if (station != access_.lattice().get(side).trailingEdgeIndex + 1) {
-      return result;
-    }
-    result.isStartOfWake = true;
-
-    result.coeffs.tte =
-        output.profiles.get(1)
-            .momentumThickness[access_.lattice().top.trailingEdgeIndex] +
-        output.profiles.get(2)
-            .momentumThickness[access_.lattice().bottom.trailingEdgeIndex];
-    result.coeffs.dte =
-        output.profiles.get(1)
-            .displacementThickness[access_.lattice().top.trailingEdgeIndex] +
-        output.profiles.get(2).displacementThickness
-            [access_.lattice().bottom.trailingEdgeIndex] +
-        edge.ante;
-    result.coeffs.cte =
-        (output.profiles.get(1)
-             .skinFrictionCoeff[access_.lattice().top.trailingEdgeIndex] *
-             output.profiles.get(1)
-                 .momentumThickness[access_.lattice().top.trailingEdgeIndex] +
-         output.profiles.get(2)
-                 .skinFrictionCoeff[access_.lattice().bottom.trailingEdgeIndex] *
-             output.profiles.get(2).momentumThickness
-                 [access_.lattice().bottom.trailingEdgeIndex]) /
-        result.coeffs.tte;
-
-    result.coeffs.tte_tte1 = 1.0;
-    result.coeffs.tte_tte2 = 1.0;
-    result.coeffs.dte_mte1 =
-        1.0 / output.profiles.top.edgeVelocity[access_.lattice().top.trailingEdgeIndex];
-    result.coeffs.dte_ute1 =
-        -output.profiles.get(1)
-             .displacementThickness[access_.lattice().top.trailingEdgeIndex] /
-        output.profiles.top.edgeVelocity[access_.lattice().top.trailingEdgeIndex];
-    result.coeffs.dte_mte2 =
-        1.0 / output.profiles.bottom.edgeVelocity[access_.lattice().bottom.trailingEdgeIndex];
-    result.coeffs.dte_ute2 =
-        -output.profiles.get(2)
-             .displacementThickness[access_.lattice().bottom.trailingEdgeIndex] /
-        output.profiles.bottom.edgeVelocity[access_.lattice().bottom.trailingEdgeIndex];
-    result.coeffs.cte_cte1 =
-        output.profiles.get(1)
-            .momentumThickness[access_.lattice().top.trailingEdgeIndex] /
-        result.coeffs.tte;
-    result.coeffs.cte_cte2 =
-        output.profiles.get(2)
-            .momentumThickness[access_.lattice().bottom.trailingEdgeIndex] /
-        result.coeffs.tte;
-    result.coeffs.cte_tte1 =
-        (output.profiles.get(1)
-             .skinFrictionCoeff[access_.lattice().top.trailingEdgeIndex] -
-         result.coeffs.cte) /
-        result.coeffs.tte;
-    result.coeffs.cte_tte2 =
-        (output.profiles.get(2)
-             .skinFrictionCoeff[access_.lattice().bottom.trailingEdgeIndex] -
-         result.coeffs.cte) /
-        result.coeffs.tte;
-
-    result.d_m1 = d_m1_template;
-    for (int js = 1; js <= 2; ++js) {
-      for (int jbl = 0; jbl < access_.lattice().get(js).stationCount - 1;
-           ++jbl) {
-        const int jv = access_.lattice().get(js).stationToSystem[jbl];
-        result.d_m1[jv] = result.coeffs.dte_ute1 * ute_m.get(1)[jv] +
-                          result.coeffs.dte_ute2 * ute_m.get(2)[jv];
-      }
-    }
-    result.d_m1[jvte.get(1)] += result.coeffs.dte_mte1;
-    result.d_m1[jvte.get(2)] += result.coeffs.dte_mte2;
-
-    result.dds1 =
-        result.coeffs.dte_ute1 *
-            (output.profiles.top.edgeVelocity[access_.lattice().top.trailingEdgeIndex] -
-             usav.top[access_.lattice().top.trailingEdgeIndex]) +
-        result.coeffs.dte_ute2 *
-            (output.profiles.bottom.edgeVelocity[access_.lattice().bottom.trailingEdgeIndex] -
-             usav.bottom[access_.lattice().bottom.trailingEdgeIndex]);
-
-    return result;
+    return setbl_te::SetblTrailingEdgeOps::computeWakeUpdate(
+        access_, side, station, usav, ute_m, jvte, d_m1_template,
+        output.profiles, edge);
   }
 
-  TeWakeJacobianAdjustments computeTeWakeJacobianAdjustments(
-      const TeWakeCoefficients &coeffs) const {
-    TeWakeJacobianAdjustments result;
-    result.vz[0][0] = access_.blc().a1(0, 0) * coeffs.cte_cte1;
-    result.vz[0][1] = access_.blc().a1(0, 0) * coeffs.cte_tte1 +
-                      access_.blc().a1(0, 1) * coeffs.tte_tte1;
-    result.vb(0, 0) = access_.blc().a1(0, 0) * coeffs.cte_cte2;
-    result.vb(0, 1) = access_.blc().a1(0, 0) * coeffs.cte_tte2 +
-                      access_.blc().a1(0, 1) * coeffs.tte_tte2;
-
-    result.vz[1][0] = access_.blc().a1(1, 0) * coeffs.cte_cte1;
-    result.vz[1][1] = access_.blc().a1(1, 0) * coeffs.cte_tte1 +
-                      access_.blc().a1(1, 1) * coeffs.tte_tte1;
-    result.vb(1, 0) = access_.blc().a1(1, 0) * coeffs.cte_cte2;
-    result.vb(1, 1) = access_.blc().a1(1, 0) * coeffs.cte_tte2 +
-                      access_.blc().a1(1, 1) * coeffs.tte_tte2;
-
-    result.vz[2][0] = access_.blc().a1(2, 0) * coeffs.cte_cte1;
-    result.vz[2][1] = access_.blc().a1(2, 0) * coeffs.cte_tte1 +
-                      access_.blc().a1(2, 1) * coeffs.tte_tte1;
-    result.vb(2, 0) = access_.blc().a1(2, 0) * coeffs.cte_cte2;
-    result.vb(2, 1) = access_.blc().a1(2, 0) * coeffs.cte_tte2 +
-                      access_.blc().a1(2, 1) * coeffs.tte_tte2;
-    return result;
+  setbl_te::TeWakeJacobianAdjustments computeTeWakeJacobianAdjustments(
+      const setbl_te::TeWakeCoefficients &coeffs) const {
+    return setbl_te::SetblTrailingEdgeOps::computeJacobianAdjustments(access_,
+                                                                      coeffs);
   }
 
-  EdgeVelocitySensitivityResult prepareEdgeVelocityAndSensitivities(
+  setbl_edge_velocity::EdgeVelocitySensitivityResult
+  prepareEdgeVelocityAndSensitivities(
       SidePairRef<const BoundaryLayerSideProfiles> profiles,
       const Eigen::MatrixXd &dij, int nsys) const {
-    EdgeVelocitySensitivityResult result;
-
-    result.edgeVelocity = access_.ueset(dij);
-    result.outputEdgeVelocity.top = profiles.top.edgeVelocity;
-    result.outputEdgeVelocity.bottom = profiles.bottom.edgeVelocity;
-
-    result.jvte.top = access_.lattice().top.stationToSystem
-        [access_.lattice().top.trailingEdgeIndex];
-    result.jvte.bottom = access_.lattice().bottom.stationToSystem
-        [access_.lattice().bottom.trailingEdgeIndex];
-
-    result.dule.top = result.outputEdgeVelocity.top[0] - result.edgeVelocity.top[0];
-    result.dule.bottom =
-        result.outputEdgeVelocity.bottom[0] - result.edgeVelocity.bottom[0];
-
-    const auto le_te_sensitivities = computeLeTeSensitivities(
-        access_.lattice().get(1).stationToPanel[0],
-        access_.lattice().get(2).stationToPanel[0],
-        access_.lattice().get(1)
-            .stationToPanel[access_.lattice().top.trailingEdgeIndex],
-        access_.lattice().get(2)
-            .stationToPanel[access_.lattice().bottom.trailingEdgeIndex],
-        nsys, dij);
-    result.ule_m = le_te_sensitivities.ule_m;
-    result.ute_m = le_te_sensitivities.ute_m;
-
-    result.ule_a.top = access_.lattice().get(1).inviscidEdgeVelocityMatrix(1, 0);
-    result.ule_a.bottom = access_.lattice().get(2).inviscidEdgeVelocityMatrix(1, 0);
-    return result;
+    return setbl_edge_velocity::SetblEdgeVelocityOps::prepare(access_, profiles,
+                                                              dij, nsys);
   }
 
   void assembleBlJacobianForStation(
       int iv, int nsys, const std::array<SetblStation, 2> &setblStations,
       const SetblSideData &setblSides, bool controlByAlpha, double re_clmr,
       double msq_clmr, SetblOutputView &output) {
-    output.bl_newton_system.vb[iv] = access_.blc().a1.block(0, 0, 3, 2);
-    output.bl_newton_system.va[iv] = access_.blc().a2.block(0, 0, 3, 2);
-
-    Eigen::Matrix<double, 3, 4> A;
-    A.col(0) = access_.blc().a1.col(3).head<3>();
-    A.col(1) = access_.blc().a1.col(2).head<3>();
-    A.col(2) = access_.blc().a2.col(3).head<3>();
-    A.col(3) = access_.blc().a2.col(2).head<3>();
-
-    Eigen::Matrix<double, 4, 2> B;
-    B << setblStations[0].due, setblStations[0].u_a, setblStations[0].dds,
-        setblStations[0].d_a, setblStations[1].due, setblStations[1].u_a,
-        setblStations[1].dds, setblStations[1].d_a;
-    const Eigen::Vector3d ax =
-        (access_.blc().a1.col(4) + access_.blc().a2.col(4) + access_.blc().d_xi)
-            .head<3>();
-    const Eigen::RowVector2d xi =
-        setblStations[0].xi_ule *
-            Eigen::RowVector2d(setblSides.dule.get(1), setblSides.ule_a.get(1)) +
-        setblStations[1].xi_ule *
-            Eigen::RowVector2d(setblSides.dule.get(2), setblSides.ule_a.get(2));
-    output.bl_newton_system.vdel[iv] = A * B + ax * xi;
-
-    for (int jv = 1; jv < nsys; ++jv) {
-      const Eigen::Vector4d m(setblStations[0].u_m(jv), setblStations[0].d_m(jv),
-                              setblStations[1].u_m(jv), setblStations[1].d_m(jv));
-      const double xi_m = setblStations[0].xi_ule * setblSides.ule_m.get(1)(jv) +
-                          setblStations[1].xi_ule * setblSides.ule_m.get(2)(jv);
-      const Eigen::Vector3d vm = A * m + ax * xi_m;
-      output.bl_newton_system.vm.at(0, jv, iv) = vm[0];
-      output.bl_newton_system.vm.at(1, jv, iv) = vm[1];
-      output.bl_newton_system.vm.at(2, jv, iv) = vm[2];
+    std::array<setbl_jacobian::StationState, 2> stations;
+    for (int i = 0; i < 2; ++i) {
+      stations[i].u_m = setblStations[i].u_m;
+      stations[i].d_m = setblStations[i].d_m;
+      stations[i].u_a = setblStations[i].u_a;
+      stations[i].d_a = setblStations[i].d_a;
+      stations[i].due = setblStations[i].due;
+      stations[i].dds = setblStations[i].dds;
+      stations[i].xi_ule = setblStations[i].xi_ule;
     }
 
-    if (controlByAlpha) {
-      output.bl_newton_system.vdel[iv].col(1).head<3>() =
-          access_.blc().d_re.head(3) * re_clmr +
-          access_.blc().d_msq.head(3) * msq_clmr;
-    }
-  }
+    setbl_jacobian::SideState sideState;
+    sideState.ule_m = setblSides.ule_m;
+    sideState.ule_a = setblSides.ule_a;
+    sideState.dule = setblSides.dule;
 
-  StationArraysAdvanceResult advanceStationArrays(const VectorXd &u_m2,
-                                                  const VectorXd &d_m2,
-                                                  double u_a2, double d_a2,
-                                                  double due2,
-                                                  double dds2) const {
-    StationArraysAdvanceResult result;
-    result.u_m1 = u_m2;
-    result.d_m1 = d_m2;
-    result.u_a1 = u_a2;
-    result.d_a1 = d_a2;
-    result.due1 = due2;
-    result.dds1 = dds2;
-    return result;
+    setbl_jacobian::SetblJacobianOps::assembleForStation(
+        access_, iv, nsys, stations, sideState, controlByAlpha, re_clmr,
+        msq_clmr, output.bl_newton_system);
   }
 
   BoundaryLayerReferenceParams computeBlReferenceParams(
@@ -530,14 +265,13 @@ class BoundaryLayerSetblAssembler {
     output.bl_newton_system.va.resize(access_.systemSize(), zero);
     output.bl_newton_system.vb.resize(access_.systemSize(), zero);
     output.bl_newton_system.vdel.resize(access_.systemSize(), zero);
-    stations[0].resizeSystem(access_.systemSize());
-    stations[1].resizeSystem(access_.systemSize());
+    resizeStation(stations[0], access_.systemSize());
+    resizeStation(stations[1], access_.systemSize());
     sideData.resizeSystem(access_.systemSize());
   }
 
   void initializeSetblProfiles(SetblOutputView &output) const {
-    output.profiles.top = access_.lattice().top.profiles;
-    output.profiles.bottom = access_.lattice().bottom.profiles;
+    access_.copyProfilesTo(output.profiles);
   }
 
   void initializeSetblEdgeVelocityState(
@@ -574,11 +308,10 @@ class BoundaryLayerSetblAssembler {
     output.blTransition.xiforc = sweep_init.xiforc;
     access_.blTransition().xiforc = output.blTransition.xiforc;
 
-    for (int station = 0; station < access_.lattice().get(side).stationCount - 1;
+    for (int station = 0; station < access_.stationCount(side) - 1;
          ++station) {
-      const int iv = access_.lattice().get(side).stationToSystem[station];
-      const bool station_is_wake =
-          station > access_.lattice().get(side).trailingEdgeIndex;
+      const int iv = access_.stationToSystem(side, station);
+      const bool station_is_wake = station > access_.trailingEdgeIndex(side);
       const bool station_is_transition_candidate =
           station == output.profiles.get(side).transitionIndex;
 
@@ -599,11 +332,11 @@ class BoundaryLayerSetblAssembler {
       stations[1].d_a = station_update.d_a2;
       stations[1].due = station_update.due2;
       stations[1].dds = station_update.dds2;
-      access_.state() = station_update.state;
+      access_.replaceState(station_update.state);
 
       if (station_is_transition_candidate) {
         access_.runTransitionCheck();
-        ami = access_.state().station2.param.amplz;
+        ami = access_.currentAmplification();
       }
       buildTransitionLog(station_is_transition_candidate, output.flowRegime);
 
@@ -611,8 +344,7 @@ class BoundaryLayerSetblAssembler {
           side, station, sideData.usav, sideData.ute_m, sideData.jvte,
           stations[0].d_m, output, foil.edge);
       if (te_update.isStartOfWake) {
-        access_.tesys(access_.lattice().top.profiles,
-                      access_.lattice().bottom.profiles, foil.edge);
+        access_.solveTeSystemForCurrentProfiles(foil.edge);
         stations[0].d_m = te_update.d_m1;
         stations[0].due = te_update.due1;
         stations[0].dds = te_update.dds1;
@@ -621,15 +353,10 @@ class BoundaryLayerSetblAssembler {
       }
 
       output.profiles.get(side).skinFrictionCoeffHistory[station] =
-          access_.state().station2.cqz.scalar;
+          access_.currentSkinFrictionHistory();
 
-      if (side == 1) {
-        stations[0].xi_ule = stagnation.sst_go;
-        stations[1].xi_ule = -stagnation.sst_gp;
-      } else {
-        stations[0].xi_ule = -stagnation.sst_go;
-        stations[1].xi_ule = stagnation.sst_gp;
-      }
+      setbl_side_sweep::SetblSideSweepOps::assignXiUle(side, stagnation,
+                                                       stations);
 
       assembleBlJacobianForStation(iv, access_.systemSize(), stations, sideData,
                                    controlByAlpha, re_clmr, msq_clmr, output);
@@ -644,65 +371,12 @@ class BoundaryLayerSetblAssembler {
         output.bl_newton_system.vb[iv] = te_jacobian.vb;
       }
 
-      if (output.flowRegime == FlowRegimeEnum::Transition) {
-        output.profiles.get(side).transitionIndex = station;
-        access_.lattice().get(side).profiles.transitionIndex = station;
-        output.flowRegime = FlowRegimeEnum::Turbulent;
-        access_.flowRegime() = output.flowRegime;
-      }
-
-      if (station == access_.lattice().get(side).trailingEdgeIndex) {
-        output.flowRegime = FlowRegimeEnum::Wake;
-        access_.flowRegime() = output.flowRegime;
-        access_.solveWakeState();
-        access_.blmid(FlowRegimeEnum::Wake);
-      }
-
-      const auto advance = advanceStationArrays(
-          stations[1].u_m, stations[1].d_m, stations[1].u_a, stations[1].d_a,
-          stations[1].due, stations[1].dds);
-      stations[0].u_m = advance.u_m1;
-      stations[0].d_m = advance.d_m1;
-      stations[0].u_a = advance.u_a1;
-      stations[0].d_a = advance.d_a1;
-      stations[0].due = advance.due1;
-      stations[0].dds = advance.dds1;
-      access_.state().stepbl();
+      setbl_side_sweep::SetblSideSweepOps::updateRegimeAfterStation(
+          access_, side, station, output);
+      setbl_side_sweep::SetblSideSweepOps::advanceStationWindow(stations[1],
+                                                                stations[0],
+                                                                access_);
     }
-  }
-
-  LeTeSensitivities computeLeTeSensitivities(int ile1, int ile2, int ite1,
-                                             int ite2, int nsys,
-                                             const Eigen::MatrixXd &dij) const {
-    LeTeSensitivities sensitivities;
-    sensitivities.ule_m.top = VectorXd::Zero(nsys);
-    sensitivities.ule_m.bottom = VectorXd::Zero(nsys);
-    sensitivities.ute_m.top = VectorXd::Zero(nsys);
-    sensitivities.ute_m.bottom = VectorXd::Zero(nsys);
-    for (int js = 1; js <= 2; ++js) {
-      for (int jbl = 0; jbl < access_.lattice().get(js).stationCount - 1;
-           ++jbl) {
-        const int panel_index = access_.lattice().get(js).stationToPanel[jbl];
-        const int system_index = access_.lattice().get(js).stationToSystem[jbl];
-        const double panel_factor =
-            access_.lattice().get(js).panelInfluenceFactor[jbl];
-        sensitivities.ule_m.top[system_index] =
-            -access_.lattice().top.panelInfluenceFactor[0] * panel_factor *
-            dij(ile1, panel_index);
-        sensitivities.ule_m.bottom[system_index] =
-            -access_.lattice().bottom.panelInfluenceFactor[0] * panel_factor *
-            dij(ile2, panel_index);
-        sensitivities.ute_m.top[system_index] =
-            -access_.lattice().top
-                 .panelInfluenceFactor[access_.lattice().top.trailingEdgeIndex] *
-            panel_factor * dij(ite1, panel_index);
-        sensitivities.ute_m.bottom[system_index] =
-            -access_.lattice().bottom.panelInfluenceFactor
-                 [access_.lattice().bottom.trailingEdgeIndex] *
-            panel_factor * dij(ite2, panel_index);
-      }
-    }
-    return sensitivities;
   }
 
   BoundaryLayerSetblAccess access_;
