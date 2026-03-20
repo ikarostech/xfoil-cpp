@@ -61,8 +61,8 @@ void XFoil::updateTrailingEdgeState() {
   const int node_count = foil.foil_shape.n;
 
   if (node_count < 2) {
-    sigte = 0.0;
-    gamte = 0.0;
+    inviscid_state_.sigmaTe = 0.0;
+    inviscid_state_.gammaTe = 0.0;
     return;
   }
 
@@ -77,19 +77,22 @@ void XFoil::updateTrailingEdgeState() {
     sds = foil.edge.aste * inv_dste;
   }
 
-  if (surface_vortex.rows() > 0 && surface_vortex.cols() >= node_count) {
+  if (inviscid_state_.surfaceVortex.rows() > 0 &&
+      inviscid_state_.surfaceVortex.cols() >= node_count) {
     const double surface_delta =
-        surface_vortex(0, 0) - surface_vortex(0, node_count - 1);
-    sigte = 0.5 * surface_delta * scs;
-    gamte = -0.5 * surface_delta * sds;
+        inviscid_state_.surfaceVortex(0, 0) -
+        inviscid_state_.surfaceVortex(0, node_count - 1);
+    inviscid_state_.sigmaTe = 0.5 * surface_delta * scs;
+    inviscid_state_.gammaTe = -0.5 * surface_delta * sds;
   } else {
-    sigte = 0.0;
-    gamte = 0.0;
+    inviscid_state_.sigmaTe = 0.0;
+    inviscid_state_.gammaTe = 0.0;
   }
 }
 
 bool XFoil::xyWake() {
-  if (!foil.xyWake(foil.wake_shape.n, aerodynamicCache.gamu, surface_vortex,
+  if (!foil.xyWake(foil.wake_shape.n, inviscid_state_.cache.gamu,
+                   inviscid_state_.surfaceVortex,
                    analysis_state_.alpha, analysis_state_.qinf)) {
     return false;
   }

@@ -3,32 +3,8 @@
 #include <algorithm>
 #include <limits>
 #include <numbers>
-#include <unordered_map>
 
 // Initialization and global state related member functions split from XFoil.cpp
-
-namespace {
-struct InitState {
-  double amax = 0.0;
-  std::vector<double> qf0;
-  std::vector<double> qf1;
-  std::vector<double> qf2;
-  std::vector<double> qf3;
-};
-
-using InitStateRegistry = std::unordered_map<const XFoil *, InitState>;
-
-InitStateRegistry &initStateRegistry() {
-  static InitStateRegistry state;
-  return state;
-}
-
-InitState &ensureInitState(const XFoil *xfoil) {
-  return initStateRegistry()[xfoil];
-}
-} // namespace
-
-void ClearInitState(const XFoil &xfoil) { initStateRegistry().erase(&xfoil); }
 
 bool XFoil::initialize() {
 
@@ -42,8 +18,10 @@ bool XFoil::initialize() {
   setVAccel(0.01);
 
   //---- set minf, reinf, based on current cl-dependence
-  minf_cl = getActualMach(1.0, analysis_state_.machType);
-  reinf_cl = getActualReynolds(1.0, analysis_state_.reynoldsType);
+  operating_point_coupling_.machPerLift =
+      getActualMach(1.0, analysis_state_.machType);
+  operating_point_coupling_.reynoldsPerLift =
+      getActualReynolds(1.0, analysis_state_.reynoldsType);
 
   return true;
 }
@@ -54,27 +32,27 @@ void XFoil::initializeDataStructures() {
   const int total_nodes_with_wake = point_count + wake_nodes;
   const int surface_buffer_nodes = point_count + 6;
   const int bl_node_count = point_count + wake_nodes;
-  auto &cache = ensureInitState(this);
 
   boundaryLayer.initializeLattices(bl_node_count);
 
-  aerodynamicCache.bij = MatrixXd::Zero(point_count + 1, total_nodes_with_wake);
-  aerodynamicCache.dij =
+  inviscid_state_.cache.bij =
+      MatrixXd::Zero(point_count + 1, total_nodes_with_wake);
+  inviscid_state_.cache.dij =
       MatrixXd::Zero(total_nodes_with_wake, total_nodes_with_wake);
-  aerodynamicCache.gamu = Matrix2Xd::Zero(2, point_count + 1);
-  surface_vortex = Matrix2Xd::Zero(2, point_count);
-  cache.qf0.assign(surface_buffer_nodes + 1, 0.0);
-  cache.qf1.assign(surface_buffer_nodes + 1, 0.0);
-  cache.qf2.assign(surface_buffer_nodes + 1, 0.0);
-  cache.qf3.assign(surface_buffer_nodes + 1, 0.0);
-  qinv_matrix = Matrix2Xd::Zero(2, total_nodes_with_wake);
-  aerodynamicCache.qinvu = Matrix2Xd::Zero(2, total_nodes_with_wake);
-  qvis = VectorXd::Zero(total_nodes_with_wake);
+  inviscid_state_.cache.gamu = Matrix2Xd::Zero(2, point_count + 1);
+  inviscid_state_.surfaceVortex = Matrix2Xd::Zero(2, point_count);
+  init_state_.qf0.assign(surface_buffer_nodes + 1, 0.0);
+  init_state_.qf1.assign(surface_buffer_nodes + 1, 0.0);
+  init_state_.qf2.assign(surface_buffer_nodes + 1, 0.0);
+  init_state_.qf3.assign(surface_buffer_nodes + 1, 0.0);
+  inviscid_state_.qinvMatrix = Matrix2Xd::Zero(2, total_nodes_with_wake);
+  inviscid_state_.cache.qinvu = Matrix2Xd::Zero(2, total_nodes_with_wake);
+  viscous_state_.qvis = VectorXd::Zero(total_nodes_with_wake);
 
   boundaryLayer.initializeWakeGap(wake_nodes);
   boundaryLayer.systemCoefficients().clear();
 
-  qgamm = VectorXd::Zero(point_count);
+  inviscid_state_.qgamm = VectorXd::Zero(point_count);
 }
 
 void XFoil::resetFlags() {
@@ -95,11 +73,10 @@ void XFoil::resetVariables() {
   aero_coeffs_.cm = 0.0;
   aero_coeffs_.cd = 0.0;
   aero_coeffs_.xcp = 0.0;
-  sigte = gamte = 0.0;
-  avisc = std::numeric_limits<double>::quiet_NaN();
+  inviscid_state_.sigmaTe = inviscid_state_.gammaTe = 0.0;
+  viscous_state_.convergedAlpha = std::numeric_limits<double>::quiet_NaN();
   resetFlags();
-  auto &cache = ensureInitState(this);
-  cache.amax = 0.0;
+  init_state_.amax = 0.0;
   analysis_state_.alpha = 0.0;
   analysis_state_.clspec = 0.0;
   foil.edge.ante = 0.0;
@@ -107,10 +84,11 @@ void XFoil::resetVariables() {
   foil.edge.dste = 0.0;
   analysis_state_.currentMach = 0.0;
   analysis_state_.currentRe = 0.0;
-  minf_cl = reinf_cl = 0.0;
+  operating_point_coupling_.machPerLift = 0.0;
+  operating_point_coupling_.reynoldsPerLift = 0.0;
   aero_coeffs_.cl_alf = 0.0;
   aero_coeffs_.cl_msq = 0.0;
-  stagnation = StagnationResult{};
+  viscous_state_.stagnation = StagnationResult{};
 }
 
 double XFoil::getActualMach(double cls, MachType mach_control) {
@@ -156,14 +134,18 @@ double XFoil::getActualReynolds(double cls, ReynoldsType reynolds_control) {
 }
 
 bool XFoil::setMach() {
-  minf_cl = getActualMach(1.0, analysis_state_.machType);
-  reinf_cl = getActualReynolds(1.0, analysis_state_.reynoldsType);
+  operating_point_coupling_.machPerLift =
+      getActualMach(1.0, analysis_state_.machType);
+  operating_point_coupling_.reynoldsPerLift =
+      getActualReynolds(1.0, analysis_state_.reynoldsType);
   const int point_count = foil.foil_shape.n;
   cpi =
-      InviscidSolver::cpcalc(point_count, qinv_matrix.row(0).transpose(),
+      InviscidSolver::cpcalc(point_count,
+                             inviscid_state_.qinvMatrix.row(0).transpose(),
                              analysis_state_.qinf, analysis_state_.currentMach);
   if (analysis_state_.viscous) {
-    cpv = InviscidSolver::cpcalc(point_count + foil.wake_shape.n, qvis,
+    cpv = InviscidSolver::cpcalc(point_count + foil.wake_shape.n,
+                                 viscous_state_.qvis,
                                  analysis_state_.qinf,
                                  analysis_state_.currentMach);
   }

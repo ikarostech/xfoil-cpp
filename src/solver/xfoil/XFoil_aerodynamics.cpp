@@ -54,7 +54,8 @@ XFoil::ClComputation XFoil::clcalc(Vector2d ref) const {
   const int point_count = foil.foil_shape.n;
 
   const PressureCoefficientResult cp_first = computePressureCoefficient(
-      surface_vortex(0, 0), surface_vortex(1, 0), compressibility);
+      inviscid_state_.surfaceVortex(0, 0), inviscid_state_.surfaceVortex(1, 0),
+      compressibility);
 
   double cpg1 = cp_first.cp;
   double cpg1_msq = cp_first.cp_msq;
@@ -63,7 +64,8 @@ XFoil::ClComputation XFoil::clcalc(Vector2d ref) const {
   for (int i = 0; i < point_count; i++) {
     const int ip = (i + 1) % point_count;
     const PressureCoefficientResult cp_next = computePressureCoefficient(
-        surface_vortex(0, ip), surface_vortex(1, ip), compressibility);
+        inviscid_state_.surfaceVortex(0, ip),
+        inviscid_state_.surfaceVortex(1, ip), compressibility);
 
     const double cpg2 = cp_next.cp;
     const double cpg2_msq = cp_next.cp_msq;
@@ -121,8 +123,8 @@ Matrix2Xd XFoil::gamqv() const {
   const int point_count = foil.foil_shape.n;
   Matrix2Xd updated_surface_vortex(2, point_count);
   for (int i = 0; i < point_count; i++) {
-    updated_surface_vortex(0, i) = qvis[i];
-    updated_surface_vortex(1, i) = qinv_matrix(1, i);
+    updated_surface_vortex(0, i) = viscous_state_.qvis[i];
+    updated_surface_vortex(1, i) = inviscid_state_.qinvMatrix(1, i);
   }
   return updated_surface_vortex;
 }
@@ -133,7 +135,7 @@ Matrix2Xd XFoil::gamqv() const {
  *     in specal or speccl for specified alpha or cl.
  *-------------------------------------------------------------- */
 FoilAerodynamicCache XFoil::ggcalc() {
-  FoilAerodynamicCache cache = aerodynamicCache;
+  FoilAerodynamicCache cache = inviscid_state_.cache;
 
   Logger::instance().write("   Calculating unit vorticity distributions ...\n");
 
@@ -149,7 +151,8 @@ FoilAerodynamicCache XFoil::ggcalc() {
     PsiResult psi_result =
         psilin(foil, i, foil.foil_shape.points.col(i),
                foil.foil_shape.normal_vector.col(i), true, cache.gamu,
-               surface_vortex, analysis_state_.alpha, analysis_state_.qinf,
+               inviscid_state_.surfaceVortex, analysis_state_.alpha,
+               analysis_state_.qinf,
                foil.foil_shape.angle_panel);
     //------ dres/dgamma
     dpsi_dgam.row(i).head(foil.foil_shape.n) = psi_result.dzdg;
@@ -198,7 +201,8 @@ FoilAerodynamicCache XFoil::ggcalc() {
 
     //----- set velocity component along bisector line
     PsiResult psi_result =
-        psilin(foil, -1, bis, normal_bis, true, cache.gamu, surface_vortex,
+        psilin(foil, -1, bis, normal_bis, true, cache.gamu,
+               inviscid_state_.surfaceVortex,
                analysis_state_.alpha, analysis_state_.qinf,
                foil.foil_shape.angle_panel);
 

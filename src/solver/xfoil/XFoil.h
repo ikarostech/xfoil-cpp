@@ -57,6 +57,35 @@ class InviscidSolver;
 
 class XFoil {
   public:
+    struct InitState {
+        double amax = 0.0;
+        std::vector<double> qf0;
+        std::vector<double> qf1;
+        std::vector<double> qf2;
+        std::vector<double> qf3;
+    };
+
+    struct OperatingPointCouplingState {
+        double machPerLift = 0.0;
+        double reynoldsPerLift = 0.0;
+    };
+
+    struct InviscidFieldState {
+        Eigen::Matrix2Xd surfaceVortex;
+        FoilAerodynamicCache cache;
+        double gammaTe = 0.0;
+        double sigmaTe = 0.0;
+        Eigen::Matrix2Xd qinvMatrix;
+        Eigen::VectorXd qgamm;
+    };
+
+    struct ViscousIterationState {
+        StagnationResult stagnation;
+        Eigen::VectorXd qvis;
+        double convergedAlpha = 0.0;
+        double convergedMach = 0.0;
+    };
+
     XFoil();
     virtual ~XFoil();
     XFoil(const XFoil &)            = delete;
@@ -230,6 +259,18 @@ class XFoil {
     void invalidateConvergedSolution();
     void invalidateWakeGeometry();
     void invalidatePanelMap();
+    void ensureWakeTrajectoryAndInviscidVelocity();
+    void ensurePanelMapAndBoundaryLayerGeometry();
+    void assignCurrentInviscidEdgeVelocity();
+    void ensureBoundaryLayerEdgeSeed();
+    void restoreConvergedOperatingPoint(int point_count, int total_nodes_with_wake);
+    void ensureSourceInfluenceMatrix();
+    SetblOutputView initializeBoundaryLayerNewtonSystem();
+    Matrix3x2dVector solveBoundaryLayerNewtonStep(const SetblOutputView &setbl_output) const;
+    void applyBoundaryLayerIterationUpdate(const UpdateResult &update_result);
+    void updateFreestreamForIteration(const UpdateResult &update_result);
+    void refreshViscousFlowFields();
+    void finalizeViscousIteration(const UpdateResult &update_result, double eps1);
     bool hasPanelMap() const;
     bool hasAirfoilInfluenceMatrix() const;
     bool hasWakeInfluenceMatrix() const;
@@ -254,23 +295,16 @@ class XFoil {
     AeroCoefficients aero_coeffs_;
     double acrit;
     VectorXd cpi, cpv;
-    double avisc, mvisc;
-    VectorXd qgamm;
+    InitState init_state_;
+    OperatingPointCouplingState operating_point_coupling_;
+    InviscidFieldState inviscid_state_;
+    ViscousIterationState viscous_state_;
 
     Foil foil;
     BoundaryLayer boundaryLayer;
     const Vector2d cmref = Vector2d{0.25, 0.0};
 
   public: // private:
-    double minf_cl, reinf_cl;
-
-    Matrix2Xd surface_vortex;
-    FoilAerodynamicCache aerodynamicCache;
-    StagnationResult stagnation;
-    double gamte, sigte;
-    Matrix2Xd qinv_matrix;
-    VectorXd qvis;
-
     /*
     c
     c-    sccon  =  shear coefficient lag constant

@@ -12,7 +12,6 @@
 #include <cstring>
 #include <iomanip>
 #include <numbers>
-#include <sstream>
 #include <utility>
 using Eigen::Matrix2Xd;
 using Eigen::MatrixXd;
@@ -41,7 +40,7 @@ bool XFoil::initXFoilGeometry(int fn, const double *fx, const double *fy) {
   }
 
   abcopy(buffer_points);
-  aerodynamicCache = ggcalc();
+  inviscid_state_.cache = ggcalc();
   return true;
 }
 
@@ -94,15 +93,16 @@ bool XFoil::qdcalc() {
 
   if (!hasAirfoilInfluenceMatrix()) {
     //----- calculate source influence matrix for airfoil surface
-    aerodynamicCache.bij.block(0, 0, point_count + 1, point_count) =
-        aerodynamicCache.psi_gamma_lu
+    inviscid_state_.cache.bij.block(0, 0, point_count + 1, point_count) =
+        inviscid_state_.cache.psi_gamma_lu
             .solve(
-                aerodynamicCache.bij.block(0, 0, point_count + 1, point_count))
+                inviscid_state_.cache.bij.block(0, 0, point_count + 1,
+                                                point_count))
             .eval();
 
     //------- store resulting dgam/dsig = dqtan/dsig vector
-    aerodynamicCache.dij.block(0, 0, point_count, point_count) =
-        aerodynamicCache.bij.block(0, 0, point_count, point_count);
+    inviscid_state_.cache.dij.block(0, 0, point_count, point_count) =
+        inviscid_state_.cache.bij.block(0, 0, point_count, point_count);
   }
 
   //---- set up coefficient matrix of dpsi/dm on airfoil surface
@@ -110,27 +110,29 @@ bool XFoil::qdcalc() {
     PsiResult psi_result = pswlin(foil, i, foil.foil_shape.points.col(i),
                                   foil.foil_shape.normal_vector.col(i),
                                   foil.wake_shape.angle_panel);
-    aerodynamicCache.bij.row(i).segment(point_count, foil.wake_shape.n) =
+    inviscid_state_.cache.bij.row(i).segment(point_count, foil.wake_shape.n) =
         -psi_result.dzdm.segment(point_count, foil.wake_shape.n).transpose();
   }
 
   //---- set up kutta condition (no direct source influence)
 
-  aerodynamicCache.bij.row(point_count)
+  inviscid_state_.cache.bij.row(point_count)
       .segment(point_count, foil.wake_shape.n)
       .setZero();
 
   //---- multiply by inverse of factored dpsi/dgam matrix
-  aerodynamicCache.bij.block(0, point_count, point_count + 1,
-                             foil.wake_shape.n) =
-      aerodynamicCache.psi_gamma_lu
-          .solve(aerodynamicCache.bij.block(0, point_count, point_count + 1,
-                                            foil.wake_shape.n))
+  inviscid_state_.cache.bij.block(0, point_count, point_count + 1,
+                                  foil.wake_shape.n) =
+      inviscid_state_.cache.psi_gamma_lu
+          .solve(inviscid_state_.cache.bij.block(0, point_count,
+                                                 point_count + 1,
+                                                 foil.wake_shape.n))
           .eval();
   //---- set the source influence matrix for the wake sources
-  aerodynamicCache.dij.block(0, point_count, point_count, foil.wake_shape.n) =
-      aerodynamicCache.bij.block(0, point_count, point_count,
-                                 foil.wake_shape.n);
+  inviscid_state_.cache.dij.block(0, point_count, point_count,
+                                  foil.wake_shape.n) =
+      inviscid_state_.cache.bij.block(0, point_count, point_count,
+                                      foil.wake_shape.n);
 
   //**** now we need to calculate the influence of sources on the wake
   // velocities
@@ -143,32 +145,34 @@ bool XFoil::qdcalc() {
     PsiResult psi_result =
         psilin(foil, i, foil.wake_shape.points.col(i),
                foil.wake_shape.normal_vector.col(i), true,
-               aerodynamicCache.gamu, surface_vortex, analysis_state_.alpha,
-               analysis_state_.qinf, foil.wake_shape.angle_panel);
+               inviscid_state_.cache.gamu, inviscid_state_.surfaceVortex,
+               analysis_state_.alpha, analysis_state_.qinf,
+               foil.wake_shape.angle_panel);
     cij.row(iw) = psi_result.dqdg.head(point_count).transpose();
-    aerodynamicCache.dij.row(i).head(point_count) =
+    inviscid_state_.cache.dij.row(i).head(point_count) =
         psi_result.dqdm.head(point_count).transpose();
     //------ wake contribution
     psi_result = pswlin(foil, i, foil.wake_shape.points.col(i),
                         foil.wake_shape.normal_vector.col(i),
                         foil.wake_shape.angle_panel);
-    aerodynamicCache.dij.row(i).segment(point_count, foil.wake_shape.n) =
+    inviscid_state_.cache.dij.row(i).segment(point_count, foil.wake_shape.n) =
         psi_result.dqdm.segment(point_count, foil.wake_shape.n).transpose();
   }
 
   //---- add on effect of all sources on airfoil vorticity which effects wake
   // qtan
-  aerodynamicCache.dij.block(point_count, 0, foil.wake_shape.n, point_count) +=
-      cij * aerodynamicCache.dij.topLeftCorner(point_count, point_count);
+  inviscid_state_.cache.dij.block(point_count, 0, foil.wake_shape.n,
+                                  point_count) +=
+      cij * inviscid_state_.cache.dij.topLeftCorner(point_count, point_count);
 
-  aerodynamicCache.dij.block(point_count, point_count, foil.wake_shape.n,
-                             foil.wake_shape.n) +=
-      cij * aerodynamicCache.bij.block(0, point_count, point_count,
-                                       foil.wake_shape.n);
+  inviscid_state_.cache.dij.block(point_count, point_count, foil.wake_shape.n,
+                                  foil.wake_shape.n) +=
+      cij * inviscid_state_.cache.bij.block(0, point_count, point_count,
+                                            foil.wake_shape.n);
 
   //---- make sure first wake point has same velocity as trailing edge
-  aerodynamicCache.dij.row(point_count) =
-      aerodynamicCache.dij.row(point_count - 1);
+  inviscid_state_.cache.dij.row(point_count) =
+      inviscid_state_.cache.dij.row(point_count - 1);
 
   return true;
 }
@@ -219,7 +223,9 @@ double XFoil::computeAcChange(double clnew, double cl_current, double cl_target,
                               double cl_ac, double cl_a, double cl_ms) const {
   if (analysis_state_.controlByAlpha) {
     return (clnew - cl_current) /
-           (1.0 - cl_ac - cl_ms * 2.0 * analysis_state_.currentMach * minf_cl);
+           (1.0 - cl_ac -
+            cl_ms * 2.0 * analysis_state_.currentMach *
+                operating_point_coupling_.machPerLift);
   }
   return (clnew - cl_target) / (0.0 - cl_ac - cl_a);
 }
@@ -346,77 +352,14 @@ bool XFoil::viscal() {
   const int point_count = foil.foil_shape.n;
   const int total_nodes_with_wake = point_count + foil.wake_shape.n;
 
-  //---- calculate wake trajectory from current inviscid solution if necessary
-  xyWake();
-
-  //	---- set velocities on wake from airfoil vorticity for alpha=0, 90
-  aerodynamicCache.qinvu =
-      qwcalc(foil, aerodynamicCache.qinvu, aerodynamicCache.gamu,
-             surface_vortex, analysis_state_.alpha, analysis_state_.qinf);
-
-  //	---- set velocities on airfoil and wake for initial alpha
-  qinv_matrix =
-      InviscidSolver::qiset(analysis_state_.alpha, aerodynamicCache.qinvu);
-
-  if (!hasPanelMap()) {
-    //	----- locate stagnation point arc length position and panel index
-    const auto stagnation = boundaryLayer.findStagnation(
-        surface_vortex, foil.foil_shape.spline_length);
-    if (!stagnation.found) {
-      Logger::instance().write(
-          "stfind: Stagnation point not found. Continuing ...\n");
-    }
-    boundaryLayer.setStagnationState(stagnation);
-    this->stagnation = stagnation;
-
-    //	----- set  bl position -> panel position  pointers
-    boundaryLayer.buildPanelMap(point_count, foil.wake_shape.n);
-
-    //	----- calculate surface arc length array for current stagnation point
-    // location
-    boundaryLayer.rebuildArcLengthCoordinates(foil);
-
-    //	----- set  bl position -> system line  pointers
-    boundaryLayer.buildSystemMapping();
-  }
-
-  //	---- set inviscid bl edge velocity inviscidEdgeVelocityMatrix from
-  // qinv_matrix
-  {
-    const auto inviscid_edge_velocity =
-        boundaryLayer.computeInviscidEdgeVelocity(qinv_matrix);
-    boundaryLayer.assignInviscidEdgeVelocity(inviscid_edge_velocity);
-  }
-
-  if (!isBLInitialized()) {
-    boundaryLayer.seedEdgeVelocityFromInviscid();
-  }
-
+  ensureWakeTrajectoryAndInviscidVelocity();
+  ensurePanelMapAndBoundaryLayerGeometry();
+  assignCurrentInviscidEdgeVelocity();
+  ensureBoundaryLayerEdgeSeed();
   if (hasConvergedSolution()) {
-    //	----- set correct cl if converged point exists
-    qvis = qvfue(qvis);
-
-    if (analysis_state_.viscous) {
-      cpv = InviscidSolver::cpcalc(total_nodes_with_wake, qvis,
-                                   analysis_state_.qinf,
-                                   analysis_state_.currentMach);
-      cpi = InviscidSolver::cpcalc(
-          total_nodes_with_wake, qinv_matrix.row(0).transpose(),
-          analysis_state_.qinf, analysis_state_.currentMach);
-    } else {
-      cpi = InviscidSolver::cpcalc(point_count, qinv_matrix.row(0).transpose(),
-                                   analysis_state_.qinf,
-                                   analysis_state_.currentMach);
-    }
-
-    const auto cl_result = clcalc(cmref);
-    applyClComputation(cl_result);
-    aero_coeffs_.cd = cdcalc();
+    restoreConvergedOperatingPoint(point_count, total_nodes_with_wake);
   }
-
-  //	---- set up source influence matrix if it doesn't exist
-  if (!hasAirfoilInfluenceMatrix() || !hasWakeInfluenceMatrix())
-    qdcalc();
+  ensureSourceInfluenceMatrix();
 
   return true;
 }
@@ -425,71 +368,162 @@ XFoil::ViscalEndResult XFoil::ViscalEnd() {
   ViscalEndResult result;
   const int total_nodes_with_wake = foil.foil_shape.n + foil.wake_shape.n;
   result.inviscidCp = InviscidSolver::cpcalc(
-      total_nodes_with_wake, qinv_matrix.row(0).transpose(),
+      total_nodes_with_wake, inviscid_state_.qinvMatrix.row(0).transpose(),
       analysis_state_.qinf, analysis_state_.currentMach);
   result.viscousCp =
-      InviscidSolver::cpcalc(total_nodes_with_wake, qvis, analysis_state_.qinf,
-                             analysis_state_.currentMach);
+      InviscidSolver::cpcalc(total_nodes_with_wake, viscous_state_.qvis,
+                             analysis_state_.qinf, analysis_state_.currentMach);
   return result;
 }
 
 bool XFoil::ViscousIter() {
   //	Performs one iteration
-  std::stringstream ss;
   double eps1 = 0.0001;
 
-  auto setbl_output = BoundaryLayerInitializer::run(
-      boundaryLayer, analysis_state_, aero_coeffs_, acrit, foil, stagnation,
-      aerodynamicCache.dij, isBLInitialized());
-  BoundaryLayerInitializer::applyOutput(
-      boundaryLayer,
-      setbl_output); //	------ fill newton system for bl variables
+  auto setbl_output = initializeBoundaryLayerNewtonSystem();
+  auto vdel = solveBoundaryLayerNewtonStep(setbl_output);
+  const auto update_result = update(vdel);
+  applyBoundaryLayerIterationUpdate(update_result);
+  updateFreestreamForIteration(update_result);
+  refreshViscousFlowFields();
+  finalizeViscousIteration(update_result, eps1);
 
+  return true;
+}
+
+void XFoil::ensureWakeTrajectoryAndInviscidVelocity() {
+  xyWake();
+  inviscid_state_.cache.qinvu =
+      qwcalc(foil, inviscid_state_.cache.qinvu, inviscid_state_.cache.gamu,
+             inviscid_state_.surfaceVortex, analysis_state_.alpha,
+             analysis_state_.qinf);
+  inviscid_state_.qinvMatrix =
+      InviscidSolver::qiset(analysis_state_.alpha, inviscid_state_.cache.qinvu);
+}
+
+void XFoil::ensurePanelMapAndBoundaryLayerGeometry() {
+  if (hasPanelMap()) {
+    return;
+  }
+
+  const auto new_stagnation = boundaryLayer.findStagnation(
+      inviscid_state_.surfaceVortex, foil.foil_shape.spline_length);
+  if (!new_stagnation.found) {
+    Logger::instance().write(
+        "stfind: Stagnation point not found. Continuing ...\n");
+  }
+
+  boundaryLayer.setStagnationState(new_stagnation);
+  viscous_state_.stagnation = new_stagnation;
+  boundaryLayer.buildPanelMap(foil.foil_shape.n, foil.wake_shape.n);
+  boundaryLayer.rebuildArcLengthCoordinates(foil);
+  boundaryLayer.buildSystemMapping();
+}
+
+void XFoil::assignCurrentInviscidEdgeVelocity() {
+  const auto inviscid_edge_velocity =
+      boundaryLayer.computeInviscidEdgeVelocity(inviscid_state_.qinvMatrix);
+  boundaryLayer.assignInviscidEdgeVelocity(inviscid_edge_velocity);
+}
+
+void XFoil::ensureBoundaryLayerEdgeSeed() {
+  if (!isBLInitialized()) {
+    boundaryLayer.seedEdgeVelocityFromInviscid();
+  }
+}
+
+void XFoil::restoreConvergedOperatingPoint(int point_count,
+                                           int total_nodes_with_wake) {
+  viscous_state_.qvis = qvfue(viscous_state_.qvis);
+
+  if (analysis_state_.viscous) {
+    cpv = InviscidSolver::cpcalc(total_nodes_with_wake, viscous_state_.qvis,
+                                 analysis_state_.qinf,
+                                 analysis_state_.currentMach);
+    cpi = InviscidSolver::cpcalc(total_nodes_with_wake,
+                                 inviscid_state_.qinvMatrix.row(0).transpose(),
+                                 analysis_state_.qinf,
+                                 analysis_state_.currentMach);
+  } else {
+    cpi = InviscidSolver::cpcalc(point_count,
+                                 inviscid_state_.qinvMatrix.row(0).transpose(),
+                                 analysis_state_.qinf,
+                                 analysis_state_.currentMach);
+  }
+
+  const auto cl_result = clcalc(cmref);
+  applyClComputation(cl_result);
+  aero_coeffs_.cd = cdcalc();
+}
+
+void XFoil::ensureSourceInfluenceMatrix() {
+  if (!hasAirfoilInfluenceMatrix() || !hasWakeInfluenceMatrix()) {
+    qdcalc();
+  }
+}
+
+SetblOutputView XFoil::initializeBoundaryLayerNewtonSystem() {
+  auto setbl_output = BoundaryLayerInitializer::run(
+      boundaryLayer, analysis_state_, aero_coeffs_, acrit, foil,
+      viscous_state_.stagnation, inviscid_state_.cache.dij, isBLInitialized());
+  BoundaryLayerInitializer::applyOutput(boundaryLayer, setbl_output);
+  return setbl_output;
+}
+
+XFoil::Matrix3x2dVector
+XFoil::solveBoundaryLayerNewtonStep(const SetblOutputView &setbl_output) const {
   Blsolve solver;
   SidePair<int> ivte{
       boundaryLayer.trailingEdgeSystemIndex(1),
       boundaryLayer.trailingEdgeSystemIndex(2)};
-  auto vdel = solver.solve(boundaryLayer.systemSize(), ivte, VAccel(),
-                           setbl_output.bl_newton_system);
+  return solver.solve(boundaryLayer.systemSize(), ivte, VAccel(),
+                      setbl_output.bl_newton_system);
+}
 
-  const auto update_result = update(vdel);
+void XFoil::applyBoundaryLayerIterationUpdate(
+    const UpdateResult &update_result) {
   boundaryLayer.applyProfiles(update_result.profiles);
+}
 
-  if (update_result.analysis_state
-          .controlByAlpha) { //	------- set new freestream mach, re from new cl
-    minf_cl = getActualMach(update_result.aero_coeffs.cl,
-                            update_result.analysis_state.machType);
-    reinf_cl = getActualReynolds(update_result.aero_coeffs.cl,
-                                 update_result.analysis_state.reynoldsType);
-  } else { //	------- set new inviscid speeds qinv_matrix and
-           // inviscidEdgeVelocityMatrix for new alpha
-    qinv_matrix = InviscidSolver::qiset(update_result.analysis_state.alpha,
-                                        aerodynamicCache.qinvu);
-    const auto inviscid_edge_velocity =
-        boundaryLayer.computeInviscidEdgeVelocity(qinv_matrix);
-    boundaryLayer.assignInviscidEdgeVelocity(inviscid_edge_velocity);
+void XFoil::updateFreestreamForIteration(const UpdateResult &update_result) {
+  if (update_result.analysis_state.controlByAlpha) {
+    operating_point_coupling_.machPerLift =
+        getActualMach(update_result.aero_coeffs.cl,
+                      update_result.analysis_state.machType);
+    operating_point_coupling_.reynoldsPerLift =
+        getActualReynolds(update_result.aero_coeffs.cl,
+                          update_result.analysis_state.reynoldsType);
+    return;
   }
 
-  qvis = qvfue(
-      qvis); //	------ calculate edge velocities
-                                            // qvis(.) from edgeVelocity(..)
-  surface_vortex = gamqv(); //	------ set gam distribution from qvis
-  boundaryLayer.moveStagnation(
-      surface_vortex, foil.foil_shape.spline_length, foil, qinv_matrix,
-      stagnation); //	------ relocate stagnation point
+  inviscid_state_.qinvMatrix =
+      InviscidSolver::qiset(update_result.analysis_state.alpha,
+                            inviscid_state_.cache.qinvu);
+  assignCurrentInviscidEdgeVelocity();
+}
 
-  //	------ set updated cl,cd
+void XFoil::refreshViscousFlowFields() {
+  viscous_state_.qvis = qvfue(viscous_state_.qvis);
+  inviscid_state_.surfaceVortex = gamqv();
+  boundaryLayer.moveStagnation(inviscid_state_.surfaceVortex,
+                               foil.foil_shape.spline_length, foil,
+                               inviscid_state_.qinvMatrix,
+                               viscous_state_.stagnation);
+
   const auto cl_result = clcalc(cmref);
   applyClComputation(cl_result);
   aero_coeffs_.cd = cdcalc();
+}
 
-  if (update_result.rmsbl < eps1) {
-    avisc = update_result.analysis_state.alpha;
-    mvisc = update_result.analysis_state.currentMach;
-    Logger::instance().write("----------CONVERGED----------\n\n");
+void XFoil::finalizeViscousIteration(const UpdateResult &update_result,
+                                     double eps1) {
+  if (update_result.rmsbl >= eps1) {
+    return;
   }
 
-  return true;
+  viscous_state_.convergedAlpha = update_result.analysis_state.alpha;
+  viscous_state_.convergedMach = update_result.analysis_state.currentMach;
+  Logger::instance().write("----------CONVERGED----------\n\n");
 }
 
 bool XFoil::isValidFoilAngles(Matrix2Xd points) {

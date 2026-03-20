@@ -26,8 +26,6 @@
 #include <limits>
 using namespace Eigen;
 
-void ClearInitState(const XFoil &xfoil);
-
 XFoil::CompressibilityParams XFoil::buildCompressibilityParams() const {
   const double current_mach = analysis_state_.currentMach;
   const double beta = std::sqrt(1.0 - current_mach * current_mach);
@@ -76,7 +74,7 @@ XFoil::computePressureCoefficient(double tangential_velocity,
 
 XFoil::XFoil() : analysis_state_() {
   // fortran seems to initializes variables to 0
-  mvisc = 0.0;
+  viscous_state_.convergedMach = 0.0;
 
   // initialize transition parameters until user changes them
   acrit = 9.0;
@@ -93,7 +91,7 @@ XFoil::XFoil() : analysis_state_() {
   analysis_state_.referenceRe = 0.0;
 }
 
-XFoil::~XFoil() { ClearInitState(*this); }
+XFoil::~XFoil() = default;
 
 bool XFoil::isBLInitialized() const {
   if (!hasPanelMap()) {
@@ -111,34 +109,23 @@ void XFoil::setBLInitialized(bool bInitialized) {
   if (bInitialized) {
     return;
   }
-  auto invalidateSide = [](BoundaryLayerLattice &lattice) {
-    if (lattice.profiles.edgeVelocity.size() > 0)
-      lattice.profiles.edgeVelocity.setZero();
-    if (lattice.profiles.skinFrictionCoeff.size() > 0)
-      lattice.profiles.skinFrictionCoeff.setZero();
-    if (lattice.profiles.momentumThickness.size() > 0)
-      lattice.profiles.momentumThickness.setZero();
-    if (lattice.profiles.displacementThickness.size() > 0)
-      lattice.profiles.displacementThickness.setZero();
-    if (lattice.profiles.massFlux.size() > 0)
-      lattice.profiles.massFlux.setZero();
-  };
   boundaryLayer.zeroProfiles();
   invalidateConvergedSolution();
 }
 
 void XFoil::invalidateConvergedSolution() {
-  avisc = std::numeric_limits<double>::quiet_NaN();
-  mvisc = std::numeric_limits<double>::quiet_NaN();
+  viscous_state_.convergedAlpha = std::numeric_limits<double>::quiet_NaN();
+  viscous_state_.convergedMach = std::numeric_limits<double>::quiet_NaN();
 }
 
 void XFoil::invalidateWakeGeometry() {
   const int point_count = foil.foil_shape.n;
   const int wake_point_count = foil.wake_shape.n;
   if (const int total_nodes = point_count + wake_point_count;
-      wake_point_count > 0 && aerodynamicCache.dij.rows() >= total_nodes &&
-      aerodynamicCache.dij.cols() >= total_nodes) {
-    aerodynamicCache.dij
+      wake_point_count > 0 &&
+          inviscid_state_.cache.dij.rows() >= total_nodes &&
+      inviscid_state_.cache.dij.cols() >= total_nodes) {
+    inviscid_state_.cache.dij
         .block(point_count, point_count, wake_point_count, wake_point_count)
         .setConstant(std::numeric_limits<double>::quiet_NaN());
   }
@@ -161,11 +148,12 @@ bool XFoil::hasPanelMap() const {
 bool XFoil::hasAirfoilInfluenceMatrix() const {
   const int point_count = foil.foil_shape.n;
   if (const int total_nodes = point_count + foil.wake_shape.n;
-      aerodynamicCache.dij.rows() < total_nodes ||
-      aerodynamicCache.dij.cols() < total_nodes) {
+      inviscid_state_.cache.dij.rows() < total_nodes ||
+      inviscid_state_.cache.dij.cols() < total_nodes) {
     return false;
   }
-  const auto block = aerodynamicCache.dij.block(0, 0, point_count, point_count);
+  const auto block =
+      inviscid_state_.cache.dij.block(0, 0, point_count, point_count);
   return block.allFinite() && block.cwiseAbs().maxCoeff() > 0.0;
 }
 
@@ -173,29 +161,32 @@ bool XFoil::hasWakeInfluenceMatrix() const {
   const int point_count = foil.foil_shape.n;
   const int wake_point_count = foil.wake_shape.n;
   if (const int total_nodes = point_count + wake_point_count;
-      aerodynamicCache.dij.rows() < total_nodes ||
-      aerodynamicCache.dij.cols() < total_nodes) {
+      inviscid_state_.cache.dij.rows() < total_nodes ||
+      inviscid_state_.cache.dij.cols() < total_nodes) {
     return false;
   }
-  const auto block = aerodynamicCache.dij.block(
+  const auto block = inviscid_state_.cache.dij.block(
       point_count, point_count, wake_point_count, wake_point_count);
   return block.allFinite() && block.cwiseAbs().maxCoeff() > 0.0;
 }
 
 bool XFoil::hasConvergedSolution() const {
-  if (!std::isfinite(avisc) || !std::isfinite(mvisc)) {
+  if (!std::isfinite(viscous_state_.convergedAlpha) ||
+      !std::isfinite(viscous_state_.convergedMach)) {
     return false;
   }
   const double alpha_tol = 1.0e-12;
   if (const double mach_tol = 1.0e-12;
-      std::fabs(analysis_state_.alpha - avisc) > alpha_tol ||
-      std::fabs(analysis_state_.currentMach - mvisc) > mach_tol) {
+      std::fabs(analysis_state_.alpha - viscous_state_.convergedAlpha) >
+          alpha_tol ||
+      std::fabs(analysis_state_.currentMach - viscous_state_.convergedMach) >
+          mach_tol) {
     return false;
   }
 
   const int total_nodes_with_wake = foil.foil_shape.n + foil.wake_shape.n;
-  return qvis.size() >= total_nodes_with_wake &&
-         qvis.head(total_nodes_with_wake).allFinite();
+  return viscous_state_.qvis.size() >= total_nodes_with_wake &&
+         viscous_state_.qvis.head(total_nodes_with_wake).allFinite();
 }
 
 double XFoil::VAccel() { return vaccel_; }

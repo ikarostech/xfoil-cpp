@@ -27,7 +27,7 @@ BoundaryLayerAerodynamicsOps::computeNewUeDistribution(
           const double influence =
               -lattice.get(side).panelInfluenceFactor[station] *
               lattice.get(otherSide).panelInfluenceFactor[otherStation] *
-              xfoil.aerodynamicCache.dij(panelIndex, otherPanel);
+              xfoil.inviscid_state_.cache.dij(panelIndex, otherPanel);
           dui += influence * (lattice.get(otherSide).profiles.massFlux[otherStation] +
                               vdel[systemIndex](2, 0));
           dui_ac += influence * (-vdel[systemIndex](2, 1));
