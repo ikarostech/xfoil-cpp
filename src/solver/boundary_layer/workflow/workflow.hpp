@@ -20,8 +20,9 @@
 
 class Edge;
 class XFoil;
-class BoundaryLayerWorkflow;
+class BoundaryLayer;
 class BoundaryLayerMarchAccess;
+class BoundaryLayerSetblAccess;
 class BoundaryLayerSolverOps;
 class BoundaryLayerMixedModeOps;
 
@@ -43,9 +44,9 @@ struct BoundaryLayerWorkspace {
     int nsys = 0;
 };
 
-class BoundaryLayerWorkflow {
+class BoundaryLayer {
   public:
-    BoundaryLayerWorkflow();
+    BoundaryLayer();
 
     BoundaryLayerVariablesSolver boundaryLayerVariablesSolver;
     BlDiffSolver blDiffSolver;
@@ -87,23 +88,11 @@ class BoundaryLayerWorkflow {
     bool tesys(const BoundaryLayerSideProfiles &top_profiles, const BoundaryLayerSideProfiles &bottom_profiles,
                const Edge &edge);
 
-    int stationCount(int side) const {
-        return state_store_.lattice.get(side).stationCount;
-    }
-    void setStationCount(int side, int count) {
-        state_store_.lattice.get(side).stationCount = count;
-    }
     int trailingEdgeIndex(int side) const {
         return state_store_.lattice.get(side).trailingEdgeIndex;
     }
     void setTrailingEdgeIndex(int side, int index) {
         state_store_.lattice.get(side).trailingEdgeIndex = index;
-    }
-    int transitionIndex(int side) const {
-        return state_store_.lattice.get(side).profiles.transitionIndex;
-    }
-    void setTransitionIndex(int side, int index) {
-        state_store_.lattice.get(side).profiles.transitionIndex = index;
     }
     int stationToSystem(int side, int stationIndex) const {
         return state_store_.lattice.get(side).stationToSystem[stationIndex];
@@ -114,11 +103,8 @@ class BoundaryLayerWorkflow {
     double panelInfluenceFactor(int side, int stationIndex) const {
         return state_store_.lattice.get(side).panelInfluenceFactor[stationIndex];
     }
-    const BoundaryLayerSideProfiles &profiles(int side) const {
-        return state_store_.lattice.get(side).profiles;
-    }
-    BoundaryLayerSideProfiles &profiles(int side) {
-        return state_store_.lattice.get(side).profiles;
+    SidePairRef<const BoundaryLayerSideProfiles> currentProfiles() const {
+        return {state_store_.lattice.top.profiles, state_store_.lattice.bottom.profiles};
     }
     void clearState();
     void resetSideMetadata();
@@ -254,6 +240,26 @@ class BoundaryLayerWorkflow {
 
   private:
     friend class BoundaryLayerMarchAccess;
+    friend class BoundaryLayerSetblAccess;
+
+    int stationCount(int side) const {
+        return state_store_.lattice.get(side).stationCount;
+    }
+    void setStationCount(int side, int count) {
+        state_store_.lattice.get(side).stationCount = count;
+    }
+    int transitionIndex(int side) const {
+        return state_store_.lattice.get(side).profiles.transitionIndex;
+    }
+    void setTransitionIndex(int side, int index) {
+        state_store_.lattice.get(side).profiles.transitionIndex = index;
+    }
+    const BoundaryLayerSideProfiles &profiles(int side) const {
+        return state_store_.lattice.get(side).profiles;
+    }
+    BoundaryLayerSideProfiles &profiles(int side) {
+        return state_store_.lattice.get(side).profiles;
+    }
 
     SidePair<BoundaryLayerLattice> &lattice() {
         return state_store_.lattice;

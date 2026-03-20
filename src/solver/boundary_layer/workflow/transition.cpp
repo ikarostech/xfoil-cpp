@@ -17,7 +17,7 @@ using Eigen::Vector;
 BoundaryLayerTransitionSolver::BoundaryLayerTransitionSolver(Context context)
     : context_(context) {}
 
-BoundaryLayerWorkflow::BoundaryLayerWorkflow()
+BoundaryLayer::BoundaryLayer()
     : transitionSolver({workspace_.state,
                         state_store_.blTransition,
                         state_store_.flowRegime,

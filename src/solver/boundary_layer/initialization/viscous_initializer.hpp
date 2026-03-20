@@ -13,9 +13,7 @@ class BoundaryLayerInitializer {
       const Eigen::MatrixXd &dij, bool bl_initialized) {
     return BoundaryLayerSetblUseCase{}.run(
                                            boundaryLayer,
-                                           SidePairRef<const BoundaryLayerSideProfiles>{
-                                               boundaryLayer.profiles(1),
-                                               boundaryLayer.profiles(2)},
+                                           boundaryLayer.currentProfiles(),
                                            analysis_state,
                                            aero_coeffs, acrit, foil,
                                            stagnation, dij, bl_initialized);

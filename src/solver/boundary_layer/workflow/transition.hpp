@@ -9,7 +9,7 @@
 #include "numerics/boundary_layer/variables.hpp"
 #include "solver/boundary_layer/boundary_layer_store.hpp"
 
-class BoundaryLayerWorkflow;
+class BoundaryLayer;
 class XFoil;
 
 class BoundaryLayerTransitionSolver {

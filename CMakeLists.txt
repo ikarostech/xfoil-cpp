@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 project(XFoil)
+enable_testing()
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -99,3 +100,6 @@ file(COPY sample/ DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/sample)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/out)
 set_target_properties(testExe PROPERTIES OUTPUT_NAME "test")
 set_target_properties(testExe PROPERTIES SUFFIX ".exe")
+add_test(NAME regression_test_exe
+    COMMAND test.exe
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
