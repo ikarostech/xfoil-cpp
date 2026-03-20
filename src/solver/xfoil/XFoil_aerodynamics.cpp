@@ -178,8 +178,8 @@ FoilAerodynamicCache XFoil::ggcalc() {
     const double ag1 = atan2(-foil.foil_shape.dpoints_ds.col(0).y(),
                              -foil.foil_shape.dpoints_ds.col(0).x());
     const double ag2 =
-        atanc(foil.foil_shape.dpoints_ds.col(foil.foil_shape.n - 1).y(),
-              foil.foil_shape.dpoints_ds.col(foil.foil_shape.n - 1).x(), ag1);
+        MathUtil::atanc(foil.foil_shape.dpoints_ds.col(foil.foil_shape.n - 1).y(),
+                        foil.foil_shape.dpoints_ds.col(foil.foil_shape.n - 1).x(), ag1);
     const double abis = 0.5 * (ag1 + ag2);
 
     Vector2d bis_vector{cos(abis), sin(abis)};

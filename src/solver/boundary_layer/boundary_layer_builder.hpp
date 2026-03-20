@@ -2,6 +2,7 @@
 #include "Eigen/Core"
 #include "numerics/side_pair.hpp"
 #include "model/boundary_layer.hpp"
+#include "model/boundary_layer/state.hpp"
 #include "model/boundary_layer/bl_compressibility_params.hpp"
 #include "model/boundary_layer/bl_reynolds_params.hpp"
 #include "model/boundary_layer/bl_transition_params.hpp"

@@ -41,14 +41,14 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 #include "Eigen/Dense"
 #include "Eigen/StdVector"
 
-#include "solver/boundary_layer/boundary_layer.hpp"
-#include "numerics/side_pair.hpp"
 #include "model/boundary_layer.hpp"
 #include "model/coefficient/aero_coefficients.hpp"
 #include "model/flow_regime.hpp"
 #include "model/flow_state.hpp"
 #include "model/foil/FoilAerodynamicCache.hpp"
 #include "model/foil/foil.hpp"
+#include "numerics/side_pair.hpp"
+#include "solver/boundary_layer/boundary_layer.hpp"
 
 struct SetblOutputView;
 class InviscidSolver;
@@ -66,7 +66,7 @@ class XFoil {
     };
 
     struct OperatingPointCouplingState {
-        double machPerLift = 0.0;
+        double machPerLift     = 0.0;
         double reynoldsPerLift = 0.0;
     };
 
@@ -83,7 +83,7 @@ class XFoil {
         StagnationResult stagnation;
         Eigen::VectorXd qvis;
         double convergedAlpha = 0.0;
-        double convergedMach = 0.0;
+        double convergedMach  = 0.0;
     };
 
     XFoil();
@@ -255,7 +255,6 @@ class XFoil {
                            double cl_ms) const;
 
     double rlxCalc(double dac) const;
-    bool xyWake();
     void invalidateConvergedSolution();
     void invalidateWakeGeometry();
     void invalidatePanelMap();
@@ -279,9 +278,6 @@ class XFoil {
     void initializeDataStructures();
     void resetFlags();
     void resetVariables();
-    double atanc(double y, double x, double thold);
-
-    double sign(double a, double b);
 
     FlowState analysis_state_;
     FlowState &analysisState() {

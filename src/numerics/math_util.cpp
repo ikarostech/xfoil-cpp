@@ -3,6 +3,7 @@
 #include <Eigen/Core>
 #include <cmath>
 #include <iostream>
+#include <numbers>
 
 ThomasAlgorithmResult MathUtil::tridiagonalSolve(Eigen::MatrixXd A,
                                                  Eigen::VectorXd d) {
@@ -45,6 +46,22 @@ double MathUtil::pow(double a, int b) {
   } else {
     return a * pow(a, b - 1);
   }
+}
+
+double MathUtil::sign(double a, double b) {
+  if (b >= 0.0) {
+    return std::fabs(a);
+  }
+  return -std::fabs(a);
+}
+
+double MathUtil::atanc(double y, double x, double thold) {
+  constexpr double tpi = 6.2831853071795864769;
+  const double thnew = std::atan2(y, x);
+  const double delta = thnew - thold;
+  const double corrected =
+      delta - tpi * int((delta + sign(std::numbers::pi, delta)) / tpi);
+  return thold + corrected;
 }
 
 double MathUtil::cross2(const Eigen::Vector2d &a, const Eigen::Vector2d &b) {
