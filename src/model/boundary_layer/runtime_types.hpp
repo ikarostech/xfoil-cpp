@@ -14,6 +14,17 @@ struct BoundaryLayerStationReadModel {
   double wakeGap = 0.0;
 };
 
+struct BoundaryLayerSideReadModel {
+  int stationCount = 0;
+  int trailingEdgeIndex = 0;
+  int transitionIndex = 0;
+  bool hasStations = false;
+  bool hasFiniteThickness = false;
+  double lastEdgeVelocity = 0.0;
+  double lastMomentumThickness = 0.0;
+  double lastDisplacementThickness = 0.0;
+};
+
 struct BoundaryLayerTrailingEdgeReadModel {
   int topTrailingEdgeIndex = 0;
   int bottomTrailingEdgeIndex = 0;

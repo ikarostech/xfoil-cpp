@@ -7,8 +7,6 @@ class MarcherDu : public Marcher
 public:
   bool mrchdu(MrchduContext &context, const Foil &foil,
               const StagnationResult &stagnation);
-  bool mrchdu(MrchduContext &context, BoundaryLayerState &state,
-              const Foil &foil, const StagnationResult &stagnation);
 
 private:
   struct SideInput
@@ -38,13 +36,11 @@ private:
   const double senswt = 1000.0;
   SideInput makeSideInput(MrchduContext &context, int side, const Foil &foil,
                           const StagnationResult &stagnation) const;
-  bool marchBoundaryLayerSide(MrchduContext &context,
-                              BoundaryLayerState &state, int side,
+  bool marchBoundaryLayerSide(MrchduContext &context, int side,
                               SideMarchState &sideState,
                               const Foil &foil,
                               const StagnationResult &stagnation);
   bool processBoundaryLayerStation(MrchduContext &context,
-                                   BoundaryLayerState &state,
                                    SideMarchState &sideState, int side,
                                    int stationIndex, int previousTransition,
                                    const Foil &foil);

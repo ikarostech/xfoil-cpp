@@ -2,6 +2,7 @@
 
 #include <string_view>
 
+#include "solver/boundary_layer/boundary_layer.hpp"
 #include "infrastructure/logger.hpp"
 #include "solver/boundary_layer/runtime/state.hpp"
 #include "solver/march/mrchue_linear_system.hpp"
@@ -9,28 +10,37 @@
 
 class BoundaryLayerMarchAccess {
  public:
-  explicit BoundaryLayerMarchAccess(BoundaryLayerWorkflow &workflow)
-      : workflow_(workflow) {}
+  explicit BoundaryLayerMarchAccess(BoundaryLayer &boundaryLayer)
+      : boundaryLayer_(boundaryLayer) {}
 
-  BoundaryLayerState &state() const { return workflow_.state(); }
-  Eigen::VectorXd &wgap() const { return workflow_.wakeGap(); }
-  BlSystemCoeffs &blc() const { return workflow_.systemCoefficients(); }
-  FlowRegimeEnum &flowRegime() const { return workflow_.flowRegime(); }
+  Eigen::VectorXd &wgap() const { return boundaryLayer_.wakeGap(); }
+  BlSystemCoeffs &blc() const { return boundaryLayer_.systemCoefficients(); }
+  FlowRegimeEnum &flowRegime() const { return boundaryLayer_.flowRegime(); }
   BlCompressibilityParams &blCompressibility() const {
-    return workflow_.compressibility();
+    return boundaryLayer_.compressibility();
   }
-  BlReynoldsParams &blReynolds() const { return workflow_.reynolds(); }
-  blDiff &xt() const { return workflow_.transitionSensitivity(); }
+  BlReynoldsParams &blReynolds() const { return boundaryLayer_.reynolds(); }
+  blDiff &xt() const { return boundaryLayer_.transitionSensitivity(); }
 
+  blData readCurrentState() const { return boundaryLayer_.readCurrentState(); }
+  void writeCurrentState(const blData &state) const {
+    boundaryLayer_.writeCurrentState(state);
+  }
+  double readCurrentShapeFactor() const {
+    return boundaryLayer_.readCurrentShapeFactor();
+  }
+  void updateCurrentStationKinematics() const {
+    boundaryLayer_.updateCurrentStationKinematics();
+  }
   int readSideStationCount(int side) const {
-    return workflow_.readSideStationCount(side);
+    return boundaryLayer_.readSideStationCount(side);
   }
   BoundaryLayerStationReadModel readStationModel(
       int side, int stationIndex) const {
-    return workflow_.readStationModel(side, stationIndex);
+    return boundaryLayer_.readStationModel(side, stationIndex);
   }
   BoundaryLayerTrailingEdgeReadModel readTrailingEdgeModel() const {
-    return workflow_.readTrailingEdgeModel();
+    return boundaryLayer_.readTrailingEdgeModel();
   }
 
   void emitMarchInfoLog(std::string_view message) const {
@@ -38,100 +48,94 @@ class BoundaryLayerMarchAccess {
   }
 
   double readNewtonRhs(int row) const {
-    return workflow_.readNewtonRhs(row);
+    return boundaryLayer_.readNewtonRhs(row);
   }
-  void solveMrchueDirectNewtonSystem() const { workflow_.solveDirectNewtonSystem(); }
+  void solveMrchueDirectNewtonSystem() const { boundaryLayer_.solveDirectNewtonSystem(); }
   void solveMrchueInverseNewtonSystem(double htarg) const {
-    workflow_.solveInverseNewtonSystem(htarg);
+    boundaryLayer_.solveInverseNewtonSystem(htarg);
   }
   void runTransitionCheckForMrchue(int side, int stationIndex, double &ami,
                                    double &cti) const {
-    workflow_.runTransitionCheckForMrchue(side, stationIndex, ami, cti);
+    boundaryLayer_.runTransitionCheckForMrchue(side, stationIndex, ami, cti);
   }
   double calcHtarg(int stationIndex, int side, bool wake) const {
-    return workflow_.calcHtarg(stationIndex, side, wake);
+    return boundaryLayer_.calcHtarg(stationIndex, side, wake);
   }
 
   bool isStartOfWake(int side, int stationIndex) const {
-    return workflow_.isStartOfWake(side, stationIndex);
+    return boundaryLayer_.isStartOfWake(side, stationIndex);
   }
   FlowRegimeEnum applyFlowRegimeCandidate(FlowRegimeEnum candidate) const {
-    workflow_.flowRegime() = candidate;
-    return workflow_.flowRegime();
+    boundaryLayer_.flowRegime() = candidate;
+    return boundaryLayer_.flowRegime();
   }
-  FlowRegimeEnum currentFlowRegime() const { return workflow_.flowRegime(); }
+  FlowRegimeEnum currentFlowRegime() const { return boundaryLayer_.flowRegime(); }
   FlowRegimeEnum determineRegimeForStation(int side, int stationIndex) const {
-    return workflow_.determineRegimeForStation(side, stationIndex);
+    return boundaryLayer_.determineRegimeForStation(side, stationIndex);
   }
   int resetSideState(int side, const Foil &foil,
                      const StagnationResult &stagnation) const {
-    return workflow_.resetSideState(side, foil, stagnation);
+    return boundaryLayer_.resetSideState(side, foil, stagnation);
   }
 
   bool tesys(const BoundaryLayerSideProfiles &top_profiles,
              const BoundaryLayerSideProfiles &bottom_profiles,
              const Edge &edge) const {
-    return workflow_.tesys(top_profiles, bottom_profiles, edge);
+    return boundaryLayer_.tesys(top_profiles, bottom_profiles, edge);
   }
-  bool blsys() const { return workflow_.blsys(); }
-  bool blkin(BoundaryLayerState &state) const { return workflow_.blkin(state); }
+  bool blsys() const { return boundaryLayer_.blsys(); }
   blData blprv(blData data, double xsi, double ami, double cti, double thi,
                double dsi, double dswaki, double uei) const {
-    return workflow_.blprv(data, xsi, ami, cti, thi, dsi, dswaki, uei);
+    return boundaryLayer_.blprv(data, xsi, ami, cti, thi, dsi, dswaki, uei);
   }
 
   void updateSystemMatricesForStation(
       const Edge &edge, int side, int stationIndex,
       BoundaryLayerMixedModeStationContext &ctx) const {
-    workflow_.updateSystemMatricesForStation(edge, side, stationIndex, ctx);
+    boundaryLayer_.updateSystemMatricesForStation(edge, side, stationIndex, ctx);
   }
   void initializeFirstIterationState(
       int side, int stationIndex, int previousTransition,
       BoundaryLayerMixedModeStationContext &ctx, double &ueref,
       double &hkref) const {
-    workflow_.initializeFirstIterationState(side, stationIndex,
-                                            previousTransition, ctx, ueref,
-                                            hkref);
+    boundaryLayer_.initializeFirstIterationState(side, stationIndex,
+                                                 previousTransition, ctx, ueref,
+                                                 hkref);
   }
-  void configureSimilarityRow(double ueref) const { workflow_.configureSimilarityRow(ueref); }
+  void configureSimilarityRow(double ueref) const { boundaryLayer_.configureSimilarityRow(ueref); }
   void configureViscousRow(double hkref, double ueref, double senswt,
                            bool resetSensitivity, bool averageSensitivity,
                            double &sens, double &sennew) const {
-    workflow_.configureViscousRow(hkref, ueref, senswt, resetSensitivity,
-                                  averageSensitivity, sens, sennew);
+    boundaryLayer_.configureViscousRow(hkref, ueref, senswt, resetSensitivity,
+                                       averageSensitivity, sens, sennew);
   }
   bool applyMixedModeNewtonStep(
       int side, int stationIndex, double &ami,
       BoundaryLayerMixedModeStationContext &ctx) const {
-    return workflow_.applyMixedModeNewtonStep(side, stationIndex, ami, ctx);
+    return boundaryLayer_.applyMixedModeNewtonStep(side, stationIndex, ami, ctx);
   }
   void checkTransitionIfNeeded(int side, int stationIndex, bool skipCheck,
                                int laminarAdvance, double &ami) const {
-    workflow_.checkTransitionIfNeeded(side, stationIndex, skipCheck,
-                                      laminarAdvance, ami);
+    boundaryLayer_.checkTransitionIfNeeded(side, stationIndex, skipCheck,
+                                           laminarAdvance, ami);
   }
   void storeStationStateCommon(
       int side, int stationIndex,
       const BoundaryLayerMixedModeStationContext &ctx) const {
-    workflow_.storeStationStateCommon(side, stationIndex, ctx);
+    boundaryLayer_.storeStationStateCommon(side, stationIndex, ctx);
   }
   void recoverStationAfterFailure(
       int side, int stationIndex,
       BoundaryLayerMixedModeStationContext &ctx, double &ami,
       BoundaryLayerEdgeVelocityFallbackMode edgeMode,
       int laminarAdvance) const {
-    workflow_.recoverStationAfterFailure(side, stationIndex, ctx, ami, edgeMode,
-                                         laminarAdvance);
+    boundaryLayer_.recoverStationAfterFailure(side, stationIndex, ctx, ami,
+                                              edgeMode, laminarAdvance);
   }
   bool solveTeSystemForCurrentProfiles(const Edge &edge) const {
-    return workflow_.solveTeSystemForCurrentProfiles(edge);
+    return boundaryLayer_.solveTeSystemForCurrentProfiles(edge);
   }
 
  private:
-  BoundaryLayerWorkflow &workflow_;
+  BoundaryLayer &boundaryLayer_;
 };
-
-inline BoundaryLayerMarchAccess makeBoundaryLayerMarchAccess(
-    BoundaryLayerWorkflow &workflow) {
-  return BoundaryLayerMarchAccess(workflow);
-}

@@ -270,15 +270,14 @@ MarcherUe::performMrchueNewtonLoop(MrchueContext &context,
   double dmax_local = 0.0;
   std::vector<MarchEvent> events;
   station.flowRegime = context.applyFlowRegimeCandidate(station.flowRegime);
-  auto &state = context.mutableState();
 
   for (int itbl = 1; itbl <= 25; ++itbl)
   {
-    state.current() =
-        context.blprv(state.current(), station.xsi, station.ami, station.cti,
-                      station.thi, station.dsi, station.dswaki, station.uei);
-
-    context.blkin(state);
+    context.writeCurrentState(
+        context.blprv(context.readCurrentState(), station.xsi, station.ami,
+                      station.cti, station.thi, station.dsi, station.dswaki,
+                      station.uei));
+    context.updateCurrentStationKinematics();
     station.flowRegime = context.currentFlowRegime();
 
     if ((!station.isSimilarity()) &&
@@ -328,7 +327,7 @@ MarcherUe::performMrchueNewtonLoop(MrchueContext &context,
     else
     {
       const double effectiveHtarg = ue_numerics::computeInverseTarget(
-          state.station2.hkz.scalar, station.htarg, station.hmax);
+          context.readCurrentShapeFactor(), station.htarg, station.hmax);
       context.solveMrchueInverseNewtonSystem(effectiveHtarg);
       dmax_local = computeMrchueDmax(context, input, station, false);
       const double rlx = ue_numerics::computeRelaxation(dmax_local);

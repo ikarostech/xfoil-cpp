@@ -62,18 +62,10 @@ MarcherDu::prepareMixedModeStation(MrchduContext &context,
 bool MarcherDu::mrchdu(MrchduContext &context, const Foil &foil,
                        const StagnationResult &stagnation)
 {
-  return mrchdu(context, context.mutableState(), foil, stagnation);
-}
-
-bool MarcherDu::mrchdu(MrchduContext &context,
-                       BoundaryLayerState &state, const Foil &foil,
-                       const StagnationResult &stagnation)
-{
   for (int side = 1; side <= 2; ++side)
   {
     SideMarchState sideState;
-    if (!marchBoundaryLayerSide(context, state, side, sideState, foil,
-                                stagnation))
+    if (!marchBoundaryLayerSide(context, side, sideState, foil, stagnation))
     {
       return false;
     }
@@ -90,8 +82,7 @@ MarcherDu::SideInput MarcherDu::makeSideInput(MrchduContext &context, int side,
 }
 
 bool MarcherDu::marchBoundaryLayerSide(MrchduContext &context,
-                                       BoundaryLayerState &state, int side,
-                                       SideMarchState &sideState,
+                                       int side, SideMarchState &sideState,
                                        const Foil &foil,
                                        const StagnationResult &stagnation)
 {
@@ -102,8 +93,7 @@ bool MarcherDu::marchBoundaryLayerSide(MrchduContext &context,
        stationIndex < sideInput.stationCount - 1;
        ++stationIndex)
   {
-    if (!processBoundaryLayerStation(context, state, sideState, side,
-                                     stationIndex,
+    if (!processBoundaryLayerStation(context, sideState, side, stationIndex,
                                      sideInput.previousTransition, foil))
     {
       return false;
@@ -114,8 +104,7 @@ bool MarcherDu::marchBoundaryLayerSide(MrchduContext &context,
 }
 
 bool MarcherDu::processBoundaryLayerStation(
-    MrchduContext &context, BoundaryLayerState &state,
-    SideMarchState &sideState, int side,
+    MrchduContext &context, SideMarchState &sideState, int side,
     int stationIndex, int previousTransition, const Foil &foil)
 {
   const StationInput input = makeStationInput(
@@ -161,16 +150,14 @@ MarcherDu::StationMarchResult MarcherDu::performMixedModeNewtonIteration(
   double ueref = 0.0;
   double hkref = 0.0;
   station.flowRegime = context.applyFlowRegimeCandidate(station.flowRegime);
-  auto &state = context.mutableState();
 
   for (int itbl = 1; itbl <= 25; ++itbl)
   {
-    blData updatedCurrent =
-        context.blprv(state.current(), station.xsi, sideState.ami,
+    context.writeCurrentState(
+        context.blprv(context.readCurrentState(), station.xsi, sideState.ami,
                       station.cti, station.thi, station.dsi, station.dswaki,
-                      station.uei);
-    state.current() = updatedCurrent;
-    context.blkin(state);
+                      station.uei));
+    context.updateCurrentStationKinematics();
     station.flowRegime = context.currentFlowRegime();
 
     context.checkTransitionIfNeeded(input.side, input.stationIndex,

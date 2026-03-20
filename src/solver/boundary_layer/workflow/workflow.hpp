@@ -123,7 +123,10 @@ class BoundaryLayerWorkflow {
     void clearState();
     void resetSideMetadata();
     void resetPhysicsState();
+    void resetTransportState();
+    void resetForReinitialization();
     void setStagnationState(const StagnationResult &stagnation);
+    void clearPanelMap();
     void zeroProfiles();
     bool hasValidPanelMap(int total_nodes) const;
     int trailingEdgeSystemIndex(int side) const;
@@ -164,6 +167,7 @@ class BoundaryLayerWorkflow {
     const FlowRegimeEnum &flowRegime() const {
         return state_store_.flowRegime;
     }
+    void setFlowRegime(FlowRegimeEnum flowRegime);
     BlCompressibilityParams &compressibility() {
         return state_store_.blCompressibility;
     }
@@ -215,6 +219,7 @@ class BoundaryLayerWorkflow {
     int readSideStationCount(int side) const;
     BoundaryLayerStationReadModel readStationModel(int side,
                                                    int stationIndex) const;
+    BoundaryLayerSideReadModel readSideModel(int side) const;
     BoundaryLayerTrailingEdgeReadModel readTrailingEdgeModel() const;
     bool isStartOfWake(int side, int stationIndex) const;
     void copyProfilesTo(SidePair<BoundaryLayerSideProfiles> &profiles) const;
@@ -224,6 +229,10 @@ class BoundaryLayerWorkflow {
     double previousAmplification() const;
     double currentSkinFrictionHistory() const;
     BoundaryLayerState snapshotState() const;
+    blData readCurrentState() const;
+    void writeCurrentState(const blData &state);
+    double readCurrentShapeFactor() const;
+    void updateCurrentStationKinematics();
     void replaceState(const BoundaryLayerState &state);
     void advanceState();
     void runTransitionCheck();
@@ -234,6 +243,11 @@ class BoundaryLayerWorkflow {
     double readNewtonRhs(int row) const;
     void solveDirectNewtonSystem();
     void solveInverseNewtonSystem(double htarg);
+    void applyInitializationState(const BlCompressibilityParams &compressibility,
+                                  const BlReynoldsParams &reynolds,
+                                  const BlTransitionParams &transition,
+                                  FlowRegimeEnum flowRegime,
+                                  SidePair<BoundaryLayerSideProfiles> profiles);
     void runTransitionCheckForMrchue(int side, int stationIndex, double &ami,
                                      double &cti, int laminarAdvance = 2);
     double calcHtarg(int stationIndex, int side, bool wake);

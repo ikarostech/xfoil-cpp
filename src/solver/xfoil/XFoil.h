@@ -41,7 +41,7 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 #include "Eigen/Dense"
 #include "Eigen/StdVector"
 
-#include "solver/boundary_layer/workflow/workflow.hpp"
+#include "solver/boundary_layer/boundary_layer.hpp"
 #include "numerics/side_pair.hpp"
 #include "model/boundary_layer.hpp"
 #include "model/coefficient/aero_coefficients.hpp"
@@ -65,7 +65,7 @@ class XFoil {
     XFoil &operator=(XFoil &&)      = delete;
 
     friend class InviscidSolver;
-    friend class BoundaryLayerWorkflow;
+    friend BoundaryLayer;
 
     using VectorXd                        = Eigen::VectorXd;
     using VectorXi                        = Eigen::VectorXi;
@@ -258,7 +258,7 @@ class XFoil {
     VectorXd qgamm;
 
     Foil foil;
-    BoundaryLayerWorkflow boundaryLayerWorkflow;
+    BoundaryLayer boundaryLayer;
     const Vector2d cmref = Vector2d{0.25, 0.0};
 
   public: // private:

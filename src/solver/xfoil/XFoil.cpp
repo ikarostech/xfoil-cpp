@@ -80,7 +80,7 @@ XFoil::XFoil() : analysis_state_() {
 
   // initialize transition parameters until user changes them
   acrit = 9.0;
-  boundaryLayerWorkflow.setTransitionLocations(1.0, 1.0);
+  boundaryLayer.setTransitionLocations(1.0, 1.0);
 
   //---- initialize freestream mach number to zero
   analysis_state_.machType = MachType::CONSTANT;
@@ -99,38 +99,12 @@ bool XFoil::isBLInitialized() const {
   if (!hasPanelMap()) {
     return false;
   }
-  const auto &top = boundaryLayerWorkflow.profiles(1);
-  const auto &bottom = boundaryLayerWorkflow.profiles(2);
-  const int top_station_count = boundaryLayerWorkflow.stationCount(1);
-  const int bottom_station_count = boundaryLayerWorkflow.stationCount(2);
-  if (top_station_count <= 1 || bottom_station_count <= 1) {
+  const auto top = boundaryLayer.readSideModel(1);
+  const auto bottom = boundaryLayer.readSideModel(2);
+  if (!top.hasStations || !bottom.hasStations) {
     return false;
   }
-  if (top.edgeVelocity.size() < top_station_count ||
-      bottom.edgeVelocity.size() < bottom_station_count ||
-      top.skinFrictionCoeff.size() < top_station_count ||
-      bottom.skinFrictionCoeff.size() < bottom_station_count ||
-      top.momentumThickness.size() < top_station_count ||
-      bottom.momentumThickness.size() < bottom_station_count ||
-      top.displacementThickness.size() < top_station_count ||
-      bottom.displacementThickness.size() < bottom_station_count) {
-    return false;
-  }
-
-  const int top_count = top_station_count - 1;
-  const int bottom_count = bottom_station_count - 1;
-  const auto top_theta = top.momentumThickness.head(top_count);
-  const auto bottom_theta = bottom.momentumThickness.head(bottom_count);
-  const auto top_delta = top.displacementThickness.head(top_count);
-  const auto bottom_delta = bottom.displacementThickness.head(bottom_count);
-
-  if (!top_theta.allFinite() || !bottom_theta.allFinite() ||
-      !top_delta.allFinite() || !bottom_delta.allFinite()) {
-    return false;
-  }
-
-  return top_theta.maxCoeff() > 0.0 && bottom_theta.maxCoeff() > 0.0 &&
-         top_delta.maxCoeff() > 0.0 && bottom_delta.maxCoeff() > 0.0;
+  return top.hasFiniteThickness && bottom.hasFiniteThickness;
 }
 
 void XFoil::setBLInitialized(bool bInitialized) {
@@ -149,7 +123,7 @@ void XFoil::setBLInitialized(bool bInitialized) {
     if (lattice.profiles.massFlux.size() > 0)
       lattice.profiles.massFlux.setZero();
   };
-  boundaryLayerWorkflow.zeroProfiles();
+  boundaryLayer.zeroProfiles();
   invalidateConvergedSolution();
 }
 
@@ -175,14 +149,13 @@ void XFoil::invalidateWakeGeometry() {
 }
 
 void XFoil::invalidatePanelMap() {
-  boundaryLayerWorkflow.setStationCount(1, 0);
-  boundaryLayerWorkflow.setStationCount(2, 0);
+  boundaryLayer.clearPanelMap();
 }
 
 bool XFoil::hasPanelMap() const {
   const int point_count = foil.foil_shape.n;
   const int total_nodes = point_count + foil.wake_shape.n;
-  return boundaryLayerWorkflow.hasValidPanelMap(total_nodes);
+  return boundaryLayer.hasValidPanelMap(total_nodes);
 }
 
 bool XFoil::hasAirfoilInfluenceMatrix() const {

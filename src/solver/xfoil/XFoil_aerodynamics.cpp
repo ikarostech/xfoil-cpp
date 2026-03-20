@@ -21,17 +21,13 @@ double XFoil::cdcalc() const {
   const double tklam_local =
       MathUtil::pow(analysis_state_.currentMach / (1.0 + beta), 2);
 
-  const int bottom_station_count = boundaryLayerWorkflow.stationCount(2);
-  const auto &bottom_profiles = boundaryLayerWorkflow.profiles(2);
-  const double thwake = bottom_profiles.momentumThickness[bottom_station_count - 2];
-  const double edgeVelocity_bottom =
-      bottom_profiles.edgeVelocity[bottom_station_count - 2];
+  const auto bottom = boundaryLayer.readSideModel(2);
+  const double thwake = bottom.lastMomentumThickness;
+  const double edgeVelocity_bottom = bottom.lastEdgeVelocity;
   const double urat = edgeVelocity_bottom / analysis_state_.qinf;
   const double uewake = edgeVelocity_bottom * (1.0 - tklam_local) /
                         (1.0 - tklam_local * urat * urat);
-  const double shwake =
-      bottom_profiles.displacementThickness[bottom_station_count - 2] /
-      bottom_profiles.momentumThickness[bottom_station_count - 2];
+  const double shwake = bottom.lastDisplacementThickness / bottom.lastMomentumThickness;
 
   const double exponent = 0.5 * (5.0 + shwake);
   const double wake_ratio = uewake / analysis_state_.qinf;

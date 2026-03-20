@@ -4,7 +4,6 @@
 #include "infrastructure/logger.hpp"
 #include "solver/boundary_layer/blsolve.hpp"
 #include "solver/inviscid/InviscidSolver.hpp"
-#include "solver/boundary_layer/viscous_aerodynamic_coupling.hpp"
 #include "solver/boundary_layer/initialization/viscous_initializer.hpp"
 #include "solver/march/march.hpp"
 #include "solver/inviscid/psi.hpp"
@@ -66,7 +65,7 @@ bool XFoil::initXFoilAnalysis(double Re, double alpha, double Mach,
   state.viscous = bViscous;
 
   acrit = NCrit;
-  boundaryLayerWorkflow.setTransitionLocations(XtrTop, XtrBot);
+  boundaryLayer.setTransitionLocations(XtrTop, XtrBot);
 
   if (Mach > 0.000001) {
     setMach();
@@ -180,12 +179,11 @@ bool XFoil::qdcalc() {
 VectorXd XFoil::qvfue(const VectorXd &base_qvis) const {
   VectorXd updated_qvis = base_qvis;
   for (int is = 1; is <= 2; is++) {
-    const auto &edgeVelocity_side = boundaryLayerWorkflow.profiles(is).edgeVelocity;
-    const int limit = boundaryLayerWorkflow.stationCount(is) - 1;
+    const int limit = boundaryLayer.readSideStationCount(is) - 1;
     for (int ibl = 0; ibl < limit; ++ibl) {
-      int i = boundaryLayerWorkflow.stationToPanel(is, ibl);
-      updated_qvis[i] = boundaryLayerWorkflow.panelInfluenceFactor(is, ibl) *
-                        edgeVelocity_side[ibl];
+      int i = boundaryLayer.stationToPanel(is, ibl);
+      updated_qvis[i] = boundaryLayer.panelInfluenceFactor(is, ibl) *
+                        boundaryLayer.readStationModel(is, ibl).edgeVelocity;
     }
   }
 
@@ -270,9 +268,9 @@ XFoil::UpdateResult XFoil::update(const XFoil::Matrix3x2dVector &vdel) const {
   result.aero_coeffs = aero_coeffs_;
   //--- calculate new ue distribution and tangential velocities
   const auto ue_distribution =
-      boundaryLayerWorkflow.computeNewUeDistribution(*this, vdel);
+      boundaryLayer.computeNewUeDistribution(*this, vdel);
   const auto cl_contributions =
-      boundaryLayerWorkflow.computeClFromEdgeVelocityDistribution(
+      boundaryLayer.computeClFromEdgeVelocityDistribution(
           *this, ue_distribution);
 
   const double cl_target =
@@ -291,10 +289,10 @@ XFoil::UpdateResult XFoil::update(const XFoil::Matrix3x2dVector &vdel) const {
   SidePair<BoundaryLayerMetrics> metrics;
   const double gamma = 1.4;
   for (int side = 1; side <= 2; ++side) {
-    deltas.get(side) = boundaryLayerWorkflow.buildBoundaryLayerDelta(
+    deltas.get(side) = boundaryLayer.buildBoundaryLayerDelta(
         side, ue_distribution.unew.get(side), ue_distribution.u_ac.get(side),
         dac, vdel);
-    metrics.get(side) = boundaryLayerWorkflow.evaluateSegmentRelaxation(
+    metrics.get(side) = boundaryLayer.evaluateSegmentRelaxation(
         side, deltas.get(side), dhi, dlo, rlx);
     rmsbl += metrics.get(side).rmsContribution;
 
@@ -304,14 +302,14 @@ XFoil::UpdateResult XFoil::update(const XFoil::Matrix3x2dVector &vdel) const {
         (1.0 + 0.5 * (gamma - 1) * analysis_state_.currentMach *
                    analysis_state_.currentMach);
 
-    result.profiles.get(side) = boundaryLayerWorkflow.applyBoundaryLayerDelta(
+    result.profiles.get(side) = boundaryLayer.applyBoundaryLayerDelta(
         side, deltas.get(side), rlx, hstinv, gamma - 1);
   }
 
   rmsbl =
       sqrt(rmsbl /
-           (4.0 * double(boundaryLayerWorkflow.stationCount(1) +
-                         boundaryLayerWorkflow.stationCount(2))));
+           (4.0 * double(boundaryLayer.readSideStationCount(1) +
+                         boundaryLayer.readSideStationCount(2))));
 
   if (analysis_state_.controlByAlpha)
     result.aero_coeffs.cl = aero_coeffs_.cl + rlx * dac;
@@ -320,11 +318,11 @@ XFoil::UpdateResult XFoil::update(const XFoil::Matrix3x2dVector &vdel) const {
 
   //--- equate upper wake arrays to lower wake arrays
   for (int kbl = 1;
-       kbl <= boundaryLayerWorkflow.stationCount(2) -
-                  (boundaryLayerWorkflow.trailingEdgeIndex(2) + 1);
+       kbl <= boundaryLayer.readSideStationCount(2) -
+                  (boundaryLayer.trailingEdgeIndex(2) + 1);
        kbl++) {
-    const int top_index = boundaryLayerWorkflow.trailingEdgeIndex(1) + kbl;
-    const int bottom_index = boundaryLayerWorkflow.trailingEdgeIndex(2) + kbl;
+    const int top_index = boundaryLayer.trailingEdgeIndex(1) + kbl;
+    const int bottom_index = boundaryLayer.trailingEdgeIndex(2) + kbl;
     result.profiles.top.skinFrictionCoeff[top_index] =
         result.profiles.bottom.skinFrictionCoeff[bottom_index];
     result.profiles.top.momentumThickness[top_index] =
@@ -362,37 +360,36 @@ bool XFoil::viscal() {
 
   if (!hasPanelMap()) {
     //	----- locate stagnation point arc length position and panel index
-    const auto stagnation = boundaryLayerWorkflow.findStagnation(
+    const auto stagnation = boundaryLayer.findStagnation(
         surface_vortex, foil.foil_shape.spline_length);
     if (!stagnation.found) {
       Logger::instance().write(
           "stfind: Stagnation point not found. Continuing ...\n");
     }
-    boundaryLayerWorkflow.stagnationIndex() = stagnation.stagnationIndex;
+    boundaryLayer.setStagnationState(stagnation);
     this->stagnation = stagnation;
-    boundaryLayerWorkflow.stagnationSst() = stagnation.sst;
 
     //	----- set  bl position -> panel position  pointers
-    boundaryLayerWorkflow.buildPanelMap(point_count, foil.wake_shape.n);
+    boundaryLayer.buildPanelMap(point_count, foil.wake_shape.n);
 
     //	----- calculate surface arc length array for current stagnation point
     // location
-    boundaryLayerWorkflow.rebuildArcLengthCoordinates(foil);
+    boundaryLayer.rebuildArcLengthCoordinates(foil);
 
     //	----- set  bl position -> system line  pointers
-    boundaryLayerWorkflow.buildSystemMapping();
+    boundaryLayer.buildSystemMapping();
   }
 
   //	---- set inviscid bl edge velocity inviscidEdgeVelocityMatrix from
   // qinv_matrix
   {
     const auto inviscid_edge_velocity =
-        boundaryLayerWorkflow.computeInviscidEdgeVelocity(qinv_matrix);
-    boundaryLayerWorkflow.assignInviscidEdgeVelocity(inviscid_edge_velocity);
+        boundaryLayer.computeInviscidEdgeVelocity(qinv_matrix);
+    boundaryLayer.assignInviscidEdgeVelocity(inviscid_edge_velocity);
   }
 
   if (!isBLInitialized()) {
-    boundaryLayerWorkflow.seedEdgeVelocityFromInviscid();
+    boundaryLayer.seedEdgeVelocityFromInviscid();
   }
 
   if (hasConvergedSolution()) {
@@ -442,25 +439,21 @@ bool XFoil::ViscousIter() {
   double eps1 = 0.0001;
 
   auto setbl_output = BoundaryLayerInitializer::run(
-      boundaryLayerWorkflow,
-      SidePairRef<const BoundaryLayerSideProfiles>{
-          boundaryLayerWorkflow.profiles(1),
-          boundaryLayerWorkflow.profiles(2)},
-      analysis_state_, aero_coeffs_, acrit, foil, stagnation,
+      boundaryLayer, analysis_state_, aero_coeffs_, acrit, foil, stagnation,
       aerodynamicCache.dij, isBLInitialized());
   BoundaryLayerInitializer::applyOutput(
-      boundaryLayerWorkflow,
+      boundaryLayer,
       setbl_output); //	------ fill newton system for bl variables
 
   Blsolve solver;
   SidePair<int> ivte{
-      boundaryLayerWorkflow.trailingEdgeSystemIndex(1),
-      boundaryLayerWorkflow.trailingEdgeSystemIndex(2)};
-  auto vdel = solver.solve(boundaryLayerWorkflow.systemSize(), ivte, VAccel(),
+      boundaryLayer.trailingEdgeSystemIndex(1),
+      boundaryLayer.trailingEdgeSystemIndex(2)};
+  auto vdel = solver.solve(boundaryLayer.systemSize(), ivte, VAccel(),
                            setbl_output.bl_newton_system);
 
   const auto update_result = update(vdel);
-  boundaryLayerWorkflow.applyProfiles(update_result.profiles);
+  boundaryLayer.applyProfiles(update_result.profiles);
 
   if (update_result.analysis_state
           .controlByAlpha) { //	------- set new freestream mach, re from new cl
@@ -473,15 +466,15 @@ bool XFoil::ViscousIter() {
     qinv_matrix = InviscidSolver::qiset(update_result.analysis_state.alpha,
                                         aerodynamicCache.qinvu);
     const auto inviscid_edge_velocity =
-        boundaryLayerWorkflow.computeInviscidEdgeVelocity(qinv_matrix);
-    boundaryLayerWorkflow.assignInviscidEdgeVelocity(inviscid_edge_velocity);
+        boundaryLayer.computeInviscidEdgeVelocity(qinv_matrix);
+    boundaryLayer.assignInviscidEdgeVelocity(inviscid_edge_velocity);
   }
 
   qvis = qvfue(
       qvis); //	------ calculate edge velocities
                                             // qvis(.) from edgeVelocity(..)
   surface_vortex = gamqv(); //	------ set gam distribution from qvis
-  boundaryLayerWorkflow.moveStagnation(
+  boundaryLayer.moveStagnation(
       surface_vortex, foil.foil_shape.spline_length, foil, qinv_matrix,
       stagnation); //	------ relocate stagnation point
 

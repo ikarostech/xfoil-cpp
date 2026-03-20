@@ -30,26 +30,12 @@ BoundaryLayerStationReadModel
 BoundaryLayerRuntimeStateOps::readStationModel(
     const SidePair<BoundaryLayerLattice> &lattice, const Eigen::VectorXd &wgap,
     int side, int stationIndex) {
-  const auto &sideLattice = lattice.get(side);
+  return lattice.get(side).readStationModel(wgap, stationIndex);
+}
 
-  BoundaryLayerStationReadModel model;
-  model.stationCount = sideLattice.stationCount;
-  model.trailingEdgeIndex = sideLattice.trailingEdgeIndex;
-  model.transitionIndex = sideLattice.profiles.transitionIndex;
-  model.arcLength = sideLattice.arcLengthCoordinates[stationIndex];
-  model.edgeVelocity = sideLattice.profiles.edgeVelocity[stationIndex];
-  model.momentumThickness =
-      sideLattice.profiles.momentumThickness[stationIndex];
-  model.displacementThickness =
-      sideLattice.profiles.displacementThickness[stationIndex];
-  model.skinFrictionCoeff = sideLattice.profiles.skinFrictionCoeff[stationIndex];
-
-  if (stationIndex > sideLattice.trailingEdgeIndex) {
-    const int wakeIndex = stationIndex - sideLattice.trailingEdgeIndex;
-    model.wakeGap = wgap[wakeIndex - 1];
-  }
-
-  return model;
+BoundaryLayerSideReadModel BoundaryLayerRuntimeStateOps::readSideModel(
+    const SidePair<BoundaryLayerLattice> &lattice, int side) {
+  return lattice.get(side).readSideModel();
 }
 
 BoundaryLayerTrailingEdgeReadModel

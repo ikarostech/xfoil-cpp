@@ -1,39 +1,44 @@
 #pragma once
 
-#include "solver/boundary_layer/workflow/workflow.hpp"
+#include "solver/boundary_layer/boundary_layer.hpp"
 #include "solver/boundary_layer/runtime/state.hpp"
 #include "solver/boundary_layer/initialization/setbl.hpp"
 
 class BoundaryLayerInitializer {
  public:
   static SetblOutputView run(
-      BoundaryLayerWorkflow &workflow,
-      SidePairRef<const BoundaryLayerSideProfiles> profiles,
-      const FlowState &analysis_state, const AeroCoefficients &aero_coeffs,
+      BoundaryLayer &boundaryLayer, const FlowState &analysis_state,
+      const AeroCoefficients &aero_coeffs,
       double acrit, const Foil &foil, const StagnationResult &stagnation,
       const Eigen::MatrixXd &dij, bool bl_initialized) {
-    return runBoundaryLayerSetbl(workflow, profiles, analysis_state,
-                                 aero_coeffs, acrit, foil, stagnation, dij,
-                                 bl_initialized);
+    return BoundaryLayerSetblUseCase{}.run(
+                                           boundaryLayer,
+                                           SidePairRef<const BoundaryLayerSideProfiles>{
+                                               boundaryLayer.profiles(1),
+                                               boundaryLayer.profiles(2)},
+                                           analysis_state,
+                                           aero_coeffs, acrit, foil,
+                                           stagnation, dij, bl_initialized);
   }
 
-  static void applyOutput(BoundaryLayerWorkflow &workflow,
+  static void applyOutput(BoundaryLayer &boundaryLayer,
                           SetblOutputView &output) {
-    workflow.compressibility() = output.blCompressibility;
-    workflow.reynolds() = output.blReynolds;
-    workflow.applyProfiles(std::move(output.profiles));
-    workflow.flowRegime() = output.flowRegime;
-    workflow.transition() = output.blTransition;
+    boundaryLayer.applyInitializationState(output.blCompressibility,
+                                           output.blReynolds,
+                                           output.blTransition,
+                                           output.flowRegime,
+                                           std::move(output.profiles));
   }
 
-  static int resetSideState(BoundaryLayerWorkflow &workflow, int side,
+  static int resetSideState(BoundaryLayer &boundaryLayer, int side,
                             const Foil &foil,
                             const StagnationResult &stagnation) {
-    return workflow.resetSideState(side, foil, stagnation);
+    return boundaryLayer.resetSideState(side, foil, stagnation);
   }
 
-  static double xifset(const BoundaryLayerWorkflow &workflow, const Foil &foil,
+  static double xifset(const BoundaryLayer &boundaryLayer, const Foil &foil,
                        const StagnationResult &stagnation, int side) {
-    return workflow.computeForcedTransitionArcLength(foil, stagnation, side);
+    return boundaryLayer.computeForcedTransitionArcLength(foil, stagnation,
+                                                          side);
   }
 };

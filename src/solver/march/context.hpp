@@ -26,7 +26,10 @@ class MarchStateContext : public virtual MarchCoreContext {
 public:
   virtual ~MarchStateContext() = default;
 
-  virtual BoundaryLayerState &mutableState() = 0;
+  virtual blData readCurrentState() const = 0;
+  virtual void writeCurrentState(const blData &state) = 0;
+  virtual double readCurrentShapeFactor() const = 0;
+  virtual void updateCurrentStationKinematics() = 0;
 
   virtual FlowRegimeEnum
   applyFlowRegimeCandidate(FlowRegimeEnum candidate) = 0;
@@ -34,7 +37,6 @@ public:
   virtual blData blprv(blData data, double xsi, double ami, double cti,
                        double thi, double dsi, double dswaki,
                        double uei) const = 0;
-  virtual bool blkin(BoundaryLayerState &state) = 0;
 };
 
 class MarchStationDataAccess : public virtual MarchCoreContext {

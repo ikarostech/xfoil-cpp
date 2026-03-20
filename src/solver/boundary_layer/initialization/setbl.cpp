@@ -386,15 +386,15 @@ class BoundaryLayerSetblAssembler {
 
 } // namespace
 
-SetblOutputView runBoundaryLayerSetbl(
-    BoundaryLayerWorkflow &workflow,
+SetblOutputView BoundaryLayerSetblUseCase::run(
+    BoundaryLayer &boundaryLayer,
     SidePairRef<const BoundaryLayerSideProfiles> profiles,
     const FlowState &analysis_state, const AeroCoefficients &aero_coeffs,
     double acrit, const Foil &foil, const StagnationResult &stagnation,
-    const Eigen::MatrixXd &dij, bool bl_initialized) {
+    const Eigen::MatrixXd &dij, bool bl_initialized) const {
   BoundaryLayerSetblAssembler assembler{
-      makeBoundaryLayerSetblAccess(workflow),
-      makeBoundaryLayerMarchAccess(workflow)};
+      BoundaryLayerSetblAccess(boundaryLayer),
+      BoundaryLayerMarchAccess(boundaryLayer)};
   return assembler.run(profiles, analysis_state, aero_coeffs, acrit, foil,
                        stagnation, dij, bl_initialized);
 }

@@ -56,7 +56,7 @@ void XFoil::initializeDataStructures() {
   const int bl_node_count = point_count + wake_nodes;
   auto &cache = ensureInitState(this);
 
-  boundaryLayerWorkflow.initializeLattices(bl_node_count);
+  boundaryLayer.initializeLattices(bl_node_count);
 
   aerodynamicCache.bij = MatrixXd::Zero(point_count + 1, total_nodes_with_wake);
   aerodynamicCache.dij =
@@ -71,8 +71,8 @@ void XFoil::initializeDataStructures() {
   aerodynamicCache.qinvu = Matrix2Xd::Zero(2, total_nodes_with_wake);
   qvis = VectorXd::Zero(total_nodes_with_wake);
 
-  boundaryLayerWorkflow.initializeWakeGap(wake_nodes);
-  boundaryLayerWorkflow.systemCoefficients().clear();
+  boundaryLayer.initializeWakeGap(wake_nodes);
+  boundaryLayer.systemCoefficients().clear();
 
   qgamm = VectorXd::Zero(point_count);
 }
@@ -84,12 +84,11 @@ void XFoil::resetFlags() {
   analysis_state_.viscous = false;
   analysis_state_.controlByAlpha = false;
   foil.edge.sharp = false;
-  boundaryLayerWorkflow.flowRegime() = FlowRegimeEnum::Laminar;
+  boundaryLayer.setFlowRegime(FlowRegimeEnum::Laminar);
 }
 
 void XFoil::resetVariables() {
-  boundaryLayerWorkflow.clearState();
-  boundaryLayerWorkflow.resetSideMetadata();
+  boundaryLayer.resetForReinitialization();
 
   analysis_state_.qinf = 1.0;
   aero_coeffs_.cl = 0.0;
@@ -99,20 +98,6 @@ void XFoil::resetVariables() {
   sigte = gamte = 0.0;
   avisc = std::numeric_limits<double>::quiet_NaN();
   resetFlags();
-  boundaryLayerWorkflow.resetPhysicsState();
-  boundaryLayerWorkflow.compressibility().qinfbl =
-      boundaryLayerWorkflow.compressibility().tkbl =
-          boundaryLayerWorkflow.compressibility().tkbl_ms = 0.0;
-  boundaryLayerWorkflow.compressibility().rstbl =
-      boundaryLayerWorkflow.compressibility().rstbl_ms = 0.0;
-  boundaryLayerWorkflow.compressibility().hstinv =
-      boundaryLayerWorkflow.compressibility().hstinv_ms = 0.0;
-  boundaryLayerWorkflow.reynolds().reybl =
-      boundaryLayerWorkflow.reynolds().reybl_ms =
-          boundaryLayerWorkflow.reynolds().reybl_re = 0.0;
-  boundaryLayerWorkflow.compressibility().gm1bl = 0.0;
-  boundaryLayerWorkflow.transition().xiforc = 0.0;
-  boundaryLayerWorkflow.transition().amcrit = 0.0;
   auto &cache = ensureInitState(this);
   cache.amax = 0.0;
   analysis_state_.alpha = 0.0;

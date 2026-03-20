@@ -18,6 +18,8 @@ class BoundaryLayerRuntimeStateOps {
   static BoundaryLayerStationReadModel readStationModel(
       const SidePair<BoundaryLayerLattice> &lattice, const Eigen::VectorXd &wgap,
       int side, int stationIndex);
+  static BoundaryLayerSideReadModel readSideModel(
+      const SidePair<BoundaryLayerLattice> &lattice, int side);
   static BoundaryLayerTrailingEdgeReadModel readTrailingEdgeModel(
       const SidePair<BoundaryLayerLattice> &lattice);
   static double xifset(const SidePair<BoundaryLayerLattice> &lattice,

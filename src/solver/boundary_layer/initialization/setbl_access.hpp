@@ -1,6 +1,6 @@
 #pragma once
 
-#include "solver/boundary_layer/workflow/workflow.hpp"
+#include "solver/boundary_layer/boundary_layer.hpp"
 #include "solver/boundary_layer/boundary_layer_aerodynamics.hpp"
 #include "solver/boundary_layer/workflow/mixed_mode.hpp"
 #include "solver/boundary_layer/runtime/state.hpp"
@@ -8,40 +8,40 @@
 
 class BoundaryLayerSetblAccess {
  public:
-  explicit BoundaryLayerSetblAccess(BoundaryLayerWorkflow &workflow)
-      : workflow_(workflow) {}
+  explicit BoundaryLayerSetblAccess(BoundaryLayer &boundaryLayer)
+      : boundaryLayer_(boundaryLayer) {}
 
-  Eigen::VectorXd &wgap() const { return workflow_.wakeGap(); }
-  BlSystemCoeffs &blc() const { return workflow_.systemCoefficients(); }
+  Eigen::VectorXd &wgap() const { return boundaryLayer_.wakeGap(); }
+  BlSystemCoeffs &blc() const { return boundaryLayer_.systemCoefficients(); }
   const BlSystemCoeffs &blcConst() const {
-    return workflow_.systemCoefficients();
+    return boundaryLayer_.systemCoefficients();
   }
-  int stationCount(int side) const { return workflow_.stationCount(side); }
-  int trailingEdgeIndex(int side) const { return workflow_.trailingEdgeIndex(side); }
+  int stationCount(int side) const { return boundaryLayer_.stationCount(side); }
+  int trailingEdgeIndex(int side) const { return boundaryLayer_.trailingEdgeIndex(side); }
   int topTrailingEdgeIndex() const { return trailingEdgeIndex(1); }
   int bottomTrailingEdgeIndex() const { return trailingEdgeIndex(2); }
-  int transitionIndex(int side) const { return workflow_.transitionIndex(side); }
+  int transitionIndex(int side) const { return boundaryLayer_.transitionIndex(side); }
   void setTransitionIndex(int side, int stationIndex) const {
-    workflow_.setTransitionIndex(side, stationIndex);
+    boundaryLayer_.setTransitionIndex(side, stationIndex);
   }
   int stationToPanel(int side, int stationIndex) const {
-    return workflow_.stationToPanel(side, stationIndex);
+    return boundaryLayer_.stationToPanel(side, stationIndex);
   }
   int leadingEdgePanelIndex(int side) const { return stationToPanel(side, 0); }
   int trailingEdgePanelIndex(int side) const {
     return stationToPanel(side, trailingEdgeIndex(side));
   }
   int stationToSystem(int side, int stationIndex) const {
-    return workflow_.stationToSystem(side, stationIndex);
+    return boundaryLayer_.stationToSystem(side, stationIndex);
   }
   int trailingEdgeSystemIndex(int side) const {
-    return workflow_.trailingEdgeSystemIndex(side);
+    return boundaryLayer_.trailingEdgeSystemIndex(side);
   }
   double arcLengthCoordinate(int side, int stationIndex) const {
-    return workflow_.readStationModel(side, stationIndex).arcLength;
+    return boundaryLayer_.readStationModel(side, stationIndex).arcLength;
   }
   double panelInfluenceFactor(int side, int stationIndex) const {
-    return workflow_.panelInfluenceFactor(side, stationIndex);
+    return boundaryLayer_.panelInfluenceFactor(side, stationIndex);
   }
   double leadingEdgePanelInfluenceFactor(int side) const {
     return panelInfluenceFactor(side, 0);
@@ -51,66 +51,61 @@ class BoundaryLayerSetblAccess {
   }
   double inviscidEdgeVelocitySensitivityToAlpha(int side,
                                                 int stationIndex) const {
-    return workflow_.inviscidEdgeVelocitySensitivityToAlpha(side, stationIndex);
+    return boundaryLayer_.inviscidEdgeVelocitySensitivityToAlpha(side, stationIndex);
   }
   double wakeGapAt(int side, int stationIndex) const {
     const int wake_index = stationIndex - trailingEdgeIndex(side);
-    return workflow_.wakeGap()[wake_index - 1];
+    return boundaryLayer_.wakeGap()[wake_index - 1];
   }
-  BoundaryLayerSideProfiles &profiles(int side) { return workflow_.profiles(side); }
-  const BoundaryLayerSideProfiles &profiles(int side) const { return workflow_.profiles(side); }
+  BoundaryLayerSideProfiles &profiles(int side) { return boundaryLayer_.profiles(side); }
+  const BoundaryLayerSideProfiles &profiles(int side) const { return boundaryLayer_.profiles(side); }
   void copyProfilesTo(SidePair<BoundaryLayerSideProfiles> &profiles) const {
-    workflow_.copyProfilesTo(profiles);
+    boundaryLayer_.copyProfilesTo(profiles);
   }
-  FlowRegimeEnum &flowRegime() const { return workflow_.flowRegime(); }
+  FlowRegimeEnum &flowRegime() const { return boundaryLayer_.flowRegime(); }
   BlCompressibilityParams &blCompressibility() const {
-    return workflow_.compressibility();
+    return boundaryLayer_.compressibility();
   }
-  BlReynoldsParams &blReynolds() const { return workflow_.reynolds(); }
-  BlTransitionParams &blTransition() const { return workflow_.transition(); }
-  int systemSize() const { return workflow_.systemSize(); }
+  BlReynoldsParams &blReynolds() const { return boundaryLayer_.reynolds(); }
+  BlTransitionParams &blTransition() const { return boundaryLayer_.transition(); }
+  int systemSize() const { return boundaryLayer_.systemSize(); }
   FlowRegimeEnum determineRegimeForStation(int side, int stationIndex) const {
-    return workflow_.determineRegimeForStation(side, stationIndex);
+    return boundaryLayer_.determineRegimeForStation(side, stationIndex);
   }
 
   bool tesys(const BoundaryLayerSideProfiles &top_profiles,
              const BoundaryLayerSideProfiles &bottom_profiles,
              const Edge &edge) const {
-    return workflow_.tesys(top_profiles, bottom_profiles, edge);
+    return boundaryLayer_.tesys(top_profiles, bottom_profiles, edge);
   }
-  bool blsys() const { return workflow_.blsys(); }
-  bool blkin(BoundaryLayerState &state) const { return workflow_.blkin(state); }
+  bool blsys() const { return boundaryLayer_.blsys(); }
+  bool blkin(BoundaryLayerState &state) const { return boundaryLayer_.blkin(state); }
   blData blprv(blData data, double xsi, double ami, double cti, double thi,
                double dsi, double dswaki, double uei) const {
-    return workflow_.blprv(data, xsi, ami, cti, thi, dsi, dswaki, uei);
+    return boundaryLayer_.blprv(data, xsi, ami, cti, thi, dsi, dswaki, uei);
   }
   SkinFrictionCoefficients blmid(FlowRegimeEnum flow_regime) const {
-    return workflow_.blmid(flow_regime);
+    return boundaryLayer_.blmid(flow_regime);
   }
-  void runTransitionCheck() const { workflow_.runTransitionCheck(); }
-  double currentAmplification() const { return workflow_.currentAmplification(); }
-  double previousAmplification() const { return workflow_.previousAmplification(); }
-  double currentSkinFrictionHistory() const { return workflow_.currentSkinFrictionHistory(); }
-  BoundaryLayerState snapshotState() const { return workflow_.snapshotState(); }
-  void replaceState(const BoundaryLayerState &state) const { workflow_.replaceState(state); }
-  void advanceState() const { workflow_.advanceState(); }
+  void runTransitionCheck() const { boundaryLayer_.runTransitionCheck(); }
+  double currentAmplification() const { return boundaryLayer_.currentAmplification(); }
+  double previousAmplification() const { return boundaryLayer_.previousAmplification(); }
+  double currentSkinFrictionHistory() const { return boundaryLayer_.currentSkinFrictionHistory(); }
+  BoundaryLayerState snapshotState() const { return boundaryLayer_.snapshotState(); }
+  void replaceState(const BoundaryLayerState &state) const { boundaryLayer_.replaceState(state); }
+  void advanceState() const { boundaryLayer_.advanceState(); }
   bool solveTeSystemForCurrentProfiles(const Edge &edge) const {
-    return workflow_.solveTeSystemForCurrentProfiles(edge);
+    return boundaryLayer_.solveTeSystemForCurrentProfiles(edge);
   }
-  void solveWakeState() const { workflow_.solveWakeState(); }
+  void solveWakeState() const { boundaryLayer_.solveWakeState(); }
   double xifset(const Foil &foil, const StagnationResult &stagnation,
                 int side) const {
-    return workflow_.computeForcedTransitionArcLength(foil, stagnation, side);
+    return boundaryLayer_.computeForcedTransitionArcLength(foil, stagnation, side);
   }
   SidePair<Eigen::VectorXd> ueset(const Eigen::MatrixXd &dij) const {
-    return workflow_.computeInviscidEdgeVelocitySensitivity(dij);
+    return boundaryLayer_.computeInviscidEdgeVelocitySensitivity(dij);
   }
 
  private:
-  BoundaryLayerWorkflow &workflow_;
+  BoundaryLayer &boundaryLayer_;
 };
-
-inline BoundaryLayerSetblAccess makeBoundaryLayerSetblAccess(
-    BoundaryLayerWorkflow &workflow) {
-  return BoundaryLayerSetblAccess(workflow);
-}
