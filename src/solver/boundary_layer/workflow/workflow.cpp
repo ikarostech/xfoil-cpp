@@ -258,17 +258,18 @@ int BoundaryLayer::trailingEdgeSystemIndex(int side) const {
 
 BoundaryLayerEdgeVelocityDistribution
 BoundaryLayer::computeNewUeDistribution(
-    const XFoil &xfoil, const BoundaryLayerMatrix3x2dVector &vdel) const {
+    const BoundaryLayerAerodynamicContext &context,
+    const BoundaryLayerMatrix3x2dVector &vdel) const {
   return BoundaryLayerAerodynamicsOps::computeNewUeDistribution(
-      state_store_.lattice, xfoil, vdel);
+      state_store_.lattice, context, vdel);
 }
 
 BoundaryLayerClContributions
 BoundaryLayer::computeClFromEdgeVelocityDistribution(
-    const XFoil &xfoil,
+    const BoundaryLayerAerodynamicContext &context,
     const BoundaryLayerEdgeVelocityDistribution &distribution) const {
   return BoundaryLayerAerodynamicsOps::computeClFromEdgeVelocityDistribution(
-      state_store_.lattice, xfoil, distribution);
+      state_store_.lattice, context, distribution);
 }
 
 void BoundaryLayer::initializeLattices(int size) {

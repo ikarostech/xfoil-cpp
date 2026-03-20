@@ -14,6 +14,7 @@
 #include "numerics/coefficient/bl_newton.hpp"
 #include "model/flow_regime.hpp"
 #include "solver/boundary_layer/workflow/transition.hpp"
+#include "solver/boundary_layer/boundary_layer_aerodynamics.hpp"
 #include "solver/boundary_layer/boundary_layer_geometry.hpp"
 #include "solver/boundary_layer/viscous_types.hpp"
 #include "solver/boundary_layer/runtime/state.hpp"
@@ -117,10 +118,10 @@ class BoundaryLayer {
     bool hasValidPanelMap(int total_nodes) const;
     int trailingEdgeSystemIndex(int side) const;
     BoundaryLayerEdgeVelocityDistribution
-    computeNewUeDistribution(const class XFoil &xfoil,
+    computeNewUeDistribution(const BoundaryLayerAerodynamicContext &context,
                              const BoundaryLayerMatrix3x2dVector &vdel) const;
     BoundaryLayerClContributions computeClFromEdgeVelocityDistribution(
-        const class XFoil &xfoil,
+        const BoundaryLayerAerodynamicContext &context,
         const BoundaryLayerEdgeVelocityDistribution &distribution) const;
 
     Eigen::VectorXd &wakeGap() {

@@ -1,11 +1,63 @@
 #include "solver/boundary_layer/boundary_layer_aerodynamics.hpp"
 
-#include "solver/xfoil/XFoil.h"
 #include "numerics/math_util.hpp"
+
+namespace {
+
+struct CompressibilityParams {
+  double beta = 0.0;
+  double beta_msq = 0.0;
+  double prandtlGlauertFactor = 0.0;
+  double prandtlGlauertFactor_msq = 0.0;
+};
+
+struct PressureCoefficientResult {
+  double cp = 0.0;
+  double cp_msq = 0.0;
+  double cp_velocity_derivative = 0.0;
+};
+
+CompressibilityParams
+buildCompressibilityParams(const BoundaryLayerAerodynamicContext &context) {
+  const double beta = std::sqrt(1.0 - context.currentMach * context.currentMach);
+  const double beta_msq = -0.5 / beta;
+  const double prandtl_glauert_factor =
+      0.5 * context.currentMach * context.currentMach / (1.0 + beta);
+  const double prandtl_glauert_factor_msq =
+      0.5 / (1.0 + beta) -
+      prandtl_glauert_factor / (1.0 + beta) * beta_msq;
+  return {beta, beta_msq, prandtl_glauert_factor,
+          prandtl_glauert_factor_msq};
+}
+
+PressureCoefficientResult computePressureCoefficient(
+    double tangential_velocity, double velocity_derivative, double qinf,
+    const CompressibilityParams &params) {
+  const double velocity_ratio = tangential_velocity / qinf;
+  const double cginc = 1.0 - velocity_ratio * velocity_ratio;
+  const double denom = params.beta + params.prandtlGlauertFactor * cginc;
+  const double pressure_coefficient = cginc / denom;
+  const double cp_msq =
+      -pressure_coefficient / denom *
+      (params.beta_msq + params.prandtlGlauertFactor_msq * cginc);
+
+  double cp_velocity_derivative = 0.0;
+  if (velocity_derivative != 0.0) {
+    const double cpi = -2.0 * tangential_velocity / (qinf * qinf);
+    const double cpc_cpi =
+        (1.0 - params.prandtlGlauertFactor * pressure_coefficient) / denom;
+    cp_velocity_derivative = cpc_cpi * cpi * velocity_derivative;
+  }
+
+  return {pressure_coefficient, cp_msq, cp_velocity_derivative};
+}
+
+} // namespace
 
 BoundaryLayerEdgeVelocityDistribution
 BoundaryLayerAerodynamicsOps::computeNewUeDistribution(
-    const SidePair<BoundaryLayerLattice> &lattice, const XFoil &xfoil,
+    const SidePair<BoundaryLayerLattice> &lattice,
+    const BoundaryLayerAerodynamicContext &context,
     const BoundaryLayerMatrix3x2dVector &vdel) {
   BoundaryLayerEdgeVelocityDistribution distribution;
   distribution.unew.top = Eigen::VectorXd::Zero(lattice.top.stationCount);
@@ -27,7 +79,7 @@ BoundaryLayerAerodynamicsOps::computeNewUeDistribution(
           const double influence =
               -lattice.get(side).panelInfluenceFactor[station] *
               lattice.get(otherSide).panelInfluenceFactor[otherStation] *
-              xfoil.inviscid_state_.cache.dij(panelIndex, otherPanel);
+              context.dij(panelIndex, otherPanel);
           dui += influence * (lattice.get(otherSide).profiles.massFlux[otherStation] +
                               vdel[systemIndex](2, 0));
           dui_ac += influence * (-vdel[systemIndex](2, 1));
@@ -35,7 +87,7 @@ BoundaryLayerAerodynamicsOps::computeNewUeDistribution(
       }
 
       const double inviscidDerivative =
-          xfoil.analysis_state_.controlByAlpha
+          context.controlByAlpha
               ? 0.0
               : lattice.get(side).inviscidEdgeVelocityMatrix(1, station);
       distribution.unew.get(side)[station] =
@@ -48,10 +100,11 @@ BoundaryLayerAerodynamicsOps::computeNewUeDistribution(
 
 BoundaryLayerClContributions
 BoundaryLayerAerodynamicsOps::computeClFromEdgeVelocityDistribution(
-    const SidePair<BoundaryLayerLattice> &lattice, const XFoil &xfoil,
+    const SidePair<BoundaryLayerLattice> &lattice,
+    const BoundaryLayerAerodynamicContext &context,
     const BoundaryLayerEdgeVelocityDistribution &distribution) {
   BoundaryLayerClContributions contributions;
-  const int point_count = xfoil.foil.foil_shape.n;
+  const int point_count = context.foilPoints.cols();
   if (point_count == 0) {
     return contributions;
   }
@@ -69,9 +122,9 @@ BoundaryLayerAerodynamicsOps::computeClFromEdgeVelocityDistribution(
     }
   }
 
-  const auto compressibility = xfoil.buildCompressibilityParams();
-  const auto cp_first =
-      xfoil.computePressureCoefficient(qnew[0], q_ac[0], compressibility);
+  const auto compressibility = buildCompressibilityParams(context);
+  const auto cp_first = computePressureCoefficient(
+      qnew[0], q_ac[0], context.qinf, compressibility);
 
   double cpg1 = cp_first.cp;
   double cpg1_ms = cp_first.cp_msq;
@@ -79,17 +132,16 @@ BoundaryLayerAerodynamicsOps::computeClFromEdgeVelocityDistribution(
 
   for (int i = 0; i < point_count; i++) {
     const int ip = (i + 1) % point_count;
-    const auto cp_next =
-        xfoil.computePressureCoefficient(qnew[ip], q_ac[ip], compressibility);
+    const auto cp_next = computePressureCoefficient(
+        qnew[ip], q_ac[ip], context.qinf, compressibility);
 
     const double cpg2 = cp_next.cp;
     const double cpg2_ms = cp_next.cp_msq;
     const double cpg2_ac = cp_next.cp_velocity_derivative;
 
     const Eigen::Vector2d dpoint =
-        MathUtil::getRotateMatrix(xfoil.analysis_state_.alpha) *
-        (xfoil.foil.foil_shape.points.col(ip) -
-         xfoil.foil.foil_shape.points.col(i));
+        MathUtil::getRotateMatrix(context.alpha) *
+        (context.foilPoints.col(ip) - context.foilPoints.col(i));
 
     const double ag = 0.5 * (cpg2 + cpg1);
     const double ag_ms = 0.5 * (cpg2_ms + cpg1_ms);

@@ -49,6 +49,7 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 #include "model/foil/foil.hpp"
 #include "numerics/side_pair.hpp"
 #include "solver/boundary_layer/boundary_layer.hpp"
+#include "solver/xfoil/viscous_update.hpp"
 
 struct SetblOutputView;
 class InviscidSolver;
@@ -95,7 +96,6 @@ class XFoil {
 
     friend class InviscidSolver;
     friend BoundaryLayer;
-
     using VectorXd                        = Eigen::VectorXd;
     using VectorXi                        = Eigen::VectorXi;
     using Vector2d                        = Eigen::Vector2d;
@@ -242,19 +242,9 @@ class XFoil {
 
   private:
   public:
-    struct UpdateResult {
-        double rmsbl = 0.0;
-
-        FlowState analysis_state;
-        AeroCoefficients aero_coeffs;
-        SidePair<BoundaryLayerSideProfiles> profiles;
-    };
+    using UpdateResult = ViscousUpdateResult;
     UpdateResult update(const Matrix3x2dVector &vdel) const;
     using ClContributions = BoundaryLayerClContributions;
-    double computeAcChange(double clnew, double cl_current, double cl_target, double cl_ac, double cl_a,
-                           double cl_ms) const;
-
-    double rlxCalc(double dac) const;
     void invalidateConvergedSolution();
     void invalidateWakeGeometry();
     void invalidatePanelMap();

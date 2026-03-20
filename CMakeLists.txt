@@ -50,6 +50,7 @@ add_library(xfoil_solver
     src/solver/xfoil/XFoil_geometry.cpp
     src/solver/xfoil/XFoil_init.cpp
     src/solver/xfoil/XFoil_viscous.cpp
+    src/solver/xfoil/viscous_update.cpp
     src/solver/inviscid/InviscidSolver.cpp
     src/solver/inviscid/psi.cpp
     src/solver/boundary_layer/blsolve.cpp

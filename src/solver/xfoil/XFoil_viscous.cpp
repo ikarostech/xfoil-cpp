@@ -6,6 +6,7 @@
 #include "solver/inviscid/InviscidSolver.hpp"
 #include "solver/inviscid/psi.hpp"
 #include "solver/march/march.hpp"
+#include "solver/xfoil/viscous_update.hpp"
 #include "solver/xfoil/XFoil.h"
 #include <algorithm>
 #include <cmath>
@@ -194,108 +195,20 @@ Matrix2Xd XFoil::qwcalc(const Foil &foil, const Matrix2Xd &base_qinvu, const Mat
     return updated_qinvu;
 }
 
-double XFoil::computeAcChange(double clnew, double cl_current, double cl_target, double cl_ac, double cl_a,
-                              double cl_ms) const {
-    if (analysis_state_.controlByAlpha) {
-        return (clnew - cl_current) /
-               (1.0 - cl_ac - cl_ms * 2.0 * analysis_state_.currentMach * operating_point_coupling_.machPerLift);
-    }
-    return (clnew - cl_target) / (0.0 - cl_ac - cl_a);
-}
-
-double XFoil::rlxCalc(double dac) const {
-    //---- max allowable alpha changes per iteration
-    const double dtor = std::numbers::pi / 180.0;
-    double dalmax     = 0.5 * dtor;
-    double dalmin     = -0.5 * dtor;
-    //---- max allowable cl change per iteration
-    double dclmax = 0.5;
-    double dclmin = -0.5;
-
-    if (analysis_state_.machType != MachType::CONSTANT)
-        dclmin = std::max(-0.5, -0.9 * aero_coeffs_.cl);
-
-    auto clampRelaxationForGlobalChange = [&](double relaxation, double dac, double lower, double upper) {
-        if (dac == 0.0)
-            return relaxation;
-        if (relaxation * dac > upper)
-            relaxation = upper / dac;
-        if (relaxation * dac < lower)
-            relaxation = lower / dac;
-        return relaxation;
-    };
-
-    if (analysis_state_.controlByAlpha)
-        return clampRelaxationForGlobalChange(1.0, dac, dclmin, dclmax);
-
-    return clampRelaxationForGlobalChange(1.0, dac, dalmin, dalmax);
-}
-
 XFoil::UpdateResult XFoil::update(const XFoil::Matrix3x2dVector &vdel) const {
-    //------------------------------------------------------------------
-    //      adds on newton deltas to boundary layer variables.
-    //      checks for excessive changes and underrelaxes if necessary.
-    //      calculates max and rms changes.
-    //      also calculates the change in the global variable "ac".
-    //        if controlByAlpha=true , "ac" is cl
-    //        if controlByAlpha=false, "ac" is alpha
-    //------------------------------------------------------------------
-
-    UpdateResult result;
-    result.analysis_state = analysis_state_;
-    result.aero_coeffs    = aero_coeffs_;
-    //--- calculate new ue distribution and tangential velocities
-    const auto ue_distribution  = boundaryLayer.computeNewUeDistribution(*this, vdel);
-    const auto cl_contributions = boundaryLayer.computeClFromEdgeVelocityDistribution(*this, ue_distribution);
-
-    const double cl_target = analysis_state_.controlByAlpha ? aero_coeffs_.cl : analysis_state_.clspec;
-    double dac             = computeAcChange(cl_contributions.cl, aero_coeffs_.cl, cl_target, cl_contributions.cl_ac,
-                                             cl_contributions.cl_a, cl_contributions.cl_ms);
-
-    double rlx = rlxCalc(dac);
-
-    double rmsbl     = 0.0;
-    const double dhi = 1.5;
-    const double dlo = -0.5;
-
-    SidePair<BoundaryLayerDelta> deltas;
-    SidePair<BoundaryLayerMetrics> metrics;
-    const double gamma = 1.4;
-    for (int side = 1; side <= 2; ++side) {
-        deltas.get(side)  = boundaryLayer.buildBoundaryLayerDelta(side, ue_distribution.unew.get(side),
-                                                                  ue_distribution.u_ac.get(side), dac, vdel);
-        metrics.get(side) = boundaryLayer.evaluateSegmentRelaxation(side, deltas.get(side), dhi, dlo, rlx);
-        rmsbl += metrics.get(side).rmsContribution;
-
-        double hstinv = (gamma - 1) * MathUtil::pow(analysis_state_.currentMach / analysis_state_.qinf, 2) /
-                        (1.0 + 0.5 * (gamma - 1) * analysis_state_.currentMach * analysis_state_.currentMach);
-
-        result.profiles.get(side) =
-            boundaryLayer.applyBoundaryLayerDelta(side, deltas.get(side), rlx, hstinv, gamma - 1);
-    }
-
-    rmsbl = sqrt(rmsbl / (4.0 * double(boundaryLayer.readSideStationCount(1) + boundaryLayer.readSideStationCount(2))));
-
-    if (analysis_state_.controlByAlpha)
-        result.aero_coeffs.cl = aero_coeffs_.cl + rlx * dac;
-    else
-        result.analysis_state.alpha = analysis_state_.alpha + rlx * dac;
-
-    //--- equate upper wake arrays to lower wake arrays
-    for (int kbl = 1; kbl <= boundaryLayer.readSideStationCount(2) - (boundaryLayer.trailingEdgeIndex(2) + 1); kbl++) {
-        const int top_index                              = boundaryLayer.trailingEdgeIndex(1) + kbl;
-        const int bottom_index                           = boundaryLayer.trailingEdgeIndex(2) + kbl;
-        result.profiles.top.skinFrictionCoeff[top_index] = result.profiles.bottom.skinFrictionCoeff[bottom_index];
-        result.profiles.top.momentumThickness[top_index] = result.profiles.bottom.momentumThickness[bottom_index];
-        result.profiles.top.displacementThickness[top_index] =
-            result.profiles.bottom.displacementThickness[bottom_index];
-        result.profiles.top.edgeVelocity[top_index] = result.profiles.bottom.edgeVelocity[bottom_index];
-        result.profiles.top.skinFrictionCoeffHistory[top_index] =
-            result.profiles.bottom.skinFrictionCoeffHistory[bottom_index];
-    }
-
-    result.rmsbl = rmsbl;
-    return result;
+    return BoundaryLayerViscousUpdate::run(
+        ViscousUpdateInput{boundaryLayer,
+                           analysis_state_,
+                           aero_coeffs_,
+                           operating_point_coupling_.machPerLift,
+                           BoundaryLayerAerodynamicContext{
+                               inviscid_state_.cache.dij,
+                               foil.foil_shape.points,
+                               analysis_state_.alpha,
+                               analysis_state_.qinf,
+                               analysis_state_.currentMach,
+                               analysis_state_.controlByAlpha}},
+        vdel);
 }
 
 bool XFoil::viscal() {
