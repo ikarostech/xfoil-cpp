@@ -8,6 +8,7 @@
 #include "solver/boundary_layer/workflow/relaxation.hpp"
 #include "solver/boundary_layer/workflow/solver_ops.hpp"
 #include "solver/boundary_layer/runtime/state.hpp"
+#include "solver/march/mrchue_linear_system.hpp"
 
 using BoundaryContext = BoundaryLayerMixedModeStationContext;
 
@@ -343,6 +344,95 @@ double BoundaryLayerWorkflow::computeForcedTransitionArcLength(
     const Foil &foil, const StagnationResult &stagnation, int side) const {
   return BoundaryLayerRuntimeStateOps::xifset(state_store_.lattice, foil,
                                               stagnation, side);
+}
+
+int BoundaryLayerWorkflow::readSideStationCount(int side) const {
+  return BoundaryLayerRuntimeStateOps::readSideStationCount(state_store_.lattice,
+                                                            side);
+}
+
+BoundaryLayerStationReadModel BoundaryLayerWorkflow::readStationModel(
+    int side, int stationIndex) const {
+  return BoundaryLayerRuntimeStateOps::readStationModel(
+      state_store_.lattice, state_store_.wgap, side, stationIndex);
+}
+
+BoundaryLayerTrailingEdgeReadModel
+BoundaryLayerWorkflow::readTrailingEdgeModel() const {
+  return BoundaryLayerRuntimeStateOps::readTrailingEdgeModel(
+      state_store_.lattice);
+}
+
+bool BoundaryLayerWorkflow::isStartOfWake(int side, int stationIndex) const {
+  return stationIndex == state_store_.lattice.get(side).trailingEdgeIndex + 1;
+}
+
+void BoundaryLayerWorkflow::copyProfilesTo(
+    SidePair<BoundaryLayerSideProfiles> &profiles) const {
+  profiles.top = state_store_.lattice.top.profiles;
+  profiles.bottom = state_store_.lattice.bottom.profiles;
+}
+
+double BoundaryLayerWorkflow::inviscidEdgeVelocitySensitivityToAlpha(
+    int side, int stationIndex) const {
+  return state_store_.lattice.get(side).inviscidEdgeVelocityMatrix(1,
+                                                                   stationIndex);
+}
+
+double BoundaryLayerWorkflow::currentAmplification() const {
+  return workspace_.state.station2.param.amplz;
+}
+
+double BoundaryLayerWorkflow::previousAmplification() const {
+  return workspace_.state.station1.param.amplz;
+}
+
+double BoundaryLayerWorkflow::currentSkinFrictionHistory() const {
+  return workspace_.state.station2.cqz.scalar;
+}
+
+BoundaryLayerState BoundaryLayerWorkflow::snapshotState() const {
+  return workspace_.state;
+}
+
+void BoundaryLayerWorkflow::replaceState(const BoundaryLayerState &state) {
+  workspace_.state = state;
+}
+
+void BoundaryLayerWorkflow::advanceState() {
+  workspace_.state.stepbl();
+}
+
+void BoundaryLayerWorkflow::runTransitionCheck() {
+  transitionSolver.trchek();
+}
+
+bool BoundaryLayerWorkflow::solveTeSystemForCurrentProfiles(const Edge &edge) {
+  return makeSolverOps().tesys(state_store_.lattice.top.profiles,
+                               state_store_.lattice.bottom.profiles, edge);
+}
+
+void BoundaryLayerWorkflow::solveWakeState() {
+  workspace_.state.station2 = boundaryLayerVariablesSolver.solve(
+      workspace_.state.station2, FlowRegimeEnum::Wake);
+}
+
+SidePair<Eigen::VectorXd>
+BoundaryLayerWorkflow::computeInviscidEdgeVelocitySensitivity(
+    const Eigen::MatrixXd &dij) const {
+  return BoundaryLayerAerodynamicsOps::ueset(state_store_.lattice, dij);
+}
+
+double BoundaryLayerWorkflow::readNewtonRhs(int row) const {
+  return MrchueLinearSystemOps::readNewtonRhs(workspace_.blc, row);
+}
+
+void BoundaryLayerWorkflow::solveDirectNewtonSystem() {
+  MrchueLinearSystemOps::solveDirect(workspace_.blc);
+}
+
+void BoundaryLayerWorkflow::solveInverseNewtonSystem(double htarg) {
+  MrchueLinearSystemOps::solveInverse(workspace_.blc, workspace_.state, htarg);
 }
 
 void BoundaryLayerWorkflow::runTransitionCheckForMrchue(

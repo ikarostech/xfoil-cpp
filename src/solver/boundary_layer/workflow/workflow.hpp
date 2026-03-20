@@ -16,18 +16,14 @@
 #include "solver/boundary_layer/workflow/transition.hpp"
 #include "solver/boundary_layer/boundary_layer_geometry.hpp"
 #include "solver/boundary_layer/viscous_types.hpp"
+#include "solver/boundary_layer/runtime/state.hpp"
 
 class Edge;
 class XFoil;
 class BoundaryLayerWorkflow;
 class BoundaryLayerMarchAccess;
-class BoundaryLayerSetblAccess;
-class BoundaryLayerAerodynamicCoupling;
 class BoundaryLayerSolverOps;
 class BoundaryLayerMixedModeOps;
-
-BoundaryLayerSolverOps makeBoundaryLayerSetblSolverOps(
-    BoundaryLayerWorkflow &workflow);
 
 struct BoundaryLayerStateStore {
     Eigen::VectorXd wgap;
@@ -216,16 +212,34 @@ class BoundaryLayerWorkflow {
     double computeForcedTransitionArcLength(const Foil &foil,
                                             const StagnationResult &stagnation,
                                             int side) const;
+    int readSideStationCount(int side) const;
+    BoundaryLayerStationReadModel readStationModel(int side,
+                                                   int stationIndex) const;
+    BoundaryLayerTrailingEdgeReadModel readTrailingEdgeModel() const;
+    bool isStartOfWake(int side, int stationIndex) const;
+    void copyProfilesTo(SidePair<BoundaryLayerSideProfiles> &profiles) const;
+    double inviscidEdgeVelocitySensitivityToAlpha(int side,
+                                                  int stationIndex) const;
+    double currentAmplification() const;
+    double previousAmplification() const;
+    double currentSkinFrictionHistory() const;
+    BoundaryLayerState snapshotState() const;
+    void replaceState(const BoundaryLayerState &state);
+    void advanceState();
+    void runTransitionCheck();
+    bool solveTeSystemForCurrentProfiles(const Edge &edge);
+    void solveWakeState();
+    SidePair<Eigen::VectorXd>
+    computeInviscidEdgeVelocitySensitivity(const Eigen::MatrixXd &dij) const;
+    double readNewtonRhs(int row) const;
+    void solveDirectNewtonSystem();
+    void solveInverseNewtonSystem(double htarg);
     void runTransitionCheckForMrchue(int side, int stationIndex, double &ami,
                                      double &cti, int laminarAdvance = 2);
     double calcHtarg(int stationIndex, int side, bool wake);
 
   private:
     friend class BoundaryLayerMarchAccess;
-    friend class BoundaryLayerSetblAccess;
-    friend class BoundaryLayerAerodynamicCoupling;
-    friend BoundaryLayerSolverOps makeBoundaryLayerSetblSolverOps(
-        BoundaryLayerWorkflow &workflow);
 
     SidePair<BoundaryLayerLattice> &lattice() {
         return state_store_.lattice;

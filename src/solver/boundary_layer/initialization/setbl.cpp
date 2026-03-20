@@ -177,7 +177,7 @@ class BoundaryLayerSetblAssembler {
     if (station_is_transition_candidate &&
         flow_regime != FlowRegimeEnum::Transition) {
       std::stringstream ss;
-      ss << "setbl: xtr???  n1=" << access_.state().station1.param.amplz
+      ss << "setbl: xtr???  n1=" << access_.previousAmplification()
          << " n2=" << access_.currentAmplification() << ":\n";
       Logger::instance().write(ss.str());
     }
@@ -323,8 +323,9 @@ class BoundaryLayerSetblAssembler {
       ami = vars.ami;
       cti = vars.cti;
 
+      const auto base_state = access_.snapshotState();
       auto station_update = updateStationMatricesAndState(
-          side, station, iv, vars, sideData.usav, output, access_.state(),
+          side, station, iv, vars, sideData.usav, output, base_state,
           stations[1].u_m.size(), dij);
       stations[1].u_m = station_update.u_m2;
       stations[1].d_m = station_update.d_m2;

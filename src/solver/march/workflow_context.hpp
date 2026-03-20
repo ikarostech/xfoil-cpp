@@ -36,8 +36,7 @@ class WorkflowMarchContext final : public MarchContext {
     access_.runTransitionCheckForMrchue(side, stationIndex, ami, cti);
   }
   bool solveTeSystemForCurrentProfiles(const Edge &edge) override {
-    return access_.tesys(access_.lattice().top.profiles,
-                         access_.lattice().bottom.profiles, edge);
+    return access_.solveTeSystemForCurrentProfiles(edge);
   }
 
   double readBlCompressibilityHstinv() const override {
