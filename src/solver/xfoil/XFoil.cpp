@@ -99,30 +99,30 @@ bool XFoil::isBLInitialized() const {
   if (!hasPanelMap()) {
     return false;
   }
-  const auto &top = boundaryLayerWorkflow.lattice(1);
-  const auto &bottom = boundaryLayerWorkflow.lattice(2);
-  if (top.stationCount <= 1 || bottom.stationCount <= 1) {
+  const auto &top = boundaryLayerWorkflow.profiles(1);
+  const auto &bottom = boundaryLayerWorkflow.profiles(2);
+  const int top_station_count = boundaryLayerWorkflow.stationCount(1);
+  const int bottom_station_count = boundaryLayerWorkflow.stationCount(2);
+  if (top_station_count <= 1 || bottom_station_count <= 1) {
     return false;
   }
-  if (top.profiles.edgeVelocity.size() < top.stationCount ||
-      bottom.profiles.edgeVelocity.size() < bottom.stationCount ||
-      top.profiles.skinFrictionCoeff.size() < top.stationCount ||
-      bottom.profiles.skinFrictionCoeff.size() < bottom.stationCount ||
-      top.profiles.momentumThickness.size() < top.stationCount ||
-      bottom.profiles.momentumThickness.size() < bottom.stationCount ||
-      top.profiles.displacementThickness.size() < top.stationCount ||
-      bottom.profiles.displacementThickness.size() < bottom.stationCount) {
+  if (top.edgeVelocity.size() < top_station_count ||
+      bottom.edgeVelocity.size() < bottom_station_count ||
+      top.skinFrictionCoeff.size() < top_station_count ||
+      bottom.skinFrictionCoeff.size() < bottom_station_count ||
+      top.momentumThickness.size() < top_station_count ||
+      bottom.momentumThickness.size() < bottom_station_count ||
+      top.displacementThickness.size() < top_station_count ||
+      bottom.displacementThickness.size() < bottom_station_count) {
     return false;
   }
 
-  const int top_count = top.stationCount - 1;
-  const int bottom_count = bottom.stationCount - 1;
-  const auto top_theta = top.profiles.momentumThickness.head(top_count);
-  const auto bottom_theta =
-      bottom.profiles.momentumThickness.head(bottom_count);
-  const auto top_delta = top.profiles.displacementThickness.head(top_count);
-  const auto bottom_delta =
-      bottom.profiles.displacementThickness.head(bottom_count);
+  const int top_count = top_station_count - 1;
+  const int bottom_count = bottom_station_count - 1;
+  const auto top_theta = top.momentumThickness.head(top_count);
+  const auto bottom_theta = bottom.momentumThickness.head(bottom_count);
+  const auto top_delta = top.displacementThickness.head(top_count);
+  const auto bottom_delta = bottom.displacementThickness.head(bottom_count);
 
   if (!top_theta.allFinite() || !bottom_theta.allFinite() ||
       !top_delta.allFinite() || !bottom_delta.allFinite()) {
@@ -149,8 +149,7 @@ void XFoil::setBLInitialized(bool bInitialized) {
     if (lattice.profiles.massFlux.size() > 0)
       lattice.profiles.massFlux.setZero();
   };
-  invalidateSide(boundaryLayerWorkflow.lattice(1));
-  invalidateSide(boundaryLayerWorkflow.lattice(2));
+  boundaryLayerWorkflow.zeroProfiles();
   invalidateConvergedSolution();
 }
 
@@ -176,39 +175,14 @@ void XFoil::invalidateWakeGeometry() {
 }
 
 void XFoil::invalidatePanelMap() {
-  boundaryLayerWorkflow.lattice(1).stationCount = 0;
-  boundaryLayerWorkflow.lattice(2).stationCount = 0;
+  boundaryLayerWorkflow.setStationCount(1, 0);
+  boundaryLayerWorkflow.setStationCount(2, 0);
 }
 
 bool XFoil::hasPanelMap() const {
-  const auto &top = boundaryLayerWorkflow.lattice(1);
-  const auto &bottom = boundaryLayerWorkflow.lattice(2);
   const int point_count = foil.foil_shape.n;
   const int total_nodes = point_count + foil.wake_shape.n;
-
-  auto isValidSide = [total_nodes](const BoundaryLayerLattice &lattice) {
-    if (lattice.stationCount <= 1 ||
-        lattice.stationToPanel.size() < lattice.stationCount ||
-        lattice.panelInfluenceFactor.size() < lattice.stationCount) {
-      return false;
-    }
-    for (int i = 0; i < lattice.stationCount - 1; ++i) {
-      const int panel = lattice.stationToPanel[i];
-      if (panel < 0 || panel >= total_nodes) {
-        return false;
-      }
-    }
-    return true;
-  };
-
-  if (!isValidSide(top) || !isValidSide(bottom)) {
-    return false;
-  }
-
-  return top.trailingEdgeIndex >= 0 &&
-         top.trailingEdgeIndex < top.stationCount &&
-         bottom.trailingEdgeIndex >= 0 &&
-         bottom.trailingEdgeIndex < bottom.stationCount;
+  return boundaryLayerWorkflow.hasValidPanelMap(total_nodes);
 }
 
 bool XFoil::hasAirfoilInfluenceMatrix() const {

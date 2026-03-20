@@ -14,26 +14,17 @@
 using Eigen::Matrix;
 using Eigen::Vector;
 
-namespace {
-BoundaryLayerTransitionSolver makeTransitionSolver(BoundaryLayerWorkflow &workflow) {
-  auto &state_store = workflow.stateStore();
-  auto &workspace = workflow.workspace();
-  return BoundaryLayerTransitionSolver(
-      {workspace.state,
-       state_store.blTransition,
-       state_store.flowRegime,
-       workspace.xt,
-       workspace.blc,
-       state_store.blCompressibility,
-       state_store.blReynolds});
-}
-} // namespace
-
 BoundaryLayerTransitionSolver::BoundaryLayerTransitionSolver(Context context)
     : context_(context) {}
 
 BoundaryLayerWorkflow::BoundaryLayerWorkflow()
-    : transitionSolver(makeTransitionSolver(*this)),
+    : transitionSolver({workspace_.state,
+                        state_store_.blTransition,
+                        state_store_.flowRegime,
+                        workspace_.xt,
+                        workspace_.blc,
+                        state_store_.blCompressibility,
+                        state_store_.blReynolds}),
       geometry_(state_store_.lattice, state_store_.wgap,
                 state_store_.stagnationIndex, state_store_.stagnationSst) {}
 

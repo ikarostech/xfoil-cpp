@@ -88,14 +88,8 @@ void XFoil::resetFlags() {
 }
 
 void XFoil::resetVariables() {
-  boundaryLayerWorkflow.state().station1 = blData{};
-  boundaryLayerWorkflow.state().station2 = blData{};
-  boundaryLayerWorkflow.lattice(1).profiles.transitionIndex = 0;
-  boundaryLayerWorkflow.lattice(2).profiles.transitionIndex = 0;
-  boundaryLayerWorkflow.lattice(1).stationCount = 0;
-  boundaryLayerWorkflow.lattice(2).stationCount = 0;
-  boundaryLayerWorkflow.lattice(1).trailingEdgeIndex = 0;
-  boundaryLayerWorkflow.lattice(2).trailingEdgeIndex = 0;
+  boundaryLayerWorkflow.clearState();
+  boundaryLayerWorkflow.resetSideMetadata();
 
   analysis_state_.qinf = 1.0;
   aero_coeffs_.cl = 0.0;
@@ -105,8 +99,7 @@ void XFoil::resetVariables() {
   sigte = gamte = 0.0;
   avisc = std::numeric_limits<double>::quiet_NaN();
   resetFlags();
-  boundaryLayerWorkflow.stagnationIndex() = 0;
-  boundaryLayerWorkflow.stagnationSst() = 0.0;
+  boundaryLayerWorkflow.resetPhysicsState();
   boundaryLayerWorkflow.compressibility().qinfbl =
       boundaryLayerWorkflow.compressibility().tkbl =
           boundaryLayerWorkflow.compressibility().tkbl_ms = 0.0;

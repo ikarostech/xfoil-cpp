@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "model/boundary_layer.hpp"
+#include "solver/boundary_layer/boundary_layer_aerodynamics.hpp"
 #include "solver/boundary_layer/workflow/mixed_mode.hpp"
 #include "solver/boundary_layer/workflow/relaxation.hpp"
 #include "solver/boundary_layer/workflow/solver_ops.hpp"
@@ -10,46 +11,41 @@
 
 using BoundaryContext = BoundaryLayerMixedModeStationContext;
 
-namespace {
-BoundaryLayerSolverOps makeSolverOps(BoundaryLayerWorkflow &workflow) {
-  auto &state_store = workflow.stateStore();
-  auto &workspace = workflow.workspace();
-  return BoundaryLayerSolverOps({workflow.boundaryLayerVariablesSolver,
-                                 workflow.blDiffSolver,
-                                 workflow.transitionSolver,
-                                 state_store.flowRegime,
-                                 state_store.blCompressibility,
-                                 state_store.blReynolds,
-                                 state_store.blTransition,
-                                 workspace.state,
-                                 workspace.blc,
-                                 state_store.lattice});
+BoundaryLayerSolverOps BoundaryLayerWorkflow::makeSolverOps() {
+  return BoundaryLayerSolverOps({boundaryLayerVariablesSolver,
+                                 blDiffSolver,
+                                 transitionSolver,
+                                 state_store_.flowRegime,
+                                 state_store_.blCompressibility,
+                                 state_store_.blReynolds,
+                                 state_store_.blTransition,
+                                 workspace_.state,
+                                 workspace_.blc,
+                                 state_store_.lattice});
 }
 
-BoundaryLayerMixedModeOps makeMixedModeOps(BoundaryLayerWorkflow &workflow) {
-  auto &state_store = workflow.stateStore();
-  auto &workspace = workflow.workspace();
-  return BoundaryLayerMixedModeOps({state_store.lattice,
-                                    workspace.state,
-                                    state_store.flowRegime,
-                                    workspace.blc,
-                                    state_store.blCompressibility,
-                                    workflow.boundaryLayerVariablesSolver,
-                                    workflow.transitionSolver,
-                                    makeSolverOps(workflow)});
-}
+BoundaryLayerMixedModeOps BoundaryLayerWorkflow::makeMixedModeOps() {
+  return BoundaryLayerMixedModeOps({state_store_.lattice,
+                                    workspace_.state,
+                                    state_store_.flowRegime,
+                                    workspace_.blc,
+                                    state_store_.blCompressibility,
+                                    boundaryLayerVariablesSolver,
+                                    transitionSolver,
+                                    makeSolverOps()});
 }
 
 void BoundaryLayerWorkflow::storeStationStateCommon(
     int side, int stationIndex,
     const BoundaryLayerMixedModeStationContext &ctx) {
-  makeMixedModeOps(*this).storeStationStateCommon(side, stationIndex, ctx);
+  makeMixedModeOps().storeStationStateCommon(side, stationIndex, ctx);
 }
 
 double BoundaryLayerWorkflow::fallbackEdgeVelocity(
     int side, int stationIndex,
     BoundaryLayerEdgeVelocityFallbackMode edgeMode) const {
-  return makeMixedModeOps(const_cast<BoundaryLayerWorkflow &>(*this))
+  return const_cast<BoundaryLayerWorkflow *>(this)
+      ->makeMixedModeOps()
       .fallbackEdgeVelocity(side, stationIndex, edgeMode);
 }
 
@@ -57,60 +53,56 @@ BoundaryLayerDelta
 BoundaryLayerWorkflow::buildBoundaryLayerDelta(
     int side, const Eigen::VectorXd &unew_side, const Eigen::VectorXd &u_ac_side,
     double dac, const BoundaryLayerMatrix3x2dVector &vdel) const {
-  const auto &state_store = stateStore();
   return BoundaryLayerRelaxationOps::buildBoundaryLayerDelta(
-      state_store.lattice.get(side), unew_side, u_ac_side, dac, vdel);
+      state_store_.lattice.get(side), unew_side, u_ac_side, dac, vdel);
 }
 
 BoundaryLayerMetrics
 BoundaryLayerWorkflow::evaluateSegmentRelaxation(
     int side, const BoundaryLayerDelta &delta, double dhi, double dlo,
     double &relaxation) const {
-  const auto &state_store = stateStore();
   return BoundaryLayerRelaxationOps::evaluateSegmentRelaxation(
-      state_store.lattice.get(side).profiles, delta, dhi, dlo, relaxation);
+      state_store_.lattice.get(side).profiles, delta, dhi, dlo, relaxation);
 }
 
 BoundaryLayerSideProfiles BoundaryLayerWorkflow::applyBoundaryLayerDelta(
     int side, const BoundaryLayerDelta &delta, double relaxation, double hstinv,
     double gamm1) const {
-  const auto &state_store = stateStore();
   return BoundaryLayerRelaxationOps::applyBoundaryLayerDelta(
-      state_store.lattice.get(side), state_store.wgap, delta, relaxation,
+      state_store_.lattice.get(side), state_store_.wgap, delta, relaxation,
       hstinv, gamm1);
 }
 
 void BoundaryLayerWorkflow::syncStationRegimeStates(int side, int stationIndex,
                                                     FlowRegimeEnum stationRegime) {
-  makeMixedModeOps(*this).syncStationRegimeStates(side, stationIndex,
-                                                  stationRegime);
+  makeMixedModeOps().syncStationRegimeStates(side, stationIndex, stationRegime);
 }
 
 FlowRegimeEnum BoundaryLayerWorkflow::determineRegimeForStation(
     int side, int stationIndex) const {
-  return makeMixedModeOps(const_cast<BoundaryLayerWorkflow &>(*this))
+  return const_cast<BoundaryLayerWorkflow *>(this)->makeMixedModeOps()
       .determineRegimeForStation(side, stationIndex);
 }
 
 bool BoundaryLayerWorkflow::blkin(BoundaryLayerState &state) {
-  return makeSolverOps(*this).blkin(state);
+  return makeSolverOps().blkin(state);
 }
 
 void BoundaryLayerWorkflow::updateSystemMatricesForStation(
     const Edge &edge, int side, int stationIndex, BoundaryContext &ctx) {
-  makeMixedModeOps(*this).updateSystemMatricesForStation(edge, side,
-                                                         stationIndex, ctx);
+  makeMixedModeOps().updateSystemMatricesForStation(edge, side, stationIndex,
+                                                    ctx);
 }
 
 void BoundaryLayerWorkflow::initializeFirstIterationState(
     int side, int stationIndex, int previousTransition, BoundaryContext &ctx,
     double &ueref, double &hkref) {
-  makeMixedModeOps(*this).initializeFirstIterationState(
+  makeMixedModeOps().initializeFirstIterationState(
       side, stationIndex, previousTransition, ctx, ueref, hkref);
 }
 
 void BoundaryLayerWorkflow::configureSimilarityRow(double ueref) {
-  makeMixedModeOps(*this).configureSimilarityRow(ueref);
+  makeMixedModeOps().configureSimilarityRow(ueref);
 }
 
 void BoundaryLayerWorkflow::configureViscousRow(double hkref, double ueref,
@@ -118,7 +110,7 @@ void BoundaryLayerWorkflow::configureViscousRow(double hkref, double ueref,
                                                 bool resetSensitivity,
                                                 bool averageSensitivity,
                                                 double &sens, double &sennew) {
-  makeMixedModeOps(*this).configureViscousRow(
+  makeMixedModeOps().configureViscousRow(
       hkref, ueref, senswt, resetSensitivity, averageSensitivity, sens,
       sennew);
 }
@@ -126,44 +118,44 @@ void BoundaryLayerWorkflow::configureViscousRow(double hkref, double ueref,
 bool BoundaryLayerWorkflow::applyMixedModeNewtonStep(int side, int stationIndex,
                                                      double &ami,
                                                      BoundaryContext &ctx) {
-  return makeMixedModeOps(*this).applyMixedModeNewtonStep(
+  return makeMixedModeOps().applyMixedModeNewtonStep(
       side, stationIndex, ami, ctx);
 }
 
 SkinFrictionCoefficients
 BoundaryLayerWorkflow::blmid(FlowRegimeEnum flowRegimeType) {
-  return makeSolverOps(*this).blmid(flowRegimeType);
+  return makeSolverOps().blmid(flowRegimeType);
 }
 
 blData BoundaryLayerWorkflow::blprv(blData data, double xsi, double ami,
                                     double cti, double thi, double dsi,
                                     double dswaki, double uei) const {
-  return makeSolverOps(const_cast<BoundaryLayerWorkflow &>(*this))
+  return const_cast<BoundaryLayerWorkflow *>(this)->makeSolverOps()
       .blprv(data, xsi, ami, cti, thi, dsi, dswaki, uei);
 }
 
 bool BoundaryLayerWorkflow::blsys() {
-  return makeSolverOps(*this).blsys();
+  return makeSolverOps().blsys();
 }
 
 bool BoundaryLayerWorkflow::tesys(
     const BoundaryLayerSideProfiles &top_profiles,
     const BoundaryLayerSideProfiles &bottom_profiles, const Edge &edge) {
-  return makeSolverOps(*this).tesys(top_profiles, bottom_profiles, edge);
+  return makeSolverOps().tesys(top_profiles, bottom_profiles, edge);
 }
 
 void BoundaryLayerWorkflow::checkTransitionIfNeeded(int side, int stationIndex,
                                                     bool skipCheck,
                                                     int laminarAdvance,
                                                     double &ami) {
-  makeMixedModeOps(*this).checkTransitionIfNeeded(
+  makeMixedModeOps().checkTransitionIfNeeded(
       side, stationIndex, skipCheck, laminarAdvance, ami);
 }
 
 void BoundaryLayerWorkflow::resetStationKinematicsAfterFailure(
     int side, int stationIndex, BoundaryLayerMixedModeStationContext &ctx,
     BoundaryLayerEdgeVelocityFallbackMode edgeMode) {
-  makeMixedModeOps(*this).resetStationKinematicsAfterFailure(
+  makeMixedModeOps().resetStationKinematicsAfterFailure(
       side, stationIndex, ctx, edgeMode);
 }
 
@@ -171,13 +163,104 @@ void BoundaryLayerWorkflow::recoverStationAfterFailure(
     int side, int stationIndex, BoundaryLayerMixedModeStationContext &ctx,
     double &ami, BoundaryLayerEdgeVelocityFallbackMode edgeMode,
     int laminarAdvance) {
-  makeMixedModeOps(*this).recoverStationAfterFailure(
+  makeMixedModeOps().recoverStationAfterFailure(
       side, stationIndex, ctx, ami, edgeMode, laminarAdvance);
 }
 
 void BoundaryLayerWorkflow::setTransitionLocations(double top, double bottom) {
   state_store_.lattice.top.transitionLocation = top;
   state_store_.lattice.bottom.transitionLocation = bottom;
+}
+
+void BoundaryLayerWorkflow::clearState() {
+  workspace_.state.station1 = blData{};
+  workspace_.state.station2 = blData{};
+}
+
+void BoundaryLayerWorkflow::resetSideMetadata() {
+  for (int side = 1; side <= 2; ++side) {
+    setTransitionIndex(side, 0);
+    setStationCount(side, 0);
+    setTrailingEdgeIndex(side, 0);
+  }
+}
+
+void BoundaryLayerWorkflow::resetPhysicsState() {
+  state_store_.stagnationIndex = 0;
+  state_store_.stagnationSst = 0.0;
+  state_store_.flowRegime = FlowRegimeEnum::Laminar;
+  state_store_.blCompressibility = {};
+  state_store_.blReynolds = {};
+  state_store_.blTransition = {};
+}
+
+void BoundaryLayerWorkflow::setStagnationState(
+    const StagnationResult &stagnation) {
+  state_store_.stagnationIndex = stagnation.stagnationIndex;
+  state_store_.stagnationSst = stagnation.sst;
+}
+
+void BoundaryLayerWorkflow::zeroProfiles() {
+  for (int side = 1; side <= 2; ++side) {
+    auto &profiles = state_store_.lattice.get(side).profiles;
+    if (profiles.edgeVelocity.size() > 0)
+      profiles.edgeVelocity.setZero();
+    if (profiles.skinFrictionCoeff.size() > 0)
+      profiles.skinFrictionCoeff.setZero();
+    if (profiles.momentumThickness.size() > 0)
+      profiles.momentumThickness.setZero();
+    if (profiles.displacementThickness.size() > 0)
+      profiles.displacementThickness.setZero();
+    if (profiles.massFlux.size() > 0)
+      profiles.massFlux.setZero();
+  }
+}
+
+bool BoundaryLayerWorkflow::hasValidPanelMap(int total_nodes) const {
+  auto isValidSide = [total_nodes](const BoundaryLayerLattice &lattice) {
+    if (lattice.stationCount <= 1 ||
+        lattice.stationToPanel.size() < lattice.stationCount ||
+        lattice.panelInfluenceFactor.size() < lattice.stationCount) {
+      return false;
+    }
+    for (int i = 0; i < lattice.stationCount - 1; ++i) {
+      const int panel = lattice.stationToPanel[i];
+      if (panel < 0 || panel >= total_nodes) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const auto &top = state_store_.lattice.top;
+  const auto &bottom = state_store_.lattice.bottom;
+  if (!isValidSide(top) || !isValidSide(bottom)) {
+    return false;
+  }
+
+  return top.trailingEdgeIndex >= 0 && top.trailingEdgeIndex < top.stationCount &&
+         bottom.trailingEdgeIndex >= 0 &&
+         bottom.trailingEdgeIndex < bottom.stationCount;
+}
+
+int BoundaryLayerWorkflow::trailingEdgeSystemIndex(int side) const {
+  return state_store_.lattice.get(side)
+      .stationToSystem[state_store_.lattice.get(side).trailingEdgeIndex];
+}
+
+BoundaryLayerEdgeVelocityDistribution
+BoundaryLayerWorkflow::computeNewUeDistribution(
+    const XFoil &xfoil, const BoundaryLayerMatrix3x2dVector &vdel) const {
+  return BoundaryLayerAerodynamicsOps::computeNewUeDistribution(
+      state_store_.lattice, xfoil, vdel);
+}
+
+BoundaryLayerClContributions
+BoundaryLayerWorkflow::computeClFromEdgeVelocityDistribution(
+    const XFoil &xfoil,
+    const BoundaryLayerEdgeVelocityDistribution &distribution) const {
+  return BoundaryLayerAerodynamicsOps::computeClFromEdgeVelocityDistribution(
+      state_store_.lattice, xfoil, distribution);
 }
 
 void BoundaryLayerWorkflow::initializeLattices(int size) {

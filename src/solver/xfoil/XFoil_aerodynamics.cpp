@@ -16,23 +16,22 @@ double XFoil::cdcalc() const {
   if (!(analysis_state_.viscous && isBLInitialized())) {
     return 0.0;
   }
-  const auto &lattice = boundaryLayerWorkflow.lattice();
-
   const double beta = std::sqrt(std::max(
       0.0, 1.0 - analysis_state_.currentMach * analysis_state_.currentMach));
   const double tklam_local =
       MathUtil::pow(analysis_state_.currentMach / (1.0 + beta), 2);
 
-  const double thwake =
-      lattice.get(2).profiles.momentumThickness[lattice.bottom.stationCount - 2];
+  const int bottom_station_count = boundaryLayerWorkflow.stationCount(2);
+  const auto &bottom_profiles = boundaryLayerWorkflow.profiles(2);
+  const double thwake = bottom_profiles.momentumThickness[bottom_station_count - 2];
   const double edgeVelocity_bottom =
-      lattice.bottom.profiles.edgeVelocity[lattice.bottom.stationCount - 2];
+      bottom_profiles.edgeVelocity[bottom_station_count - 2];
   const double urat = edgeVelocity_bottom / analysis_state_.qinf;
   const double uewake = edgeVelocity_bottom * (1.0 - tklam_local) /
                         (1.0 - tklam_local * urat * urat);
   const double shwake =
-      lattice.get(2).profiles.displacementThickness[lattice.bottom.stationCount - 2] /
-      lattice.get(2).profiles.momentumThickness[lattice.bottom.stationCount - 2];
+      bottom_profiles.displacementThickness[bottom_station_count - 2] /
+      bottom_profiles.momentumThickness[bottom_station_count - 2];
 
   const double exponent = 0.5 * (5.0 + shwake);
   const double wake_ratio = uewake / analysis_state_.qinf;

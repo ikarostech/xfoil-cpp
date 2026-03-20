@@ -18,6 +18,16 @@
 #include "solver/boundary_layer/viscous_types.hpp"
 
 class Edge;
+class XFoil;
+class BoundaryLayerWorkflow;
+class BoundaryLayerMarchAccess;
+class BoundaryLayerSetblAccess;
+class BoundaryLayerAerodynamicCoupling;
+class BoundaryLayerSolverOps;
+class BoundaryLayerMixedModeOps;
+
+BoundaryLayerSolverOps makeBoundaryLayerSetblSolverOps(
+    BoundaryLayerWorkflow &workflow);
 
 struct BoundaryLayerStateStore {
     Eigen::VectorXd wgap;
@@ -81,29 +91,58 @@ class BoundaryLayerWorkflow {
     bool tesys(const BoundaryLayerSideProfiles &top_profiles, const BoundaryLayerSideProfiles &bottom_profiles,
                const Edge &edge);
 
-    SidePair<BoundaryLayerLattice> &lattice() {
-        return state_store_.lattice;
+    int stationCount(int side) const {
+        return state_store_.lattice.get(side).stationCount;
     }
-    const SidePair<BoundaryLayerLattice> &lattice() const {
-        return state_store_.lattice;
+    void setStationCount(int side, int count) {
+        state_store_.lattice.get(side).stationCount = count;
     }
-    BoundaryLayerLattice &lattice(int side) {
-        return state_store_.lattice.get(side);
+    int trailingEdgeIndex(int side) const {
+        return state_store_.lattice.get(side).trailingEdgeIndex;
     }
-    const BoundaryLayerLattice &lattice(int side) const {
-        return state_store_.lattice.get(side);
+    void setTrailingEdgeIndex(int side, int index) {
+        state_store_.lattice.get(side).trailingEdgeIndex = index;
     }
+    int transitionIndex(int side) const {
+        return state_store_.lattice.get(side).profiles.transitionIndex;
+    }
+    void setTransitionIndex(int side, int index) {
+        state_store_.lattice.get(side).profiles.transitionIndex = index;
+    }
+    int stationToSystem(int side, int stationIndex) const {
+        return state_store_.lattice.get(side).stationToSystem[stationIndex];
+    }
+    int stationToPanel(int side, int stationIndex) const {
+        return state_store_.lattice.get(side).stationToPanel[stationIndex];
+    }
+    double panelInfluenceFactor(int side, int stationIndex) const {
+        return state_store_.lattice.get(side).panelInfluenceFactor[stationIndex];
+    }
+    const BoundaryLayerSideProfiles &profiles(int side) const {
+        return state_store_.lattice.get(side).profiles;
+    }
+    BoundaryLayerSideProfiles &profiles(int side) {
+        return state_store_.lattice.get(side).profiles;
+    }
+    void clearState();
+    void resetSideMetadata();
+    void resetPhysicsState();
+    void setStagnationState(const StagnationResult &stagnation);
+    void zeroProfiles();
+    bool hasValidPanelMap(int total_nodes) const;
+    int trailingEdgeSystemIndex(int side) const;
+    BoundaryLayerEdgeVelocityDistribution
+    computeNewUeDistribution(const class XFoil &xfoil,
+                             const BoundaryLayerMatrix3x2dVector &vdel) const;
+    BoundaryLayerClContributions computeClFromEdgeVelocityDistribution(
+        const class XFoil &xfoil,
+        const BoundaryLayerEdgeVelocityDistribution &distribution) const;
+
     Eigen::VectorXd &wakeGap() {
         return state_store_.wgap;
     }
     const Eigen::VectorXd &wakeGap() const {
         return state_store_.wgap;
-    }
-    BoundaryLayerState &state() {
-        return workspace_.state;
-    }
-    const BoundaryLayerState &state() const {
-        return workspace_.state;
     }
     BlSystemCoeffs &systemCoefficients() {
         return workspace_.blc;
@@ -181,26 +220,34 @@ class BoundaryLayerWorkflow {
                                      double &cti, int laminarAdvance = 2);
     double calcHtarg(int stationIndex, int side, bool wake);
 
-    BoundaryLayerStateStore &stateStore() {
-        return state_store_;
-    }
-    const BoundaryLayerStateStore &stateStore() const {
-        return state_store_;
-    }
-    BoundaryLayerWorkspace &workspace() {
-        return workspace_;
-    }
-    const BoundaryLayerWorkspace &workspace() const {
-        return workspace_;
-    }
-    BoundaryLayerGeometry &geometryService() {
-        return geometry_;
-    }
-    const BoundaryLayerGeometry &geometryService() const {
-        return geometry_;
-    }
-
   private:
+    friend class BoundaryLayerMarchAccess;
+    friend class BoundaryLayerSetblAccess;
+    friend class BoundaryLayerAerodynamicCoupling;
+    friend BoundaryLayerSolverOps makeBoundaryLayerSetblSolverOps(
+        BoundaryLayerWorkflow &workflow);
+
+    SidePair<BoundaryLayerLattice> &lattice() {
+        return state_store_.lattice;
+    }
+    const SidePair<BoundaryLayerLattice> &lattice() const {
+        return state_store_.lattice;
+    }
+    BoundaryLayerLattice &lattice(int side) {
+        return state_store_.lattice.get(side);
+    }
+    const BoundaryLayerLattice &lattice(int side) const {
+        return state_store_.lattice.get(side);
+    }
+    BoundaryLayerState &state() {
+        return workspace_.state;
+    }
+    const BoundaryLayerState &state() const {
+        return workspace_.state;
+    }
+    BoundaryLayerSolverOps makeSolverOps();
+    BoundaryLayerMixedModeOps makeMixedModeOps();
+
     BoundaryLayerStateStore state_store_;
     BoundaryLayerWorkspace workspace_;
     BoundaryLayerGeometry geometry_;

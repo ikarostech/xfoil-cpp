@@ -207,7 +207,7 @@ class XFoil {
         Matrix2Xd qinv_matrix;
     };
 
-    VectorXd qvfue(const VectorXd &base_qvis, const SidePair<BoundaryLayerLattice> &lattice) const;
+    VectorXd qvfue(const VectorXd &base_qvis) const;
     Matrix2Xd qwcalc(const Foil &foil, const Matrix2Xd &base_qinvu, const Matrix2Xd &gamu,
                      const Matrix2Xd &surface_vortex, double alpha, double qinf) const;
 
