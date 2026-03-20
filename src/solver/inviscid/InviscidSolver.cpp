@@ -14,7 +14,7 @@ bool InviscidSolver::specConverge(XFoil &xfoil, SpecTarget target) {
   // Rebuild inviscid baseline from current alpha so viscous leftovers do not
   // contaminate the operating-point solve.
   xfoil.inviscid_state_.qinvMatrix =
-      qiset(xfoil.analysis_state_.alpha, xfoil.inviscid_state_.cache.qinvu);
+      qiset(xfoil.analysis_state_.alpha, xfoil.inviscid_state_.qinvu);
   xfoil.inviscid_state_.surfaceVortex =
       MathUtil::getRotateMatrix(xfoil.analysis_state_.alpha) *
       xfoil.inviscid_state_.cache.gamu;
@@ -121,7 +121,7 @@ bool InviscidSolver::specConverge(XFoil &xfoil, SpecTarget target) {
   //---- set final surface speed and cp distributions
   xfoil.updateTrailingEdgeState();
   // xfoil.qinv_matrix =
-  //     qiset(xfoil.analysis_state_.alpha, xfoil.aerodynamicCache.qinvu);
+  //     qiset(xfoil.analysis_state_.alpha, xfoil.inviscid_state_.qinvu);
 
   if (xfoil.analysis_state_.viscous) {
     xfoil.cpv =

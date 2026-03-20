@@ -10,7 +10,6 @@
 class FoilAerodynamicCache {
 public:
   Eigen::Matrix2Xd gamu;
-  Eigen::Matrix2Xd qinvu;
   Eigen::FullPivLU<Eigen::MatrixXd> psi_gamma_lu;
   Eigen::MatrixXd bij;
   Eigen::MatrixXd dij;

@@ -76,6 +76,7 @@ class XFoil {
         FoilAerodynamicCache cache;
         double gammaTe = 0.0;
         double sigmaTe = 0.0;
+        Eigen::Matrix2Xd qinvu;
         Eigen::Matrix2Xd qinvMatrix;
         Eigen::VectorXd qgamm;
     };

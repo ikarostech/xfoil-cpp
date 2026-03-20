@@ -45,8 +45,8 @@ void XFoil::initializeDataStructures() {
   init_state_.qf1.assign(surface_buffer_nodes + 1, 0.0);
   init_state_.qf2.assign(surface_buffer_nodes + 1, 0.0);
   init_state_.qf3.assign(surface_buffer_nodes + 1, 0.0);
+  inviscid_state_.qinvu = Matrix2Xd::Zero(2, total_nodes_with_wake);
   inviscid_state_.qinvMatrix = Matrix2Xd::Zero(2, total_nodes_with_wake);
-  inviscid_state_.cache.qinvu = Matrix2Xd::Zero(2, total_nodes_with_wake);
   viscous_state_.qvis = VectorXd::Zero(total_nodes_with_wake);
 
   boundaryLayer.initializeWakeGap(wake_nodes);

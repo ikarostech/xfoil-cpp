@@ -41,6 +41,7 @@ bool XFoil::initXFoilGeometry(int fn, const double *fx, const double *fy) {
 
     abcopy(buffer_points);
     inviscid_state_.cache = ggcalc();
+    inviscid_state_.qinvu.leftCols(foil.foil_shape.n + 1) = inviscid_state_.cache.gamu;
     return true;
 }
 
@@ -258,10 +259,10 @@ bool XFoil::ViscousIter() {
 void XFoil::ensureWakeTrajectoryAndInviscidVelocity() {
     foil.xyWake(foil.wake_shape.n, inviscid_state_.cache.gamu, inviscid_state_.surfaceVortex, analysis_state_.alpha,
                 analysis_state_.qinf);
-    inviscid_state_.cache.qinvu =
-        qwcalc(foil, inviscid_state_.cache.qinvu, inviscid_state_.cache.gamu, inviscid_state_.surfaceVortex,
+    inviscid_state_.qinvu =
+        qwcalc(foil, inviscid_state_.qinvu, inviscid_state_.cache.gamu, inviscid_state_.surfaceVortex,
                analysis_state_.alpha, analysis_state_.qinf);
-    inviscid_state_.qinvMatrix = InviscidSolver::qiset(analysis_state_.alpha, inviscid_state_.cache.qinvu);
+    inviscid_state_.qinvMatrix = InviscidSolver::qiset(analysis_state_.alpha, inviscid_state_.qinvu);
 }
 
 void XFoil::ensurePanelMapAndBoundaryLayerGeometry() {
@@ -344,7 +345,7 @@ void XFoil::updateFreestreamForIteration(const UpdateResult &update_result) {
         return;
     }
 
-    inviscid_state_.qinvMatrix = InviscidSolver::qiset(update_result.analysis_state.alpha, inviscid_state_.cache.qinvu);
+    inviscid_state_.qinvMatrix = InviscidSolver::qiset(update_result.analysis_state.alpha, inviscid_state_.qinvu);
     assignCurrentInviscidEdgeVelocity();
 }
 
