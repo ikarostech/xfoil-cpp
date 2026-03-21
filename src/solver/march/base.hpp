@@ -9,8 +9,6 @@
 #include "Eigen/Core"
 #include "solver/march/context.hpp"
 
-class XFoil;
-
 class Marcher
 {
 public:

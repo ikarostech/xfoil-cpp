@@ -10,7 +10,6 @@
 #include "solver/boundary_layer/boundary_layer_store.hpp"
 
 class BoundaryLayer;
-class XFoil;
 
 class BoundaryLayerTransitionSolver {
 public:

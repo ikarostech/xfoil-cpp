@@ -173,6 +173,10 @@ void BoundaryLayer::setTransitionLocations(double top, double bottom) {
   state_store_.lattice.bottom.transitionLocation = bottom;
 }
 
+double BoundaryLayer::transitionLocation(int side) const {
+  return state_store_.lattice.get(side).transitionLocation;
+}
+
 void BoundaryLayer::setFlowRegime(FlowRegimeEnum flowRegime) {
   state_store_.flowRegime = flowRegime;
 }

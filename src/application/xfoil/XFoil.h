@@ -1,688 +1,83 @@
-/****************************************************************************
-
-    XFoil Class
-        Copyright (C) 2000 Mark Drela
-        Copyright (C) 2003 Andre Deperrois techwinder@gmail.com
-
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program; if not, write to the Free Software
-    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
-*****************************************************************************/
-
-/**
- *@file This class defines the Xfoil object.
- */
-
 #pragma once
 
-/**
-*@class XFoil
-*@brief  The class which defines the XFoil object.
-
-This is a translation to C++ of the original Fortran code of Mark Drela and
-Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
-*/
-
-#include <stdexcept>
-#include <vector>
+#include <memory>
 
 #include "Eigen/Core"
-#include "Eigen/Dense"
-#include "Eigen/StdVector"
 
-#include "model/boundary_layer.hpp"
-#include "model/coefficient/aero_coefficients.hpp"
-#include "model/flow_regime.hpp"
+#include "application/xfoil/XFoilSharedTypes.hpp"
+#include "application/xfoil/XFoilResult.hpp"
+#include "application/xfoil/XFoilWorkspace.hpp"
 #include "model/flow_state.hpp"
-#include "model/foil/FoilAerodynamicCache.hpp"
-#include "model/foil/foil.hpp"
-#include "numerics/side_pair.hpp"
-#include "solver/boundary_layer/boundary_layer.hpp"
-#include "application/xfoil/XFoilInternalState.hpp"
-#include "solver/xfoil/viscous_update.hpp"
 
-struct SetblOutputView;
-class InviscidSolver;
-
-//------ derived dimensioning limit parameters
+class XFoilAnalysis;
 
 class XFoil {
-  public:
-    using InitState                  = XFoilInternalState::InitState;
-    using OperatingPointCouplingState = XFoilInternalState::OperatingPointCouplingState;
-    using InviscidFieldState         = XFoilInternalState::InviscidFieldState;
-    using ViscousIterationState      = XFoilInternalState::ViscousIterationState;
+ public:
+  using VectorXd = Eigen::VectorXd;
+  using Vector2d = Eigen::Vector2d;
+  using ReynoldsType = FlowState::ReynoldsType;
+  using MachType = FlowState::MachType;
+  using ViscalEndResult = XFoilViscalEndResult;
 
-    XFoil();
-    virtual ~XFoil();
-    XFoil(const XFoil &)            = delete;
-    XFoil &operator=(const XFoil &) = delete;
-    XFoil(XFoil &&)                 = delete;
-    XFoil &operator=(XFoil &&)      = delete;
+  XFoil();
+  ~XFoil();
+  XFoil(const XFoil &) = delete;
+  XFoil &operator=(const XFoil &) = delete;
+  XFoil(XFoil &&) = delete;
+  XFoil &operator=(XFoil &&) = delete;
 
-    friend class InviscidSolver;
-    friend BoundaryLayer;
-    using VectorXd                        = Eigen::VectorXd;
-    using VectorXi                        = Eigen::VectorXi;
-    using Vector2d                        = Eigen::Vector2d;
-    using MatrixXd                        = Eigen::MatrixXd;
-    using Matrix2Xd                       = Eigen::Matrix2Xd;
-    using Matrix2d                        = Eigen::Matrix2d;
-    template <typename T> using FullPivLU = Eigen::FullPivLU<T>;
-    using Matrix3x2d                      = BoundaryLayerMatrix3x2d;
-    using Matrix3x2dVector                = BoundaryLayerMatrix3x2dVector;
-    using EdgeVelocityDistribution        = BoundaryLayerEdgeVelocityDistribution;
-    using BoundaryLayerDelta              = ::BoundaryLayerDelta;
-    using BoundaryLayerMetrics            = ::BoundaryLayerMetrics;
+  bool initialize();
+  bool initXFoilGeometry(int fn, const double *fx, const double *fy);
+  bool initXFoilAnalysis(double Re, double alpha, double Mach, double NCrit,
+                         double XtrTop, double XtrBot, ReynoldsType reType,
+                         MachType maType, bool bViscous);
 
-  public:
-    bool isValidFoilAngles(Matrix2Xd points);
-    bool isValidFoilPointSize(Matrix2Xd points);
+  bool specal();
+  bool speccl();
+  bool viscal();
+  ViscalEndResult ViscalEnd();
+  bool ViscousIter();
 
-    bool initialize();
-    bool initXFoilGeometry(int fn, const double *fx, const double *fy);
+  bool isBLInitialized() const;
+  void setBLInitialized(bool bInitialized);
+  bool hasConvergedSolution() const;
+  void invalidateConvergedSolution();
+  void invalidateWakeGeometry();
+  void invalidatePanelMap();
 
-    using ReynoldsType = FlowState::ReynoldsType;
-    using MachType     = FlowState::MachType;
+  double QInf() const;
+  void setQInf(double v);
+  double alpha() const;
+  void setAlpha(double aoa);
+  void setControlByAlpha(bool enabled);
+  double ClSpec() const;
+  void setClSpec(double cl);
+  bool setMach();
 
-    bool initXFoilAnalysis(double Re, double alpha, double Mach, double NCrit, double XtrTop, double XtrBot,
-                           ReynoldsType reType, MachType maType, bool bViscous);
+  double Cl() const;
+  double Cd() const;
+  double Cm() const;
+  double getXcp() const;
 
-    struct ClComputation {
-        double cl     = 0.0;
-        double cm     = 0.0;
-        double cl_alf = 0.0;
-        double cl_msq = 0.0;
-        double xcp    = 0.0;
-    };
-    ClComputation clcalc(Vector2d ref) const;
-    void applyClComputation(const ClComputation &result);
+  const VectorXd &inviscidCp() const;
+  const VectorXd &viscousCp() const;
+  double transitionLocationTop() const;
+  double transitionLocationBottom() const;
+  const XFoilResult &result() const;
 
-    bool specal();
-    bool speccl();
-    bool viscal();
-    struct ViscalEndResult {
-        VectorXd inviscidCp;
-        VectorXd viscousCp;
-    };
-    ViscalEndResult ViscalEnd();
-    bool ViscousIter();
+  FlowState &analysisState();
+  const FlowState &analysisState() const;
 
-    bool abcopy(Matrix2Xd copyFrom);
+  static double VAccel();
+  static void setVAccel(double accel);
 
-    bool isBLInitialized() const;
-    void setBLInitialized(bool bInitialized);
+ private:
+  XFoilAnalysis &analysis();
+  const XFoilAnalysis &analysis() const;
 
-    double QInf() const {
-        return analysis_state_.qinf;
-    }
-    void setQInf(double v) {
-        analysis_state_.qinf = v;
-    }
-
-    double alpha() const {
-        return analysis_state_.alpha;
-    }
-    void setAlpha(double aoa) {
-        analysis_state_.alpha = aoa;
-    }
-
-    double Cl() const {
-        return aero_coeffs_.cl;
-    }
-    double Cd() const {
-        return aero_coeffs_.cd;
-    }
-    double Cm() const {
-        return aero_coeffs_.cm;
-    }
-
-    double ClSpec() const {
-        return analysis_state_.clspec;
-    }
-    void setClSpec(double cl) {
-        analysis_state_.clspec = cl;
-    }
-    double getXcp() const;
-
-    static double VAccel();
-    static void setVAccel(double accel);
-    inline static double vaccel_ = 0.01;
-
-    bool setMach();
-
-    // TODO ActualMachにあわせる
-    double getActualMach(double cls, MachType mach_type);
-    double getActualReynolds(double cls, ReynoldsType reynolds_type);
-
-    void updateTrailingEdgeState();
-    double cdcalc() const;
-
-    struct CompressibilityParams {
-        double beta;
-        double beta_msq;
-        double karmanTsienFactor;
-        double karmanTsienFactor_msq;
-        double prandtlGlauertFactor;
-        double prandtlGlauertFactor_msq;
-    };
-
-    struct PressureCoefficientResult {
-        double cp;
-        double cp_msq;
-        double cp_velocity_derivative;
-    };
-
-    CompressibilityParams buildCompressibilityParams() const;
-    PressureCoefficientResult computePressureCoefficient(double tangential_velocity, double velocity_derivative,
-                                                         const CompressibilityParams &params) const;
-
-    enum class SideType { TOP = 1, BOTTOM = 2 };
-    template <class T> class IterPair {
-      public:
-        T before;
-        T after;
-        // FIXME deprecated
-        T &get(int phase) {
-            if (phase == 0) {
-                return before;
-            } else if (phase == 1) {
-                return after;
-            }
-            throw std::invalid_argument("invalid phase type");
-        }
-    };
-
-    using MixedModeStationContext = BoundaryLayerMixedModeStationContext;
-    Matrix2Xd gamqv() const;
-    FoilAerodynamicCache ggcalc();
-
-    bool qdcalc();
-    struct TangentialVelocityResult {
-        Matrix2Xd qinv_matrix;
-    };
-
-    VectorXd qvfue(const VectorXd &base_qvis) const;
-    Matrix2Xd qwcalc(const Foil &foil, const Matrix2Xd &base_qinvu, const Matrix2Xd &gamu,
-                     const Matrix2Xd &surface_vortex, double alpha, double qinf) const;
-
-  private:
-  public:
-    using UpdateResult = ViscousUpdateResult;
-    UpdateResult update(const Matrix3x2dVector &vdel) const;
-    using ClContributions = BoundaryLayerClContributions;
-    void invalidateConvergedSolution();
-    void invalidateWakeGeometry();
-    void invalidatePanelMap();
-    void ensureWakeTrajectoryAndInviscidVelocity();
-    void ensurePanelMapAndBoundaryLayerGeometry();
-    void assignCurrentInviscidEdgeVelocity();
-    void ensureBoundaryLayerEdgeSeed();
-    void restoreConvergedOperatingPoint(int point_count, int total_nodes_with_wake);
-    void ensureSourceInfluenceMatrix();
-    SetblOutputView initializeBoundaryLayerNewtonSystem();
-    Matrix3x2dVector solveBoundaryLayerNewtonStep(const SetblOutputView &setbl_output) const;
-    void applyBoundaryLayerIterationUpdate(const UpdateResult &update_result);
-    void updateFreestreamForIteration(const UpdateResult &update_result);
-    void refreshViscousFlowFields();
-    void finalizeViscousIteration(const UpdateResult &update_result, double eps1);
-    bool hasPanelMap() const;
-    bool hasAirfoilInfluenceMatrix() const;
-    bool hasWakeInfluenceMatrix() const;
-    bool hasConvergedSolution() const;
-    // Helper routines used during initialization
-    void initializeDataStructures();
-    void resetFlags();
-    void resetVariables();
-    XFoilInternalState &internalState() {
-        return state_;
-    }
-    const XFoilInternalState &internalState() const {
-        return state_;
-    }
-
-    FlowState analysis_state_;
-    FlowState &analysisState() {
-        return analysis_state_;
-    }
-    const FlowState &analysisState() const {
-        return analysis_state_;
-    }
-    // transitional parameters stored inside analysis_state_
-
-    AeroCoefficients aero_coeffs_;
-    double acrit;
-    VectorXd cpi, cpv;
-    XFoilInternalState state_;
-
-    Foil foil;
-    BoundaryLayer boundaryLayer;
-    const Vector2d cmref = Vector2d{0.25, 0.0};
-
-  public: // private:
-    /*
-    c
-    c-    sccon  =  shear coefficient lag constant
-    c-    gacon  =  g-beta locus constants...
-    c-    gbcon  =  g = gacon * sqrt(1.0 + gbcon*beta)
-    c-    gccon  =         + gccon / [h*rmomentumThickness*sqrt(cf/2)]   <-- wall
-    term c-    dlcon  =  wall/wake dissipation length ratio  lo/l c-    ctcon  =
-    skinFrictionCoeff weighting coefficient (implied by g-beta constants)
-
-    c   version     version number of this xfoil implementation
-    c
-    c   fname       airfoil data filename
-    c   pfname[.]   polar append filename
-    c   pfnamx[.]   polar append x/c dump filename
-    c   oname       default overlay airfoil filename
-    c   prefix      default filename prefix
-    c   name        airfoil name
-    c
-    c   ispars      ises domain parameters  [not used in xfoil]
-    c
-    c   q[..]       generic coefficient matrix
-    c   dq[.]       generic matrix righthand side
-    c
-    c   dzdg[.]     dpsi/dgam
-    c   dzdn[.]     dpsi/dn
-    c   dzdm[.]     dpsi/dsig
-    c
-    c   dqdg[.]     dqtan/dgam
-    c   dqdm[.]     dqtan/dsig
-    c   qtan1       qtan at alpha =  0 deg.
-    c   qtan2       qtan at alpha = 90 deg.
-    c
-    c   z_qinf      dpsi/dqinf
-    c   z_alfa      dpsi/dalfa
-    c   z_qdof0     dpsi/dqdof0
-    c   z_qdof1     dpsi/dqdof1
-    c   z_qdof2     dpsi/dqdof2
-    c   z_qdof3     dpsi/dqdof3
-    c
-    c   aij[..]     dpsi/dgam  influence coefficient matrix [factored if lqaij=t]
-    c   bij[..]     dgam/dsig  influence coefficient matrix
-    c   cij[..]     dqtan/dgam influence coefficient matrix
-    c   dij[..]     dqtan/dsig influence coefficient matrix
-    c   qinv_matrix[.,.] tangential velocity due to surface vorticity
-    c   qvis[.]     tangential velocity due to surface vorticity & mass sources
-    c   qinvu[..]   qinv for alpha = 0, 90 deg.
-    c   qinv_matrix row(1) dqinv/dalpha
-    c
-    c   x[.],y[.]   airfoil [1<i<n] and wake [n+1<i<n+foil.wake_shape.n]
-    coordinate arrays c   xp[.],yp[.] dx/ds, dy/ds arrays for spline evaluation c
-    s[.]        arc length along airfoil [spline parameter] c   sle         value
-    of s at leading edge c   xle,yle     leading  edge coordinates c   xte,yte
-    trailing edge coordinates c   waklen      wake length to chord ratio
-    c
-    c   gam[.]      surface vortex panel strength array
-    c   gamu[.2]    surface vortex panel strength arrays for alpha = 0, 90 deg.
-    c   gam_a[.]    dgam/dalfa
-    c   sig[.]      surface and wake mass defect array
-    c
-    c   nx[.],ny[.] normal unit vector components at airfoil and wake coordinates
-    c   apanel[.]   surface and wake panel angle array [+ counterclockwise]
-    c
-    c   stagnation.sst    s value at stagnation point
-    c   stagnation.sst_go dsst/dgam[ist]
-    c   stagnation.sst_gp dsst/dgam[ist+1]
-    c
-    c   gamte       vortex panel strength across finite-thickness te
-    c   sigte       source panel strength across finite-thickness te
-    c   gamte_a     dgamte/dalfa
-    c   sigte_a     dsigte/dalfa
-    c   dste        te panel length
-    c   ante,aste   projected te thickness perp.,para. to te bisector
-    c   sharp       .true.  if  dste.eq.0.0 ,  .false. otherwise
-    c
-    c   sspec[.]    normalized arc length around airfoil [qspec coordinate]
-    c   xspoc[.]    x/c at sspec points
-    c   yspoc[.]    y/c at sspec points
-    c   qspec[..]   specified surface velocity for inverse calculations
-    c   qspecp[..]  dqspec/dsspec
-    c   qgamm[.]    surface velocity for current airfoil geometry
-    c   ssple       sspec value at airfoil nose
-    c
-    c   iq1,iq2     target segment endpoint indices on qspec[s] plot
-    c   nsp         number of points in qspec array
-    c   nqsp        number qspec arrays
-    c   iacqsp      1:  alqsp is prescribed for qspec arrays
-    c               2:  clqsp is prescribed for qspec arrays
-    c   nc1         number of circle plane points, must be 2**n - 1
-    c
-    c   nname       number of characters in airfoil name
-    c   nprefix     number of characters in default filename prefix
-    c
-    c   alqsp[.]    alpha,cl,cm corresponding to qspec distributions
-    c   clqsp[.]
-    c   cmqsp[.]
-    c   algam       alpha,cl,cm corresponding to qgamm distribution
-    c   clgam
-    c   cmgam
-    c
-    c   qf0[.]      shape function for qspec modification
-    c   qf1[.]        "
-    c   qf2[.]        "
-    c   qf3[.]        "
-    c   qdof0       shape function weighting coefficient [inverse dof]
-    c   qdof1         "
-    c   qdof2         "
-    c   qdof3         "
-    c   clspec      specified cl
-    c   ffilt       circle-plane mapping filter parameter
-    c
-    c   adeg,alfa   angle of attack in degrees, radians
-    c   awake       angle of attack corresponding to wake geometry [radians]
-    c   avisc       angle of attack corresponding to bl solution   [radians]
-    c   mvisc       mach number corresponding to bl solution
-    c   cl,cm       current cl and cm calculated from gam[.] distribution
-    c   cd          current cd from bl solution
-    c   cl_alf      dcl/dalfa
-    c   cl_msq      dcl/d[minf^2]
-    c
-    c   psio        streamfunction inside airfoil
-    c   circ        circulation
-    c   cosa,sina   cos[alfa], sin[alfa]
-    c   qinf        freestream speed    [defined as 1]
-    c   gamma,gamm1 gas constant cp/cv, cp/cv - 1
-    c   minf1       freestream mach number at cl=1
-    c   minf        freestream mach number at current cl
-    c   minf_cl     dminf/dcl
-    c   cpstar      sonic pressure coefficient
-    c   qstar       sonic speed
-    c
-    c   ncpref      number of reference cp vs x/c points
-    c   xpref[.]    x/c array corresponding to reference cp data array
-    c   cpref[.]    reference cp data array
-    c   labref      reference cp data descriptor string
-    c
-    c   nlref       number of characters in labref string
-    c   napol[.]    number of points in each stored polar
-    c   npol        number of stored polars
-    c   ipact       index of "active" polar being accumulated [0 if none are]
-    c   icolp[.]    color for each polar
-    c   icolr[.]    color for each reference polar
-    c
-    c   ndref[..]   number of points in each stored reference polar
-    c   npolref     number of stored reference polars
-    c
-    c   verspol[.]  version number of generating-code for each polar
-    c   cpol[...]   cl,cd,and other parameters for each polar
-    c   cpolxy[.1.] x,y coordinates of airfoil geometry which generated each polar
-    c   cpolxy[.2.]
-    c   nxypol[.]   number of x,y points in cpolxy array
-    c
-    c   pxtr[..]    transition locations for each polar
-    c   namepol[.]  airfoil names for each polar
-    c   codepol[.]  generating-code names for each polar
-    c
-    c   nameref[.]  name label of reference polar
-    c
-    c   pi          3.1415926...
-    c   dtor        pi / 180    [degrees to radians conversion factor]
-    c
-    c   cvpar       curvature attraction parameter for airfoil paneling
-    c               0 = uniform panel node spacing around airfoil
-    c              ~1 = panel nodes strongly bunched in areas of large curvature
-    c   cterat      te panel density / le panel density ratio
-    c   ctrrat      local refinement panel density / le panel density ratio
-    c   xsref1-2    suction  side local refinement x/c limits
-    c   xpref1-2    pressure side local refinement x/c limits
-    c
-    c   n           number of points on airfoil
-    c   nb          number of points in buffer airfoil array
-    c   foil.wake_shape.n          number of points in wake
-    c   npan        default/specified number of points on airfoil
-    c
-    c   ist         stagnation point lies between s[ist], s[ist+1]
-    c   itmax       max number of newton iterations
-    c   nseqex      max number of unconverged sequence points for early exit
-    c
-    c   retyp       index giving type of re variation with cl ...
-    c            ... 1  re constant
-    c            ... 2  re ~ 1/sqrt[cl]    [fixed lift]
-    c            ... 3  re ~ 1/cl          [fixed lift and dynamic pressure]
-    c
-    c   matyp       index giving type of ma variation with cl ...
-    c            ... 1  ma constant
-    c            ... 2  ma ~ 1/sqrt[cl]    [fixed lift]
-    c
-    c   aijpiv[.]   pivot index array for lu factoring routine
-    c
-    c   idev        "device" number for normal screen plotting
-    c   idevrp      "device" number for replotting [typically for hardcopy]
-    c   ipslu       postscript file specifier
-    c   ncolor      number of defined colors in colormap
-    c   icols[1]    color indices of top side
-    c   icols[2]    color indices of bottom side
-    c
-    c   nover       number of airfoils overlaid on gdes geometry plot
-    c
-    c   scrnfr      screen fraction taken up by initial plot window
-    c   size        plot width [inches]
-    c   plotar      plot aspect ratio
-    c   xwind,ywind window size in inches
-    c   xpage,ypage plot-page size in inches [for hardcopy]
-    c   xmarg,ymarg margin dimensions in inches
-    c   pfac        scaling factor for  cp
-    c   qfac        scaling factor for  q  [surface speed]
-    c   vfac        scaling factor for  cp vectors
-    c   ch          character width / plot size  ratio
-    c   chg         character width / plot size  ratio for geometry plot
-    c   chq         character width / plot size  ratio for qspec[s] plot
-    c
-    c   xofair      x offset for airfoil in  cp vs x plots
-    c   yofair      y offset for airfoil in  cp vs x plots
-    c   facair      scale factor for airfoil in  cp vs x plots
-    c   xofa        x offset for airfoil in  cp vs x plots in airfoil units
-    c   yofa        y offset for airfoil in  cp vs x plots in airfoil units
-    c   faca        scale factor for airfoil in  cp vs x plots  in airfoil units
-    c   uprwt       u/qinf scale factor for profile plotting
-    c   cpmax       max cp  in  cp vs x plots
-    c   cpmin       min cp  in  cp vs x plots
-    c   cpdel       delta cp  in  cp vs x plots
-    c
-    c   cpolplf[1,icd]  min cd in cd-cl polar plot
-    c   cpolplf[2,icd]  max cd in cd-cl polar plot
-    c   cpolplf[3,icd]  delta cd in cd-cl polar plot
-    c
-    c   xcdwid      width of cd   -cl polar plot
-    c   xalwid      width of alpha-cl polar plot
-    c   xocwid      width of xtr/c-cl polar plot
-    c
-    c   ok          user question response
-    c   limage      .true. if image airfoil is present
-    c   lgamu       .true. if gamu  arrays exist for current airfoil geometry
-    c   lqinu       .true. if qinvu arrays exist for current airfoil geometry
-    c   lvisc       .true. if viscous option is invoked
-    c   lalfa       .true. if alpha is specifed, .false. if cl is specified
-    c   wake cache validity derived from wake_shape arrays
-    c   lpacc       .true. if each point calculated is to be saved
-    c   bl init/panel map validity derived from lattice/profile arrays
-    c   lqaij       .true. if dpsi/dgam matrix has been computed and factored
-    c   influence matrix validity derived from dij matrix shape/finiteness
-    c   lqvdes      .true. if viscous ue is to be plotted in qdes routines
-    c   lqspec      .true. if qspec has been initialized
-    c   lqrefl      .true. if reflected qspec is to be plotted in qdes routines
-    c   convergence state derived from avisc/mvisc and qvis consistency
-    c   lcpref      .true. if reference data is to be plotted on cp vs x/c plots
-    c   lclock      .true. if source airfoil coordinates are clockwise
-    c   lpfile      .true. if polar file is ready to be appended to
-    c   lpfilx      .true. if polar dump file is ready to be appended to
-    c   lppsho      .true. if cl-cd polar is plotted during point sequence
-    c   lbflap      .true. if buffer  airfoil flap parameters are defined
-    c   lflap       .true. if current airfoil flap parameters are defined
-    c   leiw        .true. if unit circle complex number array is initialized
-    c   lscini      .true. if old-airfoil circle-plane arc length s[w] exists
-    c   lforef      .true. if cl,cd... data is to be plotted on cp vs x/c plots
-    c   lnorm       .true. if input buffer airfoil is to be normalized
-    c   lgsame      .true. if current and buffer airfoils are identical
-    c
-    c   lplcam      .true. if thickness and camber are to be plotted
-    c   lqsym       .true. if symmetric qspec will be enforced
-    c   lgsym       .true. if symmetric geometry will be enforced
-    c   lqgrid      .true. if grid is to overlaid on qspec[s] plot
-    c   lggrid      .true. if grid is to overlaid on buffer airfoil geometry plot
-    c   lgtick      .true. if node tick marks are to be plotted on buffer airfoil
-    c   lqslop      .true. if modified qspec[s] segment is to match slopes
-    c   lgslop      .true. if modified geometry segment is to match slopes
-    c   lcslop      .true. if modified camber line segment is to match slopes
-    c   lqsppl      .true. if current qspec[s] in in plot
-    c   lgeopl      .true. if current geometry in in plot
-    c   lcpgrd      .true. if grid is to be plotted on cp plots
-    c   lblgrd      .true. if grid is to be plotted on bl variable plots
-    c   lblsym      .true. if symbols are to be plotted on bl variable plots
-    c   lcminp      .true. if min cp is to be written to polar file for cavitation
-    c   lhmomp      .true. if hinge moment is to be written to polar file
-    c
-    c   lpgrid      .true. if polar grid overlay is enabled
-    c   lpcdw       .true. if polar cdwave is plotted
-    c   lplist      .true. if polar listing lines [at top of plot] are enabled
-    c   lplegn      .true. if polar legend is enabled
-    c
-    c   lplot       .true. if plot page is open
-    c   lsym        .true. if symbols are to be plotted in qdes routines
-    c   liqset      .true. if inverse target segment is marked off in qdes
-    c   lclip       .true. if line-plot clipping is to be performed
-    c   lvlab       .true. if label is to be plotted on viscous-variable plots
-    c   lcurs       .true. if cursor input is to be used for blowups, etc.
-    c   lland       .true. if landscape orientation for postscript is used
-    c
-    c
-    c   xb[.],yb[.] buffer airfoil coordinate arrays
-    c   xbp[.]      dxb/dsb
-    c   ybp[.]      dyb/dsb
-    c   sb[.]       spline parameter for buffer airfoil
-    c
-    c   xbf,ybf     buffer  airfoil flap hinge coordinates
-    c   xof,yof     current airfoil flap hinge coordinates
-    c   hmom        moment of flap about hinge point
-    c   hfx         x-force of flap on hinge point
-    c   hfy         y-force of flap on hinge point
-    c
-    c~~~~~~~~~~~~~~ properties of current buffer airfoil
-    c
-    c   xbmin,xbmax  limits of xb array
-    c   ybmin,ybmax  limits of yb array
-    c   sble         le tangency-point sb location
-    c   chordb       chord
-    c   areab        area
-    c   radble       le radius
-    c   angbte       te angle  [rad]
-    c
-    c   ei11ba       bending inertia about axis 1    x^2 dx dy
-    c   ei22ba       bending inertia about axis 2    y^2 dx dy
-    c   apx1ba       principal axis 1 angle
-    c   apx2ba       principal axis 2 angle
-    c
-    c   ei11bt       bending inertia about axis 1    x^2 t ds
-    c   ei22bt       bending inertia about axis 2    y^2 t ds
-    c   apx1bt       principal axis 1 angle
-    c   apx2bt       principal axis 2 angle
-    c
-    c   thickb       max thickness
-    c   cambrb       max camber
-    c
-    c~~~~~~~~~~~~~~
-    c
-    c   arcLengthCoordinates[..]    bl arc length coordinate array on each surface
-    c   edgeVelocity[..]    bl edge velocity array
-    c   inviscidEdgeVelocityMatrix[.,.] bl edge velocity array without mass defect
-    influence c   mass[..]    bl mass defect array  [ =
-    edgeVelocity*displacementThickness ] c   momentumThickness[..]    bl momentum
-    thickness array c   displacementThickness[..]    bl displacement thickness
-    array c   skinFrictionCoeff[..]    sqrt[max shear coefficient] array c [in
-    laminar regions, log of amplification ratio]
-    c
-    c   skinFrictionCoeffHistory[..]     sqrt[equilibrium max shear coefficient]
-    array [  "  ] c   panelInfluenceFactor[..]     +/-1 conversion factor between
-    panel and bl variables c   inviscidEdgeVelocityMatrix row(1)
-    dinviscidEdgeVelocity/dalfa array
-    c
-    c   reinf1      reynolds number  vinf c / ve  for cl=1
-    c   reinf       reynolds number for current cl
-    c   reinf_cl    dreinf/dcl
-    c
-    c   acrit       log [critical amplification ratio]
-    c   xstrip[.]   transition trip  x/c locations [if xtrip > 0],
-    c               transition trip -s/s_side locations [if xtrip < 0],
-    c   xoctr[.]    actual transition x/c locations
-    c   yoctr[.]    actual transition y/c locations
-    c   arcLengthCoordinatestr[.]   actual transition xi locations
-    c
-    c   iblte[.]    bl array index at trailing edge
-    c   nbl[.]      max bl array index
-    c   ipan[..]    panel index corresponding to bl location
-    c   isys[..]    bl newton system line number corresponding to bl location
-    c   itran[.]    bl array index of transition interval
-    c   tforce[.]   .true. if transition is forced due to transition strip
-    c
-    c   bl_newton_system.va/vb[...]  diagonal and off-diagonal blocks in bl newton
-    system c   bl_newton_system.vz[..]      way-off-diagonal block at te station
-    line c   bl_newton_system.vm[...]     mass-influence coefficient vectors in bl
-    newton system c   bl_newton_system.vdel[..]    residual and solution vectors
-    in bl newton system
-    c
-    c   rmxbl       max change from bl newton system solution
-    c   imxbl       location of max change
-    c   ismxbl      index of bl side containing max change
-    c   vmxbl       character identifying variable with max change
-    c   rlx         underrelaxation factor for newton update
-    c   vaccel      parameter for accelerating bl newton system solution
-    c               [any off-diagonal element < vaccel is not eliminated,
-    c                which speeds up each iteration, but may increase
-    c                iteration count]
-    c                can be set to zero for unadulterated newton method
-    c
-    c   xoff,yoff   x and y offsets for windowing in qdes,gdes routines
-    c   xsf ,ysf    x and y scaling factors for windowing in qdes,gdes routines
-    c
-    c   xgmin       airfoil grid plot limits
-    c   xgmax
-    c   ygmin
-    c   ygmax
-    c   dxyg        airfoil grid-plot annotation increment
-    c   gtick       airfoil-plot tick marks size [as fraction of arc length]
-    */
-
-    //	complex<double> zcoldw, dzte, chordz, zleold, zc, zc_cn, piq, cn, eiw;
-
-    //----- CIRCLE.INC include file for circle-plane operations
-    //   NC         number of circle plane points, must be 2**n + 1
-    //   MC         number of Fourier harmonics of P(w) + iQ(w)
-    //   MCT        number of Fourier harmonics for which dZC/dCN are calculated
-    //
-    //   PI         3.1415926
-    //   AGTE       trailing edge angle/pi
-    //   AG0        angle of airfoil surface at first point
-    //   QIM0       Q(w) offset   = Q(0)
-    //   QIMOLD     Q(w) offset for old airfoil
-    //   DWC        increment of circle-plane coordinate w,  DWC = 2 pi/(NC-1)
-    //   WC(.)      circle plane coordinate w for Fourier operations
-    //   SC(.)      normalized arc length array s(w)
-    //   SCOLD(.)   normalized arc length s(w) of old airfoil
-    //   XCOLD(.)   x coordinate x(w) of old airfoil
-    //   YCOLD(.)   y coordinate y(w) of old airfoil
-    //
-    //   DZTE       trailing edge gap specified in the complex plane
-    //   CHORDZ     airfoil chord specified in the complex plane
-    //   ZLEOLD     leading edge of old airfoil
-    //   ZCOLDW(.)  d(x+iy)/dw of old airfoil
-    //   ZC(.)      complex airfoil coordinates derived from P(w) + iQ(w)
-    //   ZC_CN(..)  sensitivities dZC/dCN for driving geometry constraints
-    //   PIQ(.)     complex harmonic function P(w) + iQ(w)
-    //   CN(.)      Fourier coefficients of P(w) + iQ(w)
-    //   EIW(..)    complex number  exp(inw)  array on the unit circle
-
-    //-----End Specific Inverse MDES-------------------------------
+  FlowState analysis_state_;
+  XFoilResult result_;
+  double acrit_ = 9.0;
+  std::unique_ptr<XFoilWorkspace> workspace_;
+  std::unique_ptr<XFoilAnalysis> analysis_;
 };

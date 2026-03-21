@@ -39,9 +39,7 @@ bool iterate(XFoil &xfoil, IterationContext &context) {
   }
 
   {
-    const auto viscal_end = xfoil.ViscalEnd();
-    xfoil.cpi = viscal_end.inviscidCp;
-    xfoil.cpv = viscal_end.viscousCp;
+    xfoil.ViscalEnd();
   }
 
   if (context.iterationCount >= context.iterationLimit &&
@@ -127,7 +125,7 @@ int main() {
     foil->invalidatePanelMap();
 
     foil->setAlpha(alpha * kPi / 180.0);
-    foil->analysisState().controlByAlpha = true;
+    foil->setControlByAlpha(true);
     foil->setQInf(1.0);
     std::cout << "alpha : " << alpha << std::endl;
 

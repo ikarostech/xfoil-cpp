@@ -1,5 +1,4 @@
 #include "solver/inviscid/psi.hpp"
-#include "application/xfoil/XFoil.h"
 #include "numerics/math_util.hpp"
 #include <algorithm>
 #include <cmath>

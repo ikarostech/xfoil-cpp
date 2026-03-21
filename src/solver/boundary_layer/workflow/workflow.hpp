@@ -20,7 +20,6 @@
 #include "solver/boundary_layer/runtime/state.hpp"
 
 class Edge;
-class XFoil;
 class BoundaryLayer;
 class BoundaryLayerMarchAccess;
 class BoundaryLayerSetblAccess;
@@ -181,6 +180,7 @@ class BoundaryLayer {
     }
 
     void setTransitionLocations(double top, double bottom);
+    double transitionLocation(int side) const;
     void initializeLattices(int size);
     void initializeWakeGap(int wake_nodes);
     void assignInviscidEdgeVelocity(const SidePair<Eigen::Matrix2Xd> &velocity);

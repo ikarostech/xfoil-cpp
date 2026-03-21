@@ -6,8 +6,6 @@
 #include "numerics/side_pair.hpp"
 #include "model/foil/foil.hpp"
 
-class XFoil;
-
 struct StagnationResult {
   int stagnationIndex = 0;
   double sst = 0.0;

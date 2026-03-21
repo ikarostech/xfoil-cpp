@@ -30,6 +30,7 @@ target_link_libraries(xfoil_numerics
 add_library(xfoil_model
     src/model/boundary_layer.cpp
     src/model/boundary_layer/physics.cpp
+    src/model/coefficient/xfoil_postprocess.cpp
     src/model/foil/edge.cpp
     src/model/foil/foil_shape.cpp
 )
@@ -46,14 +47,14 @@ target_link_libraries(xfoil_model
 
 add_library(xfoil_solver
     src/application/xfoil/XFoil.cpp
-    src/application/xfoil/XFoil_aerodynamics.cpp
-    src/application/xfoil/XFoil_geometry.cpp
-    src/application/xfoil/XFoil_init.cpp
+    src/application/xfoil/XFoilAnalysis_core.cpp
     src/application/xfoil/XFoil_viscous.cpp
     src/solver/xfoil/viscous_update.cpp
+    src/solver/xfoil/xfoil_flowfield.cpp
     src/solver/inviscid/InviscidSolver.cpp
     src/solver/inviscid/psi.cpp
     src/solver/boundary_layer/blsolve.cpp
+    src/solver/boundary_layer/viscous_iteration_ops.cpp
     src/solver/boundary_layer/workflow/workflow.cpp
     src/solver/boundary_layer/boundary_layer_store.cpp
     src/solver/boundary_layer/boundary_layer_geometry.cpp
