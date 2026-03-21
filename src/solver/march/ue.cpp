@@ -5,7 +5,7 @@
 #include <iomanip>
 #include <sstream>
 
-#include "solver/xfoil/XFoil.h"
+#include "application/xfoil/XFoil.h"
 #include "solver/march/ue_numerics.hpp"
 
 using EdgeVelocityFallbackMode = MrchueContext::EdgeVelocityFallbackMode;

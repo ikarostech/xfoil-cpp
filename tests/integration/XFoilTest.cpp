@@ -5,7 +5,7 @@
 #include <sstream>
 #include <string>
 
-#include "solver/xfoil/XFoil.h"
+#include "application/xfoil/XFoil.h"
 #include "model/flow_regime.hpp"
 
 namespace {

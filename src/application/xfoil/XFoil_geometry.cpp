@@ -1,5 +1,5 @@
 #include "Eigen/Core"
-#include "solver/xfoil/XFoil.h"
+#include "application/xfoil/XFoil.h"
 #include <algorithm>
 #include <numbers>
 
@@ -49,8 +49,8 @@ void XFoil::updateTrailingEdgeState() {
     const int node_count = foil.foil_shape.n;
 
     if (node_count < 2) {
-        inviscid_state_.sigmaTe = 0.0;
-        inviscid_state_.gammaTe = 0.0;
+        state_.inviscid.sigmaTe = 0.0;
+        state_.inviscid.gammaTe = 0.0;
         return;
     }
 
@@ -65,13 +65,13 @@ void XFoil::updateTrailingEdgeState() {
         sds                   = foil.edge.aste * inv_dste;
     }
 
-    if (inviscid_state_.surfaceVortex.rows() > 0 && inviscid_state_.surfaceVortex.cols() >= node_count) {
+    if (state_.inviscid.surfaceVortex.rows() > 0 && state_.inviscid.surfaceVortex.cols() >= node_count) {
         const double surface_delta =
-            inviscid_state_.surfaceVortex(0, 0) - inviscid_state_.surfaceVortex(0, node_count - 1);
-        inviscid_state_.sigmaTe = 0.5 * surface_delta * scs;
-        inviscid_state_.gammaTe = -0.5 * surface_delta * sds;
+            state_.inviscid.surfaceVortex(0, 0) - state_.inviscid.surfaceVortex(0, node_count - 1);
+        state_.inviscid.sigmaTe = 0.5 * surface_delta * scs;
+        state_.inviscid.gammaTe = -0.5 * surface_delta * sds;
     } else {
-        inviscid_state_.sigmaTe = 0.0;
-        inviscid_state_.gammaTe = 0.0;
+        state_.inviscid.sigmaTe = 0.0;
+        state_.inviscid.gammaTe = 0.0;
     }
 }

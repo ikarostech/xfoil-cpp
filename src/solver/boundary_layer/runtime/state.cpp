@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <sstream>
 
-#include "solver/xfoil/XFoil.h"
+#include "application/xfoil/XFoil.h"
 #include "numerics/spline.hpp"
 #include "infrastructure/logger.hpp"
 

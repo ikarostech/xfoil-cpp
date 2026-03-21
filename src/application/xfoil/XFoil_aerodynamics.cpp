@@ -2,7 +2,7 @@
 #include "numerics/math_util.hpp"
 #include "solver/inviscid/InviscidSolver.hpp"
 #include "solver/inviscid/psi.hpp"
-#include "solver/xfoil/XFoil.h"
+#include "application/xfoil/XFoil.h"
 #include <algorithm>
 #include <cmath>
 using Eigen::FullPivLU;
@@ -52,7 +52,7 @@ XFoil::ClComputation XFoil::clcalc(Vector2d ref) const {
     const int point_count       = foil.foil_shape.n;
 
     const PressureCoefficientResult cp_first = computePressureCoefficient(
-        inviscid_state_.surfaceVortex(0, 0), inviscid_state_.surfaceVortex(1, 0), compressibility);
+        state_.inviscid.surfaceVortex(0, 0), state_.inviscid.surfaceVortex(1, 0), compressibility);
 
     double cpg1     = cp_first.cp;
     double cpg1_msq = cp_first.cp_msq;
@@ -61,7 +61,7 @@ XFoil::ClComputation XFoil::clcalc(Vector2d ref) const {
     for (int i = 0; i < point_count; i++) {
         const int ip                            = (i + 1) % point_count;
         const PressureCoefficientResult cp_next = computePressureCoefficient(
-            inviscid_state_.surfaceVortex(0, ip), inviscid_state_.surfaceVortex(1, ip), compressibility);
+            state_.inviscid.surfaceVortex(0, ip), state_.inviscid.surfaceVortex(1, ip), compressibility);
 
         const double cpg2     = cp_next.cp;
         const double cpg2_msq = cp_next.cp_msq;
@@ -113,8 +113,8 @@ Matrix2Xd XFoil::gamqv() const {
     const int point_count = foil.foil_shape.n;
     Matrix2Xd updated_surface_vortex(2, point_count);
     for (int i = 0; i < point_count; i++) {
-        updated_surface_vortex(0, i) = viscous_state_.qvis[i];
-        updated_surface_vortex(1, i) = inviscid_state_.qinvMatrix(1, i);
+        updated_surface_vortex(0, i) = state_.viscous.qvis[i];
+        updated_surface_vortex(1, i) = state_.inviscid.qinvMatrix(1, i);
     }
     return updated_surface_vortex;
 }
@@ -125,7 +125,7 @@ Matrix2Xd XFoil::gamqv() const {
  *     in specal or speccl for specified alpha or cl.
  *-------------------------------------------------------------- */
 FoilAerodynamicCache XFoil::ggcalc() {
-    FoilAerodynamicCache cache = inviscid_state_.cache;
+    FoilAerodynamicCache cache = state_.inviscid.cache;
 
     Logger::instance().write("   Calculating unit vorticity distributions ...\n");
 
@@ -138,7 +138,7 @@ FoilAerodynamicCache XFoil::ggcalc() {
     for (int i = 0; i < foil.foil_shape.n; i++) {
         //------ calculate psi and dpsi/dgamma array for current node
         PsiResult psi_result = psilin(foil, i, foil.foil_shape.points.col(i), foil.foil_shape.normal_vector.col(i),
-                                      true, cache.gamu, inviscid_state_.surfaceVortex, analysis_state_.alpha,
+                                      true, cache.gamu, state_.inviscid.surfaceVortex, analysis_state_.alpha,
                                       analysis_state_.qinf, foil.foil_shape.angle_panel);
         //------ dres/dgamma
         dpsi_dgam.row(i).head(foil.foil_shape.n) = psi_result.dzdg;
@@ -181,7 +181,7 @@ FoilAerodynamicCache XFoil::ggcalc() {
         const Vector2d normal_bis{-bis_vector.y(), bis_vector.x()};
 
         //----- set velocity component along bisector line
-        PsiResult psi_result = psilin(foil, -1, bis, normal_bis, true, cache.gamu, inviscid_state_.surfaceVortex,
+        PsiResult psi_result = psilin(foil, -1, bis, normal_bis, true, cache.gamu, state_.inviscid.surfaceVortex,
                                       analysis_state_.alpha, analysis_state_.qinf, foil.foil_shape.angle_panel);
 
         //----- dres/dgamma

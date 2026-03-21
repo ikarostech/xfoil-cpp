@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
-#include "solver/xfoil/XFoil.h"
+#include "application/xfoil/XFoil.h"
 #include "numerics/math_util.hpp"
 #include "solver/march/du_numerics.hpp"
 

@@ -6,7 +6,7 @@
 #include <sstream>
 
 #include "model/boundary_layer/physics.hpp"
-#include "solver/xfoil/XFoil.h"
+#include "application/xfoil/XFoil.h"
 #include "numerics/boundary_layer_util.hpp"
 #include "infrastructure/logger.hpp"
 #include "solver/boundary_layer/workflow/workflow.hpp"

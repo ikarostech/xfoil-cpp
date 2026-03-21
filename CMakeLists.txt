@@ -45,11 +45,11 @@ target_link_libraries(xfoil_model
 )
 
 add_library(xfoil_solver
-    src/solver/xfoil/XFoil.cpp
-    src/solver/xfoil/XFoil_aerodynamics.cpp
-    src/solver/xfoil/XFoil_geometry.cpp
-    src/solver/xfoil/XFoil_init.cpp
-    src/solver/xfoil/XFoil_viscous.cpp
+    src/application/xfoil/XFoil.cpp
+    src/application/xfoil/XFoil_aerodynamics.cpp
+    src/application/xfoil/XFoil_geometry.cpp
+    src/application/xfoil/XFoil_init.cpp
+    src/application/xfoil/XFoil_viscous.cpp
     src/solver/xfoil/viscous_update.cpp
     src/solver/inviscid/InviscidSolver.cpp
     src/solver/inviscid/psi.cpp
@@ -72,6 +72,7 @@ add_library(xfoil_solver
 target_include_directories(xfoil_solver
     PUBLIC
         ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/src/application
         ${CMAKE_SOURCE_DIR}/src/solver
         ${CMAKE_SOURCE_DIR}/src/infrastructure
 )
@@ -88,6 +89,7 @@ add_executable(testExe
 target_include_directories(testExe
     PRIVATE
         ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/src/application
         ${CMAKE_SOURCE_DIR}/src/solver
 )
 

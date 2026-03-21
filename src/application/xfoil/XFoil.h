@@ -49,6 +49,7 @@ Harold Youngren. See http://raphael.mit.edu/xfoil for more information.
 #include "model/foil/foil.hpp"
 #include "numerics/side_pair.hpp"
 #include "solver/boundary_layer/boundary_layer.hpp"
+#include "application/xfoil/XFoilInternalState.hpp"
 #include "solver/xfoil/viscous_update.hpp"
 
 struct SetblOutputView;
@@ -58,35 +59,10 @@ class InviscidSolver;
 
 class XFoil {
   public:
-    struct InitState {
-        double amax = 0.0;
-        std::vector<double> qf0;
-        std::vector<double> qf1;
-        std::vector<double> qf2;
-        std::vector<double> qf3;
-    };
-
-    struct OperatingPointCouplingState {
-        double machPerLift     = 0.0;
-        double reynoldsPerLift = 0.0;
-    };
-
-    struct InviscidFieldState {
-        Eigen::Matrix2Xd surfaceVortex;
-        FoilAerodynamicCache cache;
-        double gammaTe = 0.0;
-        double sigmaTe = 0.0;
-        Eigen::Matrix2Xd qinvu;
-        Eigen::Matrix2Xd qinvMatrix;
-        Eigen::VectorXd qgamm;
-    };
-
-    struct ViscousIterationState {
-        StagnationResult stagnation;
-        Eigen::VectorXd qvis;
-        double convergedAlpha = 0.0;
-        double convergedMach  = 0.0;
-    };
+    using InitState                  = XFoilInternalState::InitState;
+    using OperatingPointCouplingState = XFoilInternalState::OperatingPointCouplingState;
+    using InviscidFieldState         = XFoilInternalState::InviscidFieldState;
+    using ViscousIterationState      = XFoilInternalState::ViscousIterationState;
 
     XFoil();
     virtual ~XFoil();
@@ -269,6 +245,12 @@ class XFoil {
     void initializeDataStructures();
     void resetFlags();
     void resetVariables();
+    XFoilInternalState &internalState() {
+        return state_;
+    }
+    const XFoilInternalState &internalState() const {
+        return state_;
+    }
 
     FlowState analysis_state_;
     FlowState &analysisState() {
@@ -282,10 +264,7 @@ class XFoil {
     AeroCoefficients aero_coeffs_;
     double acrit;
     VectorXd cpi, cpv;
-    InitState init_state_;
-    OperatingPointCouplingState operating_point_coupling_;
-    InviscidFieldState inviscid_state_;
-    ViscousIterationState viscous_state_;
+    XFoilInternalState state_;
 
     Foil foil;
     BoundaryLayer boundaryLayer;

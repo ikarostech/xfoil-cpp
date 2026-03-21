@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <iostream>
 
-#include "solver/xfoil/XFoil.h"
+#include "application/xfoil/XFoil.h"
 #include "numerics/math_util.hpp"
 #include "infrastructure/logger.hpp"
 

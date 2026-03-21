@@ -4,7 +4,7 @@
 #include <cmath>
 #include <sstream>
 
-#include "solver/xfoil/XFoil.h"
+#include "application/xfoil/XFoil.h"
 #include "numerics/math_util.hpp"
 #include "infrastructure/logger.hpp"
 #include "solver/boundary_layer/march_access.hpp"

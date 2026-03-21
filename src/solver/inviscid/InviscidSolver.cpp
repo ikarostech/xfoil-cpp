@@ -1,6 +1,6 @@
 #include "solver/inviscid/InviscidSolver.hpp"
 
-#include "solver/xfoil/XFoil.h"
+#include "application/xfoil/XFoil.h"
 #include "numerics/math_util.hpp"
 #include "infrastructure/logger.hpp"
 
@@ -11,19 +11,20 @@ using Eigen::VectorXd;
 
 bool InviscidSolver::specConverge(XFoil &xfoil, SpecTarget target) {
   constexpr double kMachZeroTolerance = 1.0e-12;
+  auto &state = xfoil.internalState();
   // Rebuild inviscid baseline from current alpha so viscous leftovers do not
   // contaminate the operating-point solve.
-  xfoil.inviscid_state_.qinvMatrix =
-      qiset(xfoil.analysis_state_.alpha, xfoil.inviscid_state_.qinvu);
-  xfoil.inviscid_state_.surfaceVortex =
+  state.inviscid.qinvMatrix =
+      qiset(xfoil.analysis_state_.alpha, state.inviscid.qinvu);
+  state.inviscid.surfaceVortex =
       MathUtil::getRotateMatrix(xfoil.analysis_state_.alpha) *
-      xfoil.inviscid_state_.cache.gamu;
+      state.inviscid.cache.gamu;
 
   if (target == SpecTarget::LiftCoefficient) {
-    xfoil.operating_point_coupling_.machPerLift =
+    state.operatingPointCoupling.machPerLift =
         xfoil.getActualMach(xfoil.analysis_state_.clspec,
                             xfoil.analysis_state_.machType);
-    xfoil.operating_point_coupling_.reynoldsPerLift = xfoil.getActualReynolds(
+    state.operatingPointCoupling.reynoldsPerLift = xfoil.getActualReynolds(
         xfoil.analysis_state_.clspec, xfoil.analysis_state_.reynoldsType);
   }
 
@@ -79,20 +80,20 @@ bool InviscidSolver::specConverge(XFoil &xfoil, SpecTarget target) {
 
     xfoil.cpi =
         cpcalc(xfoil.foil.foil_shape.n + xfoil.foil.wake_shape.n,
-               xfoil.inviscid_state_.qinvMatrix.row(0).transpose(),
+               state.inviscid.qinvMatrix.row(0).transpose(),
                xfoil.analysis_state_.qinf,
                xfoil.analysis_state_.currentMach);
     if (xfoil.analysis_state_.viscous) {
       xfoil.cpv =
           cpcalc(xfoil.foil.foil_shape.n + xfoil.foil.wake_shape.n,
-                 xfoil.viscous_state_.qvis, xfoil.analysis_state_.qinf,
+                 state.viscous.qvis, xfoil.analysis_state_.qinf,
                  xfoil.analysis_state_.currentMach);
     }
-    xfoil.inviscid_state_.surfaceVortex =
+    state.inviscid.surfaceVortex =
         MathUtil::getRotateMatrix(xfoil.analysis_state_.alpha) *
-        xfoil.inviscid_state_.cache.gamu;
-    xfoil.inviscid_state_.qgamm =
-        xfoil.inviscid_state_.surfaceVortex.row(0).transpose();
+        state.inviscid.cache.gamu;
+    state.inviscid.qgamm =
+        state.inviscid.surfaceVortex.row(0).transpose();
 
     return true;
   }
@@ -126,18 +127,18 @@ bool InviscidSolver::specConverge(XFoil &xfoil, SpecTarget target) {
   if (xfoil.analysis_state_.viscous) {
     xfoil.cpv =
         cpcalc(xfoil.foil.foil_shape.n + xfoil.foil.wake_shape.n,
-               xfoil.viscous_state_.qvis,
+               state.viscous.qvis,
                xfoil.analysis_state_.qinf, xfoil.analysis_state_.currentMach);
     xfoil.cpi =
         cpcalc(xfoil.foil.foil_shape.n + xfoil.foil.wake_shape.n,
-               xfoil.inviscid_state_.qinvMatrix.row(0).transpose(),
+               state.inviscid.qinvMatrix.row(0).transpose(),
                xfoil.analysis_state_.qinf,
                xfoil.analysis_state_.currentMach);
 
   } else {
     xfoil.cpi =
         cpcalc(xfoil.foil.foil_shape.n,
-               xfoil.inviscid_state_.qinvMatrix.row(0).transpose(),
+               state.inviscid.qinvMatrix.row(0).transpose(),
                xfoil.analysis_state_.qinf, xfoil.analysis_state_.currentMach);
   }
 

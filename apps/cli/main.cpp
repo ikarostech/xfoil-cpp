@@ -5,7 +5,7 @@
 #include <sstream>
 #include <string>
 
-#include "solver/xfoil/XFoil.h"
+#include "application/xfoil/XFoil.h"
 
 namespace {
 constexpr int kMaxDatPoints = 604;

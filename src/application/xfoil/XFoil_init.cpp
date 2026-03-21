@@ -1,4 +1,4 @@
-#include "solver/xfoil/XFoil.h"
+#include "application/xfoil/XFoil.h"
 #include "solver/inviscid/InviscidSolver.hpp"
 #include <algorithm>
 #include <limits>
@@ -18,9 +18,9 @@ bool XFoil::initialize() {
   setVAccel(0.01);
 
   //---- set minf, reinf, based on current cl-dependence
-  operating_point_coupling_.machPerLift =
+  state_.operatingPointCoupling.machPerLift =
       getActualMach(1.0, analysis_state_.machType);
-  operating_point_coupling_.reynoldsPerLift =
+  state_.operatingPointCoupling.reynoldsPerLift =
       getActualReynolds(1.0, analysis_state_.reynoldsType);
 
   return true;
@@ -35,24 +35,24 @@ void XFoil::initializeDataStructures() {
 
   boundaryLayer.initializeLattices(bl_node_count);
 
-  inviscid_state_.cache.bij =
+  state_.inviscid.cache.bij =
       MatrixXd::Zero(point_count + 1, total_nodes_with_wake);
-  inviscid_state_.cache.dij =
+  state_.inviscid.cache.dij =
       MatrixXd::Zero(total_nodes_with_wake, total_nodes_with_wake);
-  inviscid_state_.cache.gamu = Matrix2Xd::Zero(2, point_count + 1);
-  inviscid_state_.surfaceVortex = Matrix2Xd::Zero(2, point_count);
-  init_state_.qf0.assign(surface_buffer_nodes + 1, 0.0);
-  init_state_.qf1.assign(surface_buffer_nodes + 1, 0.0);
-  init_state_.qf2.assign(surface_buffer_nodes + 1, 0.0);
-  init_state_.qf3.assign(surface_buffer_nodes + 1, 0.0);
-  inviscid_state_.qinvu = Matrix2Xd::Zero(2, total_nodes_with_wake);
-  inviscid_state_.qinvMatrix = Matrix2Xd::Zero(2, total_nodes_with_wake);
-  viscous_state_.qvis = VectorXd::Zero(total_nodes_with_wake);
+  state_.inviscid.cache.gamu = Matrix2Xd::Zero(2, point_count + 1);
+  state_.inviscid.surfaceVortex = Matrix2Xd::Zero(2, point_count);
+  state_.init.qf0.assign(surface_buffer_nodes + 1, 0.0);
+  state_.init.qf1.assign(surface_buffer_nodes + 1, 0.0);
+  state_.init.qf2.assign(surface_buffer_nodes + 1, 0.0);
+  state_.init.qf3.assign(surface_buffer_nodes + 1, 0.0);
+  state_.inviscid.qinvu = Matrix2Xd::Zero(2, total_nodes_with_wake);
+  state_.inviscid.qinvMatrix = Matrix2Xd::Zero(2, total_nodes_with_wake);
+  state_.viscous.qvis = VectorXd::Zero(total_nodes_with_wake);
 
   boundaryLayer.initializeWakeGap(wake_nodes);
   boundaryLayer.systemCoefficients().clear();
 
-  inviscid_state_.qgamm = VectorXd::Zero(point_count);
+  state_.inviscid.qgamm = VectorXd::Zero(point_count);
 }
 
 void XFoil::resetFlags() {
@@ -73,10 +73,10 @@ void XFoil::resetVariables() {
   aero_coeffs_.cm = 0.0;
   aero_coeffs_.cd = 0.0;
   aero_coeffs_.xcp = 0.0;
-  inviscid_state_.sigmaTe = inviscid_state_.gammaTe = 0.0;
-  viscous_state_.convergedAlpha = std::numeric_limits<double>::quiet_NaN();
+  state_.inviscid.sigmaTe = state_.inviscid.gammaTe = 0.0;
+  state_.viscous.convergedAlpha = std::numeric_limits<double>::quiet_NaN();
   resetFlags();
-  init_state_.amax = 0.0;
+  state_.init.amax = 0.0;
   analysis_state_.alpha = 0.0;
   analysis_state_.clspec = 0.0;
   foil.edge.ante = 0.0;
@@ -84,11 +84,11 @@ void XFoil::resetVariables() {
   foil.edge.dste = 0.0;
   analysis_state_.currentMach = 0.0;
   analysis_state_.currentRe = 0.0;
-  operating_point_coupling_.machPerLift = 0.0;
-  operating_point_coupling_.reynoldsPerLift = 0.0;
+  state_.operatingPointCoupling.machPerLift = 0.0;
+  state_.operatingPointCoupling.reynoldsPerLift = 0.0;
   aero_coeffs_.cl_alf = 0.0;
   aero_coeffs_.cl_msq = 0.0;
-  viscous_state_.stagnation = StagnationResult{};
+  state_.viscous.stagnation = StagnationResult{};
 }
 
 double XFoil::getActualMach(double cls, MachType mach_control) {
@@ -134,18 +134,18 @@ double XFoil::getActualReynolds(double cls, ReynoldsType reynolds_control) {
 }
 
 bool XFoil::setMach() {
-  operating_point_coupling_.machPerLift =
+  state_.operatingPointCoupling.machPerLift =
       getActualMach(1.0, analysis_state_.machType);
-  operating_point_coupling_.reynoldsPerLift =
+  state_.operatingPointCoupling.reynoldsPerLift =
       getActualReynolds(1.0, analysis_state_.reynoldsType);
   const int point_count = foil.foil_shape.n;
   cpi =
       InviscidSolver::cpcalc(point_count,
-                             inviscid_state_.qinvMatrix.row(0).transpose(),
+                             state_.inviscid.qinvMatrix.row(0).transpose(),
                              analysis_state_.qinf, analysis_state_.currentMach);
   if (analysis_state_.viscous) {
     cpv = InviscidSolver::cpcalc(point_count + foil.wake_shape.n,
-                                 viscous_state_.qvis,
+                                 state_.viscous.qvis,
                                  analysis_state_.qinf,
                                  analysis_state_.currentMach);
   }
