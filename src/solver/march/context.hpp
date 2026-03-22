@@ -26,17 +26,14 @@ class MarchStateContext : public virtual MarchCoreContext {
 public:
   virtual ~MarchStateContext() = default;
 
-  virtual blData readCurrentState() const = 0;
-  virtual void writeCurrentState(const blData &state) = 0;
   virtual double readCurrentShapeFactor() const = 0;
-  virtual void updateCurrentStationKinematics() = 0;
+  virtual void refreshCurrentStationState(double xsi, double ami, double cti,
+                                          double thi, double dsi,
+                                          double dswaki, double uei) = 0;
 
   virtual FlowRegimeEnum
   applyFlowRegimeCandidate(FlowRegimeEnum candidate) = 0;
   virtual FlowRegimeEnum currentFlowRegime() const = 0;
-  virtual blData blprv(blData data, double xsi, double ami, double cti,
-                       double thi, double dsi, double dswaki,
-                       double uei) const = 0;
 };
 
 class MarchStationDataAccess : public virtual MarchCoreContext {

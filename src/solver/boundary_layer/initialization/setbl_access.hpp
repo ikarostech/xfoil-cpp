@@ -79,11 +79,6 @@ class BoundaryLayerSetblAccess {
     return boundaryLayer_.tesys(top_profiles, bottom_profiles, edge);
   }
   bool blsys() const { return boundaryLayer_.blsys(); }
-  bool blkin(BoundaryLayerState &state) const { return boundaryLayer_.blkin(state); }
-  blData blprv(blData data, double xsi, double ami, double cti, double thi,
-               double dsi, double dswaki, double uei) const {
-    return boundaryLayer_.blprv(data, xsi, ami, cti, thi, dsi, dswaki, uei);
-  }
   SkinFrictionCoefficients blmid(FlowRegimeEnum flow_regime) const {
     return boundaryLayer_.blmid(flow_regime);
   }

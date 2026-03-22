@@ -24,10 +24,9 @@ void BoundaryLayerMixedModeOps::storeStationStateCommon(
   context_.lattice.get(side).profiles.skinFrictionCoeffHistory[stationIndex] =
       context_.state.station2.cqz.scalar;
 
-  context_.state.current() = context_.solverOps.blprv(
-      context_.state.current(), ctx.xsi, ctx.ami, ctx.cti, ctx.thi, ctx.dsi,
-      ctx.dswaki, ctx.uei);
-  context_.solverOps.blkin(context_.state);
+  BoundaryLayerPhysics::refreshCurrentStation(
+      context_.state, context_.blCompressibility, context_.blReynolds,
+      ctx.xsi, ctx.ami, ctx.cti, ctx.thi, ctx.dsi, ctx.dswaki, ctx.uei);
   context_.state.stepbl();
 
   if (context_.flowRegime == FlowRegimeEnum::Wake) {
@@ -307,10 +306,9 @@ void BoundaryLayerMixedModeOps::recoverStationAfterFailure(
   context_.flowRegime = ctx.flowRegime;
   resetStationKinematicsAfterFailure(side, stationIndex, ctx, edgeMode);
 
-  context_.state.current() = context_.solverOps.blprv(
-      context_.state.current(), ctx.xsi, ctx.ami, ctx.cti, ctx.thi, ctx.dsi,
-      ctx.dswaki, ctx.uei);
-  context_.solverOps.blkin(context_.state);
+  BoundaryLayerPhysics::refreshCurrentStation(
+      context_.state, context_.blCompressibility, context_.blReynolds,
+      ctx.xsi, ctx.ami, ctx.cti, ctx.thi, ctx.dsi, ctx.dswaki, ctx.uei);
   ctx.flowRegime = context_.flowRegime;
 
   checkTransitionIfNeeded(side, stationIndex, ctx.isSimilarity(), laminarAdvance,

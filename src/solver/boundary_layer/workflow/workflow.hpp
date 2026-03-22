@@ -64,10 +64,8 @@ class BoundaryLayer {
                              double &sens, double &sennew);
     bool applyMixedModeNewtonStep(int side, int stationIndex, double &ami, BoundaryLayerMixedModeStationContext &ctx);
     void checkTransitionIfNeeded(int side, int stationIndex, bool skipCheck, int laminarAdvance, double &ami);
-    SkinFrictionCoefficients blmid(FlowRegimeEnum flowRegimeType);
-    blData blprv(blData data, double xsi, double ami, double cti, double thi, double dsi, double dswaki,
-                 double uei) const;
     bool blsys();
+    SkinFrictionCoefficients blmid(FlowRegimeEnum flowRegimeType);
     void storeStationStateCommon(int side, int stationIndex, const BoundaryLayerMixedModeStationContext &ctx);
     void syncStationRegimeStates(int side, int stationIndex, FlowRegimeEnum stationRegime);
     FlowRegimeEnum determineRegimeForStation(int side, int stationIndex) const;
@@ -84,7 +82,6 @@ class BoundaryLayer {
     BoundaryLayerSideProfiles applyBoundaryLayerDelta(int side, const BoundaryLayerDelta &delta, double relaxation,
                                                       double hstinv, double gamm1) const;
 
-    bool blkin(BoundaryLayerState &state);
     bool tesys(const BoundaryLayerSideProfiles &top_profiles, const BoundaryLayerSideProfiles &bottom_profiles,
                const Edge &edge);
 
@@ -216,9 +213,10 @@ class BoundaryLayer {
     double previousAmplification() const;
     double currentSkinFrictionHistory() const;
     BoundaryLayerState snapshotState() const;
-    blData readCurrentState() const;
-    void writeCurrentState(const blData &state);
     double readCurrentShapeFactor() const;
+    void refreshCurrentStationState(double xsi, double ami, double cti,
+                                    double thi, double dsi, double dswaki,
+                                    double uei);
     void updateCurrentStationKinematics();
     void replaceState(const BoundaryLayerState &state);
     void advanceState();

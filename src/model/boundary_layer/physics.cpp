@@ -7,9 +7,10 @@
 #include "numerics/math_util.hpp"
 
 bool BoundaryLayerPhysics::blkin(
-    BoundaryLayerState &state, const BlCompressibilityParams &compressibility,
+    BoundaryLayerStationWindow &state,
+    const BlCompressibilityParams &compressibility,
     const BlReynoldsParams &reynolds) {
-  blData &current = state.current();
+  BoundaryLayerStationState &current = state.current();
   current.param.mz = current.param.uz * current.param.uz *
                      compressibility.hstinv /
                      (compressibility.gm1bl *
@@ -67,11 +68,21 @@ bool BoundaryLayerPhysics::blkin(
   return true;
 }
 
+void BoundaryLayerPhysics::refreshCurrentStation(
+    BoundaryLayerStationWindow &state,
+    const BlCompressibilityParams &compressibility,
+    const BlReynoldsParams &reynolds, double xsi, double ami, double cti,
+    double thi, double dsi, double dswaki, double uei) {
+  state.current() = blprv(state.current(), compressibility, xsi, ami, cti, thi,
+                          dsi, dswaki, uei);
+  blkin(state, compressibility, reynolds);
+}
+
 SkinFrictionCoefficients
-BoundaryLayerPhysics::blmid(BoundaryLayerState &state,
+BoundaryLayerPhysics::blmid(BoundaryLayerStationWindow &state,
                             FlowRegimeEnum flowRegimeType) {
-  blData &previous = state.previous();
-  blData &current = state.current();
+  BoundaryLayerStationState &previous = state.previous();
+  BoundaryLayerStationState &current = state.current();
 
   if (flowRegimeType == FlowRegimeEnum::Similarity) {
     previous.hkz = current.hkz;
@@ -118,36 +129,14 @@ BoundaryLayerPhysics::blmid(BoundaryLayerState &state,
   return coeffs;
 }
 
-blData BoundaryLayerPhysics::blprv(blData data,
-                                   const BlCompressibilityParams &compressibility,
-                                   double xsi, double ami, double cti,
-                                   double thi, double dsi, double dswaki,
-                                   double uei) {
-  data.param.xz = xsi;
-  data.param.amplz = ami;
-  data.param.sz = cti;
-  data.param.tz = thi;
-  data.param.dz = dsi - dswaki;
-  data.param.dwz = dswaki;
-
-  data.param.uz =
-      uei * (1.0 - compressibility.tkbl) /
-      (1.0 - compressibility.tkbl * (uei / compressibility.qinfbl) *
-                 (uei / compressibility.qinfbl));
-  data.param.uz_uei =
-      (1.0 + compressibility.tkbl *
-                 (2.0 * data.param.uz * uei / compressibility.qinfbl /
-                      compressibility.qinfbl -
-                  1.0)) /
-      (1.0 - compressibility.tkbl * (uei / compressibility.qinfbl) *
-                 (uei / compressibility.qinfbl));
-  data.param.uz_ms =
-      (data.param.uz * (uei / compressibility.qinfbl) *
-           (uei / compressibility.qinfbl) -
-       uei) *
-      compressibility.tkbl_ms /
-      (1.0 - compressibility.tkbl * (uei / compressibility.qinfbl) *
-                 (uei / compressibility.qinfbl));
+BoundaryLayerStationState BoundaryLayerPhysics::blprv(
+    BoundaryLayerStationState data,
+    const BlCompressibilityParams &compressibility, double xsi, double ami,
+    double cti, double thi, double dsi, double dswaki, double uei) {
+  data.assignPrimaryStationData(xsi, ami, cti, thi, dsi, dswaki);
+  data.assignCompressibleEdgeVelocity(uei, compressibility.qinfbl,
+                                      compressibility.tkbl,
+                                      compressibility.tkbl_ms);
   return data;
 }
 

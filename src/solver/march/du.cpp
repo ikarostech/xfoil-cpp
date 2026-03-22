@@ -152,11 +152,9 @@ MarcherDu::StationMarchResult MarcherDu::performMixedModeNewtonIteration(
 
   for (int itbl = 1; itbl <= 25; ++itbl)
   {
-    context.writeCurrentState(
-        context.blprv(context.readCurrentState(), station.xsi, sideState.ami,
-                      station.cti, station.thi, station.dsi, station.dswaki,
-                      station.uei));
-    context.updateCurrentStationKinematics();
+    context.refreshCurrentStationState(station.xsi, sideState.ami, station.cti,
+                                       station.thi, station.dsi,
+                                       station.dswaki, station.uei);
     station.flowRegime = context.currentFlowRegime();
 
     context.checkTransitionIfNeeded(input.side, input.stationIndex,

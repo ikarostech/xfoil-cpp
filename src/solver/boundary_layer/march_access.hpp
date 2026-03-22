@@ -22,15 +22,14 @@ class BoundaryLayerMarchAccess {
   BlReynoldsParams &blReynolds() const { return boundaryLayer_.reynolds(); }
   blDiff &xt() const { return boundaryLayer_.transitionSensitivity(); }
 
-  blData readCurrentState() const { return boundaryLayer_.readCurrentState(); }
-  void writeCurrentState(const blData &state) const {
-    boundaryLayer_.writeCurrentState(state);
-  }
   double readCurrentShapeFactor() const {
     return boundaryLayer_.readCurrentShapeFactor();
   }
-  void updateCurrentStationKinematics() const {
-    boundaryLayer_.updateCurrentStationKinematics();
+  void refreshCurrentStationState(double xsi, double ami, double cti,
+                                  double thi, double dsi, double dswaki,
+                                  double uei) const {
+    boundaryLayer_.refreshCurrentStationState(xsi, ami, cti, thi, dsi, dswaki,
+                                              uei);
   }
   int readSideStationCount(int side) const {
     return boundaryLayer_.readSideStationCount(side);
@@ -84,10 +83,6 @@ class BoundaryLayerMarchAccess {
     return boundaryLayer_.tesys(top_profiles, bottom_profiles, edge);
   }
   bool blsys() const { return boundaryLayer_.blsys(); }
-  blData blprv(blData data, double xsi, double ami, double cti, double thi,
-               double dsi, double dswaki, double uei) const {
-    return boundaryLayer_.blprv(data, xsi, ami, cti, thi, dsi, dswaki, uei);
-  }
 
   void updateSystemMatricesForStation(
       const Edge &edge, int side, int stationIndex,

@@ -11,6 +11,7 @@ class BoundaryLayerMixedModeOps {
     FlowRegimeEnum &flowRegime;
     BlSystemCoeffs &blc;
     const BlCompressibilityParams &blCompressibility;
+    const BlReynoldsParams &blReynolds;
     BoundaryLayerVariablesSolver &boundaryLayerVariablesSolver;
     BoundaryLayerTransitionSolver &transitionSolver;
     BoundaryLayerSolverOps solverOps;

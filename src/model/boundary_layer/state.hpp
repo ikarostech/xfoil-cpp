@@ -10,50 +10,63 @@
 #include "model/boundary_layer/runtime_types.hpp"
 
 /**
- * @brief Bundles the boundary-layer state at the two stations used by the
- *        marching routines (historically known as "1" and "2").
+ * @brief Model-owned two-station window used for local boundary-layer updates.
+ *
+ * The boundary-layer model advances by operating on a previous/current station
+ * pair. This class keeps that pair cohesive and hides the station bookkeeping
+ * behind a small set of operations.
  */
-struct BoundaryLayerState {
-  blData station1;
-  blData station2;
+class BoundaryLayerStationWindow {
+public:
+  BoundaryLayerStationState station1;
+  BoundaryLayerStationState station2;
 
-  blData &previous() { return station1; }
-  const blData &previous() const { return station1; }
+  BoundaryLayerStationState &previous() { return station1; }
+  const BoundaryLayerStationState &previous() const { return station1; }
 
-  blData &current() { return station2; }
-  const blData &current() const { return station2; }
+  BoundaryLayerStationState &current() { return station2; }
+  const BoundaryLayerStationState &current() const { return station2; }
 
-  blData &station(int index) {
+  BoundaryLayerStationState &station(int index) {
     switch (index) {
     case 1:
       return station1;
     case 2:
       return station2;
     default:
-      throw std::invalid_argument("BoundaryLayerState::station expects 1 or 2");
+      throw std::invalid_argument(
+          "BoundaryLayerStationWindow::station expects 1 or 2");
     }
   }
 
-  const blData &station(int index) const {
+  const BoundaryLayerStationState &station(int index) const {
     switch (index) {
     case 1:
       return station1;
     case 2:
       return station2;
     default:
-      throw std::invalid_argument("BoundaryLayerState::station expects 1 or 2");
+      throw std::invalid_argument(
+          "BoundaryLayerStationWindow::station expects 1 or 2");
     }
   }
 
   void swapStations() { std::swap(station1, station2); }
-  void stepbl() { station1 = station2; }
+  void advance() { station1 = station2; }
+  void stepbl() { advance(); }
 };
 
+using BoundaryLayerState = BoundaryLayerStationWindow;
+
 /**
- * @brief Holds the per-station vectors that describe a single side of the
- *        boundary layer.
+ * @brief Base state for one boundary-layer side.
+ *
+ * This corresponds to the FoilShape role in the foil model: it stores the
+ * primary side-wise arrays and exposes a few derived queries used by the rest
+ * of the boundary-layer model.
  */
-struct BoundaryLayerSideProfiles {
+class BoundaryLayerSideState {
+public:
   Eigen::VectorXd edgeVelocity;
   Eigen::VectorXd skinFrictionCoeff;
   Eigen::VectorXd momentumThickness;
@@ -108,11 +121,17 @@ struct BoundaryLayerSideProfiles {
   }
 };
 
+using BoundaryLayerSideProfiles = BoundaryLayerSideState;
+
 /**
- * @brief Aggregates per-side arrays and indices that describe the
- * boundary-layer lattice along the airfoil and wake.
+ * @brief Model base state for one side's boundary-layer lattice.
+ *
+ * The lattice combines topology and the side state arrays for one boundary
+ * layer side. It stays in the model because it represents domain state, not a
+ * transient solver-owned container.
  */
-struct BoundaryLayerLattice {
+class BoundaryLayerLattice {
+public:
   Eigen::VectorXi stationToPanel;
   Eigen::VectorXi stationToSystem;
   int trailingEdgeIndex = 0;
@@ -120,7 +139,7 @@ struct BoundaryLayerLattice {
 
   double transitionLocation = 0.0;
 
-  BoundaryLayerSideProfiles profiles;
+  BoundaryLayerSideState profiles;
   Eigen::VectorXd arcLengthCoordinates;
   Eigen::Matrix2Xd inviscidEdgeVelocityMatrix;
   Eigen::VectorXd panelInfluenceFactor;

@@ -2,6 +2,7 @@
 
 #include <Eigen/Core>
 
+#include "model/boundary_layer/physics.hpp"
 #include "model/boundary_layer/state.hpp"
 #include "numerics/side_pair.hpp"
 #include "solver/boundary_layer/initialization/setbl_access.hpp"
@@ -63,10 +64,10 @@ class SetblStationUpdateOps {
     result.dds2 = d2_u2 * result.due2;
 
     result.state = base_state;
-    result.state.current() =
-        access.blprv(result.state.current(), vars.xsi, vars.ami, vars.cti,
-                     vars.thi, vars.dsi, vars.dswaki, vars.uei);
-    access.blkin(result.state);
+    BoundaryLayerPhysics::refreshCurrentStation(
+        result.state, access.blCompressibility(), access.blReynolds(),
+        vars.xsi, vars.ami, vars.cti, vars.thi, vars.dsi, vars.dswaki,
+        vars.uei);
     return result;
   }
 };

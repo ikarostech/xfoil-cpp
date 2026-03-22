@@ -31,6 +31,7 @@ BoundaryLayerMixedModeOps BoundaryLayer::makeMixedModeOps() {
                                     state_store_.flowRegime,
                                     workspace_.blc,
                                     state_store_.blCompressibility,
+                                    state_store_.blReynolds,
                                     boundaryLayerVariablesSolver,
                                     transitionSolver,
                                     makeSolverOps()});
@@ -75,7 +76,7 @@ BoundaryLayerSideProfiles BoundaryLayer::applyBoundaryLayerDelta(
 }
 
 void BoundaryLayer::syncStationRegimeStates(int side, int stationIndex,
-                                                    FlowRegimeEnum stationRegime) {
+                                            FlowRegimeEnum stationRegime) {
   makeMixedModeOps().syncStationRegimeStates(side, stationIndex, stationRegime);
 }
 
@@ -83,10 +84,6 @@ FlowRegimeEnum BoundaryLayer::determineRegimeForStation(
     int side, int stationIndex) const {
   return const_cast<BoundaryLayer *>(this)->makeMixedModeOps()
       .determineRegimeForStation(side, stationIndex);
-}
-
-bool BoundaryLayer::blkin(BoundaryLayerState &state) {
-  return makeSolverOps().blkin(state);
 }
 
 void BoundaryLayer::updateSystemMatricesForStation(
@@ -126,13 +123,6 @@ bool BoundaryLayer::applyMixedModeNewtonStep(int side, int stationIndex,
 SkinFrictionCoefficients
 BoundaryLayer::blmid(FlowRegimeEnum flowRegimeType) {
   return makeSolverOps().blmid(flowRegimeType);
-}
-
-blData BoundaryLayer::blprv(blData data, double xsi, double ami,
-                                    double cti, double thi, double dsi,
-                                    double dswaki, double uei) const {
-  return const_cast<BoundaryLayer *>(this)->makeSolverOps()
-      .blprv(data, xsi, ami, cti, thi, dsi, dswaki, uei);
 }
 
 bool BoundaryLayer::blsys() {
@@ -407,24 +397,25 @@ double BoundaryLayer::currentSkinFrictionHistory() const {
   return workspace_.state.station2.cqz.scalar;
 }
 
-BoundaryLayerState BoundaryLayer::snapshotState() const {
-  return workspace_.state;
-}
-
-blData BoundaryLayer::readCurrentState() const {
-  return workspace_.state.current();
-}
-
-void BoundaryLayer::writeCurrentState(const blData &state) {
-  workspace_.state.current() = state;
-}
+BoundaryLayerState BoundaryLayer::snapshotState() const { return workspace_.state; }
 
 double BoundaryLayer::readCurrentShapeFactor() const {
   return workspace_.state.current().hkz.scalar;
 }
 
+void BoundaryLayer::refreshCurrentStationState(double xsi, double ami,
+                                               double cti, double thi,
+                                               double dsi, double dswaki,
+                                               double uei) {
+  BoundaryLayerPhysics::refreshCurrentStation(workspace_.state,
+                                              state_store_.blCompressibility,
+                                              state_store_.blReynolds, xsi, ami,
+                                              cti, thi, dsi, dswaki, uei);
+}
+
 void BoundaryLayer::updateCurrentStationKinematics() {
-  makeSolverOps().blkin(workspace_.state);
+  BoundaryLayerPhysics::blkin(workspace_.state, state_store_.blCompressibility,
+                              state_store_.blReynolds);
 }
 
 void BoundaryLayer::replaceState(const BoundaryLayerState &state) {

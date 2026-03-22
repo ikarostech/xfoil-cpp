@@ -8,15 +8,13 @@ class WorkflowMarchContext final : public MarchContext {
   explicit WorkflowMarchContext(BoundaryLayerMarchAccess access)
       : access_(access) {}
 
-  blData readCurrentState() const override { return access_.readCurrentState(); }
-  void writeCurrentState(const blData &state) override {
-    access_.writeCurrentState(state);
-  }
   double readCurrentShapeFactor() const override {
     return access_.readCurrentShapeFactor();
   }
-  void updateCurrentStationKinematics() override {
-    access_.updateCurrentStationKinematics();
+  void refreshCurrentStationState(double xsi, double ami, double cti,
+                                  double thi, double dsi, double dswaki,
+                                  double uei) override {
+    access_.refreshCurrentStationState(xsi, ami, cti, thi, dsi, dswaki, uei);
   }
 
   int readSideStationCount(int side) const override {
@@ -117,10 +115,6 @@ class WorkflowMarchContext final : public MarchContext {
                                        laminarAdvance);
   }
 
-  blData blprv(blData data, double xsi, double ami, double cti, double thi,
-               double dsi, double dswaki, double uei) const override {
-    return access_.blprv(data, xsi, ami, cti, thi, dsi, dswaki, uei);
-  }
   bool blsys() override { return access_.blsys(); }
   double calcHtarg(int ibl, int is, bool wake) override {
     return access_.calcHtarg(ibl, is, wake);

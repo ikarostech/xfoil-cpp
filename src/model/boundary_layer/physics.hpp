@@ -23,14 +23,21 @@ class BoundaryLayerPhysics {
 public:
   static constexpr double kHvrat = 0.35;
 
-  static bool blkin(BoundaryLayerState &state,
+  static bool blkin(BoundaryLayerStationWindow &state,
                     const BlCompressibilityParams &compressibility,
                     const BlReynoldsParams &reynolds);
+  static void refreshCurrentStation(BoundaryLayerStationWindow &state,
+                                    const BlCompressibilityParams &compressibility,
+                                    const BlReynoldsParams &reynolds,
+                                    double xsi, double ami, double cti,
+                                    double thi, double dsi, double dswaki,
+                                    double uei);
   static SkinFrictionCoefficients
-  blmid(BoundaryLayerState &state, FlowRegimeEnum flowRegimeType);
-  static blData blprv(blData data, const BlCompressibilityParams &compressibility,
-                      double xsi, double ami, double cti, double thi,
-                      double dsi, double dswaki, double uei);
+  blmid(BoundaryLayerStationWindow &state, FlowRegimeEnum flowRegimeType);
+  static BoundaryLayerStationState
+  blprv(BoundaryLayerStationState data,
+        const BlCompressibilityParams &compressibility, double xsi, double ami,
+        double cti, double thi, double dsi, double dswaki, double uei);
   static double adjustDisplacementForHkLimit(double displacementThickness,
                                              double momentumThickness,
                                              double msq, double hklim);
