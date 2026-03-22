@@ -11,9 +11,8 @@ using Eigen::VectorXd;
 
 BoundaryLayerGeometry::BoundaryLayerGeometry(
     SidePair<BoundaryLayerLattice> &lattice, Eigen::VectorXd &wgap,
-    int &stagnationIndex, double &stagnationSst)
-    : lattice_(lattice), wgap_(wgap), stagnationIndex_(stagnationIndex),
-      stagnationSst_(stagnationSst) {}
+    BoundaryLayerStagnationFeature &stagnation)
+    : lattice_(lattice), wgap_(wgap), stagnation_(stagnation) {}
 
 bool BoundaryLayerGeometry::iblpan(int point_count, int wake_point_count) {
 
@@ -21,20 +20,20 @@ bool BoundaryLayerGeometry::iblpan(int point_count, int wake_point_count) {
   lattice_.top.resize(lattice_size);
   lattice_.bottom.resize(lattice_size);
 
-  for (int i = 0; i <= stagnationIndex_; i++) {
-    lattice_.top.stationToPanel[i] = stagnationIndex_ - i;
+  for (int i = 0; i <= stagnation_.index; i++) {
+    lattice_.top.stationToPanel[i] = stagnation_.index - i;
     lattice_.top.panelInfluenceFactor[i] = 1.0;
   }
 
-  lattice_.top.trailingEdgeIndex = stagnationIndex_;
+  lattice_.top.trailingEdgeIndex = stagnation_.index;
   lattice_.top.stationCount = lattice_.top.trailingEdgeIndex + 2;
 
-  for (int index = 0; index <= point_count - stagnationIndex_; ++index) {
-    lattice_.bottom.stationToPanel[index] = stagnationIndex_ + 1 + index;
+  for (int index = 0; index <= point_count - stagnation_.index; ++index) {
+    lattice_.bottom.stationToPanel[index] = stagnation_.index + 1 + index;
     lattice_.bottom.panelInfluenceFactor[index] = -1.0;
   }
 
-  lattice_.bottom.trailingEdgeIndex = point_count - stagnationIndex_ - 2;
+  lattice_.bottom.trailingEdgeIndex = point_count - stagnation_.index - 2;
 
   for (int iw = 0; iw < wake_point_count; iw++) {
     const int panel = point_count + iw;
@@ -122,17 +121,20 @@ bool BoundaryLayerGeometry::stmove(const Eigen::Matrix2Xd &surface_vortex,
                                    const Foil &foil,
                                    const Eigen::Matrix2Xd &qinv_matrix,
                                    StagnationResult &stagnation, int &nsys) {
-  const int previous = stagnationIndex_;
+  const int previous = stagnation_.index;
   const auto stagnation_result = stfind(surface_vortex, spline_length);
   if (!stagnation_result.found) {
     Logger::instance().write(
         "stfind: Stagnation point not found. Continuing ...\n");
   }
-  stagnationIndex_ = stagnation_result.stagnationIndex;
+  stagnation_.index = stagnation_result.stagnationIndex;
+  stagnation_.sst = stagnation_result.sst;
+  stagnation_.sst_go = stagnation_result.sst_go;
+  stagnation_.sst_gp = stagnation_result.sst_gp;
+  stagnation_.found = stagnation_result.found;
   stagnation = stagnation_result;
-  stagnationSst_ = stagnation_result.sst;
 
-  if (previous == stagnationIndex_) {
+  if (previous == stagnation_.index) {
     xicalc(foil);
   } else {
     iblpan(foil.foil_shape.n, foil.wake_shape.n);
@@ -142,8 +144,8 @@ bool BoundaryLayerGeometry::stmove(const Eigen::Matrix2Xd &surface_vortex,
     xicalc(foil);
     iblsys(nsys);
 
-    if (stagnationIndex_ > previous) {
-      const int delta = stagnationIndex_ - previous;
+    if (stagnation_.index > previous) {
+      const int delta = stagnation_.index - previous;
 
       lattice_.top.profiles.transitionIndex += delta;
       lattice_.bottom.profiles.transitionIndex -= delta;
@@ -164,7 +166,7 @@ bool BoundaryLayerGeometry::stmove(const Eigen::Matrix2Xd &surface_vortex,
         copyStationState(2, ibl, ibl + delta);
       }
     } else {
-      const int delta = previous - stagnationIndex_;
+      const int delta = previous - stagnation_.index;
 
       lattice_.top.profiles.transitionIndex -= delta;
       lattice_.bottom.profiles.transitionIndex += delta;
@@ -229,7 +231,7 @@ bool BoundaryLayerGeometry::xicalc(const Foil &foil) {
   //-------------------------------------------------------------
 
   const auto arc_lengths =
-      computeArcLengthCoordinates(foil, stagnationSst_, lattice_);
+      computeArcLengthCoordinates(foil, stagnation_.sst, lattice_);
   lattice_.top.arcLengthCoordinates = arc_lengths.top;
   lattice_.bottom.arcLengthCoordinates = arc_lengths.bottom;
   wgap_ = computeWakeGap(foil, lattice_.bottom, arc_lengths.bottom);

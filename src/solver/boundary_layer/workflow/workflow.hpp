@@ -4,6 +4,7 @@
 #include <cmath>
 
 #include "model/boundary_layer/bl_compressibility_params.hpp"
+#include "model/boundary_layer/features.hpp"
 #include "model/boundary_layer/physics.hpp"
 #include "model/boundary_layer/bl_reynolds_params.hpp"
 #include "model/boundary_layer/bl_transition_params.hpp"
@@ -29,12 +30,12 @@ class BoundaryLayerMixedModeOps;
 struct BoundaryLayerStateStore {
     Eigen::VectorXd wgap;
     SidePair<BoundaryLayerLattice> lattice;
+    BoundaryLayerStagnationFeature stagnation;
+    BoundaryLayerTrailingEdgeFeature trailingEdge;
     FlowRegimeEnum flowRegime = FlowRegimeEnum::Laminar;
     BlCompressibilityParams blCompressibility{};
     BlReynoldsParams blReynolds{};
     BlTransitionParams blTransition{};
-    int stagnationIndex  = 0;
-    double stagnationSst = 0.0;
 };
 
 struct BoundaryLayerWorkspace {
@@ -109,6 +110,9 @@ class BoundaryLayer {
     void resetTransportState();
     void resetForReinitialization();
     void setStagnationState(const StagnationResult &stagnation);
+    const BoundaryLayerStagnationFeature &stagnationFeature() const;
+    const BoundaryLayerTrailingEdgeFeature &trailingEdgeFeature() const;
+    void refreshTrailingEdgeFeature();
     void clearPanelMap();
     void zeroProfiles();
     bool hasValidPanelMap(int total_nodes) const;
@@ -169,13 +173,6 @@ class BoundaryLayer {
     const BlTransitionParams &transition() const {
         return state_store_.blTransition;
     }
-    int &stagnationIndex() {
-        return state_store_.stagnationIndex;
-    }
-    double &stagnationSst() {
-        return state_store_.stagnationSst;
-    }
-
     void setTransitionLocations(double top, double bottom);
     double transitionLocation(int side) const;
     void initializeLattices(int size);

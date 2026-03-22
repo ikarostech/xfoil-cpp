@@ -24,8 +24,7 @@ BoundaryLayer::BoundaryLayer()
                         workspace_.blc,
                         state_store_.blCompressibility,
                         state_store_.blReynolds}),
-      geometry_(state_store_.lattice, state_store_.wgap,
-                state_store_.stagnationIndex, state_store_.stagnationSst) {}
+      geometry_(state_store_.lattice, state_store_.wgap, state_store_.stagnation) {}
 
 struct BoundaryLayerTransitionSolver::TrchekData {
   explicit TrchekData(Context &context)

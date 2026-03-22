@@ -41,6 +41,7 @@ void BoundaryLayer::storeStationStateCommon(
     int side, int stationIndex,
     const BoundaryLayerMixedModeStationContext &ctx) {
   makeMixedModeOps().storeStationStateCommon(side, stationIndex, ctx);
+  refreshTrailingEdgeFeature();
 }
 
 double BoundaryLayer::fallbackEdgeVelocity(
@@ -172,8 +173,7 @@ void BoundaryLayer::setFlowRegime(FlowRegimeEnum flowRegime) {
 }
 
 void BoundaryLayer::clearState() {
-  workspace_.state.station1 = blData{};
-  workspace_.state.station2 = blData{};
+  workspace_.state = BoundaryLayerState{};
 }
 
 void BoundaryLayer::resetSideMetadata() {
@@ -185,8 +185,8 @@ void BoundaryLayer::resetSideMetadata() {
 }
 
 void BoundaryLayer::resetPhysicsState() {
-  state_store_.stagnationIndex = 0;
-  state_store_.stagnationSst = 0.0;
+  state_store_.stagnation = BoundaryLayerStagnationFeature{};
+  state_store_.trailingEdge = BoundaryLayerTrailingEdgeFeature{};
   state_store_.flowRegime = FlowRegimeEnum::Laminar;
   state_store_.blCompressibility = {};
   state_store_.blReynolds = {};
@@ -221,8 +221,54 @@ void BoundaryLayer::resetForReinitialization() {
 
 void BoundaryLayer::setStagnationState(
     const StagnationResult &stagnation) {
-  state_store_.stagnationIndex = stagnation.stagnationIndex;
-  state_store_.stagnationSst = stagnation.sst;
+  state_store_.stagnation.index = stagnation.stagnationIndex;
+  state_store_.stagnation.sst = stagnation.sst;
+  state_store_.stagnation.sst_go = stagnation.sst_go;
+  state_store_.stagnation.sst_gp = stagnation.sst_gp;
+  state_store_.stagnation.found = stagnation.found;
+}
+
+const BoundaryLayerStagnationFeature &BoundaryLayer::stagnationFeature() const {
+  return state_store_.stagnation;
+}
+
+const BoundaryLayerTrailingEdgeFeature &
+BoundaryLayer::trailingEdgeFeature() const {
+  return state_store_.trailingEdge;
+}
+
+void BoundaryLayer::refreshTrailingEdgeFeature() {
+  auto &feature = state_store_.trailingEdge;
+  feature = BoundaryLayerTrailingEdgeFeature{};
+
+  const auto &top = state_store_.lattice.top;
+  const auto &bottom = state_store_.lattice.bottom;
+  if (top.stationCount <= 0 || bottom.stationCount <= 0) {
+    return;
+  }
+  if (top.profiles.momentumThickness.size() <= top.trailingEdgeIndex ||
+      bottom.profiles.momentumThickness.size() <= bottom.trailingEdgeIndex ||
+      top.profiles.displacementThickness.size() <= top.trailingEdgeIndex ||
+      bottom.profiles.displacementThickness.size() <= bottom.trailingEdgeIndex ||
+      top.profiles.skinFrictionCoeff.size() <= top.trailingEdgeIndex ||
+      bottom.profiles.skinFrictionCoeff.size() <= bottom.trailingEdgeIndex) {
+    return;
+  }
+
+  feature.topIndex = top.trailingEdgeIndex;
+  feature.bottomIndex = bottom.trailingEdgeIndex;
+  feature.topMomentumThickness =
+      top.profiles.momentumThickness[feature.topIndex];
+  feature.bottomMomentumThickness =
+      bottom.profiles.momentumThickness[feature.bottomIndex];
+  feature.topDisplacementThickness =
+      top.profiles.displacementThickness[feature.topIndex];
+  feature.bottomDisplacementThickness =
+      bottom.profiles.displacementThickness[feature.bottomIndex];
+  feature.topSkinFrictionCoeff =
+      top.profiles.skinFrictionCoeff[feature.topIndex];
+  feature.bottomSkinFrictionCoeff =
+      bottom.profiles.skinFrictionCoeff[feature.bottomIndex];
 }
 
 void BoundaryLayer::clearPanelMap() {
@@ -234,6 +280,7 @@ void BoundaryLayer::zeroProfiles() {
   for (int side = 1; side <= 2; ++side) {
     state_store_.lattice.get(side).profiles.zeroStateVectors();
   }
+  refreshTrailingEdgeFeature();
 }
 
 bool BoundaryLayer::hasValidPanelMap(int total_nodes) const {
@@ -295,12 +342,14 @@ void BoundaryLayer::applyProfiles(
     const SidePair<BoundaryLayerSideProfiles> &profiles) {
   state_store_.lattice.top.profiles = profiles.top;
   state_store_.lattice.bottom.profiles = profiles.bottom;
+  refreshTrailingEdgeFeature();
 }
 
 void BoundaryLayer::applyProfiles(
     SidePair<BoundaryLayerSideProfiles> &&profiles) {
   state_store_.lattice.top.profiles = std::move(profiles.top);
   state_store_.lattice.bottom.profiles = std::move(profiles.bottom);
+  refreshTrailingEdgeFeature();
 }
 
 StagnationResult BoundaryLayer::findStagnation(
@@ -331,8 +380,12 @@ bool BoundaryLayer::moveStagnation(
     const Eigen::Matrix2Xd &surface_vortex,
     const Eigen::VectorXd &spline_length, const Foil &foil,
     const Eigen::Matrix2Xd &qinv_matrix, StagnationResult &stagnation) {
-  return geometry_.stmove(surface_vortex, spline_length, foil, qinv_matrix,
-                          stagnation, workspace_.nsys);
+  const bool moved = geometry_.stmove(surface_vortex, spline_length, foil,
+                                      qinv_matrix, stagnation, workspace_.nsys);
+  if (moved) {
+    refreshTrailingEdgeFeature();
+  }
+  return moved;
 }
 
 int BoundaryLayer::resetSideState(int side, const Foil &foil,
@@ -365,8 +418,17 @@ BoundaryLayerSideReadModel BoundaryLayer::readSideModel(int side) const {
 
 BoundaryLayerTrailingEdgeReadModel
 BoundaryLayer::readTrailingEdgeModel() const {
-  return BoundaryLayerRuntimeStateOps::readTrailingEdgeModel(
-      state_store_.lattice);
+  BoundaryLayerTrailingEdgeReadModel model;
+  const auto &feature = state_store_.trailingEdge;
+  model.topTrailingEdgeIndex = feature.topIndex;
+  model.bottomTrailingEdgeIndex = feature.bottomIndex;
+  model.topMomentumThickness = feature.topMomentumThickness;
+  model.bottomMomentumThickness = feature.bottomMomentumThickness;
+  model.topDisplacementThickness = feature.topDisplacementThickness;
+  model.bottomDisplacementThickness = feature.bottomDisplacementThickness;
+  model.topSkinFrictionCoeff = feature.topSkinFrictionCoeff;
+  model.bottomSkinFrictionCoeff = feature.bottomSkinFrictionCoeff;
+  return model;
 }
 
 bool BoundaryLayer::isStartOfWake(int side, int stationIndex) const {
