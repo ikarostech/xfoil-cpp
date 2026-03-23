@@ -4,21 +4,21 @@
 #include <cmath>
 
 #include "model/boundary_layer/bl_compressibility_params.hpp"
-#include "model/boundary_layer/features.hpp"
-#include "model/boundary_layer/physics.hpp"
 #include "model/boundary_layer/bl_reynolds_params.hpp"
 #include "model/boundary_layer/bl_transition_params.hpp"
-#include "model/boundary_layer/state.hpp"
+#include "model/boundary_layer/features.hpp"
+#include "model/boundary_layer/physics.hpp"
 #include "model/boundary_layer/skin_friction_coefficients.hpp"
+#include "model/boundary_layer/state.hpp"
+#include "model/flow_regime.hpp"
 #include "numerics/boundary_layer/diff_system.hpp"
 #include "numerics/boundary_layer/variables.hpp"
 #include "numerics/coefficient/bl_newton.hpp"
-#include "model/flow_regime.hpp"
-#include "solver/boundary_layer/workflow/transition.hpp"
 #include "solver/boundary_layer/boundary_layer_aerodynamics.hpp"
 #include "solver/boundary_layer/boundary_layer_geometry.hpp"
-#include "solver/boundary_layer/viscous_types.hpp"
 #include "solver/boundary_layer/runtime/state.hpp"
+#include "solver/boundary_layer/viscous_types.hpp"
+#include "solver/boundary_layer/workflow/transition.hpp"
 
 class Edge;
 class BoundaryLayer;
@@ -27,7 +27,7 @@ class BoundaryLayerSetblAccess;
 class BoundaryLayerSolverOps;
 class BoundaryLayerMixedModeOps;
 
-struct BoundaryLayerStateStore {
+struct BoundaryLayerStationWindowStore {
     Eigen::VectorXd wgap;
     SidePair<BoundaryLayerLattice> lattice;
     BoundaryLayerStagnationFeature stagnation;
@@ -40,7 +40,7 @@ struct BoundaryLayerStateStore {
 
 struct BoundaryLayerWorkspace {
     BlSystemCoeffs blc;
-    BoundaryLayerState state;
+    BoundaryLayerStationWindow state;
     blDiff xt;
     int nsys = 0;
 };
@@ -57,9 +57,10 @@ class BoundaryLayer {
         Eigen::VectorXd qnew;
         Eigen::VectorXd q_ac;
     };
-    void updateSystemMatricesForStation(const Edge &edge, int side, int stationIndex, BoundaryLayerMixedModeStationContext &ctx);
-    void initializeFirstIterationState(int side, int stationIndex, int previousTransition, BoundaryLayerMixedModeStationContext &ctx,
-                                       double &ueref, double &hkref);
+    void updateSystemMatricesForStation(const Edge &edge, int side, int stationIndex,
+                                        BoundaryLayerMixedModeStationContext &ctx);
+    void initializeFirstIterationState(int side, int stationIndex, int previousTransition,
+                                       BoundaryLayerMixedModeStationContext &ctx, double &ueref, double &hkref);
     void configureSimilarityRow(double ueref);
     void configureViscousRow(double hkref, double ueref, double senswt, bool resetSensitivity, bool averageSensitivity,
                              double &sens, double &sennew);
@@ -80,10 +81,10 @@ class BoundaryLayer {
                                                const BoundaryLayerMatrix3x2dVector &vdel) const;
     BoundaryLayerMetrics evaluateSegmentRelaxation(int side, const BoundaryLayerDelta &delta, double dhi, double dlo,
                                                    double &relaxation) const;
-    BoundaryLayerSideProfiles applyBoundaryLayerDelta(int side, const BoundaryLayerDelta &delta, double relaxation,
-                                                      double hstinv, double gamm1) const;
+    BoundaryLayerSideState applyBoundaryLayerDelta(int side, const BoundaryLayerDelta &delta, double relaxation,
+                                                   double hstinv, double gamm1) const;
 
-    bool tesys(const BoundaryLayerSideProfiles &top_profiles, const BoundaryLayerSideProfiles &bottom_profiles,
+    bool tesys(const BoundaryLayerSideState &top_profiles, const BoundaryLayerSideState &bottom_profiles,
                const Edge &edge);
 
     int trailingEdgeIndex(int side) const {
@@ -101,7 +102,7 @@ class BoundaryLayer {
     double panelInfluenceFactor(int side, int stationIndex) const {
         return state_store_.lattice.get(side).panelInfluenceFactor[stationIndex];
     }
-    SidePairRef<const BoundaryLayerSideProfiles> currentProfiles() const {
+    SidePairRef<const BoundaryLayerSideState> currentProfiles() const {
         return {state_store_.lattice.top.profiles, state_store_.lattice.bottom.profiles};
     }
     void clearState();
@@ -117,12 +118,11 @@ class BoundaryLayer {
     void zeroProfiles();
     bool hasValidPanelMap(int total_nodes) const;
     int trailingEdgeSystemIndex(int side) const;
-    BoundaryLayerEdgeVelocityDistribution
-    computeNewUeDistribution(const BoundaryLayerAerodynamicContext &context,
-                             const BoundaryLayerMatrix3x2dVector &vdel) const;
-    BoundaryLayerClContributions computeClFromEdgeVelocityDistribution(
-        const BoundaryLayerAerodynamicContext &context,
-        const BoundaryLayerEdgeVelocityDistribution &distribution) const;
+    BoundaryLayerEdgeVelocityDistribution computeNewUeDistribution(const BoundaryLayerAerodynamicContext &context,
+                                                                   const BoundaryLayerMatrix3x2dVector &vdel) const;
+    BoundaryLayerClContributions
+    computeClFromEdgeVelocityDistribution(const BoundaryLayerAerodynamicContext &context,
+                                          const BoundaryLayerEdgeVelocityDistribution &distribution) const;
 
     Eigen::VectorXd &wakeGap() {
         return state_store_.wgap;
@@ -179,59 +179,45 @@ class BoundaryLayer {
     void initializeWakeGap(int wake_nodes);
     void assignInviscidEdgeVelocity(const SidePair<Eigen::Matrix2Xd> &velocity);
     void seedEdgeVelocityFromInviscid();
-    void applyProfiles(const SidePair<BoundaryLayerSideProfiles> &profiles);
-    void applyProfiles(SidePair<BoundaryLayerSideProfiles> &&profiles);
-    StagnationResult findStagnation(const Eigen::Matrix2Xd &surface_vortex,
-                                    const Eigen::VectorXd &spline_length) const;
+    void applyProfiles(const SidePair<BoundaryLayerSideState> &profiles);
+    void applyProfiles(SidePair<BoundaryLayerSideState> &&profiles);
+    StagnationResult findStagnation(const Eigen::Matrix2Xd &surface_vortex, const Eigen::VectorXd &spline_length) const;
     bool buildPanelMap(int point_count, int wake_point_count);
     bool rebuildArcLengthCoordinates(const Foil &foil);
     bool buildSystemMapping();
-    SidePair<Eigen::Matrix2Xd>
-    computeInviscidEdgeVelocity(const Eigen::Matrix2Xd &qinv_matrix) const;
-    bool moveStagnation(const Eigen::Matrix2Xd &surface_vortex,
-                        const Eigen::VectorXd &spline_length, const Foil &foil,
-                        const Eigen::Matrix2Xd &qinv_matrix,
-                        StagnationResult &stagnation);
-    int resetSideState(int side, const Foil &foil,
-                       const StagnationResult &stagnation);
-    double computeForcedTransitionArcLength(const Foil &foil,
-                                            const StagnationResult &stagnation,
-                                            int side) const;
+    SidePair<Eigen::Matrix2Xd> computeInviscidEdgeVelocity(const Eigen::Matrix2Xd &qinv_matrix) const;
+    bool moveStagnation(const Eigen::Matrix2Xd &surface_vortex, const Eigen::VectorXd &spline_length, const Foil &foil,
+                        const Eigen::Matrix2Xd &qinv_matrix, StagnationResult &stagnation);
+    int resetSideState(int side, const Foil &foil, const StagnationResult &stagnation);
+    double computeForcedTransitionArcLength(const Foil &foil, const StagnationResult &stagnation, int side) const;
     int readSideStationCount(int side) const;
-    BoundaryLayerStationReadModel readStationModel(int side,
-                                                   int stationIndex) const;
+    BoundaryLayerStationReadModel readStationModel(int side, int stationIndex) const;
     BoundaryLayerSideReadModel readSideModel(int side) const;
     BoundaryLayerTrailingEdgeReadModel readTrailingEdgeModel() const;
     bool isStartOfWake(int side, int stationIndex) const;
-    void copyProfilesTo(SidePair<BoundaryLayerSideProfiles> &profiles) const;
-    double inviscidEdgeVelocitySensitivityToAlpha(int side,
-                                                  int stationIndex) const;
+    void copyProfilesTo(SidePair<BoundaryLayerSideState> &profiles) const;
+    double inviscidEdgeVelocitySensitivityToAlpha(int side, int stationIndex) const;
     double currentAmplification() const;
     double previousAmplification() const;
     double currentSkinFrictionHistory() const;
-    BoundaryLayerState snapshotState() const;
+    BoundaryLayerStationWindow snapshotState() const;
     double readCurrentShapeFactor() const;
-    void refreshCurrentStationState(double xsi, double ami, double cti,
-                                    double thi, double dsi, double dswaki,
+    void refreshCurrentStationState(double xsi, double ami, double cti, double thi, double dsi, double dswaki,
                                     double uei);
     void updateCurrentStationKinematics();
-    void replaceState(const BoundaryLayerState &state);
+    void replaceState(const BoundaryLayerStationWindow &state);
     void advanceState();
     void runTransitionCheck();
     bool solveTeSystemForCurrentProfiles(const Edge &edge);
     void solveWakeState();
-    SidePair<Eigen::VectorXd>
-    computeInviscidEdgeVelocitySensitivity(const Eigen::MatrixXd &dij) const;
+    SidePair<Eigen::VectorXd> computeInviscidEdgeVelocitySensitivity(const Eigen::MatrixXd &dij) const;
     double readNewtonRhs(int row) const;
     void solveDirectNewtonSystem();
     void solveInverseNewtonSystem(double htarg);
-    void applyInitializationState(const BlCompressibilityParams &compressibility,
-                                  const BlReynoldsParams &reynolds,
-                                  const BlTransitionParams &transition,
-                                  FlowRegimeEnum flowRegime,
-                                  SidePair<BoundaryLayerSideProfiles> profiles);
-    void runTransitionCheckForMrchue(int side, int stationIndex, double &ami,
-                                     double &cti, int laminarAdvance = 2);
+    void applyInitializationState(const BlCompressibilityParams &compressibility, const BlReynoldsParams &reynolds,
+                                  const BlTransitionParams &transition, FlowRegimeEnum flowRegime,
+                                  SidePair<BoundaryLayerSideState> profiles);
+    void runTransitionCheckForMrchue(int side, int stationIndex, double &ami, double &cti, int laminarAdvance = 2);
     double calcHtarg(int stationIndex, int side, bool wake);
 
   private:
@@ -250,10 +236,10 @@ class BoundaryLayer {
     void setTransitionIndex(int side, int index) {
         state_store_.lattice.get(side).profiles.transitionIndex = index;
     }
-    const BoundaryLayerSideProfiles &profiles(int side) const {
+    const BoundaryLayerSideState &profiles(int side) const {
         return state_store_.lattice.get(side).profiles;
     }
-    BoundaryLayerSideProfiles &profiles(int side) {
+    BoundaryLayerSideState &profiles(int side) {
         return state_store_.lattice.get(side).profiles;
     }
 
@@ -269,16 +255,16 @@ class BoundaryLayer {
     const BoundaryLayerLattice &lattice(int side) const {
         return state_store_.lattice.get(side);
     }
-    BoundaryLayerState &state() {
+    BoundaryLayerStationWindow &state() {
         return workspace_.state;
     }
-    const BoundaryLayerState &state() const {
+    const BoundaryLayerStationWindow &state() const {
         return workspace_.state;
     }
     BoundaryLayerSolverOps makeSolverOps();
     BoundaryLayerMixedModeOps makeMixedModeOps();
 
-    BoundaryLayerStateStore state_store_;
+    BoundaryLayerStationWindowStore state_store_;
     BoundaryLayerWorkspace workspace_;
     BoundaryLayerGeometry geometry_;
 };

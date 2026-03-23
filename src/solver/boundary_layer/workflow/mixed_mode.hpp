@@ -1,59 +1,42 @@
 #pragma once
 
-#include "solver/boundary_layer/workflow/solver_ops.hpp"
 #include "solver/boundary_layer/viscous_types.hpp"
+#include "solver/boundary_layer/workflow/solver_ops.hpp"
 
 class BoundaryLayerMixedModeOps {
- public:
-  struct Context {
-    SidePair<BoundaryLayerLattice> &lattice;
-    BoundaryLayerState &state;
-    FlowRegimeEnum &flowRegime;
-    BlSystemCoeffs &blc;
-    const BlCompressibilityParams &blCompressibility;
-    const BlReynoldsParams &blReynolds;
-    BoundaryLayerVariablesSolver &boundaryLayerVariablesSolver;
-    BoundaryLayerTransitionSolver &transitionSolver;
-    BoundaryLayerSolverOps solverOps;
-  };
+  public:
+    struct Context {
+        SidePair<BoundaryLayerLattice> &lattice;
+        BoundaryLayerStationWindow &state;
+        FlowRegimeEnum &flowRegime;
+        BlSystemCoeffs &blc;
+        const BlCompressibilityParams &blCompressibility;
+        const BlReynoldsParams &blReynolds;
+        BoundaryLayerVariablesSolver &boundaryLayerVariablesSolver;
+        BoundaryLayerTransitionSolver &transitionSolver;
+        BoundaryLayerSolverOps solverOps;
+    };
 
-  explicit BoundaryLayerMixedModeOps(Context context) : context_(context) {}
+    explicit BoundaryLayerMixedModeOps(Context context) : context_(context) {}
 
-  void storeStationStateCommon(
-      int side, int stationIndex,
-      const BoundaryLayerMixedModeStationContext &ctx);
-  double fallbackEdgeVelocity(
-      int side, int stationIndex,
-      BoundaryLayerEdgeVelocityFallbackMode edgeMode) const;
-  void syncStationRegimeStates(int side, int stationIndex,
-                               FlowRegimeEnum stationRegime);
-  FlowRegimeEnum determineRegimeForStation(int side, int stationIndex) const;
-  void updateSystemMatricesForStation(
-      const Edge &edge, int side, int stationIndex,
-      BoundaryLayerMixedModeStationContext &ctx);
-  void initializeFirstIterationState(
-      int side, int stationIndex, int previousTransition,
-      BoundaryLayerMixedModeStationContext &ctx, double &ueref,
-      double &hkref);
-  void configureSimilarityRow(double ueref);
-  void configureViscousRow(double hkref, double ueref, double senswt,
-                           bool resetSensitivity, bool averageSensitivity,
-                           double &sens, double &sennew);
-  bool applyMixedModeNewtonStep(
-      int side, int stationIndex, double &ami,
-      BoundaryLayerMixedModeStationContext &ctx);
-  void checkTransitionIfNeeded(int side, int stationIndex, bool skipCheck,
-                               int laminarAdvance, double &ami);
-  void resetStationKinematicsAfterFailure(
-      int side, int stationIndex,
-      BoundaryLayerMixedModeStationContext &ctx,
-      BoundaryLayerEdgeVelocityFallbackMode edgeMode);
-  void recoverStationAfterFailure(
-      int side, int stationIndex,
-      BoundaryLayerMixedModeStationContext &ctx, double &ami,
-      BoundaryLayerEdgeVelocityFallbackMode edgeMode,
-      int laminarAdvance);
+    void storeStationStateCommon(int side, int stationIndex, const BoundaryLayerMixedModeStationContext &ctx);
+    double fallbackEdgeVelocity(int side, int stationIndex, BoundaryLayerEdgeVelocityFallbackMode edgeMode) const;
+    void syncStationRegimeStates(int side, int stationIndex, FlowRegimeEnum stationRegime);
+    FlowRegimeEnum determineRegimeForStation(int side, int stationIndex) const;
+    void updateSystemMatricesForStation(const Edge &edge, int side, int stationIndex,
+                                        BoundaryLayerMixedModeStationContext &ctx);
+    void initializeFirstIterationState(int side, int stationIndex, int previousTransition,
+                                       BoundaryLayerMixedModeStationContext &ctx, double &ueref, double &hkref);
+    void configureSimilarityRow(double ueref);
+    void configureViscousRow(double hkref, double ueref, double senswt, bool resetSensitivity, bool averageSensitivity,
+                             double &sens, double &sennew);
+    bool applyMixedModeNewtonStep(int side, int stationIndex, double &ami, BoundaryLayerMixedModeStationContext &ctx);
+    void checkTransitionIfNeeded(int side, int stationIndex, bool skipCheck, int laminarAdvance, double &ami);
+    void resetStationKinematicsAfterFailure(int side, int stationIndex, BoundaryLayerMixedModeStationContext &ctx,
+                                            BoundaryLayerEdgeVelocityFallbackMode edgeMode);
+    void recoverStationAfterFailure(int side, int stationIndex, BoundaryLayerMixedModeStationContext &ctx, double &ami,
+                                    BoundaryLayerEdgeVelocityFallbackMode edgeMode, int laminarAdvance);
 
- private:
-  Context context_;
+  private:
+    Context context_;
 };

@@ -17,46 +17,56 @@
  * behind a small set of operations.
  */
 class BoundaryLayerStationWindow {
-public:
-  BoundaryLayerStationState station1;
-  BoundaryLayerStationState station2;
+  public:
+    BoundaryLayerStationState station1;
+    BoundaryLayerStationState station2;
 
-  BoundaryLayerStationState &previous() { return station1; }
-  const BoundaryLayerStationState &previous() const { return station1; }
-
-  BoundaryLayerStationState &current() { return station2; }
-  const BoundaryLayerStationState &current() const { return station2; }
-
-  BoundaryLayerStationState &station(int index) {
-    switch (index) {
-    case 1:
-      return station1;
-    case 2:
-      return station2;
-    default:
-      throw std::invalid_argument(
-          "BoundaryLayerStationWindow::station expects 1 or 2");
+    BoundaryLayerStationState &previous() {
+        return station1;
     }
-  }
-
-  const BoundaryLayerStationState &station(int index) const {
-    switch (index) {
-    case 1:
-      return station1;
-    case 2:
-      return station2;
-    default:
-      throw std::invalid_argument(
-          "BoundaryLayerStationWindow::station expects 1 or 2");
+    const BoundaryLayerStationState &previous() const {
+        return station1;
     }
-  }
 
-  void swapStations() { std::swap(station1, station2); }
-  void advance() { station1 = station2; }
-  void stepbl() { advance(); }
+    BoundaryLayerStationState &current() {
+        return station2;
+    }
+    const BoundaryLayerStationState &current() const {
+        return station2;
+    }
+
+    BoundaryLayerStationState &station(int index) {
+        switch (index) {
+        case 1:
+            return station1;
+        case 2:
+            return station2;
+        default:
+            throw std::invalid_argument("BoundaryLayerStationWindow::station expects 1 or 2");
+        }
+    }
+
+    const BoundaryLayerStationState &station(int index) const {
+        switch (index) {
+        case 1:
+            return station1;
+        case 2:
+            return station2;
+        default:
+            throw std::invalid_argument("BoundaryLayerStationWindow::station expects 1 or 2");
+        }
+    }
+
+    void swapStations() {
+        std::swap(station1, station2);
+    }
+    void advance() {
+        station1 = station2;
+    }
+    void stepbl() {
+        advance();
+    }
 };
-
-using BoundaryLayerState = BoundaryLayerStationWindow;
 
 /**
  * @brief Base state for one boundary-layer side.
@@ -66,68 +76,54 @@ using BoundaryLayerState = BoundaryLayerStationWindow;
  * of the boundary-layer model.
  */
 class BoundaryLayerSideState {
-public:
-  BoundaryLayerSideState() = default;
-  explicit BoundaryLayerSideState(int size)
-      : edgeVelocity(size), skinFrictionCoeff(size), momentumThickness(size),
-        displacementThickness(size), massFlux(size),
-        skinFrictionCoeffHistory(size) {}
+  public:
+    BoundaryLayerSideState() = default;
+    explicit BoundaryLayerSideState(int size)
+        : edgeVelocity(size), skinFrictionCoeff(size), momentumThickness(size), displacementThickness(size),
+          massFlux(size), skinFrictionCoeffHistory(size) {}
 
-  Eigen::VectorXd edgeVelocity;
-  Eigen::VectorXd skinFrictionCoeff;
-  Eigen::VectorXd momentumThickness;
-  Eigen::VectorXd displacementThickness;
-  Eigen::VectorXd massFlux;
-  Eigen::VectorXd skinFrictionCoeffHistory;
-  int transitionIndex = 0;
+    Eigen::VectorXd edgeVelocity;
+    Eigen::VectorXd skinFrictionCoeff;
+    Eigen::VectorXd momentumThickness;
+    Eigen::VectorXd displacementThickness;
+    Eigen::VectorXd massFlux;
+    Eigen::VectorXd skinFrictionCoeffHistory;
+    int transitionIndex = 0;
 
-  void clear() {
-    skinFrictionCoeff.resize(0);
-    momentumThickness.resize(0);
-    displacementThickness.resize(0);
-    edgeVelocity.resize(0);
-    massFlux.resize(0);
-    skinFrictionCoeffHistory.resize(0);
-    transitionIndex = 0;
-  }
-
-  void resize(int size) {
-    skinFrictionCoeff.resize(size);
-    momentumThickness.resize(size);
-    displacementThickness.resize(size);
-    edgeVelocity.resize(size);
-    massFlux.resize(size);
-    skinFrictionCoeffHistory.resize(size);
-  }
-
-  void zeroStateVectors() {
-    if (edgeVelocity.size() > 0)
-      edgeVelocity.setZero();
-    if (skinFrictionCoeff.size() > 0)
-      skinFrictionCoeff.setZero();
-    if (momentumThickness.size() > 0)
-      momentumThickness.setZero();
-    if (displacementThickness.size() > 0)
-      displacementThickness.setZero();
-    if (massFlux.size() > 0)
-      massFlux.setZero();
-  }
-
-  bool hasFiniteThicknessForStationCount(int stationCount) const {
-    if (stationCount <= 1 || momentumThickness.size() < stationCount ||
-        displacementThickness.size() < stationCount) {
-      return false;
+    void resize(int size) {
+        skinFrictionCoeff.resize(size);
+        momentumThickness.resize(size);
+        displacementThickness.resize(size);
+        edgeVelocity.resize(size);
+        massFlux.resize(size);
+        skinFrictionCoeffHistory.resize(size);
     }
 
-    const int count = stationCount - 1;
-    const auto theta = momentumThickness.head(count);
-    const auto delta = displacementThickness.head(count);
-    return theta.allFinite() && delta.allFinite() && theta.maxCoeff() > 0.0 &&
-           delta.maxCoeff() > 0.0;
-  }
-};
+    void zeroStateVectors() {
+        if (edgeVelocity.size() > 0)
+            edgeVelocity.setZero();
+        if (skinFrictionCoeff.size() > 0)
+            skinFrictionCoeff.setZero();
+        if (momentumThickness.size() > 0)
+            momentumThickness.setZero();
+        if (displacementThickness.size() > 0)
+            displacementThickness.setZero();
+        if (massFlux.size() > 0)
+            massFlux.setZero();
+    }
 
-using BoundaryLayerSideProfiles = BoundaryLayerSideState;
+    bool hasFiniteThicknessForStationCount(int stationCount) const {
+        if (stationCount <= 1 || momentumThickness.size() < stationCount ||
+            displacementThickness.size() < stationCount) {
+            return false;
+        }
+
+        const int count  = stationCount - 1;
+        const auto theta = momentumThickness.head(count);
+        const auto delta = displacementThickness.head(count);
+        return theta.allFinite() && delta.allFinite() && theta.maxCoeff() > 0.0 && delta.maxCoeff() > 0.0;
+    }
+};
 
 /**
  * @brief Model base state for one side's boundary-layer lattice.
@@ -137,105 +133,89 @@ using BoundaryLayerSideProfiles = BoundaryLayerSideState;
  * transient solver-owned container.
  */
 class BoundaryLayerLattice {
-public:
-  BoundaryLayerLattice() = default;
-  explicit BoundaryLayerLattice(int size)
-      : stationToPanel(size), stationToSystem(size), profiles(size),
-        arcLengthCoordinates(size), inviscidEdgeVelocityMatrix(2, size),
-        panelInfluenceFactor(size) {}
+  public:
+    BoundaryLayerLattice() = default;
+    explicit BoundaryLayerLattice(int size)
+        : stationToPanel(size), stationToSystem(size), profiles(size), arcLengthCoordinates(size),
+          inviscidEdgeVelocityMatrix(2, size), panelInfluenceFactor(size) {}
 
-  Eigen::VectorXi stationToPanel;
-  Eigen::VectorXi stationToSystem;
-  int trailingEdgeIndex = 0;
-  int stationCount = 0;
+    Eigen::VectorXi stationToPanel;
+    Eigen::VectorXi stationToSystem;
+    int trailingEdgeIndex = 0;
+    int stationCount      = 0;
 
-  double transitionLocation = 0.0;
+    double transitionLocation = 0.0;
 
-  BoundaryLayerSideState profiles;
-  Eigen::VectorXd arcLengthCoordinates;
-  Eigen::Matrix2Xd inviscidEdgeVelocityMatrix;
-  Eigen::VectorXd panelInfluenceFactor;
+    BoundaryLayerSideState profiles;
+    Eigen::VectorXd arcLengthCoordinates;
+    Eigen::Matrix2Xd inviscidEdgeVelocityMatrix;
+    Eigen::VectorXd panelInfluenceFactor;
 
-  void clear() {
-    stationToPanel.resize(0);
-    stationToSystem.resize(0);
-    trailingEdgeIndex = 0;
-    stationCount = 0;
-    transitionLocation = 0.0;
-
-    profiles.clear();
-    arcLengthCoordinates.resize(0);
-    inviscidEdgeVelocityMatrix.resize(0, 0);
-    panelInfluenceFactor.resize(0);
-  }
-
-  void resize(int size) {
-    stationToPanel.resize(size);
-    stationToSystem.resize(size);
-    profiles.resize(size);
-    arcLengthCoordinates.resize(size);
-    inviscidEdgeVelocityMatrix.resize(2, size);
-    panelInfluenceFactor.resize(size);
-  }
-
-  int trailingEdgeSystemIndex() const {
-    return stationToSystem[trailingEdgeIndex];
-  }
-
-  bool isStartOfWake(int stationIndex) const {
-    return stationIndex == trailingEdgeIndex + 1;
-  }
-
-  BoundaryLayerStationReadModel readStationModel(
-      const Eigen::VectorXd &wakeGap, int stationIndex) const {
-    BoundaryLayerStationReadModel model;
-    model.stationCount = stationCount;
-    model.trailingEdgeIndex = trailingEdgeIndex;
-    model.transitionIndex = profiles.transitionIndex;
-    model.arcLength = arcLengthCoordinates[stationIndex];
-    model.edgeVelocity = profiles.edgeVelocity[stationIndex];
-    model.momentumThickness = profiles.momentumThickness[stationIndex];
-    model.displacementThickness = profiles.displacementThickness[stationIndex];
-    model.skinFrictionCoeff = profiles.skinFrictionCoeff[stationIndex];
-
-    if (stationIndex > trailingEdgeIndex) {
-      const int wakeIndex = stationIndex - trailingEdgeIndex;
-      model.wakeGap = wakeGap[wakeIndex - 1];
+    void resize(int size) {
+        stationToPanel.resize(size);
+        stationToSystem.resize(size);
+        profiles.resize(size);
+        arcLengthCoordinates.resize(size);
+        inviscidEdgeVelocityMatrix.resize(2, size);
+        panelInfluenceFactor.resize(size);
     }
 
-    return model;
-  }
-
-  BoundaryLayerSideReadModel readSideModel() const {
-    BoundaryLayerSideReadModel model;
-    model.stationCount = stationCount;
-    model.trailingEdgeIndex = trailingEdgeIndex;
-    model.transitionIndex = profiles.transitionIndex;
-    model.hasStations = stationCount > 1;
-    model.hasFiniteThickness = profiles.hasFiniteThicknessForStationCount(stationCount);
-
-    if (!model.hasStations) {
-      return model;
+    int trailingEdgeSystemIndex() const {
+        return stationToSystem[trailingEdgeIndex];
     }
 
-    const int lastIndex = stationCount - 2;
-    model.lastEdgeVelocity = profiles.edgeVelocity[lastIndex];
-    model.lastMomentumThickness = profiles.momentumThickness[lastIndex];
-    model.lastDisplacementThickness = profiles.displacementThickness[lastIndex];
-    return model;
-  }
+    bool isStartOfWake(int stationIndex) const {
+        return stationIndex == trailingEdgeIndex + 1;
+    }
 
-  bool hasValidPanelMap(int totalNodes) const {
-    if (stationCount <= 1 || stationToPanel.size() < stationCount ||
-        panelInfluenceFactor.size() < stationCount) {
-      return false;
+    BoundaryLayerStationReadModel readStationModel(const Eigen::VectorXd &wakeGap, int stationIndex) const {
+        BoundaryLayerStationReadModel model;
+        model.stationCount          = stationCount;
+        model.trailingEdgeIndex     = trailingEdgeIndex;
+        model.transitionIndex       = profiles.transitionIndex;
+        model.arcLength             = arcLengthCoordinates[stationIndex];
+        model.edgeVelocity          = profiles.edgeVelocity[stationIndex];
+        model.momentumThickness     = profiles.momentumThickness[stationIndex];
+        model.displacementThickness = profiles.displacementThickness[stationIndex];
+        model.skinFrictionCoeff     = profiles.skinFrictionCoeff[stationIndex];
+
+        if (stationIndex > trailingEdgeIndex) {
+            const int wakeIndex = stationIndex - trailingEdgeIndex;
+            model.wakeGap       = wakeGap[wakeIndex - 1];
+        }
+
+        return model;
     }
-    for (int i = 0; i < stationCount - 1; ++i) {
-      const int panel = stationToPanel[i];
-      if (panel < 0 || panel >= totalNodes) {
-        return false;
-      }
+
+    BoundaryLayerSideReadModel readSideModel() const {
+        BoundaryLayerSideReadModel model;
+        model.stationCount       = stationCount;
+        model.trailingEdgeIndex  = trailingEdgeIndex;
+        model.transitionIndex    = profiles.transitionIndex;
+        model.hasStations        = stationCount > 1;
+        model.hasFiniteThickness = profiles.hasFiniteThicknessForStationCount(stationCount);
+
+        if (!model.hasStations) {
+            return model;
+        }
+
+        const int lastIndex             = stationCount - 2;
+        model.lastEdgeVelocity          = profiles.edgeVelocity[lastIndex];
+        model.lastMomentumThickness     = profiles.momentumThickness[lastIndex];
+        model.lastDisplacementThickness = profiles.displacementThickness[lastIndex];
+        return model;
     }
-    return trailingEdgeIndex >= 0 && trailingEdgeIndex < stationCount;
-  }
+
+    bool hasValidPanelMap(int totalNodes) const {
+        if (stationCount <= 1 || stationToPanel.size() < stationCount || panelInfluenceFactor.size() < stationCount) {
+            return false;
+        }
+        for (int i = 0; i < stationCount - 1; ++i) {
+            const int panel = stationToPanel[i];
+            if (panel < 0 || panel >= totalNodes) {
+                return false;
+            }
+        }
+        return trailingEdgeIndex >= 0 && trailingEdgeIndex < stationCount;
+    }
 };
