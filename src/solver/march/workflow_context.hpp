@@ -47,10 +47,10 @@ class WorkflowMarchContext final : public MarchContext {
   }
 
   double readBlCompressibilityHstinv() const override {
-    return access_.blCompressibility().hstinv;
+    return access_.blCompressibility().hstinv();
   }
   double readBlCompressibilityGm1bl() const override {
-    return access_.blCompressibility().gm1bl;
+    return access_.blCompressibility().gm1bl();
   }
   double readBlReynoldsReybl() const override {
     return access_.blReynolds().reybl;

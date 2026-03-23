@@ -1,6 +1,6 @@
 #pragma once
 
-#include "model/boundary_layer/bl_transition_params.hpp"
+#include "model/boundary_layer/reference/bl_transition_params.hpp"
 #include "model/boundary_layer/runtime_types.hpp"
 #include "model/boundary_layer/state.hpp"
 #include "model/foil/foil.hpp"

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "model/boundary_layer/bl_compressibility_params.hpp"
-#include "model/boundary_layer/bl_reynolds_params.hpp"
-#include "model/boundary_layer/bl_transition_params.hpp"
+#include "model/boundary_layer/reference/bl_compressibility_params.hpp"
+#include "model/boundary_layer/reference/bl_reynolds_params.hpp"
+#include "model/boundary_layer/reference/bl_transition_params.hpp"
 #include "model/boundary_layer/physics.hpp"
 #include "model/boundary_layer/state.hpp"
 #include "numerics/boundary_layer/diff_system.hpp"

@@ -3,9 +3,9 @@
 #include <array>
 #include <cmath>
 
-#include "model/boundary_layer/bl_compressibility_params.hpp"
-#include "model/boundary_layer/bl_reynolds_params.hpp"
-#include "model/boundary_layer/bl_transition_params.hpp"
+#include "model/boundary_layer/reference/bl_compressibility_params.hpp"
+#include "model/boundary_layer/reference/bl_reynolds_params.hpp"
+#include "model/boundary_layer/reference/bl_transition_params.hpp"
 #include "model/boundary_layer/features.hpp"
 #include "model/boundary_layer/physics.hpp"
 #include "model/boundary_layer/skin_friction_coefficients.hpp"

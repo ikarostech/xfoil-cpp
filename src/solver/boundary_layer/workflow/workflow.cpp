@@ -149,14 +149,7 @@ void BoundaryLayer::resetPhysicsState() {
 }
 
 void BoundaryLayer::resetTransportState() {
-    state_store_.blCompressibility.qinfbl    = 0.0;
-    state_store_.blCompressibility.tkbl      = 0.0;
-    state_store_.blCompressibility.tkbl_ms   = 0.0;
-    state_store_.blCompressibility.rstbl     = 0.0;
-    state_store_.blCompressibility.rstbl_ms  = 0.0;
-    state_store_.blCompressibility.hstinv    = 0.0;
-    state_store_.blCompressibility.hstinv_ms = 0.0;
-    state_store_.blCompressibility.gm1bl     = 0.0;
+    state_store_.blCompressibility = {};
 
     state_store_.blReynolds.reybl    = 0.0;
     state_store_.blReynolds.reybl_ms = 0.0;

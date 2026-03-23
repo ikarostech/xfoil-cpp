@@ -139,9 +139,9 @@ void BoundaryLayerMixedModeOps::initializeFirstIterationState(
     const double thm = context_.lattice.get(side)
                            .profiles.momentumThickness[std::max(0, stationIndex - 1)];
     const double uem_sq = uem * uem;
-    const double msq = uem_sq * context_.blCompressibility.hstinv /
-                       (context_.blCompressibility.gm1bl *
-                        (1.0 - 0.5 * uem_sq * context_.blCompressibility.hstinv));
+    const double msq = uem_sq * context_.blCompressibility.hstinv() /
+                       (context_.blCompressibility.gm1bl() *
+                        (1.0 - 0.5 * uem_sq * context_.blCompressibility.hstinv()));
     hkref = boundary_layer::hkin(dsm / thm, msq).hk;
   }
 
@@ -232,9 +232,9 @@ bool BoundaryLayerMixedModeOps::applyMixedModeNewtonStep(
       (stationIndex <= context_.lattice.get(side).trailingEdgeIndex) ? 1.02
                                                                      : 1.00005;
   const double uei_sq = ctx.uei * ctx.uei;
-  const double msq = uei_sq * context_.blCompressibility.hstinv /
-                     (context_.blCompressibility.gm1bl *
-                      (1.0 - 0.5 * uei_sq * context_.blCompressibility.hstinv));
+  const double msq = uei_sq * context_.blCompressibility.hstinv() /
+                     (context_.blCompressibility.gm1bl() *
+                      (1.0 - 0.5 * uei_sq * context_.blCompressibility.hstinv()));
   double dsw = ctx.dsi - ctx.dswaki;
   dsw = BoundaryLayerPhysics::adjustDisplacementForHkLimit(dsw, ctx.thi, msq,
                                                            hklim);
