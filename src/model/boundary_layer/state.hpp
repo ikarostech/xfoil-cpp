@@ -67,6 +67,12 @@ using BoundaryLayerState = BoundaryLayerStationWindow;
  */
 class BoundaryLayerSideState {
 public:
+  BoundaryLayerSideState() = default;
+  explicit BoundaryLayerSideState(int size)
+      : edgeVelocity(size), skinFrictionCoeff(size), momentumThickness(size),
+        displacementThickness(size), massFlux(size),
+        skinFrictionCoeffHistory(size) {}
+
   Eigen::VectorXd edgeVelocity;
   Eigen::VectorXd skinFrictionCoeff;
   Eigen::VectorXd momentumThickness;
@@ -132,6 +138,12 @@ using BoundaryLayerSideProfiles = BoundaryLayerSideState;
  */
 class BoundaryLayerLattice {
 public:
+  BoundaryLayerLattice() = default;
+  explicit BoundaryLayerLattice(int size)
+      : stationToPanel(size), stationToSystem(size), profiles(size),
+        arcLengthCoordinates(size), inviscidEdgeVelocityMatrix(2, size),
+        panelInfluenceFactor(size) {}
+
   Eigen::VectorXi stationToPanel;
   Eigen::VectorXi stationToSystem;
   int trailingEdgeIndex = 0;
@@ -165,9 +177,6 @@ public:
     inviscidEdgeVelocityMatrix.resize(2, size);
     panelInfluenceFactor.resize(size);
   }
-
-  BoundaryLayerLattice() = default;
-  explicit BoundaryLayerLattice(int size) { resize(size); }
 
   int trailingEdgeSystemIndex() const {
     return stationToSystem[trailingEdgeIndex];

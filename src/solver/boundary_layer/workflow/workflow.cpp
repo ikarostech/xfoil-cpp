@@ -314,8 +314,14 @@ BoundaryLayer::computeClFromEdgeVelocityDistribution(
 }
 
 void BoundaryLayer::initializeLattices(int size) {
+  const double top_transition_location =
+      state_store_.lattice.top.transitionLocation;
+  const double bottom_transition_location =
+      state_store_.lattice.bottom.transitionLocation;
   state_store_.lattice.top = BoundaryLayerLattice(size);
   state_store_.lattice.bottom = BoundaryLayerLattice(size);
+  state_store_.lattice.top.transitionLocation = top_transition_location;
+  state_store_.lattice.bottom.transitionLocation = bottom_transition_location;
 }
 
 void BoundaryLayer::initializeWakeGap(int wake_nodes) {
