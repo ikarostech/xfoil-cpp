@@ -31,6 +31,7 @@ add_library(xfoil_model
     src/model/boundary_layer.cpp
     src/model/boundary_layer/physics.cpp
     src/model/boundary_layer/reference/bl_compressibility_params.cpp
+    src/model/boundary_layer/reference/bl_reynolds_params.cpp
     src/model/coefficient/xfoil_postprocess.cpp
     src/model/foil/edge.cpp
     src/model/foil/foil_shape.cpp

@@ -41,13 +41,13 @@ bool BoundaryLayerPhysics::blkin(BoundaryLayerStationWindow &state, const BlComp
     current.hkz.ms()       = hkin_result.hk_msq * current.param.mz_ms;
 
     current.rtz.scalar = current.param.rz * current.param.uz * current.param.tz /
-                         (std::sqrt(herat * herat * herat) * (1.0 + kHvrat) / (herat + kHvrat) / reynolds.reybl);
+                         (std::sqrt(herat * herat * herat) * (1.0 + kHvrat) / (herat + kHvrat) / reynolds.reybl());
     current.rtz.u() =
         current.rtz.scalar * (1.0 / current.param.uz + current.param.rz_uz / current.param.rz - v2_he * he_u2);
     current.rtz.t()  = current.rtz.scalar / current.param.tz;
     current.rtz.ms() = current.rtz.scalar * (current.param.rz_ms / current.param.rz +
-                                             (1.0 / reynolds.reybl * reynolds.reybl_ms - v2_he * he_ms));
-    current.rtz.re() = current.rtz.scalar * (reynolds.reybl_re / reynolds.reybl);
+                                             (1.0 / reynolds.reybl() * reynolds.reybl_ms() - v2_he * he_ms));
+    current.rtz.re() = current.rtz.scalar * (reynolds.reybl_re() / reynolds.reybl());
 
     return true;
 }
@@ -104,7 +104,8 @@ BoundaryLayerStationState BoundaryLayerPhysics::blprv(BoundaryLayerStationState 
                                                       double ami, double cti, double thi, double dsi, double dswaki,
                                                       double uei) {
     data.assignPrimaryStationData(xsi, ami, cti, thi, dsi, dswaki);
-    data.assignCompressibleEdgeVelocity(uei, compressibility.qinfbl(), compressibility.tkbl(), compressibility.tkbl_ms());
+    data.assignCompressibleEdgeVelocity(uei, compressibility.qinfbl(), compressibility.tkbl(),
+                                        compressibility.tkbl_ms());
     return data;
 }
 
@@ -163,17 +164,7 @@ BoundaryLayerReferenceParams BoundaryLayerPhysics::buildReferenceParams(const Fl
     params.msq_clmr = 2.0 * params.currentMach * ma_clmr;
 
     params.blCompressibility = BlCompressibilityParams(analysisState.qinf, params.currentMach);
-
-    const double herat =
-        1.0 - 0.5 * params.blCompressibility.qinfbl() * params.blCompressibility.qinfbl() *
-                    params.blCompressibility.hstinv();
-    const double herat_ms =
-        -0.5 * params.blCompressibility.qinfbl() * params.blCompressibility.qinfbl() *
-            params.blCompressibility.hstinv_ms();
-
-    params.blReynolds.reybl = params.currentRe * std::sqrt(herat * herat * herat) * (1.0 + kHvrat) / (herat + kHvrat);
-    params.blReynolds.reybl_re = std::sqrt(herat * herat * herat) * (1.0 + kHvrat) / (herat + kHvrat);
-    params.blReynolds.reybl_ms = params.blReynolds.reybl * (1.5 / herat - 1.0 / (herat + kHvrat)) * herat_ms;
+    params.blReynolds        = BlReynoldsParams(params.currentRe, params.blCompressibility);
 
     params.amcrit = acrit;
     return params;

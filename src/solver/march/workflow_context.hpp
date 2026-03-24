@@ -53,7 +53,7 @@ class WorkflowMarchContext final : public MarchContext {
     return access_.blCompressibility().gm1bl();
   }
   double readBlReynoldsReybl() const override {
-    return access_.blReynolds().reybl;
+    return access_.blReynolds().reybl();
   }
 
   bool isStartOfWake(int side, int stationIndex) override {
