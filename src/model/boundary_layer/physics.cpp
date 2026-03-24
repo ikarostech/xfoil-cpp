@@ -79,22 +79,27 @@ SkinFrictionCoefficients BoundaryLayerPhysics::blmid(BoundaryLayerStationWindow 
     const auto cf_res = skin_friction::getSkinFriction(hka, rta, ma, flowRegimeType);
 
     SkinFrictionCoefficients coeffs;
-    coeffs.cfm           = cf_res.cf;
-    const double cfm_hka = cf_res.hk;
-    const double cfm_rta = cf_res.rt;
-    const double cfm_ma  = cf_res.msq;
+    coeffs.cfm = cf_res.cf;
 
-    coeffs.station.row(0) << 0.5 * (cfm_hka * previous.hkz.t() + cfm_rta * previous.rtz.t()),
-        0.5 * (cfm_hka * previous.hkz.d()),
-        0.5 * (cfm_hka * previous.hkz.u() + cfm_ma * previous.param.mz_uz + cfm_rta * previous.rtz.u());
+    const Eigen::RowVector3d cf_grad{cf_res.hk, cf_res.rt, cf_res.msq};
 
-    coeffs.station.row(1) << 0.5 * (cfm_hka * current.hkz.t() + cfm_rta * current.rtz.t()),
-        0.5 * (cfm_hka * current.hkz.d()),
-        0.5 * (cfm_hka * current.hkz.u() + cfm_ma * current.param.mz_uz + cfm_rta * current.rtz.u());
+    const Eigen::Matrix3d previous_jacobian{{previous.hkz.t(), previous.hkz.d(), previous.hkz.u()},
+                                            {previous.rtz.t(), 0.0, previous.rtz.u()},
+                                            {0.0, 0.0, previous.param.mz_uz}};
 
-    coeffs.global << 0.5 * (cfm_hka * previous.hkz.ms() + cfm_ma * previous.param.mz_ms + cfm_rta * previous.rtz.ms() +
-                            cfm_hka * current.hkz.ms() + cfm_ma * current.param.mz_ms + cfm_rta * current.rtz.ms()),
-        0.5 * (cfm_rta * previous.rtz.re() + cfm_rta * current.rtz.re());
+    const Eigen::Matrix3d current_jacobian{{current.hkz.t(), current.hkz.d(), current.hkz.u()},
+                                           {current.rtz.t(), 0.0, current.rtz.u()},
+                                           {0.0, 0.0, current.param.mz_uz}};
+
+    coeffs.station.row(0) = 0.5 * cf_grad * previous_jacobian;
+    coeffs.station.row(1) = 0.5 * cf_grad * current_jacobian;
+
+    const Eigen::Vector3d ms1{previous.hkz.ms(), previous.rtz.ms(), previous.param.mz_ms};
+    const Eigen::Vector3d ms2{current.hkz.ms(), current.rtz.ms(), current.param.mz_ms};
+    const Eigen::Vector3d re1{0.0, previous.rtz.re(), 0.0};
+    const Eigen::Vector3d re2{0.0, current.rtz.re(), 0.0};
+
+    coeffs.global = Eigen::Vector2d{0.5 * cf_grad.dot(ms1 + ms2), 0.5 * cf_grad.dot(re1 + re2)};
 
     return coeffs;
 }
