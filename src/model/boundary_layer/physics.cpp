@@ -84,17 +84,17 @@ SkinFrictionCoefficients BoundaryLayerPhysics::blmid(BoundaryLayerStationWindow 
     const double cfm_rta = cf_res.rt;
     const double cfm_ma  = cf_res.msq;
 
-    coeffs.cfm_u1 = 0.5 * (cfm_hka * previous.hkz.u() + cfm_ma * previous.param.mz_uz + cfm_rta * previous.rtz.u());
-    coeffs.cfm_t1 = 0.5 * (cfm_hka * previous.hkz.t() + cfm_rta * previous.rtz.t());
-    coeffs.cfm_d1 = 0.5 * (cfm_hka * previous.hkz.d());
+    coeffs.station.row(0) << 0.5 * (cfm_hka * previous.hkz.t() + cfm_rta * previous.rtz.t()),
+        0.5 * (cfm_hka * previous.hkz.d()),
+        0.5 * (cfm_hka * previous.hkz.u() + cfm_ma * previous.param.mz_uz + cfm_rta * previous.rtz.u());
 
-    coeffs.cfm_u2 = 0.5 * (cfm_hka * current.hkz.u() + cfm_ma * current.param.mz_uz + cfm_rta * current.rtz.u());
-    coeffs.cfm_t2 = 0.5 * (cfm_hka * current.hkz.t() + cfm_rta * current.rtz.t());
-    coeffs.cfm_d2 = 0.5 * (cfm_hka * current.hkz.d());
+    coeffs.station.row(1) << 0.5 * (cfm_hka * current.hkz.t() + cfm_rta * current.rtz.t()),
+        0.5 * (cfm_hka * current.hkz.d()),
+        0.5 * (cfm_hka * current.hkz.u() + cfm_ma * current.param.mz_uz + cfm_rta * current.rtz.u());
 
-    coeffs.cfm_ms = 0.5 * (cfm_hka * previous.hkz.ms() + cfm_ma * previous.param.mz_ms + cfm_rta * previous.rtz.ms() +
-                           cfm_hka * current.hkz.ms() + cfm_ma * current.param.mz_ms + cfm_rta * current.rtz.ms());
-    coeffs.cfm_re = 0.5 * (cfm_rta * previous.rtz.re() + cfm_rta * current.rtz.re());
+    coeffs.global << 0.5 * (cfm_hka * previous.hkz.ms() + cfm_ma * previous.param.mz_ms + cfm_rta * previous.rtz.ms() +
+                            cfm_hka * current.hkz.ms() + cfm_ma * current.param.mz_ms + cfm_rta * current.rtz.ms()),
+        0.5 * (cfm_rta * previous.rtz.re() + cfm_rta * current.rtz.re());
 
     return coeffs;
 }

@@ -132,16 +132,16 @@ TEST_F(DatGoogleTest, test_blmid_turbulent) {
 
   // then
   ASSERT_DOUBLE_EQ(-6.8333333333333339e-07, laminarCoeffs.cfm);
-  ASSERT_DOUBLE_EQ(0, laminarCoeffs.cfm_u1);
-  ASSERT_DOUBLE_EQ(0, laminarCoeffs.cfm_t1);
-  ASSERT_DOUBLE_EQ(0, laminarCoeffs.cfm_d1);
+  ASSERT_DOUBLE_EQ(0, laminarCoeffs.station(0, 2));
+  ASSERT_DOUBLE_EQ(0, laminarCoeffs.station(0, 0));
+  ASSERT_DOUBLE_EQ(0, laminarCoeffs.station(0, 1));
 
-  ASSERT_DOUBLE_EQ(0, laminarCoeffs.cfm_u2);
-  ASSERT_DOUBLE_EQ(0, laminarCoeffs.cfm_t2);
-  ASSERT_DOUBLE_EQ(0, laminarCoeffs.cfm_d2);
+  ASSERT_DOUBLE_EQ(0, laminarCoeffs.station(1, 2));
+  ASSERT_DOUBLE_EQ(0, laminarCoeffs.station(1, 0));
+  ASSERT_DOUBLE_EQ(0, laminarCoeffs.station(1, 1));
 
-  ASSERT_DOUBLE_EQ(0, laminarCoeffs.cfm_ms);
-  ASSERT_DOUBLE_EQ(0, laminarCoeffs.cfm_re);
+  ASSERT_DOUBLE_EQ(0, laminarCoeffs.global[0]);
+  ASSERT_DOUBLE_EQ(0, laminarCoeffs.global[1]);
 }
 
 TEST_F(DatGoogleTest, test_blmid_laminar) {
@@ -156,16 +156,16 @@ TEST_F(DatGoogleTest, test_blmid_laminar) {
 
   // then
   ASSERT_DOUBLE_EQ(-6.8333333333333339e-07, turbulentCoeffs.cfm);
-  ASSERT_DOUBLE_EQ(0, turbulentCoeffs.cfm_u1);
-  ASSERT_DOUBLE_EQ(0, turbulentCoeffs.cfm_t1);
-  ASSERT_DOUBLE_EQ(0, turbulentCoeffs.cfm_d1);
+  ASSERT_DOUBLE_EQ(0, turbulentCoeffs.station(0, 2));
+  ASSERT_DOUBLE_EQ(0, turbulentCoeffs.station(0, 0));
+  ASSERT_DOUBLE_EQ(0, turbulentCoeffs.station(0, 1));
 
-  ASSERT_DOUBLE_EQ(0, turbulentCoeffs.cfm_u2);
-  ASSERT_DOUBLE_EQ(0, turbulentCoeffs.cfm_t2);
-  ASSERT_DOUBLE_EQ(0, turbulentCoeffs.cfm_d2);
+  ASSERT_DOUBLE_EQ(0, turbulentCoeffs.station(1, 2));
+  ASSERT_DOUBLE_EQ(0, turbulentCoeffs.station(1, 0));
+  ASSERT_DOUBLE_EQ(0, turbulentCoeffs.station(1, 1));
 
-  ASSERT_DOUBLE_EQ(0, turbulentCoeffs.cfm_ms);
-  ASSERT_DOUBLE_EQ(0, turbulentCoeffs.cfm_re);
+  ASSERT_DOUBLE_EQ(0, turbulentCoeffs.global[0]);
+  ASSERT_DOUBLE_EQ(0, turbulentCoeffs.global[1]);
 }
 
 TEST_F(DatGoogleTest, test_blmid_turbulent_wake) {
@@ -180,16 +180,16 @@ TEST_F(DatGoogleTest, test_blmid_turbulent_wake) {
 
   // then
   ASSERT_DOUBLE_EQ(0, wakeCoeffs.cfm);
-  ASSERT_DOUBLE_EQ(0, wakeCoeffs.cfm_u1);
-  ASSERT_DOUBLE_EQ(0, wakeCoeffs.cfm_t1);
-  ASSERT_DOUBLE_EQ(0, wakeCoeffs.cfm_d1);
+  ASSERT_DOUBLE_EQ(0, wakeCoeffs.station(0, 2));
+  ASSERT_DOUBLE_EQ(0, wakeCoeffs.station(0, 0));
+  ASSERT_DOUBLE_EQ(0, wakeCoeffs.station(0, 1));
 
-  ASSERT_DOUBLE_EQ(0, wakeCoeffs.cfm_u2);
-  ASSERT_DOUBLE_EQ(0, wakeCoeffs.cfm_t2);
-  ASSERT_DOUBLE_EQ(0, wakeCoeffs.cfm_d2);
+  ASSERT_DOUBLE_EQ(0, wakeCoeffs.station(1, 2));
+  ASSERT_DOUBLE_EQ(0, wakeCoeffs.station(1, 0));
+  ASSERT_DOUBLE_EQ(0, wakeCoeffs.station(1, 1));
 
-  ASSERT_DOUBLE_EQ(0, wakeCoeffs.cfm_ms);
-  ASSERT_DOUBLE_EQ(0, wakeCoeffs.cfm_re);
+  ASSERT_DOUBLE_EQ(0, wakeCoeffs.global[0]);
+  ASSERT_DOUBLE_EQ(0, wakeCoeffs.global[1]);
 }
 
 TEST_F(DatGoogleTest, test_blvar_cfz_wake) {

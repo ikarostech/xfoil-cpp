@@ -304,8 +304,8 @@ void BlDiffSolver::bldifMomentum(BoundaryLayerStationWindow &BoundaryLayerStatio
 
         const Vector3d hterm1(station1.param.hz_tz, station1.param.hz_dz, 0.0);
         const Vector3d hterm2(station2.param.hz_tz, station2.param.hz_dz, 0.0);
-        const Vector3d cfm1v(skinFriction.cfm_t1, skinFriction.cfm_d1, skinFriction.cfm_u1);
-        const Vector3d cfm2v(skinFriction.cfm_t2, skinFriction.cfm_d2, skinFriction.cfm_u2);
+        const Vector3d cfm1v = skinFriction.station.row(0).transpose();
+        const Vector3d cfm2v = skinFriction.station.row(1).transpose();
         const Vector3d cfz1v = station1.cfz.pos_vector();
         const Vector3d cfz2v = station2.cfz.pos_vector();
         const Vector3d mz1(0.0, 0.0, 0.5 * z_ma * station1.param.mz_uz);
@@ -323,9 +323,9 @@ void BlDiffSolver::bldifMomentum(BoundaryLayerStationWindow &BoundaryLayerStatio
         coeffs.a2.row(1) = row1_a2;
     }
 
-    coeffs.d_msq[1] = 0.5 * z_ma * station1.param.mz_ms + z_cfm * skinFriction.cfm_ms + z_cf1 * station1.cfz.ms() +
+    coeffs.d_msq[1] = 0.5 * z_ma * station1.param.mz_ms + z_cfm * skinFriction.global[0] + z_cf1 * station1.cfz.ms() +
                       0.5 * z_ma * station2.param.mz_ms + z_cf2 * station2.cfz.ms();
-    coeffs.d_re[1] = z_cfm * skinFriction.cfm_re + z_cf1 * station1.cfz.re() + z_cf2 * station2.cfz.re();
+    coeffs.d_re[1] = z_cfm * skinFriction.global[1] + z_cf1 * station1.cfz.re() + z_cf2 * station2.cfz.re();
     coeffs.d_xi[1] = 0.0;
     coeffs.rhs[1]  = -rezt;
 }
