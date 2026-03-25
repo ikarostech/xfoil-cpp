@@ -11,7 +11,7 @@ using Eigen::VectorXd;
 
 BoundaryLayerGeometry::BoundaryLayerGeometry(
     SidePair<BoundaryLayerLattice> &lattice, Eigen::VectorXd &wgap,
-    BoundaryLayerStagnationFeature &stagnation)
+    StagnationFeature &stagnation)
     : lattice_(lattice), wgap_(wgap), stagnation_(stagnation) {}
 
 bool BoundaryLayerGeometry::iblpan(int point_count, int wake_point_count) {
@@ -89,7 +89,7 @@ BoundaryLayerGeometry::stfind(const Eigen::Matrix2Xd &surface_vortex,
   }
 
   StagnationFeature result;
-  result.stagnationIndex = stagnation_index;
+  result.index = stagnation_index;
   result.found = found;
   const double dgam = surface_vortex(0, stagnation_index + 1) -
                       surface_vortex(0, stagnation_index);
@@ -127,7 +127,7 @@ bool BoundaryLayerGeometry::stmove(const Eigen::Matrix2Xd &surface_vortex,
     Logger::instance().write(
         "stfind: Stagnation point not found. Continuing ...\n");
   }
-  stagnation_.index = stagnation_result.stagnationIndex;
+  stagnation_.index = stagnation_result.index;
   stagnation_.sst = stagnation_result.sst;
   stagnation_.sst_go = stagnation_result.sst_go;
   stagnation_.sst_gp = stagnation_result.sst_gp;

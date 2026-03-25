@@ -3,6 +3,7 @@
 #include <array>
 #include <cmath>
 
+#include "model/analysis/stagnation_feature.hpp"
 #include "model/boundary_layer/reference/bl_compressibility_params.hpp"
 #include "model/boundary_layer/reference/bl_reynolds_params.hpp"
 #include "model/boundary_layer/reference/bl_transition_params.hpp"
@@ -30,7 +31,7 @@ class BoundaryLayerMixedModeOps;
 struct BoundaryLayerStationWindowStore {
     Eigen::VectorXd wgap;
     SidePair<BoundaryLayerLattice> lattice;
-    BoundaryLayerStagnationFeature stagnation;
+    StagnationFeature stagnation;
     BoundaryLayerTrailingEdgeFeature trailingEdge;
     FlowRegimeEnum flowRegime = FlowRegimeEnum::Laminar;
     BlCompressibilityParams blCompressibility{};
@@ -111,7 +112,7 @@ class BoundaryLayer {
     void resetTransportState();
     void resetForReinitialization();
     void setStagnationState(const StagnationFeature &stagnation);
-    const BoundaryLayerStagnationFeature &stagnationFeature() const;
+    const StagnationFeature &stagnationFeature() const;
     const BoundaryLayerTrailingEdgeFeature &trailingEdgeFeature() const;
     void refreshTrailingEdgeFeature();
     void clearPanelMap();

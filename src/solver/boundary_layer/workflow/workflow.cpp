@@ -140,7 +140,7 @@ void BoundaryLayer::resetSideMetadata() {
 }
 
 void BoundaryLayer::resetPhysicsState() {
-    state_store_.stagnation        = BoundaryLayerStagnationFeature{};
+    state_store_.stagnation        = StagnationFeature{};
     state_store_.trailingEdge      = BoundaryLayerTrailingEdgeFeature{};
     state_store_.flowRegime        = FlowRegimeEnum::Laminar;
     state_store_.blCompressibility = {};
@@ -166,14 +166,14 @@ void BoundaryLayer::resetForReinitialization() {
 }
 
 void BoundaryLayer::setStagnationState(const StagnationFeature &stagnation) {
-    state_store_.stagnation.index  = stagnation.stagnationIndex;
+    state_store_.stagnation.index  = stagnation.index;
     state_store_.stagnation.sst    = stagnation.sst;
     state_store_.stagnation.sst_go = stagnation.sst_go;
     state_store_.stagnation.sst_gp = stagnation.sst_gp;
     state_store_.stagnation.found  = stagnation.found;
 }
 
-const BoundaryLayerStagnationFeature &BoundaryLayer::stagnationFeature() const {
+const StagnationFeature &BoundaryLayer::stagnationFeature() const {
     return state_store_.stagnation;
 }
 

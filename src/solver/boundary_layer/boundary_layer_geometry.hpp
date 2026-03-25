@@ -2,24 +2,17 @@
 
 #include <string>
 
+#include "model/analysis/stagnation_feature.hpp"
 #include "model/boundary_layer/features.hpp"
 #include "model/boundary_layer/state.hpp"
 #include "numerics/side_pair.hpp"
 #include "model/foil/foil.hpp"
 
-struct StagnationFeature {
-  int stagnationIndex = 0;
-  double sst = 0.0;
-  double sst_go = 0.0;
-  double sst_gp = 0.0;
-  bool found = true;
-};
-
 class BoundaryLayerGeometry {
 public:
   BoundaryLayerGeometry(SidePair<BoundaryLayerLattice> &lattice,
                         Eigen::VectorXd &wgap,
-                        BoundaryLayerStagnationFeature &stagnation);
+                        StagnationFeature &stagnation);
 
   bool iblpan(int point_count, int wake_point_count);
   bool iblsys(int &nsys);
@@ -43,5 +36,5 @@ private:
 
   SidePair<BoundaryLayerLattice> &lattice_;
   Eigen::VectorXd &wgap_;
-  BoundaryLayerStagnationFeature &stagnation_;
+  StagnationFeature &stagnation_;
 };
