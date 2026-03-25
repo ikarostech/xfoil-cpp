@@ -32,7 +32,7 @@ class XFoilInternalState {
     };
 
     struct ViscousIterationState {
-        StagnationResult stagnation;
+        StagnationFeature stagnation;
         Eigen::VectorXd qvis;
         double convergedAlpha = 0.0;
         double convergedMach  = 0.0;

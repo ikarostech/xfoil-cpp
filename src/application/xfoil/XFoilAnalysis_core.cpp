@@ -288,7 +288,7 @@ void XFoilAnalysis::resetVariables() {
   state_.operatingPointCoupling.reynoldsPerLift = 0.0;
   aero_coeffs_.cl_alf = 0.0;
   aero_coeffs_.cl_msq = 0.0;
-  state_.viscous.stagnation = StagnationResult{};
+  state_.viscous.stagnation = StagnationFeature{};
 }
 
 double XFoilAnalysis::getActualMach(double cls, MachType mach_control) {

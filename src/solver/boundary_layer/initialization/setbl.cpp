@@ -73,7 +73,7 @@ class BoundaryLayerSetblAssembler {
 
     SetblOutputView run(SidePairRef<const BoundaryLayerSideState> profiles, const FlowState &analysis_state,
                         const AeroCoefficients &aero_coeffs, double acrit, const Foil &foil,
-                        const StagnationResult &stagnation, const Eigen::MatrixXd &dij, bool bl_initialized) {
+                        const StagnationFeature &stagnation, const Eigen::MatrixXd &dij, bool bl_initialized) {
         SetblOutputView output{};
         MarcherUe marcher_ue;
         MarcherDu marcher_du;
@@ -123,7 +123,7 @@ class BoundaryLayerSetblAssembler {
         return result;
     }
 
-    SideSweepInitResult initializeSideSweepState(const Foil &foil, const StagnationResult &stagnation, int side) const {
+    SideSweepInitResult initializeSideSweepState(const Foil &foil, const StagnationFeature &stagnation, int side) const {
         SideSweepInitResult result;
         result.xiforc = access_.xifset(foil, stagnation, side);
         return result;
@@ -263,7 +263,7 @@ class BoundaryLayerSetblAssembler {
         output.profiles.bottom.edgeVelocity = edge_result.outputEdgeVelocity.bottom;
     }
 
-    void processSetblSide(int side, const Foil &foil, const StagnationResult &stagnation, bool controlByAlpha,
+    void processSetblSide(int side, const Foil &foil, const StagnationFeature &stagnation, bool controlByAlpha,
                           const Eigen::MatrixXd &dij, SetblOutputView &output, std::array<SetblStation, 2> &stations,
                           SetblSideData &sideData, double &cti, double &ami, double re_clmr, double msq_clmr) {
         const auto similarity_coeffs = resetSimilarityStationCoefficients(stations[0].u_m, stations[0].d_m);
@@ -348,7 +348,7 @@ class BoundaryLayerSetblAssembler {
 SetblOutputView BoundaryLayerSetblUseCase::run(BoundaryLayer &boundaryLayer,
                                                SidePairRef<const BoundaryLayerSideState> profiles,
                                                const FlowState &analysis_state, const AeroCoefficients &aero_coeffs,
-                                               double acrit, const Foil &foil, const StagnationResult &stagnation,
+                                               double acrit, const Foil &foil, const StagnationFeature &stagnation,
                                                const Eigen::MatrixXd &dij, bool bl_initialized) const {
     BoundaryLayerSetblAssembler assembler{BoundaryLayerSetblAccess(boundaryLayer),
                                           BoundaryLayerMarchAccess(boundaryLayer)};

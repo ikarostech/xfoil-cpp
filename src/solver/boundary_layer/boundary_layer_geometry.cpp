@@ -70,7 +70,7 @@ bool BoundaryLayerGeometry::iblsys(int &nsys) {
   return true;
 }
 
-StagnationResult
+StagnationFeature
 BoundaryLayerGeometry::stfind(const Eigen::Matrix2Xd &surface_vortex,
                               const Eigen::VectorXd &spline_length) const {
   int stagnation_index = 0;
@@ -88,7 +88,7 @@ BoundaryLayerGeometry::stfind(const Eigen::Matrix2Xd &surface_vortex,
     stagnation_index = point_count / 2;
   }
 
-  StagnationResult result;
+  StagnationFeature result;
   result.stagnationIndex = stagnation_index;
   result.found = found;
   const double dgam = surface_vortex(0, stagnation_index + 1) -
@@ -120,7 +120,7 @@ bool BoundaryLayerGeometry::stmove(const Eigen::Matrix2Xd &surface_vortex,
                                    const Eigen::VectorXd &spline_length,
                                    const Foil &foil,
                                    const Eigen::Matrix2Xd &qinv_matrix,
-                                   StagnationResult &stagnation, int &nsys) {
+                                   StagnationFeature &stagnation, int &nsys) {
   const int previous = stagnation_.index;
   const auto stagnation_result = stfind(surface_vortex, spline_length);
   if (!stagnation_result.found) {

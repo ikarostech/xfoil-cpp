@@ -65,7 +65,7 @@ public:
   virtual FlowRegimeEnum
   determineRegimeForStation(int side, int stationIndex) const = 0;
   virtual int resetSideState(int side, const Foil &foil,
-                             const StagnationResult &stagnation) = 0;
+                             const StagnationFeature &stagnation) = 0;
   virtual void storeStationStateCommon(int side, int stationIndex,
                                        const MixedModeStationContext &ctx) = 0;
 };

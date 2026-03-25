@@ -7,7 +7,7 @@
 #include "numerics/side_pair.hpp"
 #include "model/foil/foil.hpp"
 
-struct StagnationResult {
+struct StagnationFeature {
   int stagnationIndex = 0;
   double sst = 0.0;
   double sst_go = 0.0;
@@ -23,11 +23,11 @@ public:
 
   bool iblpan(int point_count, int wake_point_count);
   bool iblsys(int &nsys);
-  StagnationResult stfind(const Eigen::Matrix2Xd &surface_vortex,
-                          const Eigen::VectorXd &spline_length) const;
+  StagnationFeature stfind(const Eigen::Matrix2Xd &surface_vortex,
+                           const Eigen::VectorXd &spline_length) const;
   bool stmove(const Eigen::Matrix2Xd &surface_vortex,
               const Eigen::VectorXd &spline_length, const Foil &foil,
-              const Eigen::Matrix2Xd &qinv_matrix, StagnationResult &stagnation,
+              const Eigen::Matrix2Xd &qinv_matrix, StagnationFeature &stagnation,
               int &nsys);
   bool xicalc(const Foil &foil);
   SidePair<Eigen::Matrix2Xd> uicalc(const Eigen::Matrix2Xd &qinv_matrix) const;

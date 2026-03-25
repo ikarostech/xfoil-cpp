@@ -12,7 +12,7 @@ class BoundaryLayerRuntimeStateOps {
                             BlTransitionParams &bl_transition,
                             FlowRegimeEnum &flow_regime, int side,
                             const Foil &foil,
-                            const StagnationResult &stagnation);
+                            const StagnationFeature &stagnation);
   static int readSideStationCount(const SidePair<BoundaryLayerLattice> &lattice,
                                   int side);
   static BoundaryLayerStationReadModel readStationModel(
@@ -23,6 +23,6 @@ class BoundaryLayerRuntimeStateOps {
   static BoundaryLayerTrailingEdgeReadModel readTrailingEdgeModel(
       const SidePair<BoundaryLayerLattice> &lattice);
   static double xifset(const SidePair<BoundaryLayerLattice> &lattice,
-                       const Foil &foil, const StagnationResult &stagnation,
+                       const Foil &foil, const StagnationFeature &stagnation,
                        int side);
 };

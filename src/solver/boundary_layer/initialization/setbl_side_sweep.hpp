@@ -12,7 +12,7 @@ namespace setbl_side_sweep {
 class SetblSideSweepOps {
  public:
   static void assignXiUle(
-      int side, const StagnationResult &stagnation,
+      int side, const StagnationFeature &stagnation,
       std::array<setbl_jacobian::StationState, 2> &stations) {
     if (side == 1) {
       stations[0].xi_ule = stagnation.sst_go;

@@ -9,7 +9,7 @@ class BoundaryLayerInitializer {
   static SetblOutputView run(
       BoundaryLayer &boundaryLayer, const FlowState &analysis_state,
       const AeroCoefficients &aero_coeffs,
-      double acrit, const Foil &foil, const StagnationResult &stagnation,
+      double acrit, const Foil &foil, const StagnationFeature &stagnation,
       const Eigen::MatrixXd &dij, bool bl_initialized) {
     return BoundaryLayerSetblUseCase{}.run(
                                            boundaryLayer,
@@ -30,12 +30,12 @@ class BoundaryLayerInitializer {
 
   static int resetSideState(BoundaryLayer &boundaryLayer, int side,
                             const Foil &foil,
-                            const StagnationResult &stagnation) {
+                            const StagnationFeature &stagnation) {
     return boundaryLayer.resetSideState(side, foil, stagnation);
   }
 
   static double xifset(const BoundaryLayer &boundaryLayer, const Foil &foil,
-                       const StagnationResult &stagnation, int side) {
+                       const StagnationFeature &stagnation, int side) {
     return boundaryLayer.computeForcedTransitionArcLength(foil, stagnation,
                                                           side);
   }

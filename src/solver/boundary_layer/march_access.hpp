@@ -81,7 +81,7 @@ class BoundaryLayerMarchAccess {
     FlowRegimeEnum determineRegimeForStation(int side, int stationIndex) const {
         return boundaryLayer_.determineRegimeForStation(side, stationIndex);
     }
-    int resetSideState(int side, const Foil &foil, const StagnationResult &stagnation) const {
+    int resetSideState(int side, const Foil &foil, const StagnationFeature &stagnation) const {
         return boundaryLayer_.resetSideState(side, foil, stagnation);
     }
 

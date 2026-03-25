@@ -70,7 +70,7 @@ class WorkflowMarchContext final : public MarchContext {
     return access_.determineRegimeForStation(side, stationIndex);
   }
   int resetSideState(int side, const Foil &foil,
-                     const StagnationResult &stagnation) override {
+                     const StagnationFeature &stagnation) override {
     return access_.resetSideState(side, foil, stagnation);
   }
 

@@ -12,7 +12,7 @@ using Eigen::VectorXd;
 int BoundaryLayerRuntimeStateOps::resetSideState(
     SidePair<BoundaryLayerLattice> &lattice, BlTransitionParams &bl_transition,
     FlowRegimeEnum &flow_regime, int side, const Foil &foil,
-    const StagnationResult &stagnation) {
+    const StagnationFeature &stagnation) {
   const int previousTransition = lattice.get(side).profiles.transitionIndex;
   bl_transition.xiforc = xifset(lattice, foil, stagnation, side);
   flow_regime = FlowRegimeEnum::Laminar;
@@ -61,7 +61,7 @@ BoundaryLayerRuntimeStateOps::readTrailingEdgeModel(
 
 double BoundaryLayerRuntimeStateOps::xifset(
     const SidePair<BoundaryLayerLattice> &lattice, const Foil &foil,
-    const StagnationResult &stagnation, int side) {
+    const StagnationFeature &stagnation, int side) {
   VectorXd w1 = VectorXd::Zero(foil.foil_shape.n);
   double str;
 

@@ -41,13 +41,13 @@ public:
   using StationMarchResult = Marcher::StationMarchResult<MrchueStationContext>;
 
   bool mrchue(MrchueContext &context, const Foil &foil,
-              const StagnationResult &stagnation);
+              const StagnationFeature &stagnation);
 
 private:
   bool marchMrchueSide(MrchueContext &context, int side, const Foil &foil,
-                       const StagnationResult &stagnation);
+                       const StagnationFeature &stagnation);
   SideInput makeSideInput(MrchueContext &context, int side, const Foil &foil,
-                          const StagnationResult &stagnation) const;
+                          const StagnationFeature &stagnation) const;
   SideMarchState initializeMrchueSide(const SideInput &input);
   void prepareMrchueStationContext(MrchueContext &context,
                                    const StationInput &input,

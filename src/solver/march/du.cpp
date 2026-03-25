@@ -59,7 +59,7 @@ MarcherDu::prepareMixedModeStation(MrchduContext &context,
 }
 
 bool MarcherDu::mrchdu(MrchduContext &context, const Foil &foil,
-                       const StagnationResult &stagnation)
+                       const StagnationFeature &stagnation)
 {
   for (int side = 1; side <= 2; ++side)
   {
@@ -74,7 +74,7 @@ bool MarcherDu::mrchdu(MrchduContext &context, const Foil &foil,
 
 MarcherDu::SideInput MarcherDu::makeSideInput(MrchduContext &context, int side,
                                               const Foil &foil,
-                                              const StagnationResult &stagnation) const
+                                              const StagnationFeature &stagnation) const
 {
   return {side, context.readSideStationCount(side),
           context.resetSideState(side, foil, stagnation)};
@@ -83,7 +83,7 @@ MarcherDu::SideInput MarcherDu::makeSideInput(MrchduContext &context, int side,
 bool MarcherDu::marchBoundaryLayerSide(MrchduContext &context,
                                        int side, SideMarchState &sideState,
                                        const Foil &foil,
-                                       const StagnationResult &stagnation)
+                                       const StagnationFeature &stagnation)
 {
   const SideInput sideInput =
       makeSideInput(context, side, foil, stagnation);

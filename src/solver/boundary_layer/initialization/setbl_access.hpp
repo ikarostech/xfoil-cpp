@@ -136,7 +136,7 @@ class BoundaryLayerSetblAccess {
     void solveWakeState() const {
         boundaryLayer_.solveWakeState();
     }
-    double xifset(const Foil &foil, const StagnationResult &stagnation, int side) const {
+    double xifset(const Foil &foil, const StagnationFeature &stagnation, int side) const {
         return boundaryLayer_.computeForcedTransitionArcLength(foil, stagnation, side);
     }
     SidePair<Eigen::VectorXd> ueset(const Eigen::MatrixXd &dij) const {

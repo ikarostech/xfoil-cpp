@@ -165,7 +165,7 @@ void BoundaryLayer::resetForReinitialization() {
     zeroProfiles();
 }
 
-void BoundaryLayer::setStagnationState(const StagnationResult &stagnation) {
+void BoundaryLayer::setStagnationState(const StagnationFeature &stagnation) {
     state_store_.stagnation.index  = stagnation.stagnationIndex;
     state_store_.stagnation.sst    = stagnation.sst;
     state_store_.stagnation.sst_go = stagnation.sst_go;
@@ -287,8 +287,8 @@ void BoundaryLayer::applyProfiles(SidePair<BoundaryLayerSideState> &&profiles) {
     refreshTrailingEdgeFeature();
 }
 
-StagnationResult BoundaryLayer::findStagnation(const Eigen::Matrix2Xd &surface_vortex,
-                                               const Eigen::VectorXd &spline_length) const {
+StagnationFeature BoundaryLayer::findStagnation(const Eigen::Matrix2Xd &surface_vortex,
+                                                const Eigen::VectorXd &spline_length) const {
     return geometry_.stfind(surface_vortex, spline_length);
 }
 
@@ -310,7 +310,7 @@ SidePair<Eigen::Matrix2Xd> BoundaryLayer::computeInviscidEdgeVelocity(const Eige
 
 bool BoundaryLayer::moveStagnation(const Eigen::Matrix2Xd &surface_vortex, const Eigen::VectorXd &spline_length,
                                    const Foil &foil, const Eigen::Matrix2Xd &qinv_matrix,
-                                   StagnationResult &stagnation) {
+                                   StagnationFeature &stagnation) {
     const bool moved = geometry_.stmove(surface_vortex, spline_length, foil, qinv_matrix, stagnation, workspace_.nsys);
     if (moved) {
         refreshTrailingEdgeFeature();
@@ -318,12 +318,12 @@ bool BoundaryLayer::moveStagnation(const Eigen::Matrix2Xd &surface_vortex, const
     return moved;
 }
 
-int BoundaryLayer::resetSideState(int side, const Foil &foil, const StagnationResult &stagnation) {
+int BoundaryLayer::resetSideState(int side, const Foil &foil, const StagnationFeature &stagnation) {
     return BoundaryLayerRuntimeStateOps::resetSideState(state_store_.lattice, state_store_.blTransition,
                                                         state_store_.flowRegime, side, foil, stagnation);
 }
 
-double BoundaryLayer::computeForcedTransitionArcLength(const Foil &foil, const StagnationResult &stagnation,
+double BoundaryLayer::computeForcedTransitionArcLength(const Foil &foil, const StagnationFeature &stagnation,
                                                        int side) const {
     return BoundaryLayerRuntimeStateOps::xifset(state_store_.lattice, foil, stagnation, side);
 }

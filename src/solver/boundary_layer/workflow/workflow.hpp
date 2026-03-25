@@ -110,7 +110,7 @@ class BoundaryLayer {
     void resetPhysicsState();
     void resetTransportState();
     void resetForReinitialization();
-    void setStagnationState(const StagnationResult &stagnation);
+    void setStagnationState(const StagnationFeature &stagnation);
     const BoundaryLayerStagnationFeature &stagnationFeature() const;
     const BoundaryLayerTrailingEdgeFeature &trailingEdgeFeature() const;
     void refreshTrailingEdgeFeature();
@@ -181,15 +181,15 @@ class BoundaryLayer {
     void seedEdgeVelocityFromInviscid();
     void applyProfiles(const SidePair<BoundaryLayerSideState> &profiles);
     void applyProfiles(SidePair<BoundaryLayerSideState> &&profiles);
-    StagnationResult findStagnation(const Eigen::Matrix2Xd &surface_vortex, const Eigen::VectorXd &spline_length) const;
+    StagnationFeature findStagnation(const Eigen::Matrix2Xd &surface_vortex, const Eigen::VectorXd &spline_length) const;
     bool buildPanelMap(int point_count, int wake_point_count);
     bool rebuildArcLengthCoordinates(const Foil &foil);
     bool buildSystemMapping();
     SidePair<Eigen::Matrix2Xd> computeInviscidEdgeVelocity(const Eigen::Matrix2Xd &qinv_matrix) const;
     bool moveStagnation(const Eigen::Matrix2Xd &surface_vortex, const Eigen::VectorXd &spline_length, const Foil &foil,
-                        const Eigen::Matrix2Xd &qinv_matrix, StagnationResult &stagnation);
-    int resetSideState(int side, const Foil &foil, const StagnationResult &stagnation);
-    double computeForcedTransitionArcLength(const Foil &foil, const StagnationResult &stagnation, int side) const;
+                        const Eigen::Matrix2Xd &qinv_matrix, StagnationFeature &stagnation);
+    int resetSideState(int side, const Foil &foil, const StagnationFeature &stagnation);
+    double computeForcedTransitionArcLength(const Foil &foil, const StagnationFeature &stagnation, int side) const;
     int readSideStationCount(int side) const;
     BoundaryLayerStationReadModel readStationModel(int side, int stationIndex) const;
     BoundaryLayerSideReadModel readSideModel(int side) const;

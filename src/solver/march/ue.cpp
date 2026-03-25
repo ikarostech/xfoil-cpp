@@ -105,7 +105,7 @@ namespace
 } // namespace
 
 bool MarcherUe::mrchue(MrchueContext &context, const Foil &foil,
-                       const StagnationResult &stagnation)
+                       const StagnationFeature &stagnation)
 {
   for (int side = 1; side <= 2; ++side)
   {
@@ -119,7 +119,7 @@ bool MarcherUe::mrchue(MrchueContext &context, const Foil &foil,
 
 bool MarcherUe::marchMrchueSide(MrchueContext &context, int side,
                                 const Foil &foil,
-                                const StagnationResult &stagnation)
+                                const StagnationFeature &stagnation)
 {
   const auto publishEvent = [&](const MarchEvent &event) {
     if (event.kind == MarchEvent::Kind::Failure)
@@ -169,7 +169,7 @@ bool MarcherUe::marchMrchueSide(MrchueContext &context, int side,
 
 MarcherUe::SideInput MarcherUe::makeSideInput(MrchueContext &context, int side,
                                               const Foil &foil,
-                                              const StagnationResult &stagnation) const
+                                              const StagnationFeature &stagnation) const
 {
   context.resetSideState(side, foil, stagnation);
   return {side, context.readSideStationCount(side),
