@@ -28,6 +28,7 @@ target_link_libraries(xfoil_numerics
 )
 
 add_library(xfoil_model
+    src/model/analysis/stagnation_feature.cpp
     src/model/boundary_layer.cpp
     src/model/boundary_layer/physics.cpp
     src/model/boundary_layer/reference/bl_compressibility_params.cpp

@@ -15,13 +15,13 @@ class SetblSideSweepOps {
       int side, const StagnationFeature &stagnation,
       std::array<setbl_jacobian::StationState, 2> &stations) {
     if (side == 1) {
-      stations[0].xi_ule = stagnation.sst_go;
-      stations[1].xi_ule = -stagnation.sst_gp;
+      stations[0].xi_ule = stagnation.sst_go();
+      stations[1].xi_ule = -stagnation.sst_gp();
       return;
     }
 
-    stations[0].xi_ule = -stagnation.sst_go;
-    stations[1].xi_ule = stagnation.sst_gp;
+    stations[0].xi_ule = -stagnation.sst_go();
+    stations[1].xi_ule = stagnation.sst_gp();
   }
 
   static void updateRegimeAfterStation(const BoundaryLayerSetblAccess &access,

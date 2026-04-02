@@ -20,20 +20,20 @@ bool BoundaryLayerGeometry::iblpan(int point_count, int wake_point_count) {
   lattice_.top.resize(lattice_size);
   lattice_.bottom.resize(lattice_size);
 
-  for (int i = 0; i <= stagnation_.index; i++) {
-    lattice_.top.stationToPanel[i] = stagnation_.index - i;
+  for (int i = 0; i <= stagnation_.index(); i++) {
+    lattice_.top.stationToPanel[i] = stagnation_.index() - i;
     lattice_.top.panelInfluenceFactor[i] = 1.0;
   }
 
-  lattice_.top.trailingEdgeIndex = stagnation_.index;
+  lattice_.top.trailingEdgeIndex = stagnation_.index();
   lattice_.top.stationCount = lattice_.top.trailingEdgeIndex + 2;
 
-  for (int index = 0; index <= point_count - stagnation_.index; ++index) {
-    lattice_.bottom.stationToPanel[index] = stagnation_.index + 1 + index;
+  for (int index = 0; index <= point_count - stagnation_.index(); ++index) {
+    lattice_.bottom.stationToPanel[index] = stagnation_.index() + 1 + index;
     lattice_.bottom.panelInfluenceFactor[index] = -1.0;
   }
 
-  lattice_.bottom.trailingEdgeIndex = point_count - stagnation_.index - 2;
+  lattice_.bottom.trailingEdgeIndex = point_count - stagnation_.index() - 2;
 
   for (int iw = 0; iw < wake_point_count; iw++) {
     const int panel = point_count + iw;
@@ -88,9 +88,7 @@ BoundaryLayerGeometry::stfind(const Eigen::Matrix2Xd &surface_vortex,
     stagnation_index = point_count / 2;
   }
 
-  StagnationFeature result;
-  result.index = stagnation_index;
-  result.found = found;
+  double sst = 0.0;
   const double dgam = surface_vortex(0, stagnation_index + 1) -
                       surface_vortex(0, stagnation_index);
   const double ds =
@@ -98,22 +96,22 @@ BoundaryLayerGeometry::stfind(const Eigen::Matrix2Xd &surface_vortex,
 
   if (surface_vortex(0, stagnation_index) <
       -surface_vortex(0, stagnation_index + 1)) {
-    result.sst = spline_length[stagnation_index] -
-                 ds * (surface_vortex(0, stagnation_index) / dgam);
+    sst = spline_length[stagnation_index] -
+          ds * (surface_vortex(0, stagnation_index) / dgam);
   } else {
-    result.sst = spline_length[stagnation_index + 1] -
-                 ds * (surface_vortex(0, stagnation_index + 1) / dgam);
+    sst = spline_length[stagnation_index + 1] -
+          ds * (surface_vortex(0, stagnation_index + 1) / dgam);
   }
 
-  if (result.sst <= spline_length[stagnation_index])
-    result.sst = spline_length[stagnation_index] + 0.0000001;
-  if (result.sst >= spline_length[stagnation_index + 1])
-    result.sst = spline_length[stagnation_index + 1] - 0.0000001;
+  if (sst <= spline_length[stagnation_index])
+    sst = spline_length[stagnation_index] + 0.0000001;
+  if (sst >= spline_length[stagnation_index + 1])
+    sst = spline_length[stagnation_index + 1] - 0.0000001;
 
-  result.sst_go = (result.sst - spline_length[stagnation_index + 1]) / dgam;
-  result.sst_gp = (spline_length[stagnation_index] - result.sst) / dgam;
+  const double sst_go = (sst - spline_length[stagnation_index + 1]) / dgam;
+  const double sst_gp = (spline_length[stagnation_index] - sst) / dgam;
 
-  return result;
+  return StagnationFeature(stagnation_index, sst, sst_go, sst_gp, found);
 }
 
 bool BoundaryLayerGeometry::stmove(const Eigen::Matrix2Xd &surface_vortex,
@@ -121,20 +119,16 @@ bool BoundaryLayerGeometry::stmove(const Eigen::Matrix2Xd &surface_vortex,
                                    const Foil &foil,
                                    const Eigen::Matrix2Xd &qinv_matrix,
                                    StagnationFeature &stagnation, int &nsys) {
-  const int previous = stagnation_.index;
+  const int previous = stagnation_.index();
   const auto stagnation_result = stfind(surface_vortex, spline_length);
-  if (!stagnation_result.found) {
+  if (!stagnation_result.found()) {
     Logger::instance().write(
         "stfind: Stagnation point not found. Continuing ...\n");
   }
-  stagnation_.index = stagnation_result.index;
-  stagnation_.sst = stagnation_result.sst;
-  stagnation_.sst_go = stagnation_result.sst_go;
-  stagnation_.sst_gp = stagnation_result.sst_gp;
-  stagnation_.found = stagnation_result.found;
+  stagnation_ = stagnation_result;
   stagnation = stagnation_result;
 
-  if (previous == stagnation_.index) {
+  if (previous == stagnation_.index()) {
     xicalc(foil);
   } else {
     iblpan(foil.foil_shape.n, foil.wake_shape.n);
@@ -144,8 +138,8 @@ bool BoundaryLayerGeometry::stmove(const Eigen::Matrix2Xd &surface_vortex,
     xicalc(foil);
     iblsys(nsys);
 
-    if (stagnation_.index > previous) {
-      const int delta = stagnation_.index - previous;
+    if (stagnation_.index() > previous) {
+      const int delta = stagnation_.index() - previous;
 
       lattice_.top.profiles.transitionIndex += delta;
       lattice_.bottom.profiles.transitionIndex -= delta;
@@ -166,7 +160,7 @@ bool BoundaryLayerGeometry::stmove(const Eigen::Matrix2Xd &surface_vortex,
         copyStationState(2, ibl, ibl + delta);
       }
     } else {
-      const int delta = previous - stagnation_.index;
+      const int delta = previous - stagnation_.index();
 
       lattice_.top.profiles.transitionIndex -= delta;
       lattice_.bottom.profiles.transitionIndex += delta;
@@ -231,7 +225,7 @@ bool BoundaryLayerGeometry::xicalc(const Foil &foil) {
   //-------------------------------------------------------------
 
   const auto arc_lengths =
-      computeArcLengthCoordinates(foil, stagnation_.sst, lattice_);
+      computeArcLengthCoordinates(foil, stagnation_.sst(), lattice_);
   lattice_.top.arcLengthCoordinates = arc_lengths.top;
   lattice_.bottom.arcLengthCoordinates = arc_lengths.bottom;
   wgap_ = computeWakeGap(foil, lattice_.bottom, arc_lengths.bottom);

@@ -166,11 +166,7 @@ void BoundaryLayer::resetForReinitialization() {
 }
 
 void BoundaryLayer::setStagnationState(const StagnationFeature &stagnation) {
-    state_store_.stagnation.index  = stagnation.index;
-    state_store_.stagnation.sst    = stagnation.sst;
-    state_store_.stagnation.sst_go = stagnation.sst_go;
-    state_store_.stagnation.sst_gp = stagnation.sst_gp;
-    state_store_.stagnation.found  = stagnation.found;
+    state_store_.stagnation = stagnation;
 }
 
 const StagnationFeature &BoundaryLayer::stagnationFeature() const {

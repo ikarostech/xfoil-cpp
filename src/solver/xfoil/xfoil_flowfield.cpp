@@ -246,7 +246,7 @@ void prepareViscousGeometry(XFoilInternalState &state,
   const auto new_stagnation = boundary_layer.findStagnation(
       state.inviscid.surfaceVortex, foil.foil_shape.spline_length);
   if (!has_panel_map) {
-    if (!new_stagnation.found) {
+    if (!new_stagnation.found()) {
       Logger::instance().write(
           "stfind: Stagnation point not found. Continuing ...\n");
     }

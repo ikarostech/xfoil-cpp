@@ -89,7 +89,7 @@ double BoundaryLayerRuntimeStateOps::xifset(
   str = spline::sinvrt(str, lattice.get(side).transitionLocation, w1,
                        w3, foil.foil_shape.spline_length, foil.foil_shape.n);
   double xiforc = std::min(
-      (str - stagnation.sst),
+      (str - stagnation.sst()),
       lattice.get(side).arcLengthCoordinates[lattice.get(side).trailingEdgeIndex]);
   if (xiforc < 0.0) {
     std::stringstream ss;
