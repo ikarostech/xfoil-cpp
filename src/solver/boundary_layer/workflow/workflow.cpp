@@ -283,11 +283,6 @@ void BoundaryLayer::applyProfiles(SidePair<BoundaryLayerSideState> &&profiles) {
     refreshTrailingEdgeFeature();
 }
 
-StagnationFeature BoundaryLayer::findStagnation(const Eigen::Matrix2Xd &surface_vortex,
-                                                const Eigen::VectorXd &spline_length) const {
-    return geometry_.stfind(surface_vortex, spline_length);
-}
-
 bool BoundaryLayer::buildPanelMap(int point_count, int wake_point_count) {
     return geometry_.iblpan(point_count, wake_point_count);
 }

@@ -5,36 +5,30 @@
 #include "model/analysis/stagnation_feature.hpp"
 #include "model/boundary_layer/features.hpp"
 #include "model/boundary_layer/state.hpp"
-#include "numerics/side_pair.hpp"
 #include "model/foil/foil.hpp"
+#include "numerics/side_pair.hpp"
 
 class BoundaryLayerGeometry {
-public:
-  BoundaryLayerGeometry(SidePair<BoundaryLayerLattice> &lattice,
-                        Eigen::VectorXd &wgap,
-                        StagnationFeature &stagnation);
+  public:
+    BoundaryLayerGeometry(SidePair<BoundaryLayerLattice> &lattice, Eigen::VectorXd &wgap,
+                          StagnationFeature &stagnation);
 
-  bool iblpan(int point_count, int wake_point_count);
-  bool iblsys(int &nsys);
-  StagnationFeature stfind(const Eigen::Matrix2Xd &surface_vortex,
-                           const Eigen::VectorXd &spline_length) const;
-  bool stmove(const Eigen::Matrix2Xd &surface_vortex,
-              const Eigen::VectorXd &spline_length, const Foil &foil,
-              const Eigen::Matrix2Xd &qinv_matrix, StagnationFeature &stagnation,
-              int &nsys);
-  bool xicalc(const Foil &foil);
-  SidePair<Eigen::Matrix2Xd> uicalc(const Eigen::Matrix2Xd &qinv_matrix) const;
+    bool iblpan(int point_count, int wake_point_count);
+    bool iblsys(int &nsys);
 
-private:
-  static SidePair<Eigen::VectorXd>
-  computeArcLengthCoordinates(const Foil &foil, double stagnationSst,
-                              const SidePair<BoundaryLayerLattice> &lattice);
-  static Eigen::VectorXd
-  computeWakeGap(const Foil &foil, const BoundaryLayerLattice &bottom,
-                 const Eigen::VectorXd &bottomArcLengths);
-  void copyStationState(int side, int destination, int source);
+    bool stmove(const Eigen::Matrix2Xd &surface_vortex, const Eigen::VectorXd &spline_length, const Foil &foil,
+                const Eigen::Matrix2Xd &qinv_matrix, StagnationFeature &stagnation, int &nsys);
+    bool xicalc(const Foil &foil);
+    SidePair<Eigen::Matrix2Xd> uicalc(const Eigen::Matrix2Xd &qinv_matrix) const;
 
-  SidePair<BoundaryLayerLattice> &lattice_;
-  Eigen::VectorXd &wgap_;
-  StagnationFeature &stagnation_;
+  private:
+    static SidePair<Eigen::VectorXd> computeArcLengthCoordinates(const Foil &foil, double stagnationSst,
+                                                                 const SidePair<BoundaryLayerLattice> &lattice);
+    static Eigen::VectorXd computeWakeGap(const Foil &foil, const BoundaryLayerLattice &bottom,
+                                          const Eigen::VectorXd &bottomArcLengths);
+    void copyStationState(int side, int destination, int source);
+
+    SidePair<BoundaryLayerLattice> &lattice_;
+    Eigen::VectorXd &wgap_;
+    StagnationFeature &stagnation_;
 };

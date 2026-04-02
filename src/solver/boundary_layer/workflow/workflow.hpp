@@ -4,11 +4,11 @@
 #include <cmath>
 
 #include "model/analysis/stagnation_feature.hpp"
+#include "model/boundary_layer/features.hpp"
+#include "model/boundary_layer/physics.hpp"
 #include "model/boundary_layer/reference/bl_compressibility_params.hpp"
 #include "model/boundary_layer/reference/bl_reynolds_params.hpp"
 #include "model/boundary_layer/reference/bl_transition_params.hpp"
-#include "model/boundary_layer/features.hpp"
-#include "model/boundary_layer/physics.hpp"
 #include "model/boundary_layer/skin_friction_coefficients.hpp"
 #include "model/boundary_layer/state.hpp"
 #include "model/flow_regime.hpp"
@@ -182,7 +182,6 @@ class BoundaryLayer {
     void seedEdgeVelocityFromInviscid();
     void applyProfiles(const SidePair<BoundaryLayerSideState> &profiles);
     void applyProfiles(SidePair<BoundaryLayerSideState> &&profiles);
-    StagnationFeature findStagnation(const Eigen::Matrix2Xd &surface_vortex, const Eigen::VectorXd &spline_length) const;
     bool buildPanelMap(int point_count, int wake_point_count);
     bool rebuildArcLengthCoordinates(const Foil &foil);
     bool buildSystemMapping();
