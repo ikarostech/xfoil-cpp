@@ -73,45 +73,7 @@ bool BoundaryLayerGeometry::iblsys(int &nsys) {
 StagnationFeature
 BoundaryLayerGeometry::stfind(const Eigen::Matrix2Xd &surface_vortex,
                               const Eigen::VectorXd &spline_length) const {
-  int stagnation_index = 0;
-  bool found = false;
-  const int point_count = static_cast<int>(surface_vortex.cols());
-  for (int i = 0; i < point_count - 1; ++i) {
-    if (surface_vortex(0, i) >= 0.0 && surface_vortex(0, i + 1) < 0.0) {
-      stagnation_index = i;
-      found = true;
-      break;
-    }
-  }
-
-  if (!found) {
-    stagnation_index = point_count / 2;
-  }
-
-  double sst = 0.0;
-  const double dgam = surface_vortex(0, stagnation_index + 1) -
-                      surface_vortex(0, stagnation_index);
-  const double ds =
-      spline_length[stagnation_index + 1] - spline_length[stagnation_index];
-
-  if (surface_vortex(0, stagnation_index) <
-      -surface_vortex(0, stagnation_index + 1)) {
-    sst = spline_length[stagnation_index] -
-          ds * (surface_vortex(0, stagnation_index) / dgam);
-  } else {
-    sst = spline_length[stagnation_index + 1] -
-          ds * (surface_vortex(0, stagnation_index + 1) / dgam);
-  }
-
-  if (sst <= spline_length[stagnation_index])
-    sst = spline_length[stagnation_index] + 0.0000001;
-  if (sst >= spline_length[stagnation_index + 1])
-    sst = spline_length[stagnation_index + 1] - 0.0000001;
-
-  const double sst_go = (sst - spline_length[stagnation_index + 1]) / dgam;
-  const double sst_gp = (spline_length[stagnation_index] - sst) / dgam;
-
-  return StagnationFeature(stagnation_index, sst, sst_go, sst_gp, found);
+  return StagnationFeature(surface_vortex, spline_length);
 }
 
 bool BoundaryLayerGeometry::stmove(const Eigen::Matrix2Xd &surface_vortex,
